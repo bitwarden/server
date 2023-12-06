@@ -3,8 +3,17 @@ using Bit.Core.Tools.Entities;
 
 namespace Bit.Infrastructure.Dapper.Tools.Helpers;
 
+/// <summary>
+/// Dapper helper methods for Sends
+/// </summary>
 public static class SendHelpers
 {
+    /// <summary>
+    /// Converts an IEnumerable of Sends to a DataTable
+    /// </summary>
+    /// <remarks>Contains a hardcoded list of properties and must be updated with model</remarks>
+    /// <param name="sends">List of sends</param>
+    /// <returns>A data table matching the schema of dbo.Send containing one row mapped from the items in <see cref="Send"/>s</returns>
     public static DataTable ToDataTable(this IEnumerable<Send> sends)
     {
         var sendsTable = new DataTable();

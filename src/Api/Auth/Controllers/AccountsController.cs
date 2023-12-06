@@ -69,7 +69,7 @@ public class AccountsController : Controller
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
-    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>> _sendValidator;
+    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
 
@@ -94,7 +94,7 @@ public class AccountsController : Controller
         ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
         IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
-        IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>> sendValidator,
+        IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator
         )

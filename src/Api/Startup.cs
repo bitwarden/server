@@ -151,7 +151,7 @@ public class Startup
             .AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>,
                 FolderRotationValidator>();
         services
-            .AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>>,
+            .AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>,
                 SendRotationValidator>();
         services
             .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,

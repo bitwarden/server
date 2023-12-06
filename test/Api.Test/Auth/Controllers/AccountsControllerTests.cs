@@ -57,7 +57,7 @@ public class AccountsControllerTests : IDisposable
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
-    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>> _sendValidator;
+    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
 
@@ -85,7 +85,7 @@ public class AccountsControllerTests : IDisposable
             Substitute.For<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>();
         _folderValidator =
             Substitute.For<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>();
-        _sendValidator = Substitute.For<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>>>();
+        _sendValidator = Substitute.For<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>();
         _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
             IEnumerable<EmergencyAccess>>>();
 

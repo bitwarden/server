@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 
+/// <inheritdoc />
 public class RotateUserKeyCommand : IRotateUserKeyCommand
 {
     private readonly IUserService _userService;
@@ -19,6 +20,17 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
     private readonly IPushNotificationService _pushService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
 
+    /// <summary>
+    /// Instantiates a new <see cref="RotateUserKeyCommand"/>
+    /// </summary>
+    /// <param name="userService">Master password hash validation</param>
+    /// <param name="userRepository">Updates user keys and re-encrypted data if needed</param>
+    /// <param name="cipherRepository">Provides a method to update re-encrypted cipher data</param>
+    /// <param name="folderRepository">Provides a method to update re-encrypted folder data</param>
+    /// <param name="sendRepository">Provides a method to update re-encrypted send data</param>
+    /// <param name="emergencyAccessRepository">Provides a method to update re-encrypted emergency access data</param>
+    /// <param name="pushService">Logs out user from other devices after successful rotation</param>
+    /// <param name="errors">Provides a password mismatch error if master password hash validation fails</param>
     public RotateUserKeyCommand(IUserService userService, IUserRepository userRepository,
         ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
         IEmergencyAccessRepository emergencyAccessRepository,

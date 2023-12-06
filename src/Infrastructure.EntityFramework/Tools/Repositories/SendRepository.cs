@@ -71,23 +71,23 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         }
     }
 
+    /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
         IEnumerable<Core.Tools.Entities.Send> sends)
     {
         return async (_, _) =>
         {
-            var newSends = sends.ToList();
+            var newSends = sends.ToDictionary(s => s.Id);
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetDatabaseContext(scope);
             var userSends = await GetDbSet(dbContext)
                 .Where(s => s.UserId == userId)
                 .ToListAsync();
             var validSends = userSends
-                .Where(send => newSends.Any(newSend => newSend.Id == send.Id));
+                .Where(send => newSends.ContainsKey(send.Id));
             foreach (var send in validSends)
             {
-                var updateSend = newSends.First(newSend => newSend.Id == send.Id);
-                send.Key = updateSend.Key;
+                send.Key = newSends[send.Id].Key;
             }
 
             await dbContext.SaveChangesAsync();

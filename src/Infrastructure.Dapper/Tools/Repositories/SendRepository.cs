@@ -51,6 +51,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         }
     }
 
+    /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId, IEnumerable<Send> sends)
     {
         return async (connection, transaction) =>

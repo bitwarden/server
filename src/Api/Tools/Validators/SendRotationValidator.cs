@@ -8,18 +8,26 @@ using Bit.Core.Tools.Services;
 
 namespace Bit.Api.Tools.Validators;
 
-public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>>
+/// <summary>
+/// Send implementation for <see cref="IRotationValidator{T,R}"/>
+/// </summary>
+public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>
 {
     private readonly ISendService _sendService;
     private readonly ISendRepository _sendRepository;
 
+    /// <summary>
+    /// Instantiates a new <see cref="SendRotationValidator"/>
+    /// </summary>
+    /// <param name="sendService">Enables conversion of <see cref="SendWithIdRequestModel"/> to <see cref="Send"/></param>
+    /// <param name="sendRepository">Retrieves all user <see cref="Send"/>s</param>
     public SendRotationValidator(ISendService sendService, ISendRepository sendRepository)
     {
         _sendService = sendService;
         _sendRepository = sendRepository;
     }
 
-    public async Task<IEnumerable<Send>> ValidateAsync(User user, IEnumerable<SendWithIdRequestModel> sends)
+    public async Task<IReadOnlyList<Send>> ValidateAsync(User user, IEnumerable<SendWithIdRequestModel> sends)
     {
         var result = new List<Send>();
         if (sends == null || !sends.Any())
