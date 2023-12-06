@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[Send_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,    
+    @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
@@ -23,7 +23,7 @@ BEGIN
         [dbo].[Send]
     SET
         [UserId] = @UserId,
-        [OrganizationId] = @OrganizationId,        
+        [OrganizationId] = @OrganizationId,
         [Type] = @Type,
         [Data] = @Data,
         [Key] = @Key,

@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[Send_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,    
+    @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
@@ -23,7 +23,7 @@ BEGIN
     (
         [Id],
         [UserId],
-        [OrganizationId],        
+        [OrganizationId],
         [Type],
         [Data],
         [Key],
@@ -42,7 +42,7 @@ BEGIN
     (
         @Id,
         @UserId,
-        @OrganizationId,        
+        @OrganizationId,
         @Type,
         @Data,
         @Key,
