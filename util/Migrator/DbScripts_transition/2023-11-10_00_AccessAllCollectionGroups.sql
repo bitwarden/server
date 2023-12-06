@@ -19,7 +19,7 @@ WHERE C.[OrganizationId] = TG.[OrganizationId];
 INSERT INTO [dbo].[CollectionGroup] ([CollectionId], [GroupId], [ReadOnly], [HidePasswords], [Manage])
 SELECT C.[Id], TG.[GroupId], 0, 0, 0
 FROM [dbo].[Collection] C
-    JOIN #TempGroup TG ON C.[OrganizationId] = TG.[OrganizationId]
+    INNER JOIN #TempGroup TG ON C.[OrganizationId] = TG.[OrganizationId]
     LEFT JOIN [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = TG.[GroupId]
 WHERE CG.[CollectionId] IS NULL;
 
