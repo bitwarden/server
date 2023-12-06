@@ -16,7 +16,7 @@ BEGIN
     SET
         target.[ReadOnly] = 0,
         target.[HidePasswords] = 0,
-        target.[Manage] = 1
+        target.[Manage] = 0
         FROM [dbo].[CollectionUser] AS target
         JOIN (
             SELECT C.[Id] AS [CollectionId], T.[OrganizationUserId]
@@ -27,7 +27,7 @@ BEGIN
 
     -- Insert new rows into [dbo].[CollectionUser]
     INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
-    SELECT source.[CollectionId], source.[OrganizationUserId], 0, 0, 1
+    SELECT source.[CollectionId], source.[OrganizationUserId], 0, 0, 0
     FROM (
              SELECT C.[Id] AS [CollectionId], T.[OrganizationUserId]
              FROM [dbo].[Collection] C
