@@ -2,11 +2,10 @@
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class SetPasswordRequestModel : IValidatableObject
+public class SetPasswordRequestModel
 {
     [Required]
     [StringLength(300)]
@@ -34,10 +33,5 @@ public class SetPasswordRequestModel : IValidatableObject
         existingUser.Key = Key;
         Keys?.ToUser(existingUser);
         return existingUser;
-    }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        return KdfSettingsValidator.Validate(Kdf, KdfIterations, KdfMemory, KdfParallelism);
     }
 }
