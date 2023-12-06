@@ -26,18 +26,48 @@ public static class Constants
     public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
 
     /// <summary>
-    /// When you set the ProrationBehavior to create_prorations,
-    /// Stripe will automatically create prorations for any changes made to the subscription,
-    /// such as changing the plan, adding or removing quantities, or applying discounts.
+    /// Used by IdentityServer to identify our own provider.
     /// </summary>
-    public const string CreateProrations = "create_prorations";
+    public const string IdentityProvider = "bitwarden";
+}
 
-    /// <summary>
-    /// When you set the ProrationBehavior to always_invoice,
-    /// Stripe will always generate an invoice when a subscription update occurs,
-    /// regardless of whether there is a proration or not.
-    /// </summary>
-    public const string AlwaysInvoice = "always_invoice";
+public static class AuthConstants
+{
+    public static readonly RangeConstant PBKDF2_ITERATIONS = new(600_000, 2_000_000, 600_000);
+
+    public static readonly RangeConstant ARGON2_ITERATIONS = new(2, 10, 3);
+    public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
+    public static readonly RangeConstant ARGON2_PARALLELISM = new(1, 16, 4);
+
+}
+
+public class RangeConstant
+{
+    public int Default { get; }
+    public int Min { get; }
+    public int Max { get; }
+
+    public RangeConstant(int min, int max, int defaultValue)
+    {
+        Default = defaultValue;
+        Min = min;
+        Max = max;
+
+        if (Min > Max)
+        {
+            throw new ArgumentOutOfRangeException($"{Min} is larger than {Max}.");
+        }
+
+        if (!InsideRange(defaultValue))
+        {
+            throw new ArgumentOutOfRangeException($"{Default} is outside allowed range of {Min}-{Max}.");
+        }
+    }
+
+    public bool InsideRange(int number)
+    {
+        return Min <= number && number <= Max;
+    }
 }
 
 public static class TokenPurposes
@@ -57,14 +87,14 @@ public static class FeatureFlagKeys
     public const string PasswordlessLogin = "passwordless-login";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
     public const string Fido2VaultCredentials = "fido2-vault-credentials";
+    public const string VaultOnboarding = "vault-onboarding";
     public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string FlexibleCollections = "flexible-collections";
+    public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
     public const string BulkCollectionAccess = "bulk-collection-access";
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
-    public const string BillingPlansUpgrade = "billing-plans-upgrade";
-    public const string BillingStarterPlan = "billing-starter-plan";
     public const string KeyRotationImprovements = "key-rotation-improvements";
 
     public static List<string> GetAllKeys()

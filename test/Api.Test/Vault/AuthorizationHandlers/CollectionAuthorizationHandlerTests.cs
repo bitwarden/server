@@ -143,7 +143,7 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_TargetCollectionsMultipleOrgs_Failure(
+    public async Task HandleRequirementAsync_TargetCollectionsMultipleOrgs_Exception(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         IList<Collection> collections)
     {
@@ -166,7 +166,7 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_MissingOrg_Failure(
+    public async Task HandleRequirementAsync_MissingOrg_NoSuccess(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
@@ -182,11 +182,44 @@ public class CollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_MissingManageCollectionPermission_Failure(
+    public async Task HandleRequirementAsync_Provider_Success(
+        SutProvider<CollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections)
+    {
+        var operationsToTest = new[]
+        {
+            CollectionOperations.Create, CollectionOperations.Delete, CollectionOperations.ModifyAccess
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            var actingUserId = Guid.NewGuid();
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections
+            );
+            var orgId = collections.First().OrganizationId;
+
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization)null);
+            sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
+
+            await sutProvider.Sut.HandleAsync(context);
+            Assert.True(context.HasSucceeded);
+            await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(orgId);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanManageCollectionAccessAsync_MissingManageCollectionPermission_NoSuccess(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         ICollection<CollectionDetails> collectionDetails,
@@ -216,7 +249,7 @@ public class CollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
         sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().GetOrganization(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
             .GetManyByUserIdAsync(default);
