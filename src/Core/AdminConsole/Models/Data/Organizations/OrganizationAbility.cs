@@ -6,7 +6,7 @@ public class OrganizationAbility
 {
     public OrganizationAbility() { }
 
-    public OrganizationAbility(Organization organization, bool flexibleCollectionsIsEnabled)
+    public OrganizationAbility(Organization organization)
     {
         Id = organization.Id;
         UseEvents = organization.UseEvents;
@@ -21,7 +21,7 @@ public class OrganizationAbility
         UseResetPassword = organization.UseResetPassword;
         UseCustomPermissions = organization.UseCustomPermissions;
         UsePolicies = organization.UsePolicies;
-        LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled || organization.LimitCollectionCreationDeletion;
+        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
     }
 
     public Guid Id { get; set; }
