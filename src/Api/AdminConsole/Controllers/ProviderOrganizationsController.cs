@@ -4,8 +4,10 @@ using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -17,28 +19,33 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class ProviderOrganizationsController : Controller
 {
-
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly IProviderService _providerService;
-    private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
-    private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderRepository _providerRepository;
+    private readonly IProviderService _providerService;
+    private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
+    private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
+    private readonly IUserService _userService;
 
     public ProviderOrganizationsController(
-        IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderService providerService,
-        IUserService userService,
         ICurrentContext currentContext,
+        IOrganizationRepository organizationRepository,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IProviderRepository providerRepository,
+        IProviderService providerService,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IProviderRepository providerRepository)
+        IRemovePaymentMethodCommand removePaymentMethodCommand,
+        IUserService userService)
     {
-        _providerOrganizationRepository = providerOrganizationRepository;
-        _providerService = providerService;
-        _userService = userService;
         _currentContext = currentContext;
-        _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
+        _organizationRepository = organizationRepository;
+        _providerOrganizationRepository = providerOrganizationRepository;
         _providerRepository = providerRepository;
+        _providerService = providerService;
+        _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
+        _removePaymentMethodCommand = removePaymentMethodCommand;
+        _userService = userService;
     }
 
     [HttpGet("")]
@@ -98,6 +105,13 @@ public class ProviderOrganizationsController : Controller
 
         var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(id);
 
-        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(provider, providerOrganization);
+        var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+
+        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(
+            provider,
+            providerOrganization,
+            organization);
+
+        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
     }
 }
