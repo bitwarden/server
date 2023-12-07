@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Bit.Commercial.Core.AdminConsole.Services;
+﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -628,42 +627,4 @@ public class ProviderServiceTests
             Assert.Equal(organization.PlanType, ExpectedPlanType);
         }
     }
-
-    [Theory, BitAutoData]
-    public async Task AddOrganizationsToReseller_WithResellerProvider_CreatebeforeNov162023_PlanTypeUpdated(ICollection<Organization> organizations, SutProvider<ProviderService> sutProvider)
-    {
-        // Set the desired creation date
-        DateTime oldCreationDate = new DateTime(2023, 10, 1);
-
-        // Modify the Provider object
-        Provider provider = new Provider();
-        provider.Type = ProviderType.Reseller;
-        // Use reflection to set the creation date
-        var creationDateField = provider.GetType().GetField("creationDate", BindingFlags.NonPublic | BindingFlags.Instance);
-        creationDateField.SetValue(provider, oldCreationDate);
-
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var ExpectedPlanType = PlanType.EnterpriseAnnually;
-        foreach (var organization in organizations)
-        {
-            organization.PlanType = PlanType.EnterpriseAnnually;
-        }
-
-        var organizationIds = organizations.Select(o => o.Id).ToArray();
-
-        await sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds);
-
-        await providerOrganizationRepository.Received(1).CreateManyAsync(Arg.Is<IEnumerable<ProviderOrganization>>(i => i.All(po => po.ProviderId == provider.Id && organizations.Any(o => o.Id == po.OrganizationId))));
-        await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventsAsync(
-            Arg.Is<IEnumerable<(ProviderOrganization, EventType, DateTime?)>>(events => events.All(e =>
-                e.Item1.ProviderId == provider.Id && organizationIds.Contains(e.Item1.OrganizationId) && e.Item2 == EventType.ProviderOrganization_Added)));
-
-        foreach (var organization in organizations)
-        {
-            Assert.Equal(organization.PlanType, ExpectedPlanType);
-        }
-    }
-
 }

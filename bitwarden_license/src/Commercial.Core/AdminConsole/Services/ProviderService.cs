@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -384,23 +385,25 @@ public class ProviderService : IProviderService
         {
             throw new BadRequestException("Provider must be of type Reseller in order to assign Organizations to it.");
         }
-        await UpdatePlanForExistingProviderAsync(organizationIds, provider);
-        var existingProviderOrganizationsCount = await _providerOrganizationRepository.GetCountByOrganizationIdsAsync(organizationIds);
+
+        var orgIdsList = organizationIds.ToList();
+        await UpdateOrgPlanForExistingProviderAsync(orgIdsList, provider);
+        var existingProviderOrganizationsCount = await _providerOrganizationRepository.GetCountByOrganizationIdsAsync(orgIdsList);
         if (existingProviderOrganizationsCount > 0)
         {
             throw new BadRequestException("Organizations must not be assigned to any Provider.");
         }
 
-        var providerOrganizationsToInsert = organizationIds.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
+        var providerOrganizationsToInsert = orgIdsList.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
         var insertedProviderOrganizations = await _providerOrganizationRepository.CreateManyAsync(providerOrganizationsToInsert);
 
         await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
-    private async Task UpdatePlanForExistingProviderAsync(IEnumerable<Guid> organizationIds, Provider provider)
+    private async Task UpdateOrgPlanForExistingProviderAsync(IEnumerable<Guid> organizationIds, Provider provider)
     {
-        // Check if provider was created on or after November 6, 2023; if so, do not update the plan to the 2020 plan.
-        if (provider.CreationDate >= new DateTime(2023, 11, 6))
+        // if a provider was created before Nov 6, 2023.If true, the organization plan assigned to that provider is updated to a 2020 plan.
+        if (provider.CreationDate >= Constants.ProviderCreatedPriorNov62023)
         {
             return;
         }
@@ -408,11 +411,11 @@ public class ProviderService : IProviderService
         foreach (var orgId in organizationIds)
         {
             var organization = await _organizationRepository.GetByIdAsync(orgId);
-            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetPlanId(organization.PlanType));
-            var newPlanType = GetPlanTypeFromPlan(organization.Plan, organization);
+            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
+            var extractedPlanType = GetPlanTypeFromPlan(organization);
             if (subscriptionItem != null)
             {
-                await UpdateSubscriptionAsync(organization.GatewaySubscriptionId, subscriptionItem, GetPlanId(newPlanType));
+                await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType));
             }
 
             await _organizationRepository.UpsertAsync(organization);
@@ -421,39 +424,39 @@ public class ProviderService : IProviderService
 
     private async Task<Stripe.SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
     {
-        var subscrptionInfo = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
-        return subscrptionInfo.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
+        var subscriptionDetails = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
+        return subscriptionDetails.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
     }
 
-    private static string GetPlanId(PlanType planType)
+    private static string GetStripeSeatPlanId(PlanType planType)
     {
         return StaticStore.GetPlan(planType).PasswordManager.StripeSeatPlanId;
     }
 
-    private async Task UpdateSubscriptionAsync(string subscriptionId, Stripe.SubscriptionItem subscriptionItem, string newPlanId)
+    private async Task UpdateSubscriptionAsync(Stripe.SubscriptionItem subscriptionItem, string extractedPlanType)
     {
         try
         {
-            if (subscriptionItem.Plan.Id != newPlanId)
+            if (subscriptionItem.Plan.Id != extractedPlanType)
             {
-                await _stripeAdapter.SubscriptionUpdateAsync(subscriptionId,
+                await _stripeAdapter.SubscriptionUpdateAsync(subscriptionItem.Subscription,
                     new Stripe.SubscriptionUpdateOptions
                     {
                         Items = new List<Stripe.SubscriptionItemOptions>
                         {
-                            new Stripe.SubscriptionItemOptions { Id = subscriptionItem.Id, Price = newPlanId },
+                            new() { Id = subscriptionItem.Id, Price = extractedPlanType },
                         }
                     });
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             throw new Exception("Unable to update existing plan on stripe");
         }
 
     }
 
-    private static PlanType GetPlanTypeFromPlan(string plan, Organization organization)
+    private static PlanType GetPlanTypeFromPlan(Organization organization)
     {
         var planTypeMappings = new Dictionary<PlanType, string>
         {
@@ -473,14 +476,14 @@ public class ProviderService : IProviderService
             }
         }
 
-        throw new BadRequestException("Invalid PlanType selected");
+        throw new ArgumentException("Invalid PlanType selected");
     }
 
     private static string GetEnumDisplayName(Enum value)
     {
         var fieldInfo = value.GetType().GetField(value.ToString());
 
-        var displayAttribute = (DisplayAttribute)Attribute.GetCustomAttribute(fieldInfo, typeof(DisplayAttribute));
+        var displayAttribute = (DisplayAttribute)Attribute.GetCustomAttribute(fieldInfo!, typeof(DisplayAttribute));
 
         return displayAttribute?.Name ?? value.ToString();
     }
