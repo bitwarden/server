@@ -21,7 +21,6 @@
     CONSTRAINT [FK_Send_Cipher] FOREIGN KEY ([CipherId]) REFERENCES [dbo].[Cipher]([[Id]])
 );
 
- 
 GO
 CREATE NONCLUSTERED INDEX [IX_Send_UserId_OrganizationId]
     ON [dbo].[Send]([UserId] ASC, [OrganizationId] ASC);
