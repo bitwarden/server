@@ -414,7 +414,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         var entities = await dbContext.AccessPolicies.Where(ap =>
                 ap.Discriminator == AccessPolicyDiscriminator.ServiceAccountProject &&
-                (((ServiceAccountProjectAccessPolicy)ap).GrantedProjectId == projectId))
+                ((ServiceAccountProjectAccessPolicy)ap).GrantedProjectId == projectId)
             .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
             .ToListAsync();
 
