@@ -437,7 +437,7 @@ public class ProviderService : IProviderService
     {
         try
         {
-            if (subscriptionItem.Plan.Id != extractedPlanType)
+            if (subscriptionItem.Price.Id != extractedPlanType)
             {
                 await _stripeAdapter.SubscriptionUpdateAsync(subscriptionItem.Subscription,
                     new Stripe.SubscriptionUpdateOptions

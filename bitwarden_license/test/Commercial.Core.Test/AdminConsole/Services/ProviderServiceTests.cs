@@ -18,6 +18,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
+using Stripe;
 using Xunit;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 using ProviderUser = Bit.Core.AdminConsole.Entities.Provider.ProviderUser;
@@ -607,7 +608,7 @@ public class ProviderServiceTests
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var ExpectedPlanType = PlanType.EnterpriseAnnually;
+        var expectedPlanType = PlanType.EnterpriseAnnually;
         foreach (var organization in organizations)
         {
             organization.PlanType = PlanType.EnterpriseAnnually;
@@ -624,7 +625,123 @@ public class ProviderServiceTests
 
         foreach (var organization in organizations)
         {
-            Assert.Equal(organization.PlanType, ExpectedPlanType);
+            Assert.Equal(organization.PlanType, expectedPlanType);
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationsToReseller_WithResellerProvider_CreateBeforeNov162023_PlanTypeUpdated(
+        Provider provider, ICollection<Organization> organizations,
+        SutProvider<ProviderService> sutProvider)
+    {
+        var newCreationDate = DateTime.UtcNow.AddMonths(-3);
+        BackdateProviderCreationDate(provider, newCreationDate);
+        provider.Type = ProviderType.Reseller;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var expectedPlanType = PlanType.EnterpriseAnnually2020;
+        var expectedPlanId = "2020-enterprise-org-seat-annually";
+        foreach (var organization in organizations)
+        {
+            organization.PlanType = PlanType.EnterpriseAnnually;
+            organization.Plan = "Enterprise (Annually)";
+        }
+
+        var organizationIds = organizations.Select(o => o.Id).ToArray();
+        foreach (var organization in organizations)
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            var subscriptionItem = GetSubscription(organization.GatewaySubscriptionId);
+            sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+                .Returns(GetSubscription(organization.GatewaySubscriptionId));
+            await sutProvider.GetDependency<IStripeAdapter>().SubscriptionUpdateAsync(
+                organization.GatewaySubscriptionId, SubscriptionUpdateRequest(expectedPlanId, subscriptionItem));
+        }
+
+        await sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds);
+
+        await providerOrganizationRepository.Received(1).CreateManyAsync(Arg.Is<IEnumerable<ProviderOrganization>>(i =>
+            i.All(po => po.ProviderId == provider.Id && organizations.Any(o => o.Id == po.OrganizationId))));
+        await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventsAsync(
+            Arg.Is<IEnumerable<(ProviderOrganization, EventType, DateTime?)>>(events => events.All(e =>
+                e.Item1.ProviderId == provider.Id && organizationIds.Contains(e.Item1.OrganizationId) &&
+                e.Item2 == EventType.ProviderOrganization_Added)));
+
+        foreach (var organization in organizations)
+        {
+            Assert.Equal(organization.PlanType, expectedPlanType);
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationsToReseller_WithResellerProvider_CreateBeforeNov162023_WithInvalidPlanType_Throws(
+        Provider provider, ICollection<Organization> organizations,
+        SutProvider<ProviderService> sutProvider)
+    {
+        var newCreationDate = DateTime.UtcNow.AddMonths(-3);
+        BackdateProviderCreationDate(provider, newCreationDate);
+        provider.Type = ProviderType.Reseller;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var expectedPlanId = "2020-enterprise-org-seat-annually";
+        foreach (var organization in organizations)
+        {
+            organization.PlanType = PlanType.FamiliesAnnually;
+            organization.Plan = "Families";
+        }
+
+        var organizationIds = organizations.Select(o => o.Id).ToArray();
+        foreach (var organization in organizations)
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            var subscriptionItem = GetSubscription(organization.GatewaySubscriptionId);
+            sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+                .Returns(GetSubscription(organization.GatewaySubscriptionId));
+            await sutProvider.GetDependency<IStripeAdapter>().SubscriptionUpdateAsync(
+                organization.GatewaySubscriptionId, SubscriptionUpdateRequest(expectedPlanId, subscriptionItem));
+        }
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds));
+        Assert.Equal("Invalid PlanType selected", exception.Message);
+    }
+
+    private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
+        new()
+        {
+            Items = new List<Stripe.SubscriptionItemOptions>
+            {
+                new() { Id = subscriptionItem.Id, Price = expectedPlanId },
+            }
+        };
+
+    private static Subscription GetSubscription(string subscriptionId) =>
+        new()
+        {
+            Id = subscriptionId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = "sub_item_123",
+                        Price = new Price()
+                        {
+                            Id = "2023-enterprise-org-seat-annually"
+                        }
+                    }
+                }
+            }
+        };
+
+    private static void BackdateProviderCreationDate(Provider provider, DateTime newCreationDate)
+    {
+        // Set the CreationDate to the desired value
+        provider.GetType().GetProperty("CreationDate")?.SetValue(provider, newCreationDate, null);
     }
 }
