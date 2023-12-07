@@ -5,7 +5,7 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class ProjectServiceAccountsAccessPoliciesResponseModel : ResponseModel
 {
-    private const string _objectName = "serviceAccountAccessPolicies";
+    private const string _objectName = "projectServiceAccountsAccessPolicies";
 
     public ProjectServiceAccountsAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies)
         : base(_objectName)
