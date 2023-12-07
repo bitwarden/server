@@ -116,6 +116,13 @@ public class Send : ITableObject<Guid>
     /// the email should be hidden.
     /// </value>
     public bool? HideEmail { get; set; }
+
+    /// <summary>
+    /// Identifies the Cipher associated with this send.
+    /// </summary>
+    /// <remarks>
+    /// Not presently in-use by client applications.
+    /// </remarks>
     public Guid? CipherId { get; set; }
 
     /// <summary>

@@ -17,7 +17,8 @@
     [CipherId]       UNIQUEIDENTIFIER NULL
     CONSTRAINT [PK_Send] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Send_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
-    CONSTRAINT [FK_Send_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
+    CONSTRAINT [FK_Send_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
+    CONSTRAINT [FK_Send_Cipher] FOREIGN KEY ([CipherId]) REFERENCES [dbo].[Cipher]([[Id]])
 );
 
  
@@ -28,4 +29,3 @@ CREATE NONCLUSTERED INDEX [IX_Send_UserId_OrganizationId]
 GO
 CREATE NONCLUSTERED INDEX [IX_Send_DeletionDate]
     ON [dbo].[Send]([DeletionDate] ASC);
-
