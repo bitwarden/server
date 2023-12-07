@@ -2359,12 +2359,8 @@ public class OrganizationService : IOrganizationService
     public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException("Invalid plan selected.");
-        }
 
-        if (plan.Disabled)
+        if (plan!.Disabled)
         {
             throw new BadRequestException("Plan not found.");
         }

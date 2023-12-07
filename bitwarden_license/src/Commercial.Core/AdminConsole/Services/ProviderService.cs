@@ -387,7 +387,7 @@ public class ProviderService : IProviderService
         }
 
         var orgIdsList = organizationIds.ToList();
-        await UpdateOrgPlanForExistingProviderAsync(orgIdsList, provider);
+        await ApplyProviderPriceRateAsync(orgIdsList, provider);
         var existingProviderOrganizationsCount = await _providerOrganizationRepository.GetCountByOrganizationIdsAsync(orgIdsList);
         if (existingProviderOrganizationsCount > 0)
         {
@@ -400,7 +400,7 @@ public class ProviderService : IProviderService
         await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
-    private async Task UpdateOrgPlanForExistingProviderAsync(IEnumerable<Guid> organizationIds, Provider provider)
+    private async Task ApplyProviderPriceRateAsync(IEnumerable<Guid> organizationIds, Provider provider)
     {
         // if a provider was created before Nov 6, 2023.If true, the organization plan assigned to that provider is updated to a 2020 plan.
         if (provider.CreationDate >= Constants.ProviderCreatedPriorNov62023)
@@ -412,7 +412,7 @@ public class ProviderService : IProviderService
         {
             var organization = await _organizationRepository.GetByIdAsync(orgId);
             var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
-            var extractedPlanType = GetPlanTypeFromPlan(organization);
+            var extractedPlanType = PlanTypeMappings(organization);
             if (subscriptionItem != null)
             {
                 await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType));
@@ -456,7 +456,7 @@ public class ProviderService : IProviderService
 
     }
 
-    private static PlanType GetPlanTypeFromPlan(Organization organization)
+    private static PlanType PlanTypeMappings(Organization organization)
     {
         var planTypeMappings = new Dictionary<PlanType, string>
         {
