@@ -3,6 +3,7 @@ using System.Text.Json;
 using AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -106,7 +107,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -115,7 +116,7 @@ public class SyncControllerTests
 
         // Returns for methods only called if we have enabled orgs
         collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
 
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
@@ -197,7 +198,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -271,7 +272,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -280,7 +281,7 @@ public class SyncControllerTests
 
         // Returns for methods only called if we have enabled orgs
         collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
 
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
@@ -334,7 +335,7 @@ public class SyncControllerTests
             .GetManyByUserIdAsync(default);
 
         await cipherRepository.ReceivedWithAnyArgs(1)
-            .GetManyByUserIdAsync(default);
+            .GetManyByUserIdAsync(default, useFlexibleCollections: default);
 
         await sendRepository.ReceivedWithAnyArgs(1)
             .GetManyByUserIdAsync(default);
@@ -345,7 +346,7 @@ public class SyncControllerTests
             await collectionRepository.ReceivedWithAnyArgs(1)
                 .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(1)
-                .GetManyByUserIdAsync(default);
+                .GetManyByUserIdAsync(default, default);
         }
         else
         {
@@ -353,7 +354,7 @@ public class SyncControllerTests
             await collectionRepository.ReceivedWithAnyArgs(0)
                 .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(0)
-                .GetManyByUserIdAsync(default);
+                .GetManyByUserIdAsync(default, default);
         }
 
         await userService.ReceivedWithAnyArgs(1)
