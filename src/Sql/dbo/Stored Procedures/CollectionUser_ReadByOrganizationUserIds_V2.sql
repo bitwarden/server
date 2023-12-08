@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[CollectionUser_ReadByOrganizationUserIds]
+CREATE PROCEDURE [dbo].[CollectionUser_ReadByOrganizationUserIds_V2]
     @OrganizationUserIds [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -9,7 +9,7 @@ BEGIN
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
-        [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = OU.[Id]
+        [dbo].[CollectionUser] CU ON CU.[OrganizationUserId] = OU.[Id]
     INNER JOIN
         @OrganizationUserIds OUI ON OUI.[Id] = OU.[Id]
 END
