@@ -113,9 +113,9 @@
       },
       "Braintree": {
         "type": "Direct",
-        "requested": "[5.19.0, )",
-        "resolved": "5.19.0",
-        "contentHash": "B60wIX54g78nMsy5cJkvSfqs1VasYDXWFZQW0cUQ4QeW8Y5jPyBSaoxHwKC806lXUDaKC8kr5Y7Q6EdsBkPANQ==",
+        "requested": "[5.21.0, )",
+        "resolved": "5.21.0",
+        "contentHash": "F29IvDV95XNUeSaUksXfSKasOI6QROdgnIJ3dbzX0uRHjEGdErPSXFsUBxHHkrNQcP8RUNa+UqveoH8v8m4I9A==",
         "dependencies": {
           "Microsoft.CSharp": "4.7.0",
           "Newtonsoft.Json": "13.0.1",
