@@ -1,5 +1,4 @@
 ﻿using System.Linq.Expressions;
-using Amazon.SimpleEmail.Model;
 using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Models.Data;
@@ -414,7 +413,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         var entities = await dbContext.AccessPolicies.Where(ap =>
                 ap.Discriminator == AccessPolicyDiscriminator.ServiceAccountProject &&
-                ((ServiceAccountProjectAccessPolicy)ap).GrantedProjectId == projectId)
+                (((ServiceAccountProjectAccessPolicy)ap).GrantedProjectId == projectId))
             .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
             .ToListAsync();
 
@@ -422,7 +421,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> ReplaceProjectServiceAccountsAsync(
-       ProjectServiceAccountsAccessPolicies newProjectServiceAccountsAccessPolicies) 
+       ProjectServiceAccountsAccessPolicies newProjectServiceAccountsAccessPolicies)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -471,7 +470,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                     ((UserServiceAccountAccessPolicy)e).OrganizationUserId == ap.OrganizationUserId),
                 GroupServiceAccountAccessPolicy ap => groupPolicyEntities.FirstOrDefault(e =>
                     ((GroupServiceAccountAccessPolicy)e).GroupId == ap.GroupId),
-                      _ => null
+                _ => null
             };
 
             if (currentEntity != null)

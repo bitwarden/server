@@ -6,7 +6,6 @@ using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.OData.Edm;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 
@@ -18,7 +17,6 @@ public class
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
-    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ISameOrganizationQuery _sameOrganizationQuery;
 
     public ProjectServiceAccountsAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
@@ -31,7 +29,6 @@ public class
         _accessClientQuery = accessClientQuery;
         _sameOrganizationQuery = sameOrganizationQuery;
         _projectRepository = projectRepository;
-        _serviceAccountRepository = serviceAccountRepository;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -72,7 +69,7 @@ public class
             if (resource.ServiceAccountProjectsAccessPolicies != null && resource.ServiceAccountProjectsAccessPolicies.Any())
             {
                 var serviceAccountIds = resource.ServiceAccountProjectsAccessPolicies.Select(ap => ap.ServiceAccountId!.Value).ToList();
-                if(! await _sameOrganizationQuery.ServiceAccountsInTheSameOrgAsync(serviceAccountIds, resource.OrganizationId))
+                if (!await _sameOrganizationQuery.ServiceAccountsInTheSameOrgAsync(serviceAccountIds, resource.OrganizationId))
                 {
                     return;
                 }

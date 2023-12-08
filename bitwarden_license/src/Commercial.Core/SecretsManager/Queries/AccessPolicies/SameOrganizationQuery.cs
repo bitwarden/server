@@ -35,8 +35,8 @@ public class SameOrganizationQuery : ISameOrganizationQuery
 
     public async Task<bool> ServiceAccountsInTheSameOrgAsync(List<Guid> serviceAccountIds, Guid organizationId)
     {
-        var serviceAccounts = await _serviceAccountRepository.GetManyByIds(serviceAccountIds);
+        var serviceAccounts = (await _serviceAccountRepository.GetManyByIds(serviceAccountIds)).ToList();
         return serviceAccounts.All(serviceAccount => serviceAccount.OrganizationId == organizationId) &&
-               serviceAccounts.Count() == serviceAccountIds.Count;
+               serviceAccounts.Count == serviceAccountIds.Count;
     }
 }

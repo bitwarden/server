@@ -378,31 +378,6 @@ public class AccessPoliciesController : Controller
         return (accessClient, userId);
     }
 
-    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckServiceAccountHasWriteAccessToProjectAsync(ServiceAccount serviceAccount, Guid projectId)
-    {
-        if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.ServiceAccount => (await _projectRepository.AccessToProjectAsync(projectId, serviceAccount.Id, accessClient)).Write,
-            AccessClientType.User => throw new NotImplementedException(),
-            AccessClientType.Organization => throw new NotImplementedException(),
-            _ => false,
-        }; ;
-
-        if (!hasAccess)
-        {
-            throw new NotFoundException();
-        }
-
-        return (accessClient, userId);
-    }
-
     private async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientTypeAsync(Guid organizationId)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
