@@ -1288,10 +1288,10 @@
       },
       "SendGrid": {
         "type": "Transitive",
-        "resolved": "9.27.0",
-        "contentHash": "kMyXRQ8hmN2bG3tYZ7T31Ufl1kXkpuP5+WBh1BJ32WY31DTnBTCVGURoIqfbTo/tRuQfAYLxra6C8cQGN6kk+A==",
+        "resolved": "9.28.1",
+        "contentHash": "LyIkgjd+svXuQxpqe5pvyOccyUdKcDqwnBNDPjyCngkKeVpXAOTAr3U1DBLWqHEbFHvu2UBFki3SJzDwxvJdfA==",
         "dependencies": {
-          "Newtonsoft.Json": "9.0.1",
+          "Newtonsoft.Json": "13.0.1",
           "starkbank-ecdsa": "[1.3.3, 2.0.0)"
         }
       },
@@ -2864,7 +2864,7 @@
           "Newtonsoft.Json": "13.0.3",
           "Otp.NET": "1.2.2",
           "Quartz": "3.4.0",
-          "SendGrid": "9.27.0",
+          "SendGrid": "9.28.1",
           "Sentry.Serilog": "3.16.0",
           "Serilog.AspNetCore": "5.0.0",
           "Serilog.Extensions.Logging": "3.1.0",
