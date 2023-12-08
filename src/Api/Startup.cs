@@ -9,6 +9,8 @@ using IdentityModel;
 using System.Globalization;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Validators;
+using Bit.Api.Vault.Models.Request;
+using Bit.Api.Vault.Validators;
 using Bit.Core.Auth.Entities;
 using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
@@ -21,6 +23,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.Vault.Entities;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -141,6 +144,12 @@ public class Startup
         services
             .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
                 EmergencyAccessRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>,
+                CipherRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>,
+                FolderRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);
