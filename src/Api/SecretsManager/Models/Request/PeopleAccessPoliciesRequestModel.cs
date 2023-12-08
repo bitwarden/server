@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Api.Utilities;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 
@@ -9,29 +10,6 @@ public class PeopleAccessPoliciesRequestModel
     public IEnumerable<AccessPolicyRequest> UserAccessPolicyRequests { get; set; }
 
     public IEnumerable<AccessPolicyRequest> GroupAccessPolicyRequests { get; set; }
-
-    private static void CheckForDistinctAccessPolicies(IReadOnlyCollection<BaseAccessPolicy> accessPolicies)
-    {
-        var distinctAccessPolicies = accessPolicies.DistinctBy(baseAccessPolicy =>
-        {
-            return baseAccessPolicy switch
-            {
-                UserProjectAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.OrganizationUserId, ap.GrantedProjectId),
-                GroupProjectAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.GroupId, ap.GrantedProjectId),
-                ServiceAccountProjectAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.ServiceAccountId,
-                    ap.GrantedProjectId),
-                UserServiceAccountAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.OrganizationUserId,
-                    ap.GrantedServiceAccountId),
-                GroupServiceAccountAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.GroupId, ap.GrantedServiceAccountId),
-                _ => throw new ArgumentException("Unsupported access policy type provided.", nameof(baseAccessPolicy))
-            };
-        }).ToList();
-
-        if (accessPolicies.Count != distinctAccessPolicies.Count)
-        {
-            throw new BadRequestException("Resources must be unique");
-        }
-    }
 
     public ProjectPeopleAccessPolicies ToProjectPeopleAccessPolicies(Guid grantedProjectId, Guid organizationId)
     {
@@ -51,7 +29,7 @@ public class PeopleAccessPoliciesRequestModel
             policies.AddRange(groupAccessPolicies);
         }
 
-        CheckForDistinctAccessPolicies(policies);
+        AccessPolicyHelpers.CheckForDistinctAccessPolicies(policies);
 
         return new ProjectPeopleAccessPolicies
         {
