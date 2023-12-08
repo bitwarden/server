@@ -6,20 +6,20 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
+namespace Bit.Api.Vault.AuthorizationHandlers.Groups;
 
 /// <summary>
-/// Handles authorization logic for Collection operations.
+/// Handles authorization logic for Group operations.
 /// This uses new logic implemented in the Flexible Collections initiative.
 /// </summary>
-public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOperationRequirement>
+public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement>
 {
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
     private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
-    public CollectionAuthorizationHandler(
+    public GroupAuthorizationHandler(
         ICurrentContext currentContext,
         IFeatureService featureService)
     {
@@ -28,7 +28,7 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        CollectionOperationRequirement requirement)
+        GroupOperationRequirement requirement)
     {
         if (!FlexibleCollectionsIsEnabled)
         {
@@ -53,55 +53,31 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
 
         switch (requirement)
         {
-            case not null when requirement.Name == nameof(CollectionOperations.ReadAll):
+            case not null when requirement.Name == nameof(GroupOperations.ReadAll):
                 await CanReadAllAsync(context, requirement, org);
                 break;
-
-            case not null when requirement.Name == nameof(CollectionOperations.ReadAllWithAccess):
-                await CanReadAllWithAccessAsync(context, requirement, org);
-                break;
         }
     }
 
-    private async Task CanReadAllAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
+    private async Task CanReadAllAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement,
         CurrentContextOrganization? org)
     {
-        // Owners, Admins, and users with EditAnyCollection, DeleteAnyCollection,
-        // or AccessImportExport permission can always read a collection
+        // If the limit collection management setting is disabled, allow any user to read all groups
+        // Otherwise, Owners, Admins, and users with any of ManageGroups, ManageUsers, EditAnyCollection, DeleteAnyCollection, CreateNewCollections permissions can always read all groups
         if (org is
+        { LimitCollectionCreationDeletion: false } or
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.ManageGroups: true } or
+        { Permissions.ManageUsers: true } or
         { Permissions.EditAnyCollection: true } or
         { Permissions.DeleteAnyCollection: true } or
-        { Permissions.AccessImportExport: true } or
-        { Permissions.ManageGroups: true })
+        { Permissions.CreateNewCollections: true })
         {
             context.Succeed(requirement);
             return;
         }
 
-        // Allow provider users to read collections if they are a provider for the target organization
-        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
-        {
-            context.Succeed(requirement);
-        }
-    }
-
-    private async Task CanReadAllWithAccessAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
-        CurrentContextOrganization? org)
-    {
-        // Owners, Admins, and users with EditAnyCollection or DeleteAnyCollection
-        // permission can always read a collection
-        if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.EditAnyCollection: true } or
-        { Permissions.DeleteAnyCollection: true } or
-        { Permissions.ManageUsers: true })
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
-        // Allow provider users to read collections if they are a provider for the target organization
+        // Allow provider users to read all groups if they are a provider for the target organization
         if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
         {
             context.Succeed(requirement);
