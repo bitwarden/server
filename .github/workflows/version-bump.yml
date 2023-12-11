@@ -6,18 +6,18 @@ on:
   workflow_call:
     inputs:
       version_number:
-        description: "New Version"
+        description: "Version to bump to (example: '2024.1.0')"
         required: true
         type: string
   workflow_dispatch:
     inputs:
       version_number:
-        description: "New Version"
+        description: "Version to bump to (example: '2024.1.0')"
         required: true
 
 jobs:
   bump_version:
-    name: "Bump Version to ${{ inputs.version_number }}"
+    name: "Bump Version to v${{ inputs.version_number }}"
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Branch
