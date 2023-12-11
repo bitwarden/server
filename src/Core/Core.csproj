@@ -30,9 +30,9 @@
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
     <PackageReference Include="DnsClient" Version="1.7.0" />
     <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
-    <PackageReference Include="Handlebars.Net" Version="2.1.2" />
-    <PackageReference Include="MailKit" Version="4.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.4" />
+    <PackageReference Include="Handlebars.Net" Version="2.1.4" />
+    <PackageReference Include="MailKit" Version="4.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.25" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.1.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.0.1" />
@@ -40,23 +40,23 @@
     <PackageReference Include="Azure.Identity" Version="1.10.2"/>
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.25" />
     <PackageReference Include="Quartz" Version="3.4.0" />
-    <PackageReference Include="SendGrid" Version="9.27.0" />
+    <PackageReference Include="SendGrid" Version="9.28.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="5.0.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0" />
-    <PackageReference Include="Serilog.Extensions.Logging.File" Version="2.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
     <PackageReference Include="Sentry.Serilog" Version="3.16.0" />
     <PackageReference Include="Duende.IdentityServer" Version="6.3.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Serilog.Sinks.AzureCosmosDB" Version="2.0.0" />
     <PackageReference Include="Serilog.Sinks.SyslogMessages" Version="2.0.9" />
     <PackageReference Include="AspNetCoreRateLimit" Version="4.0.2" />
-    <PackageReference Include="Braintree" Version="5.19.0" />
+    <PackageReference Include="Braintree" Version="5.21.0" />
     <PackageReference Include="Stripe.net" Version="40.0.0" />
     <PackageReference Include="Otp.NET" Version="1.2.2" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.6" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.25" />
     <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.0.0" />
   </ItemGroup>
 
