@@ -16,8 +16,8 @@ on:
         required: true
 
 jobs:
-  bump_props_version:
-    name: "Create version_bump_${{ github.event.inputs.version_number }} branch"
+  bump_version:
+    name: "Bump Version to ${{ inputs.version_number }}"
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Branch
@@ -121,4 +121,4 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
-        run: gh pr merge $PR_NUMBER --merge --auto --delete-branch
+        run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
