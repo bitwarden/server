@@ -52,6 +52,9 @@ jobs:
           git switch -c $NAME
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
+      - name: Install xmllint
+        run: sudo apt install -y libxml2-utils
+
       - name: Verify input version
         env:
           NEW_VERSION: ${{ inputs.version_number }}
