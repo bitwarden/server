@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -94,9 +94,14 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.PlanType = planType;
+        organization.Seats = 20;
 
         const int updateSmSeats = 15;
         const int updateSmServiceAccounts = 450;
+
+        // Ensure that SmSeats is different from the original organization.SmSeats
+        organization.SmSeats = updateSmSeats + 5;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
             SmSeats = updateSmSeats,
@@ -298,10 +303,15 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int seatCount = 10;
+
+        // Make sure Password Manager seats is greater or equal to Secrets Manager seats
+        organization.Seats = seatCount;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmSeats = 10,
-            MaxAutoscaleSmSeats = 10
+            SmSeats = seatCount,
+            MaxAutoscaleSmSeats = seatCount
         };
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
@@ -379,8 +389,8 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     {
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmSeats = 15,
-            MaxAutoscaleSmSeats = 10
+            SmSeats = organization.SmSeats + 10,
+            MaxAutoscaleSmSeats = organization.SmSeats + 5
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -509,10 +519,16 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int smServiceAccount = 15;
+        const int maxAutoscaleSmServiceAccounts = 10;
+
+        organization.SmServiceAccounts = smServiceAccount - 5;
+        organization.MaxAutoscaleSmServiceAccounts = 2 * smServiceAccount;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmServiceAccounts = 15,
-            MaxAutoscaleSmServiceAccounts = 10
+            SmServiceAccounts = smServiceAccount,
+            MaxAutoscaleSmServiceAccounts = maxAutoscaleSmServiceAccounts
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -527,9 +543,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int newSmServiceAccounts = 199;
+
+        organization.SmServiceAccounts = newSmServiceAccounts - 10;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmServiceAccounts = 199,
+            SmServiceAccounts = newSmServiceAccounts,
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -577,10 +597,16 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int smSeats = 10;
+        const int maxAutoscaleSmSeats = 5;
+
+        organization.SmSeats = smSeats - 1;
+        organization.MaxAutoscaleSmSeats = smSeats * 2;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmSeats = 10,
-            MaxAutoscaleSmSeats = 5
+            SmSeats = smSeats,
+            MaxAutoscaleSmSeats = maxAutoscaleSmSeats
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
