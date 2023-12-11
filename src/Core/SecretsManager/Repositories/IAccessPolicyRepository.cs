@@ -11,7 +11,6 @@ public interface IAccessPolicyRepository
     Task<bool> AccessPolicyExists(BaseAccessPolicy baseAccessPolicy);
     Task<BaseAccessPolicy?> GetByIdAsync(Guid id);
     Task<IEnumerable<BaseAccessPolicy>> GetManyByGrantedProjectIdAsync(Guid id, Guid userId);
-    Task<IEnumerable<BaseAccessPolicy>> GetManyByGrantedServiceAccountIdAsync(Guid id, Guid userId);
     Task<IEnumerable<BaseAccessPolicy>> GetManyByServiceAccountIdAsync(Guid id, Guid userId,
         AccessClientType accessType);
     Task ReplaceAsync(BaseAccessPolicy baseAccessPolicy);
@@ -19,4 +18,6 @@ public interface IAccessPolicyRepository
     Task<IEnumerable<BaseAccessPolicy>> GetPeoplePoliciesByGrantedProjectIdAsync(Guid id, Guid userId);
     Task<IEnumerable<BaseAccessPolicy>> ReplaceProjectPeopleAsync(ProjectPeopleAccessPolicies peopleAccessPolicies, Guid userId);
     Task<PeopleGrantees> GetPeopleGranteesAsync(Guid organizationId, Guid currentUserId);
+    Task<IEnumerable<BaseAccessPolicy>> GetPeoplePoliciesByGrantedServiceAccountIdAsync(Guid id, Guid userId);
+    Task<IEnumerable<BaseAccessPolicy>> ReplaceServiceAccountPeopleAsync(ServiceAccountPeopleAccessPolicies peopleAccessPolicies, Guid userId);
 }

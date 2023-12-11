@@ -80,6 +80,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
+    public virtual string DevelopmentDirectory { get; set; }
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -401,7 +402,7 @@ public class GlobalSettings : IGlobalSettings
         /// <value></value>
         public string CertificatePassword { get; set; }
         /// <summary>
-        /// The thumbprint of the certificate in the X.509 certificate store for personal certificates for the user account running Bitwarden. 
+        /// The thumbprint of the certificate in the X.509 certificate store for personal certificates for the user account running Bitwarden.
         /// </summary>
         /// <value></value>
         public string CertificateThumbprint { get; set; }
