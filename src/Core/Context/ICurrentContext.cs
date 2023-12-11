@@ -45,8 +45,11 @@ public interface ICurrentContext
     Task<bool> AccessReports(Guid orgId);
     Task<bool> EditAnyCollection(Guid orgId);
     Task<bool> ViewAllCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> EditAssignedCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> DeleteAssignedCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> ViewAssignedCollections(Guid orgId);
     Task<bool> ManageGroups(Guid orgId);
     Task<bool> ManagePolicies(Guid orgId);

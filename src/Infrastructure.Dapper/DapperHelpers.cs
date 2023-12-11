@@ -107,7 +107,8 @@ public static class DapperHelpers
         return organizationSponsorships.BuildTable(table, columnData);
     }
 
-    private static DataTable BuildTable<T>(this IEnumerable<T> entities, DataTable table, List<(string name, Type type, Func<T, object> getter)> columnData)
+    public static DataTable BuildTable<T>(this IEnumerable<T> entities, DataTable table,
+        List<(string name, Type type, Func<T, object> getter)> columnData)
     {
         foreach (var (name, type, getter) in columnData)
         {
