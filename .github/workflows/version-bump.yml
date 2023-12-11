@@ -1,7 +1,14 @@
 ---
 name: Version Bump
+run-name: Version Bump - v${{ inputs.version_number }}
 
 on:
+  workflow_call:
+    inputs:
+      version_number:
+        description: "New Version"
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       version_number:
@@ -39,14 +46,14 @@ jobs:
       - name: Create Version Branch
         id: create-branch
         run: |
-          NAME=version_bump_${{ github.ref_name }}_${{ github.event.inputs.version_number }}
+          NAME=version_bump_${{ github.ref_name }}_${{ inputs.version_number }}
           git switch -c $NAME
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Bump Version - Props
         uses: bitwarden/gh-actions/version-bump@main
         with:
-          version: ${{ github.event.inputs.version_number }}
+          version: ${{ inputs.version_number }}
           file_path: "Directory.Build.props"
 
       - name: Refresh lockfiles
@@ -69,7 +76,7 @@ jobs:
 
       - name: Commit files
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-        run: git commit -m "Bumped version to ${{ github.event.inputs.version_number }}" -a
+        run: git commit -m "Bumped version to ${{ inputs.version_number }}" -a
 
       - name: Push changes
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
@@ -79,12 +86,13 @@ jobs:
 
       - name: Create Version PR
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        id: create-pr
         env:
           PR_BRANCH: ${{ steps.create-branch.outputs.name }}
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          TITLE: "Bump version to ${{ github.event.inputs.version_number }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          TITLE: "Bump version to ${{ inputs.version_number }}"
         run: |
-          gh pr create --title "$TITLE" \
+          PR_URL=$(gh pr create --title "$TITLE" \
             --base "$GITHUB_REF" \
             --head "$PR_BRANCH" \
             --label "version update" \
@@ -98,4 +106,18 @@ jobs:
               - [X] Other
 
               ## Objective
-              Automated version bump to ${{ github.event.inputs.version_number }}"
+              Automated version bump to ${{ inputs.version_number }}")
+          echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
+
+      - name: Approve PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr review $PR_NUMBER --approve
+
+      - name: Merge PR
+        env:
+          #GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr merge $PR_NUMBER --merge --auto --delete-branch
