@@ -782,6 +782,7 @@ public class OrganizationsController : Controller
 
     [HttpPut("{id}/collection-management")]
     [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
+    [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
@@ -793,6 +794,14 @@ public class OrganizationsController : Controller
         if (!await _currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
+        }
+
+        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+
+        if (!v1Enabled)
+        {
+            // V1 is disabled, ensure V1 setting doesn't change
+            model.AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization), eventType: EventType.Organization_CollectionManagement_Updated);

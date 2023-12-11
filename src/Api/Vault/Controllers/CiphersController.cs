@@ -40,6 +40,10 @@ public class CiphersController : Controller
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
+    private readonly IFeatureService _featureService;
+
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -50,7 +54,8 @@ public class CiphersController : Controller
         IProviderService providerService,
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -61,13 +66,14 @@ public class CiphersController : Controller
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
-    public async Task<CipherResponseModel> Get(string id)
+    public async Task<CipherResponseModel> Get(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null)
         {
             throw new NotFoundException();
@@ -91,17 +97,16 @@ public class CiphersController : Controller
 
     [HttpGet("{id}/full-details")]
     [HttpGet("{id}/details")]
-    public async Task<CipherDetailsResponseModel> GetDetails(string id)
+    public async Task<CipherDetailsResponseModel> GetDetails(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipherId = new Guid(id);
-        var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null)
         {
             throw new NotFoundException();
         }
 
-        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipherId);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
         return new CipherDetailsResponseModel(cipher, _globalSettings, collectionCiphers);
     }
 
@@ -111,11 +116,11 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var hasOrgs = _currentContext.Organizations?.Any() ?? false;
         // TODO: Use hasOrgs proper for cipher listing here?
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true || hasOrgs);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: true || hasOrgs);
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
         if (hasOrgs)
         {
-            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId, UseFlexibleCollections);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 
@@ -175,7 +180,7 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> Put(Guid id, [FromBody] CipherRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(id, userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null)
         {
             throw new NotFoundException();
@@ -184,7 +189,7 @@ public class CiphersController : Controller
         ValidateClientVersionForItemLevelEncryptionSupport(cipher);
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
-        var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
+        var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
             (Guid?)null : new Guid(model.OrganizationId);
         if (cipher.OrganizationId != modelOrgId)
@@ -215,7 +220,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
+        var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections)).Select(c => c.CollectionId).ToList();
         // object cannot be a descendant of CipherDetails, so let's clone it.
         var cipherClone = model.ToCipher(cipher).Clone();
         await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, collectionIds, true, false);
@@ -261,25 +266,23 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/partial")]
     [HttpPost("{id}/partial")]
-    public async Task<CipherResponseModel> PutPartial(string id, [FromBody] CipherPartialRequestModel model)
+    public async Task<CipherResponseModel> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
-        var cipherId = new Guid(id);
-        await _cipherRepository.UpdatePartialAsync(cipherId, userId, folderId, model.Favorite);
+        await _cipherRepository.UpdatePartialAsync(id, userId, folderId, model.Favorite);
 
-        var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
+        var cipher = await GetByIdAsync(id, userId);
         var response = new CipherResponseModel(cipher, _globalSettings);
         return response;
     }
 
     [HttpPut("{id}/share")]
     [HttpPost("{id}/share")]
-    public async Task<CipherResponseModel> PutShare(string id, [FromBody] CipherShareRequestModel model)
+    public async Task<CipherResponseModel> PutShare(Guid id, [FromBody] CipherShareRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipherId = new Guid(id);
-        var cipher = await _cipherRepository.GetByIdAsync(cipherId);
+        var cipher = await _cipherRepository.GetByIdAsync(id);
         if (cipher == null || cipher.UserId != userId ||
             !await _currentContext.OrganizationUser(new Guid(model.Cipher.OrganizationId)))
         {
@@ -293,17 +296,17 @@ public class CiphersController : Controller
         await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
             model.CollectionIds.Select(c => new Guid(c)), userId, model.Cipher.LastKnownRevisionDate);
 
-        var sharedCipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
+        var sharedCipher = await GetByIdAsync(id, userId);
         var response = new CipherResponseModel(sharedCipher, _globalSettings);
         return response;
     }
 
     [HttpPut("{id}/collections")]
     [HttpPost("{id}/collections")]
-    public async Task PutCollections(string id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
         {
@@ -332,10 +335,10 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
-    public async Task Delete(string id)
+    public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null)
         {
             throw new NotFoundException();
@@ -394,10 +397,10 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/delete")]
-    public async Task PutDelete(string id)
+    public async Task PutDelete(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null)
         {
             throw new NotFoundException();
@@ -450,10 +453,10 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/restore")]
-    public async Task<CipherResponseModel> PutRestore(string id)
+    public async Task<CipherResponseModel> PutRestore(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null)
         {
             throw new NotFoundException();
@@ -540,7 +543,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, false);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
         var shareCiphers = new List<(Cipher, DateTime?)>();
@@ -595,13 +598,12 @@ public class CiphersController : Controller
     }
 
     [HttpPost("{id}/attachment/v2")]
-    public async Task<AttachmentUploadDataResponseModel> PostAttachment(string id, [FromBody] AttachmentRequestModel request)
+    public async Task<AttachmentUploadDataResponseModel> PostAttachment(Guid id, [FromBody] AttachmentRequestModel request)
     {
-        var idGuid = new Guid(id);
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = request.AdminRequest ?
-            await _cipherRepository.GetOrganizationDetailsByIdAsync(idGuid) :
-            await _cipherRepository.GetByIdAsync(idGuid, userId);
+            await _cipherRepository.GetOrganizationDetailsByIdAsync(id) :
+            await GetByIdAsync(id, userId);
 
         if (cipher == null || (request.AdminRequest && (!cipher.OrganizationId.HasValue ||
             !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))))
@@ -629,11 +631,10 @@ public class CiphersController : Controller
     }
 
     [HttpGet("{id}/attachment/{attachmentId}/renew")]
-    public async Task<AttachmentUploadDataResponseModel> RenewFileUploadUrl(string id, string attachmentId)
+    public async Task<AttachmentUploadDataResponseModel> RenewFileUploadUrl(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipherId = new Guid(id);
-        var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
+        var cipher = await GetByIdAsync(id, userId);
         var attachments = cipher?.GetAttachments();
 
         if (attachments == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
@@ -652,7 +653,7 @@ public class CiphersController : Controller
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
     [DisableFormValueModelBinding]
-    public async Task PostFileForExistingAttachment(string id, string attachmentId)
+    public async Task PostFileForExistingAttachment(Guid id, string attachmentId)
     {
         if (!Request?.ContentType.Contains("multipart/") ?? true)
         {
@@ -660,7 +661,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+        var cipher = await GetByIdAsync(id, userId);
         var attachments = cipher?.GetAttachments();
         if (attachments == null || !attachments.ContainsKey(attachmentId))
         {
@@ -678,13 +679,12 @@ public class CiphersController : Controller
     [Obsolete("Deprecated Attachments API", false)]
     [RequestSizeLimit(Constants.FileSize101mb)]
     [DisableFormValueModelBinding]
-    public async Task<CipherResponseModel> PostAttachment(string id)
+    public async Task<CipherResponseModel> PostAttachment(Guid id)
     {
         ValidateAttachment();
 
-        var idGuid = new Guid(id);
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(idGuid, userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null)
         {
             throw new NotFoundException();
@@ -725,10 +725,10 @@ public class CiphersController : Controller
     }
 
     [HttpGet("{id}/attachment/{attachmentId}")]
-    public async Task<AttachmentResponseModel> GetAttachmentData(string id, string attachmentId)
+    public async Task<AttachmentResponseModel> GetAttachmentData(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+        var cipher = await GetByIdAsync(id, userId);
         var result = await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
         return new AttachmentResponseModel(result);
     }
@@ -756,11 +756,10 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}/attachment/{attachmentId}")]
     [HttpPost("{id}/attachment/{attachmentId}/delete")]
-    public async Task DeleteAttachment(string id, string attachmentId)
+    public async Task DeleteAttachment(Guid id, string attachmentId)
     {
-        var idGuid = new Guid(id);
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(idGuid, userId);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null)
         {
             throw new NotFoundException();
@@ -849,5 +848,10 @@ public class CiphersController : Controller
                 throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
             }
         }
+    }
+
+    private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
+    {
+        return await _cipherRepository.GetByIdAsync(cipherId, userId, UseFlexibleCollections);
     }
 }

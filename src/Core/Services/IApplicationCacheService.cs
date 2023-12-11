@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.Services;
