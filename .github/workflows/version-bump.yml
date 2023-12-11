@@ -49,9 +49,6 @@ jobs:
           version: ${{ github.event.inputs.version_number }}
           file_path: "Directory.Build.props"
 
-      - name: Refresh lockfiles
-        run: dotnet restore -f --force-evaluate --no-cache
-
       - name: Setup git
         run: |
           git config --local user.email "106330231+bitwarden-devops-bot@users.noreply.github.com"
