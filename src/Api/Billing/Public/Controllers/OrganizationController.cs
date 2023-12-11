@@ -43,10 +43,20 @@ public class OrganizationController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> PostSubscriptionAsync([FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
 
+        await UpdatePasswordManagerAsync(model, _currentContext.OrganizationId.Value);
+
+        await UpdateSecretsManagerAsync(model, _currentContext.OrganizationId.Value);
+
+        return new OkResult();
+    }
+
+    private async Task UpdatePasswordManagerAsync(OrganizationSubscriptionUpdateRequestModel model, Guid organizationId)
+    {
         if (model.PasswordManager != null)
         {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
             model.PasswordManager.ToPasswordManagerSubscriptionUpdate(organization);
             await _organizationService.UpdateSubscription(organization.Id, (int)model.PasswordManager.Seats,
                 model.PasswordManager.MaxAutoScaleSeats);
@@ -55,13 +65,17 @@ public class OrganizationController : Controller
                 await _organizationService.AdjustStorageAsync(organization.Id, (short)model.PasswordManager.Storage);
             }
         }
+    }
 
+    private async Task UpdateSecretsManagerAsync(OrganizationSubscriptionUpdateRequestModel model, Guid organizationId)
+    {
         if (model.SecretsManager != null)
         {
+            var organization =
+                await _organizationRepository.GetByIdAsync(organizationId);
+
             var organizationUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
         }
-
-        return new OkResult();
     }
 }
