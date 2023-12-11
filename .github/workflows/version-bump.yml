@@ -6,13 +6,13 @@ on:
   workflow_call:
     inputs:
       version_number:
-        description: "Version to bump to (example: '2024.1.0')"
+        description: "New version (example: '2024.1.0')"
         required: true
         type: string
   workflow_dispatch:
     inputs:
       version_number:
-        description: "Version to bump to (example: '2024.1.0')"
+        description: "New version (example: '2024.1.0')"
         required: true
 
 jobs:
