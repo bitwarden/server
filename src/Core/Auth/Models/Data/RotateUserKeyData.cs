@@ -7,7 +7,6 @@ namespace Bit.Core.Auth.Models.Data;
 
 public class RotateUserKeyData
 {
-    public User User { get; set; }
     public string MasterPasswordHash { get; set; }
     public string Key { get; set; }
     public string PrivateKey { get; set; }

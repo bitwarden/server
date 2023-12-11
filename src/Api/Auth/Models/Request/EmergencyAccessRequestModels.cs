@@ -46,3 +46,9 @@ public class EmergencyAccessPasswordRequestModel
     [Required]
     public string Key { get; set; }
 }
+
+public class EmergencyAccessWithIdRequestModel : EmergencyAccessUpdateRequestModel
+{
+    [Required]
+    public Guid Id { get; set; }
+}
