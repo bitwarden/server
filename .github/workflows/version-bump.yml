@@ -52,6 +52,27 @@ jobs:
           git switch -c $NAME
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
+      - name: Verify input version
+        env:
+          NEW_VERSION: ${{ inputs.version_number }}
+        run: |
+          CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+          # Error if version has not changed.
+          if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
+            echo "Version has not changed."
+            exit 1
+          fi
+
+          # Check if version is newer.
+          printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V
+          if [ $? -eq 0 ]; then
+            echo "Version check successful."
+          else
+            echo "Version check failed."
+            exit 1
+          fi
+
       - name: Bump Version - Props
         uses: bitwarden/gh-actions/version-bump@main
         with:
