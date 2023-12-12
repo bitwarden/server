@@ -52,6 +52,7 @@ public class OrganizationLicense : ILicense
         UseSecretsManager = org.UseSecretsManager;
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
+        LimitCollectionCreationDeletion = org.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
 
         if (subscriptionInfo?.Subscription == null)
@@ -136,6 +137,7 @@ public class OrganizationLicense : ILicense
     public bool UseSecretsManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; } = true;
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
@@ -149,7 +151,6 @@ public class OrganizationLicense : ILicense
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors</remarks>
     public const int CurrentLicenseFileVersion = 13;
-
     private bool ValidLicenseVersion
     {
         get => Version is >= 1 and <= 14;
@@ -193,6 +194,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 13 || !p.Name.Equals(nameof(UsePasswordManager))) &&
                     (Version >= 13 || !p.Name.Equals(nameof(SmSeats))) &&
                     (Version >= 13 || !p.Name.Equals(nameof(SmServiceAccounts))) &&
+                    // LimitCollectionCreationDeletion was added in Version 14
+                    (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
                     // AllowAdminAccessToAllCollectionItems was added in Version 14
                     (Version >= 14 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
                     (
@@ -341,6 +344,13 @@ public class OrganizationLicense : ILicense
                         organization.SmSeats == SmSeats &&
                         organization.SmServiceAccounts == SmServiceAccounts;
             }
+
+            // Restore validity check when Flexible Collections are enabled for cloud and self-host
+            // https://bitwarden.atlassian.net/browse/AC-1875
+            // if (valid && Version >= 14)
+            // {
+            //     valid = organization.LimitCollectionCreationDeletion == LimitCollectionCreationDeletion;
+            // }
 
             if (valid && Version >= 14)
             {

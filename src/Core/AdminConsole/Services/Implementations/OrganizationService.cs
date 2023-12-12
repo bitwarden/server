@@ -598,6 +598,7 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
+            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled || license.LimitCollectionCreationDeletion,
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsIsEnabled || license.AllowAdminAccessToAllCollectionItems
         };
 

@@ -183,28 +183,6 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedServiceAccountIdAsync(Guid id, Guid userId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        var entities = await dbContext.AccessPolicies.Where(ap =>
-                ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id ||
-                ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id)
-            .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
-            .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
-            .Select(ap => new
-            {
-                ap,
-                CurrentUserInGroup = ap is GroupServiceAccountAccessPolicy &&
-                                     ((GroupServiceAccountAccessPolicy)ap).Group.GroupUsers.Any(g =>
-                                         g.OrganizationUser.User.Id == userId),
-            })
-            .ToListAsync();
-
-        return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
-    }
-
     public async Task DeleteAsync(Guid id)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -350,6 +328,81 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         await dbContext.SaveChangesAsync();
         return await GetPeoplePoliciesByGrantedProjectIdAsync(peopleAccessPolicies.Id, userId);
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
+        GetPeoplePoliciesByGrantedServiceAccountIdAsync(Guid id, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var entities = await dbContext.AccessPolicies.Where(ap =>
+                ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id ||
+                ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id)
+            .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
+            .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
+            .Select(ap => new
+            {
+                ap,
+                CurrentUserInGroup = ap is GroupServiceAccountAccessPolicy &&
+                                     ((GroupServiceAccountAccessPolicy)ap).Group.GroupUsers.Any(g =>
+                                         g.OrganizationUser.UserId == userId)
+            })
+            .ToListAsync();
+
+        return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> ReplaceServiceAccountPeopleAsync(
+        ServiceAccountPeopleAccessPolicies peopleAccessPolicies, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var peoplePolicyEntities = await dbContext.AccessPolicies.Where(ap =>
+            ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId == peopleAccessPolicies.Id ||
+            ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == peopleAccessPolicies.Id).ToListAsync();
+
+        var userPolicyEntities =
+            peoplePolicyEntities.Where(ap => ap.GetType() == typeof(UserServiceAccountAccessPolicy)).ToList();
+        var groupPolicyEntities =
+            peoplePolicyEntities.Where(ap => ap.GetType() == typeof(GroupServiceAccountAccessPolicy)).ToList();
+
+
+        if (peopleAccessPolicies.UserAccessPolicies == null || !peopleAccessPolicies.UserAccessPolicies.Any())
+        {
+            dbContext.RemoveRange(userPolicyEntities);
+        }
+        else
+        {
+            foreach (var userPolicyEntity in userPolicyEntities.Where(entity =>
+                         peopleAccessPolicies.UserAccessPolicies.All(ap =>
+                             ((Core.SecretsManager.Entities.UserServiceAccountAccessPolicy)ap).OrganizationUserId !=
+                             ((UserServiceAccountAccessPolicy)entity).OrganizationUserId)))
+            {
+                dbContext.Remove(userPolicyEntity);
+            }
+        }
+
+        if (peopleAccessPolicies.GroupAccessPolicies == null || !peopleAccessPolicies.GroupAccessPolicies.Any())
+        {
+            dbContext.RemoveRange(groupPolicyEntities);
+        }
+        else
+        {
+            foreach (var groupPolicyEntity in groupPolicyEntities.Where(entity =>
+                         peopleAccessPolicies.GroupAccessPolicies.All(ap =>
+                             ((Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy)ap).GroupId !=
+                             ((GroupServiceAccountAccessPolicy)entity).GroupId)))
+            {
+                dbContext.Remove(groupPolicyEntity);
+            }
+        }
+
+        await UpsertPeoplePoliciesAsync(dbContext,
+            peopleAccessPolicies.ToBaseAccessPolicies().Select(MapToEntity).ToList(), userPolicyEntities,
+            groupPolicyEntities);
+        await dbContext.SaveChangesAsync();
+        return await GetPeoplePoliciesByGrantedServiceAccountIdAsync(peopleAccessPolicies.Id, userId);
     }
 
     private static async Task UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
