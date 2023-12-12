@@ -12,7 +12,7 @@ public class RotateUserKeyData
     public string PrivateKey { get; set; }
     public IEnumerable<Cipher> Ciphers { get; set; }
     public IEnumerable<Folder> Folders { get; set; }
-    public IEnumerable<Send> Sends { get; set; }
+    public IReadOnlyList<Send> Sends { get; set; }
     public IEnumerable<EmergencyAccess> EmergencyAccessKeys { get; set; }
     public IEnumerable<OrganizationUser> ResetPasswordKeys { get; set; }
 }
