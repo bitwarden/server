@@ -29,20 +29,11 @@ configure_other_vars() {
     cp secrets.json .secrets.json.tmp
     # set DB_PASSWORD equal to .services.mssql.environment.MSSQL_SA_PASSWORD, accounting for quotes
     DB_PASSWORD="$(grep -oP 'MSSQL_SA_PASSWORD=["'"'"']?\K[^"'"'"'\s]+' $DEV_DIR/.env)"
-    CERT_OUTPUT="$(./create_certificates_linux.sh)"
-    #shellcheck disable=SC2086
-    IDENTITY_SERVER_FINGERPRINT="$(echo $CERT_OUTPUT | awk -F 'Identity Server Dev: ' '{match($2, /[[:alnum:]]+/); print substr($2, RSTART, RLENGTH)}')"
-    #shellcheck disable=SC2086
-    DATA_PROTECTION_FINGERPRINT="$(echo $CERT_OUTPUT | awk -F 'Data Protection Dev: ' '{match($2, /[[:alnum:]]+/); print substr($2, RSTART, RLENGTH)}')"
     SQL_CONNECTION_STRING="Server=localhost;Database=vault_dev;User Id=SA;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True"
-    echo "Identity Server Dev: $IDENTITY_SERVER_FINGERPRINT"
-    echo "Data Protection Dev: $DATA_PROTECTION_FINGERPRINT"
     jq \
         ".globalSettings.sqlServer.connectionString = \"$SQL_CONNECTION_STRING\" |
         .globalSettings.postgreSql.connectionString = \"Host=localhost;Username=postgres;Password=$DB_PASSWORD;Database=vault_dev;Include Error Detail=true\" |
-        .globalSettings.mySql.connectionString = \"server=localhost;uid=root;pwd=$DB_PASSWORD;database=vault_dev\" |
-        .globalSettings.identityServer.certificateThumbprint = \"$IDENTITY_SERVER_FINGERPRINT\" |
-        .globalSettings.dataProtection.certificateThumbprint = \"$DATA_PROTECTION_FINGERPRINT\"" \
+        .globalSettings.mySql.connectionString = \"server=localhost;uid=root;pwd=$DB_PASSWORD;database=vault_dev\"" \
         .secrets.json.tmp >secrets.json
     rm .secrets.json.tmp
     popd >/dev/null || exit
@@ -74,7 +65,7 @@ Press <Enter> to continue."
         echo "Injecting dotnet secrets..."
         pwsh ./setup_secrets.ps1 || true
         popd >/dev/null || exit
-        
+
         echo "Running migrations..."
         sleep 5 # wait for DB container to start
         dotnet run --project ./util/MsSqlMigratorUtility "$SQL_CONNECTION_STRING"

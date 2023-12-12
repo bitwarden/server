@@ -88,6 +88,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { "globalSettings:send:connectionString", null},
                 { "globalSettings:notifications:connectionString", null},
                 { "globalSettings:storage:connectionString", null},
+
+                // This will force it to use an ephemeral key for IdentityServer
+                { "globalSettings:developmentDirectory", null }
             });
         });
 
