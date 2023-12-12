@@ -305,7 +305,7 @@ public class AccessPoliciesController : Controller
 
     [HttpGet("/projects/{id}/access-policies/service-accounts")]
     public async Task<ProjectServiceAccountsAccessPoliciesResponseModel> GetProjectServiceAccountsAccessPoliciesAsync(
-        [FromRoute] Guid id)
+    [FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
         await CheckUserHasWriteAccessToProjectAsync(project);

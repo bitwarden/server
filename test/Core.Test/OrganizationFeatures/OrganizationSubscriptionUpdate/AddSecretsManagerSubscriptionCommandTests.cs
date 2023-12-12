@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -19,9 +19,18 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 public class AddSecretsManagerSubscriptionCommandTests
 {
     [Theory]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public async Task SignUpAsync_ReturnsSuccessAndClientSecret_WhenOrganizationAndPlanExist(PlanType planType,
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,

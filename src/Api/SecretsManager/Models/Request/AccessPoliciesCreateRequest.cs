@@ -74,7 +74,7 @@ public class AccessPoliciesCreateRequest
             policies.AddRange(groupAccessPolicies);
         }
 
-        CheckForDistinctAccessPolicies(policies);
+        AccessPolicyHelpers.CheckForDistinctAccessPolicies(policies);
         return policies;
     }
 

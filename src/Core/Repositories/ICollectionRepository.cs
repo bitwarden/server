@@ -10,7 +10,7 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<Tuple<CollectionDetails, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id, Guid userId);
     Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
-    Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId);
+    Task<ICollection<Tuple<CollectionDetails, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId);
     Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId);
     Task<ICollection<Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds);
     Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);
@@ -20,4 +20,6 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
     Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
+    Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
 }

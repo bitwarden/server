@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
@@ -27,13 +28,16 @@ public interface IUserService
     Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
     Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
+    Task<CredentialCreateOptions> StartWebAuthnLoginRegistrationAsync(User user);
+    Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null);
+    AssertionOptions StartWebAuthnLoginAssertion();
+    Task<(User, WebAuthnCredential)> CompleteWebAuthLoginAssertionAsync(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse);
     Task SendEmailVerificationAsync(User user);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
     Task InitiateEmailChangeAsync(User user, string newEmail);
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
-    Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key, string orgIdentifier = null);
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
@@ -74,6 +78,9 @@ public interface IUserService
     Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
     Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
+
+    Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
+        bool validatePassword = true, bool refreshStamp = true);
     Task RotateApiKeyAsync(User user);
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);

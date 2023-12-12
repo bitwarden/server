@@ -1,21 +1,25 @@
 ---
 name: Version Bump
+run-name: Version Bump - v${{ inputs.version_number }}
 
 on:
+  workflow_call:
+    inputs:
+      version_number:
+        description: "New version (example: '2024.1.0')"
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       version_number:
-        description: "New Version"
+        description: "New version (example: '2024.1.0')"
         required: true
 
 jobs:
-  bump_props_version:
-    name: "Create version_bump_${{ github.event.inputs.version_number }} branch"
-    runs-on: ubuntu-20.04
+  bump_version:
+    name: "Bump Version to v${{ inputs.version_number }}"
+    runs-on: ubuntu-22.04
     steps:
-      - name: Checkout Branch
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
-
       - name: Login to Azure - CI Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
@@ -23,10 +27,19 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@c970b0fb89bd966749280e832928db62040812bf
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
           keyvault: "bitwarden-ci"
-          secrets: "github-gpg-private-key, github-gpg-private-key-passphrase"
+          secrets: "github-gpg-private-key,
+            github-gpg-private-key-passphrase,
+            github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Checkout Branch
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        with:
+          repository: bitwarden/server
+          ref: master
+          token: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # v6.0.0
@@ -37,16 +50,41 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create Version Branch
-        run: git switch -c version_bump_${{ github.event.inputs.version_number }}
+        id: create-branch
+        run: |
+          NAME=version_bump_${{ github.ref_name }}_${{ inputs.version_number }}
+          git switch -c $NAME
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Install xmllint
+        run: sudo apt install -y libxml2-utils
+
+      - name: Verify input version
+        env:
+          NEW_VERSION: ${{ inputs.version_number }}
+        run: |
+          CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+          # Error if version has not changed.
+          if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
+            echo "Version has not changed."
+            exit 1
+          fi
+
+          # Check if version is newer.
+          printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V
+          if [ $? -eq 0 ]; then
+            echo "Version check successful."
+          else
+            echo "Version check failed."
+            exit 1
+          fi
 
       - name: Bump Version - Props
-        uses: bitwarden/gh-actions/version-bump@c970b0fb89bd966749280e832928db62040812bf
+        uses: bitwarden/gh-actions/version-bump@main
         with:
-          version: ${{ github.event.inputs.version_number }}
+          version: ${{ inputs.version_number }}
           file_path: "Directory.Build.props"
-
-      - name: Refresh lockfiles
-        run: dotnet restore -f --force-evaluate --no-cache
 
       - name: Setup git
         run: |
@@ -65,22 +103,24 @@ jobs:
 
       - name: Commit files
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-        run: git commit -m "Bumped version to ${{ github.event.inputs.version_number }}" -a
+        run: git commit -m "Bumped version to ${{ inputs.version_number }}" -a
 
       - name: Push changes
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-        run: git push -u origin version_bump_${{ github.event.inputs.version_number }}
+        env:
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
+        run: git push -u origin $PR_BRANCH
 
       - name: Create Version PR
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        id: create-pr
         env:
-          PR_BRANCH: "version_bump_${{ github.event.inputs.version_number }}"
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          BASE_BRANCH: master
-          TITLE: "Bump version to ${{ github.event.inputs.version_number }}"
+          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
+          TITLE: "Bump version to ${{ inputs.version_number }}"
         run: |
-          gh pr create --title "$TITLE" \
-            --base "$BASE" \
+          PR_URL=$(gh pr create --title "$TITLE" \
+            --base "master" \
             --head "$PR_BRANCH" \
             --label "version update" \
             --label "automated pr" \
@@ -93,4 +133,17 @@ jobs:
               - [X] Other
 
               ## Objective
-              Automated version bump to ${{ github.event.inputs.version_number }}"
+              Automated version bump to ${{ inputs.version_number }}")
+          echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
+
+      - name: Approve PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr review $PR_NUMBER --approve
+
+      - name: Merge PR
+        env:
+          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr merge $PR_NUMBER --squash --auto --delete-branch

@@ -36,9 +36,14 @@ BEGIN
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
         )
 
-    -- Insert
-    INSERT INTO
-        [dbo].[CollectionUser]
+    -- Insert (with column list because a value for Manage is not being provided)
+    INSERT INTO [dbo].[CollectionUser]
+    (
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords]
+    )
     SELECT
         [Source].[Id],
         @Id,
@@ -58,7 +63,7 @@ BEGIN
                 [CollectionId] = [Source].[Id]
                 AND [OrganizationUserId] = @Id
         )
-    
+
     -- Delete
     DELETE
         CU

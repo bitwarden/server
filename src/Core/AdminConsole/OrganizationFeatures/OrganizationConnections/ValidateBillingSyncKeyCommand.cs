@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
-using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 

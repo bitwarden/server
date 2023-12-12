@@ -277,7 +277,7 @@ jobs:
 
       - name: Retrieve github PAT secrets
         id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@c970b0fb89bd966749280e832928db62040812bf
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
@@ -300,12 +300,19 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Generate image full name
-        id: image-name
+      - name: Generate image name(s)
+        id: image-names
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          SHA: ${{ github.sha }}
+        run: |
+          NAMES="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          if [[ "${IMAGE_TAG}" == "dev" ]]; then
+            SHORT_SHA=$(git rev-parse --short ${SHA})
+            NAMES=$NAMES",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
+          fi
+          echo "names=$NAMES" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
@@ -327,7 +334,7 @@ jobs:
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.image-name.outputs.name }}
+          tags: ${{ steps.image-names.outputs.names }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
@@ -528,7 +535,7 @@ jobs:
 
       - name: Retrieve github PAT secrets
         id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@c970b0fb89bd966749280e832928db62040812bf
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
@@ -603,7 +610,7 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@c970b0fb89bd966749280e832928db62040812bf
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
         if: failure()
         with:
           keyvault: "bitwarden-ci"

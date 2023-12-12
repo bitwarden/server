@@ -1,7 +1,11 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -27,7 +31,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).AcceptUserAsync(orgId, user, sutProvider.GetDependency<IUserService>());
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1).AcceptOrgUserByOrgIdAsync(orgId, user, sutProvider.GetDependency<IUserService>());
     }
 
     [Theory]
@@ -41,7 +45,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(0).AcceptUserAsync(orgId, user, sutProvider.GetDependency<IUserService>());
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(0).AcceptOrgUserByOrgIdAsync(orgId, user, sutProvider.GetDependency<IUserService>());
     }
 
     [Theory]
@@ -63,8 +67,8 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.Accept(orgId, orgUserId, model);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1)
-            .AcceptUserAsync(orgUserId, user, model.Token, sutProvider.GetDependency<IUserService>());
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
+            .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, sutProvider.GetDependency<IUserService>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
             .UpdateUserResetPasswordEnrollmentAsync(default, default, default, default);
     }
@@ -81,12 +85,12 @@ public class OrganizationUsersControllerTests
         };
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(orgId,
-            Core.Enums.PolicyType.ResetPassword).Returns(policy);
+            PolicyType.ResetPassword).Returns(policy);
 
         await sutProvider.Sut.Accept(orgId, orgUserId, model);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1)
-            .AcceptUserAsync(orgUserId, user, model.Token, sutProvider.GetDependency<IUserService>());
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
+            .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, sutProvider.GetDependency<IUserService>());
         await sutProvider.GetDependency<IOrganizationService>().Received(1)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
     }
