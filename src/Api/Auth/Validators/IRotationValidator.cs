@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 
 namespace Bit.Api.Auth.Validators;
 
@@ -11,5 +12,11 @@ namespace Bit.Api.Auth.Validators;
 /// <typeparam name="R">Domain model</typeparam>
 public interface IRotationValidator<T, R>
 {
+    /// <summary>
+    /// Validates re-encrypted data before being saved to database.
+    /// </summary>
+    /// <param name="user">Request model</param>
+    /// <param name="data">Domain model</param>
+    /// <exception cref="BadRequestException">Throws if data fails validation</exception>
     Task<R> ValidateAsync(User user, T data);
 }

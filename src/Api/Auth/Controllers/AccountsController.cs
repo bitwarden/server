@@ -5,6 +5,7 @@ using Bit.Api.Auth.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
+using Bit.Api.Tools.Models.Request;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core;
@@ -68,6 +69,7 @@ public class AccountsController : Controller
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
+    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
 
@@ -92,6 +94,7 @@ public class AccountsController : Controller
         ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
         IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
+        IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator
         )
@@ -115,6 +118,7 @@ public class AccountsController : Controller
         _currentContext = currentContext;
         _cipherValidator = cipherValidator;
         _folderValidator = folderValidator;
+        _sendValidator = sendValidator;
         _emergencyAccessValidator = emergencyAccessValidator;
     }
 
@@ -423,7 +427,7 @@ public class AccountsController : Controller
                 PrivateKey = model.PrivateKey,
                 Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
                 Folders = await _folderValidator.ValidateAsync(user, model.Folders),
-                Sends = new List<Send>(),
+                Sends = await _sendValidator.ValidateAsync(user, model.Sends),
                 EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
                 ResetPasswordKeys = new List<OrganizationUser>(),
             };
