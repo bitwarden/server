@@ -29,8 +29,4 @@ public class WebAuthnLoginCredentialCreateRequestModel
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public string EncryptedPrivateKey { get; set; }
-
-    public (string userKey, string publicKey, string privateKey) GetKeys()
-        => (EncryptedUserKey, EncryptedPublicKey, EncryptedPrivateKey);
 }
-

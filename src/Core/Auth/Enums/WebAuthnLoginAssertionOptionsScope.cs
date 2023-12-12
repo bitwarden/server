@@ -3,5 +3,6 @@
 public enum WebAuthnLoginAssertionOptionsScope
 {
     Authentication = 0,
-    PrfRegistration = 1
+    PrfRegistration = 1,
+    UpdateKeySet = 2
 }

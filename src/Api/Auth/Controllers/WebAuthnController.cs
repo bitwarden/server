@@ -72,10 +72,10 @@ public class WebAuthnController : Controller
     [HttpPost("assertion-options")]
     public async Task<WebAuthnLoginAssertionOptionsResponseModel> AssertionOptions([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await VerifyUserAsync(model);
+        await VerifyUserAsync(model);
         var options = _userService.StartWebAuthnLoginAssertion();
 
-        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.PrfRegistration, options);
+        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.UpdateKeySet, options);
         var token = _assertionOptionsDataProtector.Protect(tokenable);
 
         return new WebAuthnLoginAssertionOptionsResponseModel
@@ -118,15 +118,15 @@ public class WebAuthnController : Controller
     public async Task UpdateCredential([FromBody] WebAuthnLoginCredentialUpdateRequestModel model)
     {
         var tokenable = _assertionOptionsDataProtector.Unprotect(model.Token);
-        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.PrfRegistration))
+        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.UpdateKeySet))
         {
-            throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
+            throw new BadRequestException("The token associated with your request is invalid or has expired. A valid token is required to continue.");
         }
 
         var (_, credential) = await _userService.CompleteWebAuthLoginAssertionAsync(tokenable.Options, model.DeviceResponse);
-        if (credential == null)
+        if (credential == null || credential.SupportsPrf != true)
         {
-            throw new BadRequestException("Unable to update WebAuthnLoginCredential.");
+            throw new BadRequestException("Unable to update credential.");
         }
 
         // assign new keys to credential
