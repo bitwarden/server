@@ -3,6 +3,7 @@ using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
@@ -16,15 +17,19 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
 {
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
+    private readonly IApplicationCacheService _applicationCacheService;
+    private OrganizationAbility? _organizationAbility;
 
     private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationUserAuthorizationHandler(
         ICurrentContext currentContext,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IApplicationCacheService applicationCacheService)
     {
         _currentContext = currentContext;
         _featureService = featureService;
+        _applicationCacheService = applicationCacheService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -64,7 +69,6 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
         // If the limit collection management setting is disabled, allow any user to read all organization users
         // Otherwise, Owners, Admins, and users with any of ManageGroups, ManageUsers, EditAnyCollection, DeleteAnyCollection, CreateNewCollections permissions can always read all organization users
         if (org is
-        { LimitCollectionCreationDeletion: false } or
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.ManageGroups: true } or
         { Permissions.ManageUsers: true } or
@@ -76,10 +80,30 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
             return;
         }
 
+        // If the limit collection management setting is disabled, allow any user to read all organization users
+        if (await GetOrganizationAbilityAsync(requirement.OrganizationId) is { LimitCollectionCreationDeletion: false })
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
         // Allow provider users to read all organization users if they are a provider for the target organization
         if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
         {
             context.Succeed(requirement);
         }
+    }
+
+    private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
+    {
+        if (_organizationAbility != null)
+        {
+            return _organizationAbility;
+        }
+
+        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
+            .TryGetValue(orgId, out var organizationAbility);
+
+        return _organizationAbility = organizationAbility;
     }
 }
