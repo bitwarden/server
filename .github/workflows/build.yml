@@ -250,7 +250,7 @@ jobs:
 
       - name: Check Branch to Publish
         env:
-          PUBLISH_BRANCHES: "master,rc,hotfix-rc"
+          PUBLISH_BRANCHES: "main,rc,hotfix-rc"
         id: publish-branch-check
         run: |
           IFS="," read -a publish_branches <<< $PUBLISH_BRANCHES
@@ -287,7 +287,7 @@ jobs:
         id: tag
         run: |
           IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-          if [[ "$IMAGE_TAG" == "master" ]]; then
+          if [[ "$IMAGE_TAG" == "main" ]]; then
             IMAGE_TAG=dev
           fi
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
@@ -354,13 +354,13 @@ jobs:
         run: dotnet tool restore
 
       - name: Make Docker stubs
-        if: github.ref == 'refs/heads/master' ||
+        if: github.ref == 'refs/heads/main' ||
           github.ref == 'refs/heads/rc' ||
           github.ref == 'refs/heads/hotfix-rc'
         run: |
           # Set proper setup image based on branch
           case "${{ github.ref }}" in
-            "refs/heads/master")
+            "refs/heads/main")
                 SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
                 ;;
             "refs/heads/rc")
@@ -396,13 +396,13 @@ jobs:
           cd docker-stub/EU; zip -r ../../docker-stub-EU.zip *; cd ../..
 
       - name: Make Docker stub checksums
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         run: |
           sha256sum docker-stub-US.zip > docker-stub-US-sha256.txt
           sha256sum docker-stub-EU.zip > docker-stub-EU-sha256.txt
 
       - name: Upload Docker stub US artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: docker-stub-US.zip
@@ -410,7 +410,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub EU artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: docker-stub-EU.zip
@@ -418,7 +418,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub US checksum artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: docker-stub-US-sha256.txt
@@ -426,7 +426,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub EU checksum artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: docker-stub-EU-sha256.txt
@@ -542,7 +542,7 @@ jobs:
               owner: 'bitwarden',
               repo: 'self-host',
               workflow_id: 'build-unified.yml',
-              ref: 'master',
+              ref: 'main',
               inputs: {
                 server_branch: '${{ github.ref }}'
               }
@@ -564,7 +564,7 @@ jobs:
     steps:
       - name: Check if any job failed
         if: |
-          github.ref == 'refs/heads/master'
+          github.ref == 'refs/heads/main'
           || github.ref == 'refs/heads/rc'
           || github.ref == 'refs/heads/hotfix-rc'
         env:

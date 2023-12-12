@@ -123,7 +123,7 @@ jobs:
           TITLE: "Bump version to ${{ inputs.version_number }}"
         run: |
           PR_URL=$(gh pr create --title "$TITLE" \
-            --base "master" \
+            --base "main" \
             --head "$PR_BRANCH" \
             --label "version update" \
             --label "automated pr" \
