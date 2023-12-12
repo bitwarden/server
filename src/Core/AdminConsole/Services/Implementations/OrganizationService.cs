@@ -1971,7 +1971,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
 
-        if (FlexibleCollectionsIsEnabled && newType == OrganizationUserType.Manager)
+        if (FlexibleCollectionsIsEnabled && newType == OrganizationUserType.Manager && (oldType == null) || oldType != OrganizationUserType.Manager)
         {
             throw new BadRequestException("Manager role is deprecated after Flexible Collections.");
         }
