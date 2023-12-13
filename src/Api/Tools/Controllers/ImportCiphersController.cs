@@ -3,6 +3,7 @@ using Bit.Api.Tools.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -22,16 +23,17 @@ public class ImportCiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<ImportCiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
+    private readonly ICollectionRepository _collectionRepository;
     private readonly IAuthorizationService _authorizationService;
     private readonly IFeatureService _featureService;
 
     public ImportCiphersController(
-        ICollectionCipherRepository collectionCipherRepository,
         ICipherService cipherService,
         IUserService userService,
         ICurrentContext currentContext,
         ILogger<ImportCiphersController> logger,
         GlobalSettings globalSettings,
+        ICollectionRepository collectionRepository,
         IAuthorizationService authorizationService,
         IFeatureService featureService)
     {
@@ -40,6 +42,7 @@ public class ImportCiphersController : Controller
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
+        _collectionRepository = collectionRepository;
         _authorizationService = authorizationService;
         _featureService = featureService;
     }
@@ -76,9 +79,10 @@ public class ImportCiphersController : Controller
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
 
+
         //An User is allowed to import if CanCreate Collections or has AccessToImportExport
         var authorized = FlexibleCollectionsIsEnabled
-            ? (await _authorizationService.AuthorizeAsync(User, collections, CollectionOperations.Create)).Succeeded || await _currentContext.AccessImportExport(orgId)
+            ? await CheckOrgImportPermission(collections, orgId) || await _currentContext.AccessImportExport(orgId)
             : await _currentContext.AccessImportExport(orgId);
 
         if (!authorized)
@@ -89,5 +93,29 @@ public class ImportCiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
         await _cipherService.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
+    }
+
+    private async Task<bool> CheckOrgImportPermission(List<Collection> collections, Guid orgId)
+    {
+        if (!(await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
+        {
+            return false;
+        }
+
+        var orgCollectionIds =
+            (await _collectionRepository.GetManyByOrganizationIdAsync(orgId))
+            .Select(c => c.Id)
+            .ToHashSet();
+
+        //We need to verify if the user is trying to import into existing collections
+        var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));
+
+        //When importing into existing collection, we need to verify if the user has permissions
+        if (existingCollections.Count() > 0 && !(await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
+        {
+            return false;
+        };
+
+        return true;
     }
 }
