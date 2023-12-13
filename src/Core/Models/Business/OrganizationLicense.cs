@@ -138,7 +138,7 @@ public class OrganizationLicense : ILicense
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; } = true;
-    public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
