@@ -27,3 +27,9 @@ jobs:
         run: |
           git switch --quiet --create rc
           git push --quiet --set-upstream origin rc
+
+  move-future-db-scripts:
+    name: Move future DB scripts
+    needs: cut-rc
+    uses: ./.github/workflows/_move_future_db_scripts.yml
+    secrets: inherit
