@@ -77,7 +77,6 @@ public class
                 }
 
                 var serviceAccountAccess = _serviceAccountRepository.AccessToServiceAccounts(serviceAccountIds, userId, accessClient);
-
                 if(!serviceAccountAccess.Write)
                 {
                     return;
