@@ -149,4 +149,5 @@ jobs:
   cut_rc:
     name: Cut RC Branch
     if: ${{ inputs.cut_rc_branch == true }}
+    needs: bump_version
     uses: ./.github/workflows/cut-rc.yml
