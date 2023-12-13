@@ -24,7 +24,6 @@ jobs:
           fi
 
       - name: Cut RC branch
-        if: ${{ inputs.mode == 'cut' }}
         run: |
           git switch --quiet --create rc
           git push --quiet --set-upstream origin rc
