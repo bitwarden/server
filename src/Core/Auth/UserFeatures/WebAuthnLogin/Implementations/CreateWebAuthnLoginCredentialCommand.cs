@@ -22,7 +22,7 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
     public async Task<bool> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
     {
         var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        if (existingCredentials.Count >= 5)
+        if (existingCredentials.Count >= MaxCredentialsPerUser)
         {
             return false;
         }
