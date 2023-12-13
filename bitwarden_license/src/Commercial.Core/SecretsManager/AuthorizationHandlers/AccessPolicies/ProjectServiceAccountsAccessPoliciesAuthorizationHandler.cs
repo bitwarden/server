@@ -18,6 +18,7 @@ public class
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly ISameOrganizationQuery _sameOrganizationQuery;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public ProjectServiceAccountsAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
@@ -29,6 +30,7 @@ public class
         _accessClientQuery = accessClientQuery;
         _sameOrganizationQuery = sameOrganizationQuery;
         _projectRepository = projectRepository;
+        _serviceAccountRepository = serviceAccountRepository;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -60,16 +62,23 @@ public class
     }
 
     private async Task CanReplaceProjectServiceAccountsAsync(AuthorizationHandlerContext context,
-        ProjectServiceAccountsAccessPoliciesOperationRequirement requirement, ProjectServiceAccountsAccessPolicies resource,
-        AccessClientType accessClient, Guid userId)
+       ProjectServiceAccountsAccessPoliciesOperationRequirement requirement, ProjectServiceAccountsAccessPolicies resource,
+       AccessClientType accessClient, Guid userId)
     {
-        var access = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);
-        if (access.Write)
+        var projectAccess = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);
+        if (projectAccess.Write)
         {
             if (resource.ServiceAccountProjectsAccessPolicies != null && resource.ServiceAccountProjectsAccessPolicies.Any())
             {
                 var serviceAccountIds = resource.ServiceAccountProjectsAccessPolicies.Select(ap => ap.ServiceAccountId!.Value).ToList();
                 if (!await _sameOrganizationQuery.ServiceAccountsInTheSameOrgAsync(serviceAccountIds, resource.OrganizationId))
+                {
+                    return;
+                }
+
+                var serviceAccountAccess = _serviceAccountRepository.AccessToServiceAccounts(serviceAccountIds, userId, accessClient);
+
+                if(!serviceAccountAccess.Write)
                 {
                     return;
                 }

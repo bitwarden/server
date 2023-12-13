@@ -18,4 +18,5 @@ public interface IServiceAccountRepository
     Task<(bool Read, bool Write)> AccessToServiceAccountAsync(Guid id, Guid userId, AccessClientType accessType);
     Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId);
     Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdWithSecretsDetailsAsync(Guid organizationId, Guid userId, AccessClientType accessType);
+    (bool Read, bool Write) AccessToServiceAccounts(IEnumerable<Guid> ids, Guid userId, AccessClientType accessType);
 }

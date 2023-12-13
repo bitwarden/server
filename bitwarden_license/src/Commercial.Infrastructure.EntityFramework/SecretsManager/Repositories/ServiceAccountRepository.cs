@@ -6,6 +6,7 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
@@ -110,25 +111,11 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
 
         var serviceAccount = dbContext.ServiceAccount.Where(sa => sa.Id == id);
 
-        var query = accessType switch
-        {
-            AccessClientType.NoAccessCheck => serviceAccount.Select(_ => new { Read = true, Write = true }),
-            AccessClientType.User => serviceAccount.Select(sa => new
-            {
-                Read = sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
-                       sa.GroupAccessPolicies.Any(ap =>
-                           ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
-                Write = sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                        sa.GroupAccessPolicies.Any(ap =>
-                            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
-            }),
-            AccessClientType.ServiceAccount => serviceAccount.Select(_ => new { Read = false, Write = false }),
-            _ => serviceAccount.Select(_ => new { Read = false, Write = false }),
-        };
+        var query = CheckUserServiceAccountReadWriteAccess(accessType, userId, serviceAccount);
 
         var policy = await query.FirstOrDefaultAsync();
 
-        return policy == null ? (false, false) : (policy.Read, policy.Write);
+        return (policy.Read, policy.Write);
     }
 
     public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
@@ -177,6 +164,50 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
                 }).OrderBy(c => c.ServiceAccount.RevisionDate).ToList();
 
         return results;
+    }
+
+    public (bool Read, bool Write) AccessToServiceAccounts(IEnumerable<Guid> ids, Guid userId,
+       AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var serviceAccount = dbContext.ServiceAccount.Where(sa => ids.Contains(sa.Id));
+        var query = CheckUserServiceAccountReadWriteAccess(accessType, userId, serviceAccount);
+        var policies = query.ToList();
+
+        if (!policies.Any())
+        {
+            return (false, false);
+        }
+
+        var read = policies.All(p => p.Read);
+        var write = policies.All(p => p.Write);
+
+        return (read, write);
+    }
+
+    private IQueryable<(bool Read, bool Write)> CheckUserServiceAccountReadWriteAccess(AccessClientType accessType, Guid userId, IQueryable<ServiceAccount> serviceAccount)
+    {
+        var result = accessType switch
+        {
+            AccessClientType.NoAccessCheck => serviceAccount.Select(_ => new { Read = true, Write = true }),
+            AccessClientType.User => serviceAccount.Select(sa => new
+            {
+                Read = sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                       sa.GroupAccessPolicies.Any(ap =>
+                           ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
+                Write = sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                        sa.GroupAccessPolicies.Any(ap =>
+                            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
+            }),
+            AccessClientType.ServiceAccount => serviceAccount.Select(_ => new { Read = false, Write = false }),
+            _ => serviceAccount.Select(_ => new { Read = false, Write = false }),
+        };
+
+        return result.AsEnumerable()
+        .Select(x => (x.Read, x.Write))
+        .AsQueryable();
     }
 
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>
