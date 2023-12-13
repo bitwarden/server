@@ -225,4 +225,4 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
-          message: "Created PR for moving DbScripts_future to DbScripts: ${{ needs.pr.outputs.pr_url }}"
+          message: "TEST: Created PR for moving DbScripts_future to DbScripts: ${{ needs.pr.outputs.pr_url }}"
