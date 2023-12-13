@@ -1,7 +1,7 @@
 ---
 
-name: _move_future_db_scripts
-run-name: Move future db scripts
+name: _move_finalization_db_scripts
+run-name: Move finalization db scripts
 
 on:
   workflow_call:
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       MIGRATION_FILENAME_PREFIX: ${{ steps.prefix.outputs.prefix }}
-      COPY_FUTURE_SCRIPTS: ${{ steps.check-future-scripts-existence.outputs.copy_future_scripts }}
+      COPY_FINALIZATION_SCRIPTS: ${{ steps.check-finalization-scripts-existence.outputs.copy_finalization_scripts }}
     steps:
       - name: Login to Azure
         uses: Azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.5.1
@@ -40,20 +40,20 @@ jobs:
         id: prefix
         run: echo "prefix=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      - name: Check if any files in db future
-        id: check-future-scripts-existence
+      - name: Check if any files in db finalization
+        id: check-finalization-scripts-existence
         run: |
-          if [ -f util/Migrator/DbScripts_future/* ]; then
-            echo "copy_future_scripts=true" >> $GITHUB_OUTPUT
+          if [ -f util/Migrator/DbScripts_finalization/* ]; then
+            echo "copy_finalization_scripts=true" >> $GITHUB_OUTPUT
           else
-            echo "copy_future_scripts=false" >> $GITHUB_OUTPUT
+            echo "copy_finalization_scripts=false" >> $GITHUB_OUTPUT
           fi
 
   branch:
     name: Create Branch
     runs-on: ubuntu-22.04
     needs: setup
-    if: ${{ needs.setup.outputs.COPY_FUTURE_SCRIPTS == 'true' }}
+    if: ${{ needs.setup.outputs.COPY_FINALIZATION_SCRIPTS == 'true' }}
     outputs:
       deploy_branch_name: ${{ steps.branch_name.outputs.branch_name }}
       env_name: ${{ steps.branch_name.outputs.env_name }}
@@ -67,7 +67,7 @@ jobs:
         id: branch_name
         env:
           PREFIX: ${{ needs.setup.outputs.MIGRATION_FILENAME_PREFIX }}
-        run: echo "branch_name=move_future_db_scripts_$PREFIX" >> $GITHUB_OUTPUT
+        run: echo "branch_name=move_finalization_db_scripts_$PREFIX" >> $GITHUB_OUTPUT
 
       - name: "Create branch"
         env:
@@ -77,13 +77,13 @@ jobs:
           git push -u origin $BRANCH --force
 
 
-  move-future-db-scripts:
-    name: Move future db scripts
+  move-finalization-db-scripts:
+    name: Move finalization db scripts
     runs-on: ubuntu-22.04
     needs:
       - setup
       - branch
-    if: ${{ needs.setup.outputs.COPY_FUTURE_SCRIPTS == 'true' }}
+    if: ${{ needs.setup.outputs.COPY_FINALIZATION_SCRIPTS == 'true' }}
     outputs:
       PR_NEEDED: ${{ steps.commit.outputs.pr_needed }}
       MOVED_FILES: ${{ steps.move-files.outputs.moved_files }}
@@ -99,12 +99,12 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.branch.outputs.deploy_branch_name }}
 
-      - name: Move DbScripts_future
+      - name: Move DbScripts_finalization
         id: move-files
         env:
           PREFIX: ${{ needs.setup.outputs.MIGRATION_FILENAME_PREFIX }}
         run: |
-          src_dir="util/Migrator/DbScripts_future"
+          src_dir="util/Migrator/DbScripts_finalization"
           dest_dir="util/Migrator/DbScripts"
           i=0
 
@@ -147,7 +147,7 @@ jobs:
           git config --local user.email "${{ env._BOT_EMAIL }}"
           git config --local user.name "${{ env._BOT_NAME }}"
           if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Move DbScripts_future to DbScripts" -a
+            git commit -m "Move DbScripts_finalization to DbScripts" -a
             git push -u origin ${{ env._DEPLOY_BRANCH }}
             echo "pr_needed=true" >> $GITHUB_OUTPUT
           else
@@ -162,14 +162,14 @@ jobs:
     needs:
       - setup
       - branch
-      - move-future-db-scripts
-    if: ${{ needs.setup.outputs.COPY_FUTURE_SCRIPTS == 'true' && needs.move-future-db-scripts.outputs.PR_NEEDED == 'true' }}
+      - move-finalization-db-scripts
+    if: ${{ needs.setup.outputs.COPY_FINALIZATION_SCRIPTS == 'true' && needs.move-finalization-db-scripts.outputs.PR_NEEDED == 'true' }}
     env:
       _KEY_VAULT: bitwarden-ci
       _BASE_BRANCH: master
       _HEAD_BRANCH: ${{ needs.branch.outputs.deploy_branch_name }}
-      _PR_TITLE: "Move future db scripts"
-      _MOVED_FILES: ${{ needs.move-future-db-scripts.outputs.MOVED_FILES }}
+      _PR_TITLE: "Move finalization db scripts"
+      _MOVED_FILES: ${{ needs.move-finalization-db-scripts.outputs.MOVED_FILES }}
     outputs:
       pr_url: ${{ steps.create-pr.outputs.pr_url }}
     steps:
@@ -191,7 +191,7 @@ jobs:
             --head "${{ env._HEAD_BRANCH }}" \
             --label "automated pr" \
             --body "
-              ## Automated movement of DbScripts_future to DbScripts
+              ## Automated movement of DbScripts_finalization to DbScripts
 
               ## Files moved:
               $(echo -e "$_MOVED_FILES")
@@ -200,12 +200,12 @@ jobs:
 
   notify:
     name: Notify about PR
-    if: ${{ needs.setup.outputs.COPY_FUTURE_SCRIPTS == 'true' && needs.move-future-db-scripts.outputs.PR_NEEDED == 'true' }}
+    if: ${{ needs.setup.outputs.COPY_FINALIZATION_SCRIPTS == 'true' && needs.move-finalization-db-scripts.outputs.PR_NEEDED == 'true' }}
     runs-on: ubuntu-22.04
     needs:
       - setup
       - branch
-      - move-future-db-scripts
+      - move-finalization-db-scripts
       - pr
     steps:
       - name: Login to Azure - CI subscription
@@ -225,4 +225,4 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
-          message: "TEST: Created PR for moving DbScripts_future to DbScripts: ${{ needs.pr.outputs.pr_url }}"
+          message: "TEST: Created PR for moving DbScripts_finalization to DbScripts: ${{ needs.pr.outputs.pr_url }}"
