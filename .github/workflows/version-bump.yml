@@ -152,3 +152,9 @@ jobs:
     needs: bump_version
     uses: ./.github/workflows/cut-rc.yml
     secrets: inherit
+
+  move-future-db-scripts:
+    name: Move future DB scripts
+    needs: cut_rc
+    uses: ./.github/workflows/_move_future_db_scripts.yml
+    secrets: inherit
