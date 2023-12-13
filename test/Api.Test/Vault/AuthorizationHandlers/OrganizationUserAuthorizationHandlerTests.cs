@@ -4,6 +4,8 @@ using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -26,7 +28,6 @@ public class OrganizationUserAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
@@ -48,8 +49,17 @@ public class OrganizationUserAuthorizationHandlerTests
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
         organization.Type = OrganizationUserType.User;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
+
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { organization.Id,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = true
+                }
+            }
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserOperations.ReadAll(organization.Id) },
@@ -59,6 +69,7 @@ public class OrganizationUserAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>()
             .UserId
             .Returns(userId);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(organizationAbilities);
         sutProvider.GetDependency<ICurrentContext>()
             .ProviderUserForOrgAsync(organization.Id)
             .Returns(true);
@@ -83,13 +94,22 @@ public class OrganizationUserAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = editAnyCollection,
             DeleteAnyCollection = deleteAnyCollection,
             ManageGroups = manageGroups,
             ManageUsers = manageUsers
+        };
+
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { organization.Id,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = limitCollectionCreationDeletion
+                }
+            }
         };
 
         var context = new AuthorizationHandlerContext(
@@ -99,6 +119,7 @@ public class OrganizationUserAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(organizationAbilities);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -116,13 +137,22 @@ public class OrganizationUserAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
             DeleteAnyCollection = false,
             ManageGroups = false,
             ManageUsers = false
+        };
+
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { organization.Id,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = true
+                }
+            }
         };
 
         var context = new AuthorizationHandlerContext(
@@ -132,6 +162,7 @@ public class OrganizationUserAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(organizationAbilities);
 
         await sutProvider.Sut.HandleAsync(context);
 

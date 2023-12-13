@@ -6,7 +6,9 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.Vault.AutoFixture;
 using Bit.Test.Common.AutoFixture;
@@ -31,7 +33,6 @@ public class BulkCollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
@@ -56,7 +57,16 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
-        organization.LimitCollectionCreationDeletion = false;
+
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { organization.Id,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = false
+                }
+            }
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -65,6 +75,7 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(organizationAbilities);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -83,7 +94,6 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
@@ -134,7 +144,6 @@ public class BulkCollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
 
         var operationsToTest = new[]
@@ -212,7 +221,6 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
-        organization.LimitCollectionCreationDeletion = false;
         organization.Permissions = new Permissions();
 
         var operationsToTest = new[]
@@ -249,7 +257,6 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
-        organization.LimitCollectionCreationDeletion = false;
         organization.Permissions = new Permissions();
 
         var operationsToTest = new[]
@@ -288,7 +295,6 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
@@ -362,7 +368,6 @@ public class BulkCollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
@@ -426,7 +431,6 @@ public class BulkCollectionAuthorizationHandlerTests
         }
 
         organization.Type = OrganizationUserType.User;
-        organization.LimitCollectionCreationDeletion = false;
         organization.Permissions = new Permissions();
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
@@ -457,7 +461,6 @@ public class BulkCollectionAuthorizationHandlerTests
         }
 
         organization.Type = OrganizationUserType.User;
-        organization.LimitCollectionCreationDeletion = false;
         organization.Permissions = new Permissions();
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
@@ -486,7 +489,6 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
@@ -538,7 +540,6 @@ public class BulkCollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
 
         var operationsToTest = new[]
@@ -656,7 +657,6 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = false;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
@@ -737,7 +737,6 @@ public class BulkCollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
@@ -762,7 +761,6 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.LimitCollectionCreationDeletion = false;
         organization.Permissions = new Permissions
         {
             DeleteAnyCollection = true
@@ -792,9 +790,21 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { organization.Id,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = false
+                }
+            }
+        };
+
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync()
+            .Returns(organizationAbilities);
 
         foreach (var c in collections)
         {
@@ -823,13 +833,22 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
             DeleteAnyCollection = false,
             ManageGroups = false,
             ManageUsers = false
+        };
+
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { organization.Id,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = true
+                }
+            }
         };
 
         var context = new AuthorizationHandlerContext(
@@ -839,6 +858,8 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync()
+            .Returns(organizationAbilities);
 
         await sutProvider.Sut.HandleAsync(context);
 
