@@ -91,7 +91,7 @@ jobs:
 
             mv "$file" "$dest_file"
 
-            moved_files="$moved_files /n $filename -> $new_filename"
+            moved_files="$moved_files \n $filename -> $new_filename"
 
             ((i++))
           done
