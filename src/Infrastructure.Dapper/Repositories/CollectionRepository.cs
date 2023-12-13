@@ -143,8 +143,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId,
-        Guid organizationId, bool useFlexibleCollections)
+    public async Task<ICollection<Tuple<CollectionDetails, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId, bool useFlexibleCollections)
     {
         var sprocName = useFlexibleCollections
             ? $"[{Schema}].[Collection_ReadWithGroupsAndUsersByUserId_V2]"
@@ -157,14 +156,14 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var collections = (await results.ReadAsync<Collection>()).Where(c => c.OrganizationId == organizationId);
+            var collections = (await results.ReadAsync<CollectionDetails>()).Where(c => c.OrganizationId == organizationId);
             var groups = (await results.ReadAsync<CollectionGroup>())
                 .GroupBy(g => g.CollectionId);
             var users = (await results.ReadAsync<CollectionUser>())
                 .GroupBy(u => u.CollectionId);
 
             return collections.Select(collection =>
-                new Tuple<Collection, CollectionAccessDetails>(
+                new Tuple<CollectionDetails, CollectionAccessDetails>(
                     collection,
                     new CollectionAccessDetails
                     {
@@ -190,7 +189,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 )
             ).ToList();
         }
-
     }
 
     public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)

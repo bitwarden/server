@@ -555,6 +555,9 @@ public class OrganizationService : IOrganizationService
 
         await ValidateSignUpPoliciesAsync(owner.Id);
 
+        var flexibleCollectionsIsEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
         var organization = new Organization
         {
             Name = license.Name,
@@ -594,7 +597,8 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = license.UsePasswordManager,
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
-            SmServiceAccounts = license.SmServiceAccounts
+            SmServiceAccounts = license.SmServiceAccounts,
+            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled || license.LimitCollectionCreationDeletion
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);

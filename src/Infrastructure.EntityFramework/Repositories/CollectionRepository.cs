@@ -232,8 +232,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<ICollection<Tuple<Core.Entities.Collection, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId,
-        Guid organizationId, bool useFlexibleCollections)
+    public async Task<ICollection<Tuple<CollectionDetails, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId, bool useFlexibleCollections)
     {
         var collections = (await GetManyByUserIdAsync(userId, useFlexibleCollections)).Where(c => c.OrganizationId == organizationId).ToList();
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -251,7 +250,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 select u;
 
             return collections.Select(collection =>
-                new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
+                new Tuple<CollectionDetails, CollectionAccessDetails>(
                     collection,
                     new CollectionAccessDetails
                     {
