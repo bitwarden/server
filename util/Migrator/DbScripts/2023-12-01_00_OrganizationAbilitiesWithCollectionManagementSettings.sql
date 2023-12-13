@@ -22,7 +22,8 @@ BEGIN
         [UseResetPassword],
         [UsePolicies],
         [Enabled],
-        [LimitCollectionCreationDeletion]
+        [LimitCollectionCreationDeletion],
+        [AllowAdminAccessToAllCollectionItems]
     FROM
         [dbo].[Organization]
 END

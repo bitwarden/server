@@ -22,6 +22,7 @@ public class OrganizationAbility
         UseCustomPermissions = organization.UseCustomPermissions;
         UsePolicies = organization.UsePolicies;
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
     }
 
     public Guid Id { get; set; }
@@ -37,4 +38,5 @@ public class OrganizationAbility
     public bool UseCustomPermissions { get; set; }
     public bool UsePolicies { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; }
+    public bool AllowAdminAccessToAllCollectionItems { get; set; }
 }
