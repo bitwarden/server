@@ -76,32 +76,28 @@ jobs:
         env:
           PREFIX: ${{ needs.setup.outputs.migration_filename_prefix }}
         run: |
+          ls -alh "util/Migrator/DbScripts"
+          ls -alh "util/Migrator/DbScripts_finalization"
           src_dir="util/Migrator/DbScripts_finalization"
           dest_dir="util/Migrator/DbScripts"
           i=0
 
           moved_files=""
-          echo "BEFORE LOOP"
           for file in "$src_dir"/*; do
-            echo "FILE=$file"
             filenumber=$(printf "%02d" $i)
-            echo "FILENUMBER=$filenumber"
 
             filename=$(basename "$file")
-            echo "FILENAME=$filename"
             new_filename="${PREFIX}_${filenumber}_${filename}"
-            echo "NEW_FILENAME=$new_filename"
             dest_file="$dest_dir/$new_filename"
-            echo "DEST_FILE=$dest_file"
 
             mv "$file" "$dest_file"
-            echo "MOVED FILE: $file -> $dest_file"
             moved_files="$moved_files \n $filename -> $new_filename"
 
             i=$((i+1))
           done
-          echo "AFTER LOOP"
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
+          ls -alh "util/Migrator/DbScripts"
+          ls -alh "util/Migrator/DbScripts_finalization"
 
       - name: Login to Azure - Prod Subscription
         uses: Azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.5.1
