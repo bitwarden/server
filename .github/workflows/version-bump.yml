@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           repository: bitwarden/server
-          ref: master
+          ref: main
           token: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
 
       - name: Import GPG key
@@ -120,7 +120,7 @@ jobs:
           TITLE: "Bump version to ${{ inputs.version_number }}"
         run: |
           PR_URL=$(gh pr create --title "$TITLE" \
-            --base "master" \
+            --base "main" \
             --head "$PR_BRANCH" \
             --label "version update" \
             --label "automated pr" \
