@@ -95,7 +95,7 @@ jobs:
             echo "DEST_FILE=$dest_file"
 
             mv "$file" "$dest_file"
-
+            echo "MOVED FILE: $file -> $dest_file"
             moved_files="$moved_files \n $filename -> $new_filename"
 
             ((i++))
