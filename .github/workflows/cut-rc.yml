@@ -1,0 +1,13 @@
+---
+name: Cut RC Branch
+
+on:
+  workflow_call:
+
+jobs:
+  cut-rc:
+    name: Cut RC branch
+    runs-on: ubuntu-22.04
+    steps:
+      - name: TEST STEP
+        run: exit 0
