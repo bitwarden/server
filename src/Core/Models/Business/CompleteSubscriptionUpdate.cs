@@ -136,7 +136,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
 
         bool ContainsUpdatesBetween(string currentPlanId, SubscriptionItemOptions options)
         {
-            var subscriptionItem = GetSubscriptionItem(subscription, currentPlanId);
+            var subscriptionItem = FindSubscriptionItem(subscription, currentPlanId);
 
             return (subscriptionItem.Plan.Id != options.Plan && subscriptionItem.Price.Id != options.Plan) ||
                    subscriptionItem.Quantity != options.Quantity;
@@ -180,7 +180,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
     {
         var currentPlanId = GetPasswordManagerPlanId(from.Plan);
 
-        var subscriptionItem = GetSubscriptionItem(subscription, currentPlanId);
+        var subscriptionItem = FindSubscriptionItem(subscription, currentPlanId);
 
         if (subscriptionItem == null)
         {
@@ -195,10 +195,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         {
             Id = subscriptionItem.Id,
             Price = updatedPlanId,
-            Quantity = IsNonSeatBasedPlan(to.Plan) ? 1 : to.PasswordManagerSeats,
-            Deleted = subscriptionItem.Id != null && to.PasswordManagerSeats == 0
-                ? true
-                : null
+            Quantity = IsNonSeatBasedPlan(to.Plan) ? 1 : to.PasswordManagerSeats
         };
     }
 
@@ -207,9 +204,11 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         SubscriptionData from,
         SubscriptionData to)
     {
-        var currentPlanId = from.Plan.SecretsManager.StripeSeatPlanId;
+        var currentPlanId = from.Plan?.SecretsManager?.StripeSeatPlanId;
 
-        var subscriptionItem = GetSubscriptionItem(subscription, currentPlanId);
+        var subscriptionItem = !string.IsNullOrEmpty(currentPlanId)
+            ? FindSubscriptionItem(subscription, currentPlanId)
+            : null;
 
         var updatedPlanId = to.Plan.SecretsManager.StripeSeatPlanId;
 
@@ -231,9 +230,11 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         SubscriptionData from,
         SubscriptionData to)
     {
-        var currentPlanId = from.Plan.SecretsManager.StripeServiceAccountPlanId;
+        var currentPlanId = from.Plan?.SecretsManager?.StripeServiceAccountPlanId;
 
-        var subscriptionItem = GetSubscriptionItem(subscription, currentPlanId);
+        var subscriptionItem = !string.IsNullOrEmpty(currentPlanId)
+            ? FindSubscriptionItem(subscription, currentPlanId)
+            : null;
 
         var updatedPlanId = to.Plan.SecretsManager.StripeServiceAccountPlanId;
 
@@ -257,7 +258,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
     {
         var currentPlanId = from.Plan.PasswordManager.StripeStoragePlanId;
 
-        var subscriptionItem = GetSubscriptionItem(subscription, currentPlanId);
+        var subscriptionItem = FindSubscriptionItem(subscription, currentPlanId);
 
         var updatedPlanId = to.Plan.PasswordManager.StripeStoragePlanId;
 
@@ -274,6 +275,25 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         };
     }
 
+    private static SubscriptionItem FindSubscriptionItem(Subscription subscription, string planId)
+    {
+        if (string.IsNullOrEmpty(planId))
+        {
+            return null;
+        }
+
+        var data = subscription.Items.Data;
+
+        var subscriptionItem = data.FirstOrDefault(item => item.Plan?.Id == planId) ?? data.FirstOrDefault(item => item.Price?.Id == planId);
+
+        return subscriptionItem;
+    }
+
+    private static string GetPasswordManagerPlanId(StaticStore.Plan plan)
+        => IsNonSeatBasedPlan(plan)
+            ? plan.PasswordManager.StripePlanId
+            : plan.PasswordManager.StripeSeatPlanId;
+
     private static SubscriptionData GetSubscriptionDataFor(Organization organization)
         => new()
         {
@@ -289,23 +309,4 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
             >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
             or PlanType.FamiliesAnnually
             or PlanType.TeamsStarter;
-
-    private static string GetPasswordManagerPlanId(StaticStore.Plan plan)
-        => IsNonSeatBasedPlan(plan)
-            ? plan.PasswordManager.StripePlanId
-            : plan.PasswordManager.StripeSeatPlanId;
-
-    private static SubscriptionItem GetSubscriptionItem(Subscription subscription, string planId)
-    {
-        if (string.IsNullOrEmpty(planId))
-        {
-            return null;
-        }
-
-        var data = subscription.Items.Data;
-
-        var subscriptionItem = data.FirstOrDefault(item => item.Plan?.Id == planId) ?? data.FirstOrDefault(item => item.Price?.Id == planId);
-
-        return subscriptionItem;
-    }
 }

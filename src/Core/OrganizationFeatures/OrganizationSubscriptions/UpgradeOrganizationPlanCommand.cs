@@ -225,8 +225,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                 organization,
                 newPlan,
                 upgrade.AdditionalSeats,
-                upgrade.AdditionalSmSeats,
-                upgrade.AdditionalServiceAccounts,
+                upgrade.AdditionalSmSeats == 0 ? null : upgrade.AdditionalSmSeats,
+                upgrade.AdditionalServiceAccounts == 0 ? null : upgrade.AdditionalServiceAccounts,
                 upgrade.AdditionalStorageGb == 0 ? null : upgrade.AdditionalStorageGb);
 
             success = string.IsNullOrEmpty(paymentIntentClientSecret);
