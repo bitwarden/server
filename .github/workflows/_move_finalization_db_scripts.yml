@@ -98,7 +98,7 @@ jobs:
             echo "MOVED FILE: $file -> $dest_file"
             moved_files="$moved_files \n $filename -> $new_filename"
 
-            ((i++))
+            i=$((i+1))
           done
           echo "AFTER LOOP"
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
