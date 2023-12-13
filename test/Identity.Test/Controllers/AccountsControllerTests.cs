@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -68,14 +69,14 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToSha256And100000Iterations()
+    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
     {
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation>(null!));
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
-        Assert.Equal(100000, response.KdfIterations);
+        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
     }
 
     [Fact]
