@@ -81,13 +81,18 @@ jobs:
           i=0
 
           moved_files=""
-
+          echo "BEFORE LOOP"
           for file in "$src_dir"/*; do
+            echo "FILE=$file"
             filenumber=$(printf "%02d" $i)
+            echo "FILENUMBER=$filenumber"
 
             filename=$(basename "$file")
+            echo "FILENAME=$filename"
             new_filename="${PREFIX}_${filenumber}_${filename}"
+            echo "NEW_FILENAME=$new_filename"
             dest_file="$dest_dir/$new_filename"
+            echo "DEST_FILE=$dest_file"
 
             mv "$file" "$dest_file"
 
@@ -95,7 +100,7 @@ jobs:
 
             ((i++))
           done
-
+          echo "AFTER LOOP"
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
 
       - name: Login to Azure - Prod Subscription
