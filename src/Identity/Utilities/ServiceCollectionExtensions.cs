@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         var identityServerBuilder = services
             .AddIdentityServer(options =>
             {
+                options.LicenseKey = globalSettings.IdentityServer.LicenseKey;
                 options.Endpoints.EnableIntrospectionEndpoint = false;
                 options.Endpoints.EnableEndSessionEndpoint = false;
                 options.Endpoints.EnableUserInfoEndpoint = false;
