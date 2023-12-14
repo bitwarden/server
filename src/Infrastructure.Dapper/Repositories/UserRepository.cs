@@ -230,7 +230,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             //  Update re-encrypted data
             foreach (var action in updateDataActions)
             {
-                await action(transaction);
+                await action(connection, transaction);
             }
 
             transaction.Commit();

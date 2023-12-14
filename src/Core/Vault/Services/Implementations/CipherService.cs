@@ -585,11 +585,11 @@ public class CipherService : ICipherService
                     originalCipher.SetAttachments(originalAttachments);
                 }
 
-                var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(sharingUserId, originalCipher.Id);
+                var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(sharingUserId, originalCipher.Id, UseFlexibleCollections);
                 var currentCollectionIdsForCipher = currentCollectionsForCipher.Select(c => c.CollectionId).ToList();
                 currentCollectionIdsForCipher.RemoveAll(id => collectionIds.Contains(id));
 
-                await _collectionCipherRepository.UpdateCollectionsAsync(originalCipher.Id, sharingUserId, currentCollectionIdsForCipher);
+                await _collectionCipherRepository.UpdateCollectionsAsync(originalCipher.Id, sharingUserId, currentCollectionIdsForCipher, UseFlexibleCollections);
                 await _cipherRepository.ReplaceAsync(originalCipher);
             }
 
@@ -634,7 +634,7 @@ public class CipherService : ICipherService
 
         await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
         await _collectionCipherRepository.UpdateCollectionsForCiphersAsync(cipherIds, sharingUserId,
-            organizationId, collectionIds);
+            organizationId, collectionIds, UseFlexibleCollections);
 
         var events = cipherInfos.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c.cipher, EventType.Cipher_Shared, null));
@@ -675,7 +675,7 @@ public class CipherService : ICipherService
             {
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
-            await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
+            await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds, UseFlexibleCollections);
         }
 
         await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_UpdatedCollections);
@@ -788,12 +788,15 @@ public class CipherService : ICipherService
             {
                 collection.SetNewId();
                 newCollections.Add(collection);
-                newCollectionUsers.Add(new CollectionUser
+                if (UseFlexibleCollections)
                 {
-                    CollectionId = collection.Id,
-                    OrganizationUserId = importingOrgUser.Id,
-                    Manage = true
-                });
+                    newCollectionUsers.Add(new CollectionUser
+                    {
+                        CollectionId = collection.Id,
+                        OrganizationUserId = importingOrgUser.Id,
+                        Manage = true
+                    });
+                }
             }
         }
 

@@ -102,7 +102,7 @@ jobs:
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: master
+          branch: main
           artifacts: ${{ matrix.name }}.zip
 
       - name: Login to Azure - CI subscription
@@ -291,7 +291,7 @@ jobs:
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: master
+          branch: main
           artifacts: "docker-stub-US.zip,
             docker-stub-US-sha256.txt,
             docker-stub-EU.zip,
