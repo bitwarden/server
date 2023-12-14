@@ -3,9 +3,11 @@ using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Enums;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -24,17 +26,23 @@ public class WebAuthnController : Controller
     private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> _createOptionsDataProtector;
     private readonly IPolicyService _policyService;
+    private readonly IGetWebAuthnLoginCredentialCreateOptionsCommand _getWebAuthnLoginCredentialCreateOptionsCommand;
+    private readonly ICreateWebAuthnLoginCredentialCommand _createWebAuthnLoginCredentialCommand;
 
     public WebAuthnController(
         IUserService userService,
         IWebAuthnCredentialRepository credentialRepository,
         IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> createOptionsDataProtector,
-        IPolicyService policyService)
+        IPolicyService policyService,
+        IGetWebAuthnLoginCredentialCreateOptionsCommand getWebAuthnLoginCredentialCreateOptionsCommand,
+        ICreateWebAuthnLoginCredentialCommand createWebAuthnLoginCredentialCommand)
     {
         _userService = userService;
         _credentialRepository = credentialRepository;
         _createOptionsDataProtector = createOptionsDataProtector;
         _policyService = policyService;
+        _getWebAuthnLoginCredentialCreateOptionsCommand = getWebAuthnLoginCredentialCreateOptionsCommand;
+        _createWebAuthnLoginCredentialCommand = createWebAuthnLoginCredentialCommand;
     }
 
     [HttpGet("")]
@@ -51,7 +59,7 @@ public class WebAuthnController : Controller
     {
         var user = await VerifyUserAsync(model);
         await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
-        var options = await _userService.StartWebAuthnLoginRegistrationAsync(user);
+        var options = await _getWebAuthnLoginCredentialCreateOptionsCommand.GetWebAuthnLoginCredentialCreateOptionsAsync(user);
 
         var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
         var token = _createOptionsDataProtector.Protect(tokenable);
@@ -75,7 +83,7 @@ public class WebAuthnController : Controller
             throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
         }
 
-        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, tokenable.Options, model.DeviceResponse, model.SupportsPrf, model.EncryptedUserKey, model.EncryptedPublicKey, model.EncryptedPrivateKey);
+        var success = await _createWebAuthnLoginCredentialCommand.CreateWebAuthnLoginCredentialAsync(user, model.Name, tokenable.Options, model.DeviceResponse, model.SupportsPrf, model.EncryptedUserKey, model.EncryptedPublicKey, model.EncryptedPrivateKey);
         if (!success)
         {
             throw new BadRequestException("Unable to complete WebAuthn registration.");

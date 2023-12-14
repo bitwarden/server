@@ -1,11 +1,11 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -61,8 +61,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
-    private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public UserService(
@@ -95,9 +93,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IWebAuthnCredentialRepository webAuthnRepository,
-        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
         : base(
               store,
               optionsAccessor,
@@ -135,8 +131,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _webAuthnCredentialRepository = webAuthnRepository;
-        _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -520,129 +514,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.SetTwoFactorProviders(providers);
         await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
         return true;
-    }
-
-    public async Task<CredentialCreateOptions> StartWebAuthnLoginRegistrationAsync(User user)
-    {
-        var fidoUser = new Fido2User
-        {
-            DisplayName = user.Name,
-            Name = user.Email,
-            Id = user.Id.ToByteArray(),
-        };
-
-        // Get existing keys to exclude
-        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var excludeCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
-            .ToList();
-
-        var authenticatorSelection = new AuthenticatorSelection
-        {
-            AuthenticatorAttachment = null,
-            RequireResidentKey = true,
-            UserVerification = UserVerificationRequirement.Required
-        };
-
-        var extensions = new AuthenticationExtensionsClientInputs { };
-
-        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
-            AttestationConveyancePreference.None, extensions);
-
-        return options;
-    }
-
-    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, CredentialCreateOptions options,
-        AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf,
-        string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
-    {
-        var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        if (existingCredentials.Count >= 5)
-        {
-            return false;
-        }
-
-        var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
-
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-
-        var credential = new WebAuthnCredential
-        {
-            Name = name,
-            CredentialId = CoreHelpers.Base64UrlEncode(success.Result.CredentialId),
-            PublicKey = CoreHelpers.Base64UrlEncode(success.Result.PublicKey),
-            Type = success.Result.CredType,
-            AaGuid = success.Result.Aaguid,
-            Counter = (int)success.Result.Counter,
-            UserId = user.Id,
-            SupportsPrf = supportsPrf,
-            EncryptedUserKey = encryptedUserKey,
-            EncryptedPublicKey = encryptedPublicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
-        };
-
-        await _webAuthnCredentialRepository.CreateAsync(credential);
-        return true;
-    }
-
-    public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
-    {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var existingCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
-            .ToList();
-
-        if (existingCredentials.Count == 0)
-        {
-            return null;
-        }
-
-        // TODO: PRF?
-        var exts = new AuthenticationExtensionsClientInputs
-        {
-            UserVerificationMethod = true
-        };
-        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Required, exts);
-
-        // TODO: temp save options to user record somehow
-
-        return options;
-    }
-
-    public async Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user)
-    {
-        // TODO: Get options from user record somehow, then clear them
-        var options = AssertionOptions.FromJson("");
-
-        var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
-        var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertionId);
-        if (credential == null)
-        {
-            return null;
-        }
-
-        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
-        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
-        var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
-        var assertionVerificationResult = await _fido2.MakeAssertionAsync(
-            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
-
-        // Update SignatureCounter
-        credential.Counter = (int)assertionVerificationResult.Counter;
-        await _webAuthnCredentialRepository.ReplaceAsync(credential);
-
-        if (assertionVerificationResult.Status == "ok")
-        {
-            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user));
-            return token;
-        }
-        else
-        {
-            return null;
-        }
     }
 
     public async Task SendEmailVerificationAsync(User user)

@@ -1,11 +1,15 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Identity.Controllers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -22,6 +26,8 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
     private readonly ICaptchaValidationService _captchaValidationService;
+    private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
+    private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
 
     public AccountsControllerTests()
     {
@@ -29,11 +35,15 @@ public class AccountsControllerTests : IDisposable
         _userRepository = Substitute.For<IUserRepository>();
         _userService = Substitute.For<IUserService>();
         _captchaValidationService = Substitute.For<ICaptchaValidationService>();
+        _assertionOptionsDataProtector = Substitute.For<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>();
+        _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
         _sut = new AccountsController(
             _logger,
             _userRepository,
             _userService,
-            _captchaValidationService
+            _captchaValidationService,
+            _assertionOptionsDataProtector,
+            _getWebAuthnLoginCredentialAssertionOptionsCommand
         );
     }
 
@@ -59,14 +69,14 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToSha256And100000Iterations()
+    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
     {
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation>(null!));
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
-        Assert.Equal(100000, response.KdfIterations);
+        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
     }
 
     [Fact]
