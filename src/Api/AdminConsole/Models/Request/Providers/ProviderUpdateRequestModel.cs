@@ -9,10 +9,10 @@ namespace Bit.Api.AdminConsole.Models.Request.Providers;
 public class ProviderUpdateRequestModel
 {
     [Required]
-    [StringLength(50)]
+    [StringLength(50, ErrorMessage = "The field Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
-    [StringLength(50)]
+    [StringLength(50, ErrorMessage = "The field Business Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     [EmailAddress]
