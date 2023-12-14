@@ -10,7 +10,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
-using BitPayLight;
 using Duende.IdentityServer.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Logging;
