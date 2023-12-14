@@ -54,7 +54,7 @@ public class CurrentContext : ICurrentContext
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
-        _featureService = featureService;;
+        _featureService = featureService; ;
     }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
