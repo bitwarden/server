@@ -59,13 +59,12 @@ public static class ServiceCollectionExtensions
             // so we can inject it right after.
             services.AddSingleton<PersistedGrantStore>();
 
-            services.AddTransient<IPersistedGrantStore>(sp =>
+            services.AddSingleton<IPersistedGrantStore>(sp =>
             {
                 return new RedisPersistedGrantStore(
-                    // TODO: This should be done through DI where CM is a singleton
                     ConnectionMultiplexer.Connect(globalSettings.Grants.RedisConnectionString),
                     sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-                    sp.GetRequiredService<PersistedGrantStore>()
+                    sp.GetRequiredService<PersistedGrantStore>() // Fallback grant store
                 );
             });
         }
