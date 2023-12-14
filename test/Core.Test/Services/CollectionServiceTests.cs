@@ -187,7 +187,7 @@ public class CollectionServiceTest
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(userId)
+            .GetManyByUserIdAsync(userId, Arg.Any<bool>())
             .Returns(new List<CollectionDetails> { collectionDetails });
         sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organizationId).Returns(true);
 
@@ -197,7 +197,7 @@ public class CollectionServiceTest
         Assert.Equal(collectionDetails, result.First());
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId, Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -217,7 +217,7 @@ public class CollectionServiceTest
         Assert.Equal(collection, result.First());
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -229,6 +229,6 @@ public class CollectionServiceTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId));
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, default);
     }
 }
