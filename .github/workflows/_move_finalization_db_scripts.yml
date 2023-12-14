@@ -145,7 +145,7 @@ jobs:
           MOVED_FILES: ${{ steps.move-files.outputs.moved_files }}
           TITLE: "Move finalization db scripts"
         run: |
-          PR_URL=$(gh pr create --title "$PR_TITLE" \
+          PR_URL=$(gh pr create --title "$TITLE" \
             --base "main" \
             --head "$BRANCH" \
             --label "automated pr" \
