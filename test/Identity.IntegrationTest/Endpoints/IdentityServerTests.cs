@@ -1,4 +1,7 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -569,7 +572,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         };
         await organizationUserRepository.CreateAsync(organizationUser);
 
-        var ssoPolicy = new Bit.Core.Entities.Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
+        var ssoPolicy = new Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
         await policyRepository.CreateAsync(ssoPolicy);
     }
 
