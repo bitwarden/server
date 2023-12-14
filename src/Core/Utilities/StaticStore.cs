@@ -106,10 +106,11 @@ public static class StaticStore
         GlobalDomains.Add(GlobalEquivalentDomainsType.Pinterest, new List<string> { "pinterest.com", "pinterest.com.au", "pinterest.cl", "pinterest.de", "pinterest.dk", "pinterest.es", "pinterest.fr", "pinterest.co.uk", "pinterest.jp", "pinterest.co.kr", "pinterest.nz", "pinterest.pt", "pinterest.se" });
         #endregion
 
-        Plans = new List<Models.StaticStore.Plan>
+        Plans = new List<Plan>
         {
             new EnterprisePlan(true),
             new EnterprisePlan(false),
+            new TeamsStarterPlan(),
             new TeamsPlan(true),
             new TeamsPlan(false),
 
@@ -130,7 +131,7 @@ public static class StaticStore
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
-    public static IEnumerable<Models.StaticStore.Plan> Plans { get; }
+    public static IEnumerable<Plan> Plans { get; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {
             new SponsoredPlan

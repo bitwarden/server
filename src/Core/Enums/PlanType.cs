@@ -36,4 +36,6 @@ public enum PlanType : byte
     EnterpriseMonthly = 14,
     [Display(Name = "Enterprise (Annually)")]
     EnterpriseAnnually = 15,
+    [Display(Name = "Teams Starter")]
+    TeamsStarter = 16,
 }

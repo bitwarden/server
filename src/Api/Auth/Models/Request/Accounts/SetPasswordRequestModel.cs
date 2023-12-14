@@ -1,14 +1,11 @@
-﻿#nullable enable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class SetPasswordRequestModel : IValidatableObject
+public class SetPasswordRequestModel
 {
     [Required]
     [StringLength(300)]
@@ -17,7 +14,7 @@ public class SetPasswordRequestModel : IValidatableObject
     public string Key { get; set; }
     [StringLength(50)]
     public string MasterPasswordHint { get; set; }
-    public KeysRequestModel? Keys { get; set; }
+    public KeysRequestModel Keys { get; set; }
     [Required]
     public KdfType Kdf { get; set; }
     [Required]
@@ -36,10 +33,5 @@ public class SetPasswordRequestModel : IValidatableObject
         existingUser.Key = Key;
         Keys?.ToUser(existingUser);
         return existingUser;
-    }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        return KdfSettingsValidator.Validate(Kdf, KdfIterations, KdfMemory, KdfParallelism);
     }
 }
