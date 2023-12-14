@@ -237,7 +237,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         // The limit collection management setting is disabled,
         // ensure acting user has manage permissions for all collections being deleted
-        if (await GetOrganizationAbilityAsync() is { LimitCollectionCreationDeletion: false })
+        if (org != null && await GetOrganizationAbilityAsync() is { LimitCollectionCreationDeletion: false })
         {
             var canManageCollections = await IsAssignedToCollectionsAsync(resources, org, true);
             if (canManageCollections)
@@ -256,7 +256,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> IsAssignedToCollectionsAsync(
         ICollection<Collection> targetCollections,
-        CurrentContextOrganization? org,
+        CurrentContextOrganization org,
         bool requireManagePermission)
     {
         // List of collection Ids the acting user has access to
@@ -264,7 +264,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
             .Where(c =>
                 // Check Collections with Manage permission
-                (!requireManagePermission || c.Manage) && c.OrganizationId == org?.Id)
+                (!requireManagePermission || c.Manage) && c.OrganizationId == org.Id)
             .Select(c => c.Id)
             .ToHashSet();
 
