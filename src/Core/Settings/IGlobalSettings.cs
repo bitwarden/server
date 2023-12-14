@@ -23,4 +23,5 @@ public interface IGlobalSettings
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
     IDomainVerificationSettings DomainVerification { get; set; }
     ILaunchDarklySettings LaunchDarkly { get; set; }
+    string DevelopmentDirectory { get; set; }
 }

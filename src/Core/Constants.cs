@@ -31,6 +31,45 @@ public static class Constants
     public const string IdentityProvider = "bitwarden";
 }
 
+public static class AuthConstants
+{
+    public static readonly RangeConstant PBKDF2_ITERATIONS = new(600_000, 2_000_000, 600_000);
+
+    public static readonly RangeConstant ARGON2_ITERATIONS = new(2, 10, 3);
+    public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
+    public static readonly RangeConstant ARGON2_PARALLELISM = new(1, 16, 4);
+
+}
+
+public class RangeConstant
+{
+    public int Default { get; }
+    public int Min { get; }
+    public int Max { get; }
+
+    public RangeConstant(int min, int max, int defaultValue)
+    {
+        Default = defaultValue;
+        Min = min;
+        Max = max;
+
+        if (Min > Max)
+        {
+            throw new ArgumentOutOfRangeException($"{Min} is larger than {Max}.");
+        }
+
+        if (!InsideRange(defaultValue))
+        {
+            throw new ArgumentOutOfRangeException($"{Default} is outside allowed range of {Min}-{Max}.");
+        }
+    }
+
+    public bool InsideRange(int number)
+    {
+        return Min <= number && number <= Max;
+    }
+}
+
 public static class TokenPurposes
 {
     public const string LinkSso = "LinkSso";
@@ -56,8 +95,6 @@ public static class FeatureFlagKeys
     public const string BulkCollectionAccess = "bulk-collection-access";
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
-    public const string BillingPlansUpgrade = "billing-plans-upgrade";
-    public const string BillingStarterPlan = "billing-starter-plan";
     public const string KeyRotationImprovements = "key-rotation-improvements";
 
     public static List<string> GetAllKeys()

@@ -8,7 +8,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -32,43 +31,6 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<ICollectionRepository>().Received()
             .CreateAsync(collection, Arg.Is<List<CollectionAccessSelection>>(l => l == null),
                 Arg.Is<List<CollectionAccessSelection>>(l => l.Any(i => i.Manage == true)));
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogCollectionEventAsync(collection, EventType.Collection_Created);
-        Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
-        Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveAsync_DefaultIdWithUsers_WithOneEditAssignedCollectionsUser_WhileFCFlagDisabled_CreatesCollectionInTheRepository(
-        Collection collection, Organization organization,
-        [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> users,
-        SutProvider<CollectionService> sutProvider)
-    {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(false);
-
-        collection.Id = default;
-        collection.OrganizationId = organization.Id;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(collection.OrganizationId).Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(collection.OrganizationId, Arg.Any<OrganizationUserType?>())
-            .Returns(new List<OrganizationUser>
-            {
-                users.Select(x => new OrganizationUser
-                {
-                    Id = x.Id,
-                    Type = OrganizationUserType.Custom,
-                    Permissions = CoreHelpers.ClassToJsonData(new Permissions { EditAssignedCollections = true })
-                }).First()
-            });
-        var utcNow = DateTime.UtcNow;
-
-        await sutProvider.Sut.SaveAsync(collection, null, users);
-
-        await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .CreateAsync(collection, Arg.Is<List<CollectionAccessSelection>>(l => l == null),
-                Arg.Is<List<CollectionAccessSelection>>(l => l.Count(i => i.Manage == true) == 1));
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Created);
         Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
@@ -225,7 +187,7 @@ public class CollectionServiceTest
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(userId)
+            .GetManyByUserIdAsync(userId, Arg.Any<bool>())
             .Returns(new List<CollectionDetails> { collectionDetails });
         sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organizationId).Returns(true);
 
@@ -235,7 +197,7 @@ public class CollectionServiceTest
         Assert.Equal(collectionDetails, result.First());
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId, Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -255,7 +217,7 @@ public class CollectionServiceTest
         Assert.Equal(collection, result.First());
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -267,6 +229,6 @@ public class CollectionServiceTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId));
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, default);
     }
 }

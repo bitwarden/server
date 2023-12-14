@@ -7,6 +7,13 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Validators;
+using Bit.Api.Tools.Models.Request;
+using Bit.Api.Tools.Validators;
+using Bit.Api.Vault.Models.Request;
+using Bit.Api.Vault.Validators;
+using Bit.Core.Auth.Entities;
 using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
@@ -18,6 +25,8 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Vault.Entities;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -135,6 +144,18 @@ public class Startup
 
         // Key Rotation
         services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>,
+                CipherRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>,
+                FolderRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>,
+                SendRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
+                EmergencyAccessRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using AutoMapper;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Tools.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -69,4 +70,28 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
             return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
         }
     }
+
+    /// <inheritdoc />
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+        IEnumerable<Core.Tools.Entities.Send> sends)
+    {
+        return async (_, _) =>
+        {
+            var newSends = sends.ToDictionary(s => s.Id);
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            var userSends = await GetDbSet(dbContext)
+                .Where(s => s.UserId == userId)
+                .ToListAsync();
+            var validSends = userSends
+                .Where(send => newSends.ContainsKey(send.Id));
+            foreach (var send in validSends)
+            {
+                send.Key = newSends[send.Id].Key;
+            }
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
 }
