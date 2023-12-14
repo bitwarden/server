@@ -44,83 +44,92 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
     }
     public async Task<PersistedGrant> GetAsync(string key)
     {
-        if (!_connectionMultiplexer.IsConnected)
+        try
         {
-            // Redis is down, fallback to using SQL table
-            _logger.LogWarning("This is not connected, using fallback store to execute 'GetAsync' with {Key}.", key);
-            return await _fallbackGrantStore.GetAsync(key);
-        }
-
-        var redisKey = CreateRedisKey(key);
-
-        var redisDb = _connectionMultiplexer.GetDatabase();
-        var grantHashEntries = await redisDb.HashGetAllAsync(redisKey);
-
-        if (grantHashEntries.Length == 0)
-        {
-            // It wasn't found, there is a chance is was instead stored in the fallback store
-            _logger.LogWarning("Could not find grant in primary store, using fallback one.");
-            return await _fallbackGrantStore.GetAsync(key);
-        }
-
-        // TODO: This goes to Redis twice for every GetAsync should we do this in a transaction
-        // or we could directly store the expiry in the hash value.
-        var expiry = await redisDb.KeyTimeToLiveAsync(redisKey);
-
-        if (!expiry.HasValue)
-        {
-            throw new InvalidOperationException("Grants are always expected to be stored with an expiry.");
-        }
-
-        var persistedGrant = new PersistedGrant
-        {
-            Key = key,
-        };
-
-        foreach (var entry in grantHashEntries)
-        {
-            switch (entry.Name)
+            if (!_connectionMultiplexer.IsConnected)
             {
-                case TypeEntry:
-                    persistedGrant.Type = entry.Value;
-                    break;
-                case SubjectIdEntry:
-                    persistedGrant.SubjectId = entry.Value;
-                    break;
-                case SessionIdEntry:
-                    if (entry.Value.HasValue)
-                    {
-                        persistedGrant.SessionId = entry.Value;
-                    }
-                    break;
-                case ClientIdEntry:
-                    persistedGrant.ClientId = entry.Value;
-                    break;
-                case DescriptionEntry:
-                    if (entry.Value.HasValue)
-                    {
-                        persistedGrant.Description = entry.Value;
-                    }
-                    break;
-                case CreationTimeEntry:
-                    persistedGrant.CreationTime = new DateTime((long)entry.Value, DateTimeKind.Utc);
-                    break;
-                case ConsumedTimeEntry:
-                    if (entry.Value.HasValue)
-                    {
-                        persistedGrant.ConsumedTime = new DateTime((long)entry.Value, DateTimeKind.Utc);
-                    }
-                    break;
-                case DataEntry:
-                    persistedGrant.Data = entry.Value;
-                    break;
+                // Redis is down, fallback to using SQL table
+                _logger.LogWarning("This is not connected, using fallback store to execute 'GetAsync' with {Key}.", key);
+                return await _fallbackGrantStore.GetAsync(key);
             }
+
+            var redisKey = CreateRedisKey(key);
+
+            var redisDb = _connectionMultiplexer.GetDatabase();
+            var grantHashEntries = await redisDb.HashGetAllAsync(redisKey);
+
+            if (grantHashEntries.Length == 0)
+            {
+                // It wasn't found, there is a chance is was instead stored in the fallback store
+                _logger.LogWarning("Could not find grant in primary store, using fallback one.");
+                return await _fallbackGrantStore.GetAsync(key);
+            }
+
+            // TODO: This goes to Redis twice for every GetAsync should we do this in a transaction
+            // or we could directly store the expiry in the hash value.
+            var expiry = await redisDb.KeyTimeToLiveAsync(redisKey);
+
+            if (!expiry.HasValue)
+            {
+                throw new InvalidOperationException("Grants are always expected to be stored with an expiry.");
+            }
+
+            var persistedGrant = new PersistedGrant
+            {
+                Key = key,
+            };
+
+            foreach (var entry in grantHashEntries)
+            {
+                switch (entry.Name)
+                {
+                    case TypeEntry:
+                        persistedGrant.Type = entry.Value;
+                        break;
+                    case SubjectIdEntry:
+                        persistedGrant.SubjectId = entry.Value;
+                        break;
+                    case SessionIdEntry:
+                        if (entry.Value.HasValue)
+                        {
+                            persistedGrant.SessionId = entry.Value;
+                        }
+                        break;
+                    case ClientIdEntry:
+                        persistedGrant.ClientId = entry.Value;
+                        break;
+                    case DescriptionEntry:
+                        if (entry.Value.HasValue)
+                        {
+                            persistedGrant.Description = entry.Value;
+                        }
+                        break;
+                    case CreationTimeEntry:
+                        persistedGrant.CreationTime = new DateTime((long)entry.Value, DateTimeKind.Utc);
+                        break;
+                    case ConsumedTimeEntry:
+                        if (entry.Value.HasValue)
+                        {
+                            persistedGrant.ConsumedTime = new DateTime((long)entry.Value, DateTimeKind.Utc);
+                        }
+                        break;
+                    case DataEntry:
+                        persistedGrant.Data = entry.Value;
+                        break;
+                }
+            }
+
+            Debug.Assert(persistedGrant.CreationTime != default, "CreationTime should have gotten a date");
+            persistedGrant.Expiration = persistedGrant.CreationTime.Add(expiry.Value);
+
+            return persistedGrant;
         }
-
-        Debug.Assert(persistedGrant.CreationTime != default, "CreationTime should have gotten a date");
-        persistedGrant.Expiration = persistedGrant.CreationTime.Add(expiry.Value);
-
-        return persistedGrant;
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failure in 'GetAsync' falling back.");
+            return await _fallbackGrantStore.GetAsync(key);
+        }
+        
     }
     public Task RemoveAllAsync(PersistedGrantFilter filter)
     {
@@ -143,38 +152,45 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
 
     public async Task StoreAsync(PersistedGrant grant)
     {
-        // Create a partial PersistedGrant to serialize and store as the value
-        if (!_connectionMultiplexer.IsConnected)
+        try
         {
-            _logger.LogWarning("Redis is not connected, using fallback store to execute 'StoreAsync', with {Key}", grant.Key);
+            if (!_connectionMultiplexer.IsConnected)
+            {
+                _logger.LogWarning("Redis is not connected, using fallback store to execute 'StoreAsync', with {Key}", grant.Key);
+                await _fallbackGrantStore.StoreAsync(grant);
+            }
+
+            if (!grant.Expiration.HasValue)
+            {
+                throw new ArgumentException("A PersistedGrant is always expected to include an expiration time.");
+            }
+
+            var redisDb = _connectionMultiplexer.GetDatabase();
+            var transaction = redisDb.CreateTransaction();
+
+            var redisKey = CreateRedisKey(grant.Key);
+
+            // Do not await transaction methods, the returned tasks only get completed once transaction.ExecuteAsync is called
+            // Ref: https://stackexchange.github.io/StackExchange.Redis/Transactions.html#and-in-stackexchangeredis
+            _ = transaction.HashSetAsync(redisKey, new HashEntry[]
+            {
+                new(TypeEntry, grant.Type),
+                new(SubjectIdEntry, grant.SubjectId),
+                new(SessionIdEntry, grant.SessionId != null ? grant.SessionId : RedisValue.EmptyString),
+                new(ClientIdEntry, grant.ClientId),
+                new(DescriptionEntry, grant.Description != null ? grant.Description : RedisValue.EmptyString),
+                new(CreationTimeEntry, grant.CreationTime.Ticks),
+                new(ConsumedTimeEntry, grant.ConsumedTime.HasValue ? grant.CreationTime.Ticks : RedisValue.EmptyString),
+                new(DataEntry, grant.Data),
+            });
+            _ = transaction.KeyExpireAsync(redisKey, grant.Expiration.Value);
+            await transaction.ExecuteAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failure in 'StoreAsync' falling back.");
             await _fallbackGrantStore.StoreAsync(grant);
         }
-
-        if (!grant.Expiration.HasValue)
-        {
-            throw new ArgumentException("A PersistedGrant is always expected to include an expiration time.");
-        }
-
-        var redisDb = _connectionMultiplexer.GetDatabase();
-        var transaction = redisDb.CreateTransaction();
-
-        var redisKey = CreateRedisKey(grant.Key);
-
-        // Do not await transaction methods, the returned tasks only get completed once transaction.ExecuteAsync is called
-        // Ref: https://stackexchange.github.io/StackExchange.Redis/Transactions.html#and-in-stackexchangeredis
-        _ = transaction.HashSetAsync(redisKey, new HashEntry[]
-        {
-            new(TypeEntry, grant.Type),
-            new(SubjectIdEntry, grant.SubjectId),
-            new(SessionIdEntry, grant.SessionId != null ? grant.SessionId : RedisValue.EmptyString),
-            new(ClientIdEntry, grant.ClientId),
-            new(DescriptionEntry, grant.Description != null ? grant.Description : RedisValue.EmptyString),
-            new(CreationTimeEntry, grant.CreationTime.Ticks),
-            new(ConsumedTimeEntry, grant.ConsumedTime.HasValue ? grant.CreationTime.Ticks : RedisValue.EmptyString),
-            new(DataEntry, grant.Data),
-        });
-        _ = transaction.KeyExpireAsync(redisKey, grant.Expiration.Value);
-        await transaction.ExecuteAsync();
     }
 
     private static RedisKey CreateRedisKey(string key)
