@@ -43,6 +43,9 @@ public class CollectionService : ICollectionService
         _featureService = featureService;
     }
 
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
     public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
         IEnumerable<CollectionAccessSelection> users = null)
     {
@@ -53,36 +56,21 @@ public class CollectionService : ICollectionService
         }
 
         var groupsList = groups?.ToList();
-        var usersList = users?.ToList() ?? new List<CollectionAccessSelection>();
+        var usersList = users?.ToList();
 
         // If using Flexible Collections - a collection should always have someone with Can Manage permissions
-        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
+        if (UseFlexibleCollections)
         {
             var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
-            var userHasManageAccess = usersList.Any(u => u.Manage);
+            var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
             if (!groupHasManageAccess && !userHasManageAccess)
             {
                 throw new BadRequestException(
                     "At least one member or group must have can manage permission.");
             }
         }
-        else
-        {
-            // If not using Flexible Collections
-            // all Organization users with EditAssignedCollections permission should have Manage permission for the collection
-            var organizationUsers = await _organizationUserRepository
-                .GetManyByOrganizationAsync(collection.OrganizationId, null);
-            foreach (var orgUser in organizationUsers.Where(ou => ou.GetPermissions()?.EditAssignedCollections ?? false))
-            {
-                var user = usersList.FirstOrDefault(u => u.Id == orgUser.Id);
-                if (user != null)
-                {
-                    user.Manage = true;
-                }
-            }
-        }
 
-        if (collection.Id == default)
+        if (collection.Id == default(Guid))
         {
             if (org.MaxCollections.HasValue)
             {
@@ -137,7 +125,7 @@ public class CollectionService : ICollectionService
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value, UseFlexibleCollections);
             orgCollections = collections.Where(c => c.OrganizationId == organizationId);
         }
 

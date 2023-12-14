@@ -7,6 +7,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -165,8 +166,8 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(default)
             .ReturnsForAnyArgs(user);
-        sutProvider.GetDependency<IUserService>()
-            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey)
+        sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
+            .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey)
             .Returns(true);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
@@ -196,8 +197,8 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(default)
             .ReturnsForAnyArgs(user);
-        sutProvider.GetDependency<IUserService>()
-            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), false)
+        sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
+            .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), false)
             .Returns(true);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)

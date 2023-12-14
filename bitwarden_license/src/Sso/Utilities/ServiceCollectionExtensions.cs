@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         var identityServerBuilder = services
             .AddIdentityServer(options =>
             {
+                options.LicenseKey = globalSettings.IdentityServer.LicenseKey;
                 options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
                 if (env.IsDevelopment())
                 {
