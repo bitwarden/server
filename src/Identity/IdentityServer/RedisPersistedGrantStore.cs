@@ -15,6 +15,7 @@ namespace Bit.Identity.IdentityServer;
 /// </remarks>
 public class RedisPersistedGrantStore : IPersistedGrantStore
 {
+    private static readonly MessagePackSerializerOptions _options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
     private readonly IConnectionMultiplexer _connectionMultiplexer;
     private readonly ILogger<RedisPersistedGrantStore> _logger;
     private readonly IPersistedGrantStore _fallbackGrantStore;
@@ -27,6 +28,7 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
         _connectionMultiplexer = connectionMultiplexer;
         _logger = logger;
         _fallbackGrantStore = fallbackGrantStore;
+
     }
 
     public Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)
@@ -50,7 +52,6 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
             var redisDb = _connectionMultiplexer.GetDatabase();
             var redisValueAndExpiry = await redisDb.StringGetWithExpiryAsync(redisKey);
 
-
             if (!redisValueAndExpiry.Value.HasValue)
             {
                 // It wasn't found, there is a chance is was instead stored in the fallback store
@@ -60,7 +61,7 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
 
             Debug.Assert(redisValueAndExpiry.Expiry.HasValue, "Redis entry is expected to have an expiry.");
 
-            var storablePersistedGrant = MessagePackSerializer.Deserialize<StorablePersistedGrant>(redisValueAndExpiry.Value);
+            var storablePersistedGrant = MessagePackSerializer.Deserialize<StorablePersistedGrant>(redisValueAndExpiry.Value, _options);
 
             return new PersistedGrant
             {
@@ -119,8 +120,6 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
 
             var redisDb = _connectionMultiplexer.GetDatabase();
 
-            
-
             var redisKey = CreateRedisKey(grant.Key);
 
             var serializedGrant = MessagePackSerializer.Serialize(new StorablePersistedGrant
@@ -133,7 +132,7 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
                 CreationTime = grant.CreationTime,
                 ConsumedTime = grant.ConsumedTime,
                 Data = grant.Data,
-            });
+            }, _options);
 
             await redisDb.StringSetAsync(redisKey, serializedGrant, grant.Expiration.Value - grant.CreationTime);
         }
@@ -151,7 +150,7 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
 
     // TODO: .NET 8 Make all properties required
     [MessagePackObject]
-    private class StorablePersistedGrant
+    public class StorablePersistedGrant
     {
         [Key(0)]
         public string Type { get; set; }
