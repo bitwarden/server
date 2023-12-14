@@ -374,6 +374,7 @@ public class ProviderService : IProviderService
             Key = key,
         };
 
+        await ApplyProviderPriceRateAsync(organizationId, providerId);
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
     }
@@ -387,7 +388,6 @@ public class ProviderService : IProviderService
         }
 
         var orgIdsList = organizationIds.ToList();
-        await ApplyProviderPriceRateAsync(orgIdsList, provider);
         var existingProviderOrganizationsCount = await _providerOrganizationRepository.GetCountByOrganizationIdsAsync(orgIdsList);
         if (existingProviderOrganizationsCount > 0)
         {
@@ -400,26 +400,24 @@ public class ProviderService : IProviderService
         await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
-    private async Task ApplyProviderPriceRateAsync(IEnumerable<Guid> organizationIds, Provider provider)
+    private async Task ApplyProviderPriceRateAsync(Guid organizationId, Guid providerId)
     {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
         // if a provider was created before Nov 6, 2023.If true, the organization plan assigned to that provider is updated to a 2020 plan.
         if (provider.CreationDate >= Constants.ProviderCreatedPriorNov62023)
         {
             return;
         }
 
-        foreach (var orgId in organizationIds)
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
+        var extractedPlanType = PlanTypeMappings(organization);
+        if (subscriptionItem != null)
         {
-            var organization = await _organizationRepository.GetByIdAsync(orgId);
-            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
-            var extractedPlanType = PlanTypeMappings(organization);
-            if (subscriptionItem != null)
-            {
-                await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType));
-            }
-
-            await _organizationRepository.UpsertAsync(organization);
+            await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType));
         }
+
+        await _organizationRepository.UpsertAsync(organization);
     }
 
     private async Task<Stripe.SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
