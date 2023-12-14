@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -26,6 +27,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserService _userService;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
+    private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
 
     public AccountsControllerTests()
     {
@@ -34,12 +36,14 @@ public class AccountsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _assertionOptionsDataProtector = Substitute.For<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>();
+        _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
         _sut = new AccountsController(
             _logger,
             _userRepository,
             _userService,
             _captchaValidationService,
-            _assertionOptionsDataProtector
+            _assertionOptionsDataProtector,
+            _getWebAuthnLoginCredentialAssertionOptionsCommand
         );
     }
 
