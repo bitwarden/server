@@ -180,9 +180,9 @@ public class WebAuthnControllerTests
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .GetUserByPrincipalAsync(default);
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
             .Received(1)
-            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey);
+            .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey);
     }
 
     [Theory, BitAutoData]
@@ -297,8 +297,8 @@ public class WebAuthnControllerTests
             .Unprotect(requestModel.Token)
             .Returns(token);
 
-        sutProvider.GetDependency<IUserService>()
-            .CompleteWebAuthLoginAssertionAsync(assertionOptions, requestModel.DeviceResponse)
+        sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .AssertWebAuthnLoginCredential(assertionOptions, requestModel.DeviceResponse)
             .Returns((user, credential));
 
         // Act
@@ -323,8 +323,8 @@ public class WebAuthnControllerTests
             .Unprotect(requestModel.Token)
             .Returns(token);
 
-        sutProvider.GetDependency<IUserService>()
-            .CompleteWebAuthLoginAssertionAsync(assertionOptions, requestModel.DeviceResponse)
+        sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .AssertWebAuthnLoginCredential(assertionOptions, requestModel.DeviceResponse)
             .Returns((user, credential));
 
         // Act
@@ -334,9 +334,9 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
             .Received(1)
             .Unprotect(requestModel.Token);
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
             .Received(1)
-            .CompleteWebAuthLoginAssertionAsync(assertionOptions, requestModel.DeviceResponse);
+            .AssertWebAuthnLoginCredential(assertionOptions, requestModel.DeviceResponse);
         await sutProvider.GetDependency<IWebAuthnCredentialRepository>()
             .Received(1)
             .UpdateAsync(credential);
