@@ -127,6 +127,7 @@ jobs:
           git config --local user.email "106330231+bitwarden-devops-bot@users.noreply.github.com"
           git config --local user.name "bitwarden-devops-bot"
           if [ -n "$(git status --porcelain)" ]; then
+            git add .
             git commit -m "Move DbScripts_finalization to DbScripts" -a
             git push -u origin ${{ steps.branch_name.outputs.branch_name }}
             echo "pr_needed=true" >> $GITHUB_OUTPUT
