@@ -147,6 +147,9 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
         return $"pg:{key}";
     }
 
+    // This is a slimmer version of PersistedGrant that removes the Key since that will be used as the key in Redis
+    // it also strips out the ExpirationDate since we use that to store the TTL and read that out when we retrieve the
+    // object and can use that information to fill in the Expiration property on PersistedGrant
     // TODO: .NET 8 Make all properties required
     [MessagePackObject]
     public class StorablePersistedGrant
