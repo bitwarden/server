@@ -5,6 +5,9 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Core.Auth.UserFeatures.UserKey;
 
+/// <summary>
+/// Responsible for rotation of a user key and updating database with re-encrypted data
+/// </summary>
 public interface IRotateUserKeyCommand
 {
     /// <summary>

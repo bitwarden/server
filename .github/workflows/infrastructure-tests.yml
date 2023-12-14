@@ -17,7 +17,7 @@ on:
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
   push:
     branches:
-      - "master"
+      - "main"
       - "rc"
     paths:
       - ".github/workflows/infrastructure-tests.yml" # This file
