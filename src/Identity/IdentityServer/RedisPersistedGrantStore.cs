@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using StackExchange.Redis;
 
 namespace Bit.Identity.IdentityServer;
