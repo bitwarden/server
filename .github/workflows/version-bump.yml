@@ -155,6 +155,6 @@ jobs:
 
   move-future-db-scripts:
     name: Move future DB scripts
-    # needs: cut_rc
+    needs: cut_rc
     uses: ./.github/workflows/_move_finalization_db_scripts.yml
     secrets: inherit
