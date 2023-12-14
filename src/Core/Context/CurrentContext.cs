@@ -21,7 +21,6 @@ public class CurrentContext : ICurrentContext
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
@@ -51,13 +50,11 @@ public class CurrentContext : ICurrentContext
     public CurrentContext(
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
-        IFeatureService featureService,
-        IApplicationCacheService applicationCacheService)
+        IFeatureService featureService)
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
-        _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
+        _featureService = featureService;;
     }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
@@ -381,17 +378,10 @@ public class CurrentContext : ICurrentContext
             throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
         }
 
-        var canCreateNewCollections = false;
         var org = GetOrganization(orgId);
-        if (org != null)
-        {
-            (await _applicationCacheService.GetOrganizationAbilitiesAsync())
-                .TryGetValue(org.Id, out var organizationAbility);
-            canCreateNewCollections = !organizationAbility?.LimitCollectionCreationDeletion ?? org.Permissions.CreateNewCollections;
-        }
         return await EditAssignedCollections(orgId)
                || await DeleteAssignedCollections(orgId)
-               || canCreateNewCollections;
+               || (org != null && org.Permissions.CreateNewCollections);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
