@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[Grant]
 (
     [Id] INT NOT NULL IDENTITY,
-    [Key] NVARCHAR (200) NULL,
+    [Key] NVARCHAR (200) NOT NULL,
     [Type] NVARCHAR (50) NOT NULL,
     [SubjectId] NVARCHAR (200) NULL,
     [SessionId] NVARCHAR (100) NULL,
@@ -22,5 +22,4 @@ CREATE NONCLUSTERED INDEX [IX_Grant_ExpirationDate]
 GO
 
 CREATE UNIQUE INDEX [IX_Grant_Key]
-    ON [dbo].[Grant]([Key])
-    WHERE [Key] IS NOT NULL;
+    ON [dbo].[Grant]([Key]);
