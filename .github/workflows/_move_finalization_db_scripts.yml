@@ -141,6 +141,7 @@ jobs:
         id: create-pr
         env:
           BRANCH: ${{ steps.branch_name.outputs.branch_name }}
+          GH_TOKEN: ${{ github.token }}
           MOVED_FILES: ${{ steps.move-files.outputs.moved_files }}
           TITLE: "Move finalization db scripts"
         run: |
