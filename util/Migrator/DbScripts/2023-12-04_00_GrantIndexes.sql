@@ -4,17 +4,13 @@ BEGIN
         ADD [Id] INT NOT NULL IDENTITY
 
     ALTER TABLE [dbo].[Grant]
-        ALTER COLUMN [Key] NVARCHAR (200) NULL
-
-    ALTER TABLE [dbo].[Grant]
         DROP CONSTRAINT [PK_Grant];
 
     ALTER TABLE [dbo].[Grant]
         ADD CONSTRAINT [PK_Grant] PRIMARY KEY CLUSTERED ([Id] ASC);
 
     CREATE UNIQUE INDEX [IX_Grant_Key]
-        ON [dbo].[Grant]([Key])
-        WHERE [Key] IS NOT NULL;
+        ON [dbo].[Grant]([Key]);
 END
 GO
 

@@ -14,8 +14,7 @@ public class GrantEntityTypeConfiguration : IEntityTypeConfiguration<Grant>
 
         builder
             .HasIndex(s => s.Key)
-            .IsUnique(true)
-            .HasFilter("[Key] IS NOT NULL");
+            .IsUnique(true);
 
         builder.ToTable(nameof(Grant));
     }

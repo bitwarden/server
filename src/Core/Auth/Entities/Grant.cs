@@ -7,7 +7,7 @@ public class Grant
 {
     public int Id { get; set; }
     [MaxLength(200)]
-    public string? Key { get; set; }
+    public string Key { get; set; } = null!;
     [MaxLength(50)]
     public string Type { get; set; } = null!;
     [MaxLength(200)]
