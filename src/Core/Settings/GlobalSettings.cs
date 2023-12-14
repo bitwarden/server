@@ -57,7 +57,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
     public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
-    public virtual GrantsSettings Grants { get; set; } = new GrantsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
@@ -363,11 +362,6 @@ public class GlobalSettings : IGlobalSettings
     }
 
     public class NotificationsSettings : ConnectionStringSettings
-    {
-        public string RedisConnectionString { get; set; }
-    }
-
-    public class GrantsSettings
     {
         public string RedisConnectionString { get; set; }
     }

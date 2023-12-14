@@ -51,7 +51,7 @@ public static class ServiceCollectionExtensions
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>();
 
-        if (CoreHelpers.SettingHasValue(globalSettings.Grants.RedisConnectionString))
+        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
         {
             // If we have redis, prefer it
 
@@ -63,7 +63,7 @@ public static class ServiceCollectionExtensions
             {
                 return new RedisPersistedGrantStore(
                     // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
-                    ConnectionMultiplexer.Connect(globalSettings.Grants.RedisConnectionString),
+                    ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
                     sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
                     sp.GetRequiredService<PersistedGrantStore>() // Fallback grant store
                 );

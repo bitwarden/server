@@ -144,7 +144,7 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
 
     private static RedisKey CreateRedisKey(string key)
     {
-        return $"pg:{key}";
+        return $"grant-{key}";
     }
 
     // This is a slimmer version of PersistedGrant that removes the Key since that will be used as the key in Redis
