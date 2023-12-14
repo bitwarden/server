@@ -15,7 +15,7 @@ namespace Bit.Identity.IdentityServer;
 /// </remarks>
 public class RedisPersistedGrantStore : IPersistedGrantStore
 {
-    private static readonly MessagePackSerializerOptions _options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
+    private static readonly MessagePackSerializerOptions _options = MessagePackSerializerOptions.Standard;
     private readonly IConnectionMultiplexer _connectionMultiplexer;
     private readonly ILogger<RedisPersistedGrantStore> _logger;
     private readonly IPersistedGrantStore _fallbackGrantStore;
