@@ -44,6 +44,21 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
         }
     }
 
+    public async Task DeleteAsync(Folder folder, bool useFlexibleCollections)
+    {
+        var sprocName = useFlexibleCollections
+                ? $"[{Schema}].[Folder_DeleteById_V2]"
+                : $"[{Schema}].[Folder_DeleteById]";
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                sprocName,
+                new { Id = folder.Id },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Folder> folders)

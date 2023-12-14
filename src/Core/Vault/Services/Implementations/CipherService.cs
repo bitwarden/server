@@ -511,7 +511,7 @@ public class CipherService : ICipherService
 
     public async Task DeleteFolderAsync(Folder folder)
     {
-        await _folderRepository.DeleteAsync(folder);
+        await _folderRepository.DeleteAsync(folder, UseFlexibleCollections);
 
         // push
         await _pushService.PushSyncFolderDeleteAsync(folder);

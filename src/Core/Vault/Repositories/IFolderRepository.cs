@@ -8,6 +8,7 @@ public interface IFolderRepository : IRepository<Folder, Guid>
 {
     Task<Folder> GetByIdAsync(Guid id, Guid userId);
     Task<ICollection<Folder>> GetManyByUserIdAsync(Guid userId);
+    Task DeleteAsync(Folder folder, bool useFlexibleCollections);
 
     /// <summary>
     /// Updates encrypted data for folders during a key rotation
