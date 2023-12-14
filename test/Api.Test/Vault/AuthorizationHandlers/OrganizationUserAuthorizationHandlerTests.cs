@@ -163,6 +163,7 @@ public class OrganizationUserAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(organizationAbilities);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -175,6 +176,16 @@ public class OrganizationUserAuthorizationHandlerTests
         Guid organizationId,
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
     {
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { organizationId,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = true
+                }
+            }
+        };
+
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserOperations.ReadAll(organizationId) },
             new ClaimsPrincipal(),
@@ -183,6 +194,8 @@ public class OrganizationUserAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(organizationAbilities);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.False(context.HasSucceeded);
