@@ -107,7 +107,7 @@ public class CollectionsControllerTests
 
         await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdWithAccessAsync(userId, organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdWithAccessAsync(userId, organization.Id, Arg.Any<bool>());
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithAccessAsync(organization.Id);
     }
 
@@ -137,7 +137,7 @@ public class CollectionsControllerTests
 
         await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdWithAccessAsync(userId, organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdWithAccessAsync(userId, organization.Id, Arg.Any<bool>());
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdWithAccessAsync(organization.Id);
     }
 
