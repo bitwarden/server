@@ -28,7 +28,6 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
         _connectionMultiplexer = connectionMultiplexer;
         _logger = logger;
         _fallbackGrantStore = fallbackGrantStore;
-
     }
 
     public Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)

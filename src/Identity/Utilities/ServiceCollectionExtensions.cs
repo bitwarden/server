@@ -62,6 +62,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IPersistedGrantStore>(sp =>
             {
                 return new RedisPersistedGrantStore(
+                    // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
                     ConnectionMultiplexer.Connect(globalSettings.Grants.RedisConnectionString),
                     sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
                     sp.GetRequiredService<PersistedGrantStore>() // Fallback grant store

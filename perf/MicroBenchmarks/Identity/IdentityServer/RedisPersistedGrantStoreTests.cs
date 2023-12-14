@@ -11,6 +11,8 @@ namespace Bit.MicroBenchmarks.Identity.IdentityServer;
 [MemoryDiagnoser]
 public class RedisPersistedGrantStoreTests
 {
+    const string SQL = nameof(SQL);
+    const string Redis = nameof(Redis);
     private readonly IPersistedGrantStore _redisGrantStore;
     private readonly IPersistedGrantStore _sqlGrantStore;
     private readonly PersistedGrant _updateGrant;
@@ -67,17 +69,17 @@ public class RedisPersistedGrantStoreTests
         };
     }
 
-    [Params("Redis", "SQL")]
+    [Params(Redis, SQL)]
     public string StoreType { get; set; } = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        if (StoreType == "Redis")
+        if (StoreType == Redis)
         {
             _grantStore = _redisGrantStore;
         }
-        else if (StoreType == "SQL")
+        else if (StoreType == SQL)
         {
             _grantStore = _sqlGrantStore;
         }
