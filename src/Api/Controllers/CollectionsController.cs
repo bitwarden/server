@@ -609,13 +609,10 @@ public class CollectionsController : Controller
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
-            var readAuthorized = (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Read)).Succeeded;
-            if (readAuthorized)
-            {
-                orgCollections = collections.Where(c => c.OrganizationId == orgId);
-            }
-            else
+            var assignedCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
+            orgCollections = assignedCollections.Where(c => c.OrganizationId == orgId).ToList();
+            var readAuthorized = (await _authorizationService.AuthorizeAsync(User, orgCollections, BulkCollectionOperations.Read)).Succeeded;
+            if (!readAuthorized)
             {
                 throw new NotFoundException();
             }

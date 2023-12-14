@@ -169,6 +169,98 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetOrganizationCollections_WithReadAllPermissions_GetsAllCollections(Organization organization, ICollection<Collection> collections, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadAll)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(collections);
+
+        var response = await sutProvider.Sut.Get(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organization.Id);
+
+        Assert.Equal(collections.Count, response.Data.Count());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollections_MissingReadAllPermissions_GetsAssignedCollections(Organization organization, ICollection<CollectionDetails> collections, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        collections.First().OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadAll)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<BulkCollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(BulkCollectionOperations.Read))))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId, true)
+            .Returns(collections);
+
+        var result = await sutProvider.Sut.Get(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdAsync(organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId, true);
+
+        Assert.Single(result.Data);
+        Assert.All(result.Data, c => Assert.Equal(organization.Id, c.OrganizationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollections_MissingReadPermissions_ThrowsNotFound(Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadAll)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<BulkCollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(BulkCollectionOperations.Read))))
+            .Returns(AuthorizationResult.Failed());
+
+        _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Get(organization.Id));
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteMany_Success(Guid orgId, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
