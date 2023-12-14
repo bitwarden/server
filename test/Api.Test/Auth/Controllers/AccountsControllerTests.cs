@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
@@ -60,6 +61,9 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
+    private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+            IReadOnlyList<OrganizationUser>>
+        _resetPasswordValidator;
 
 
     public AccountsControllerTests()
@@ -88,6 +92,9 @@ public class AccountsControllerTests : IDisposable
         _sendValidator = Substitute.For<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>();
         _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
             IEnumerable<EmergencyAccess>>>();
+        _resetPasswordValidator = Substitute
+            .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+                IReadOnlyList<OrganizationUser>>>();
 
         _sut = new AccountsController(
             _globalSettings,
@@ -110,7 +117,8 @@ public class AccountsControllerTests : IDisposable
             _cipherValidator,
             _folderValidator,
             _sendValidator,
-            _emergencyAccessValidator
+            _emergencyAccessValidator,
+            _resetPasswordValidator
         );
     }
 
