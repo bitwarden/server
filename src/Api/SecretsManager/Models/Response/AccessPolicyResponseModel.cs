@@ -34,10 +34,13 @@ public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMode
 
     public UserProjectAccessPolicyResponseModel(UserProjectAccessPolicy accessPolicy) : base(accessPolicy, _objectName)
     {
-        OrganizationUserId = accessPolicy.OrganizationUserId;
-        GrantedProjectId = accessPolicy.GrantedProjectId;
-        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
-        UserId = accessPolicy.User?.Id;
+        SetProperties(accessPolicy);
+    }
+
+    public UserProjectAccessPolicyResponseModel(UserProjectAccessPolicy accessPolicy, Guid currentUserId) : base(accessPolicy, _objectName)
+    {
+        CurrentUser = currentUserId == accessPolicy.User?.Id;
+        SetProperties(accessPolicy);
     }
 
     public UserProjectAccessPolicyResponseModel() : base(new UserProjectAccessPolicy(), _objectName)
@@ -48,6 +51,15 @@ public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMode
     public string? OrganizationUserName { get; set; }
     public Guid? UserId { get; set; }
     public Guid? GrantedProjectId { get; set; }
+    public bool? CurrentUser { get; set; }
+
+    private void SetProperties(UserProjectAccessPolicy accessPolicy)
+    {
+        OrganizationUserId = accessPolicy.OrganizationUserId;
+        GrantedProjectId = accessPolicy.GrantedProjectId;
+        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
+        UserId = accessPolicy.User?.Id;
+    }
 }
 
 public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResponseModel
@@ -57,10 +69,14 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
     public UserServiceAccountAccessPolicyResponseModel(UserServiceAccountAccessPolicy accessPolicy)
         : base(accessPolicy, _objectName)
     {
-        OrganizationUserId = accessPolicy.OrganizationUserId;
-        GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
-        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
-        UserId = accessPolicy.User?.Id;
+        SetProperties(accessPolicy);
+    }
+
+    public UserServiceAccountAccessPolicyResponseModel(UserServiceAccountAccessPolicy accessPolicy, Guid userId)
+        : base(accessPolicy, _objectName)
+    {
+        SetProperties(accessPolicy);
+        CurrentUser = accessPolicy.User?.Id == userId;
     }
 
     public UserServiceAccountAccessPolicyResponseModel() : base(new UserServiceAccountAccessPolicy(), _objectName)
@@ -71,6 +87,15 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
     public string? OrganizationUserName { get; set; }
     public Guid? UserId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
+    public bool CurrentUser { get; set; }
+
+    private void SetProperties(UserServiceAccountAccessPolicy accessPolicy)
+    {
+        OrganizationUserId = accessPolicy.OrganizationUserId;
+        GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
+        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
+        UserId = accessPolicy.User?.Id;
+    }
 }
 
 public class GroupProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel

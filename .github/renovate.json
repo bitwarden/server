@@ -46,6 +46,7 @@
     {
       "matchFileNames": ["src/Admin/package.json", "src/Sso/package.json"],
       "description": "Admin & SSO npm packages",
+      "commitMessagePrefix": "[deps] Auth:",
       "reviewers": ["team:team-auth-dev"]
     },
     {
@@ -104,6 +105,11 @@
       "reviewers": ["team:team-billing-dev"]
     },
     {
+      "matchPackagePatterns": ["^Microsoft.Extensions.Logging"],
+      "groupName": "Microsoft.Extensions.Logging",
+      "description": "Group Microsoft.Extensions.Logging to exclude them from the dotnet monorepo preset"
+    },
+    {
       "matchPackageNames": ["CommandDotNet", "dbup-sqlserver", "YamlDotNet"],
       "description": "DevOps owned dependencies",
       "commitMessagePrefix": "[deps] DevOps:",
@@ -122,6 +128,7 @@
     {
       "matchPackageNames": [
         "Dapper",
+        "dotnet-ef",
         "linq2db.EntityFrameworkCore",
         "Microsoft.EntityFrameworkCore.Design",
         "Microsoft.EntityFrameworkCore.InMemory",
@@ -136,6 +143,11 @@
       "reviewers": ["team:team-secrets-manager-dev"]
     },
     {
+      "matchPackagePatterns": ["EntityFrameworkCore", "^dotnet-ef"],
+      "groupName": "EntityFrameworkCore",
+      "description": "Group EntityFrameworkCore to exclude them from the dotnet monorepo preset"
+    },
+    {
       "matchPackageNames": [
         "AutoMapper.Extensions.Microsoft.DependencyInjection",
         "AWSSDK.SimpleEmail",
@@ -146,16 +158,31 @@
         "Microsoft.AspNetCore.SignalR.Protocols.MessagePack",
         "Microsoft.AspNetCore.SignalR.StackExchangeRedis",
         "Microsoft.Azure.NotificationHubs",
-        "Microsoft.Extensions.Configuration",
         "Microsoft.Extensions.Configuration.EnvironmentVariables",
         "Microsoft.Extensions.Configuration.UserSecrets",
-        "Microsoft.Extensions.DependencyInjection",
+        "Microsoft.Extensions.Configuration",
         "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "Microsoft.Extensions.DependencyInjection",
         "SendGrid"
       ],
       "description": "Tools owned dependencies",
       "commitMessagePrefix": "[deps] Tools:",
       "reviewers": ["team:team-tools-dev"]
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.AspNetCore.SignalR"],
+      "groupName": "SignalR",
+      "description": "Group SignalR to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.Extensions.Configuration"],
+      "groupName": "Microsoft.Extensions.Configuration",
+      "description": "Group Microsoft.Extensions.Configuration to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.Extensions.DependencyInjection"],
+      "groupName": "Microsoft.Extensions.DependencyInjection",
+      "description": "Group Microsoft.Extensions.DependencyInjection to exclude them from the dotnet monorepo preset"
     },
     {
       "matchPackageNames": [
@@ -175,7 +202,8 @@
   ],
   "force": {
     "constraints": {
-      "dotnet": "6.0.413"
+      "dotnet": "6.0.100"
     }
-  }
+  },
+  "ignoreDeps": ["dotnet-sdk"]
 }

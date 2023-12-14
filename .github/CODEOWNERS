@@ -1,20 +1,22 @@
-﻿# Please sort lines alphabetically, this will ensure we don't accidentally add duplicates.
+# Please sort into logical groups with comment headers. Sort groups in order of specificity.
+# For example, default owners should always be the first group.
+# Sort lines alphabetically within these groups to avoid accidentally adding duplicates.
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# The following owners will be the default owners for everything in the repo.
-# Unless a later match takes precedence
-* @bitwarden/tech-leads
-
-# DevOps for Actions and other workflow changes.
+# DevOps for Actions and other workflow changes
 .github/workflows @bitwarden/dept-devops
 
-# DevOps for Docker changes.
+# DevOps for Docker changes
 **/Dockerfile @bitwarden/dept-devops
 **/*.Dockerfile @bitwarden/dept-devops
 **/.dockerignore @bitwarden/dept-devops
 
-## Auth team files ##
+# Database Operations for database changes
+src/Sql/** @bitwarden/dept-dbops
+util/Migrator/** @bitwarden/dept-dbops
+
+# Auth team
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
@@ -22,17 +24,17 @@ src/Identity @bitwarden/team-auth-dev
 **/SecretsManager @bitwarden/team-secrets-manager-dev
 **/Tools @bitwarden/team-tools-dev
 
-## Vault Team files
+# Vault team
 **/Vault @bitwarden/team-vault-dev
 **/Vault/AuthorizationHandlers @bitwarden/team-vault-dev @bitwarden/team-admin-console-dev  # joint ownership over authorization handlers that affect organization users
 
-# Admin-Console Team
+# Admin Console team
 **/AdminConsole @bitwarden/team-admin-console-dev
 bitwarden_license/src/Scim @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 
-# Billing Team
+# Billing team
 **/*billing* @bitwarden/team-billing-dev
 **/*bitpay* @bitwarden/team-billing-dev
 **/*braintree* @bitwarden/team-billing-dev
@@ -41,8 +43,13 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/*paypal* @bitwarden/team-billing-dev
 **/*stripe* @bitwarden/team-billing-dev
 **/*subscription* @bitwarden/team-billing-dev
+**/*payment* @bitwarden/team-billing-dev
+**/*invoice* @bitwarden/team-billing-dev
+**/*OrganizationLicense* @bitwarden/team-billing-dev
 **/Billing @bitwarden/team-billing-dev
+src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
+src/Admin/Views/Tools @bitwarden/team-billing-dev
 
-# Multiple Owners
+# Multiple owners - DO NOT REMOVE (DevOps)
 **/packages.lock.json
 Directory.Build.props
