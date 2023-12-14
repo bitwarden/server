@@ -18,7 +18,6 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
-    private OrganizationAbility? _organizationAbility;
 
     private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
@@ -96,14 +95,9 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
 
     private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
     {
-        if (_organizationAbility != null)
-        {
-            return _organizationAbility;
-        }
-
         (await _applicationCacheService.GetOrganizationAbilitiesAsync())
             .TryGetValue(orgId, out var organizationAbility);
 
-        return _organizationAbility = organizationAbility;
+        return organizationAbility;
     }
 }

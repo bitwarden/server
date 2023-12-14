@@ -23,7 +23,6 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private Guid _targetOrganizationId;
-    private OrganizationAbility? _organizationAbility;
 
     private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
@@ -275,14 +274,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<OrganizationAbility?> GetOrganizationAbilityAsync()
     {
-        if (_organizationAbility != null)
-        {
-            return _organizationAbility;
-        }
-
         (await _applicationCacheService.GetOrganizationAbilitiesAsync())
             .TryGetValue(_targetOrganizationId, out var organizationAbility);
 
-        return _organizationAbility = organizationAbility;
+        return organizationAbility;
     }
 }
