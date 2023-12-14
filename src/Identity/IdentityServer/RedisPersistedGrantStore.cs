@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
+using MessagePack;
 using StackExchange.Redis;
 
 namespace Bit.Identity.IdentityServer;
@@ -14,15 +15,6 @@ namespace Bit.Identity.IdentityServer;
 /// </remarks>
 public class RedisPersistedGrantStore : IPersistedGrantStore
 {
-    private const string TypeEntry = nameof(PersistedGrant.Type);
-    private const string SubjectIdEntry = nameof(PersistedGrant.SubjectId);
-    private const string SessionIdEntry = nameof(PersistedGrant.SessionId);
-    private const string ClientIdEntry = nameof(PersistedGrant.ClientId);
-    private const string DescriptionEntry = nameof(PersistedGrant.Description);
-    private const string CreationTimeEntry = nameof(PersistedGrant.CreationTime);
-    private const string ConsumedTimeEntry = nameof(PersistedGrant.ConsumedTime);
-    private const string DataEntry = nameof(PersistedGrant.Data);
-
     private readonly IConnectionMultiplexer _connectionMultiplexer;
     private readonly ILogger<RedisPersistedGrantStore> _logger;
     private readonly IPersistedGrantStore _fallbackGrantStore;
@@ -56,73 +48,33 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
             var redisKey = CreateRedisKey(key);
 
             var redisDb = _connectionMultiplexer.GetDatabase();
-            var grantHashEntries = await redisDb.HashGetAllAsync(redisKey);
+            var redisValueAndExpiry = await redisDb.StringGetWithExpiryAsync(redisKey);
 
-            if (grantHashEntries.Length == 0)
+
+            if (!redisValueAndExpiry.Value.HasValue)
             {
                 // It wasn't found, there is a chance is was instead stored in the fallback store
                 _logger.LogWarning("Could not find grant in primary store, using fallback one.");
                 return await _fallbackGrantStore.GetAsync(key);
             }
 
-            // TODO: This goes to Redis twice for every GetAsync should we do this in a transaction
-            // or we could directly store the expiry in the hash value.
-            var expiry = await redisDb.KeyTimeToLiveAsync(redisKey);
+            Debug.Assert(redisValueAndExpiry.Expiry.HasValue, "Redis entry is expected to have an expiry.");
 
-            if (!expiry.HasValue)
-            {
-                throw new InvalidOperationException("Grants are always expected to be stored with an expiry.");
-            }
+            var storablePersistedGrant = MessagePackSerializer.Deserialize<StorablePersistedGrant>(redisValueAndExpiry.Value);
 
-            var persistedGrant = new PersistedGrant
+            return new PersistedGrant
             {
                 Key = key,
+                Type = storablePersistedGrant.Type,
+                SubjectId = storablePersistedGrant.SubjectId,
+                SessionId = storablePersistedGrant.SessionId,
+                ClientId = storablePersistedGrant.ClientId,
+                Description = storablePersistedGrant.Description,
+                CreationTime = storablePersistedGrant.CreationTime,
+                ConsumedTime = storablePersistedGrant.ConsumedTime,
+                Data = storablePersistedGrant.Data,
+                Expiration = storablePersistedGrant.CreationTime.Add(redisValueAndExpiry.Expiry.Value),
             };
-
-            foreach (var entry in grantHashEntries)
-            {
-                switch (entry.Name)
-                {
-                    case TypeEntry:
-                        persistedGrant.Type = entry.Value;
-                        break;
-                    case SubjectIdEntry:
-                        persistedGrant.SubjectId = entry.Value;
-                        break;
-                    case SessionIdEntry:
-                        if (entry.Value.HasValue)
-                        {
-                            persistedGrant.SessionId = entry.Value;
-                        }
-                        break;
-                    case ClientIdEntry:
-                        persistedGrant.ClientId = entry.Value;
-                        break;
-                    case DescriptionEntry:
-                        if (entry.Value.HasValue)
-                        {
-                            persistedGrant.Description = entry.Value;
-                        }
-                        break;
-                    case CreationTimeEntry:
-                        persistedGrant.CreationTime = new DateTime((long)entry.Value, DateTimeKind.Utc);
-                        break;
-                    case ConsumedTimeEntry:
-                        if (entry.Value.HasValue)
-                        {
-                            persistedGrant.ConsumedTime = new DateTime((long)entry.Value, DateTimeKind.Utc);
-                        }
-                        break;
-                    case DataEntry:
-                        persistedGrant.Data = entry.Value;
-                        break;
-                }
-            }
-
-            Debug.Assert(persistedGrant.CreationTime != default, "CreationTime should have gotten a date");
-            persistedGrant.Expiration = persistedGrant.CreationTime.Add(expiry.Value);
-
-            return persistedGrant;
         }
         catch (Exception ex)
         {
@@ -166,25 +118,24 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
             }
 
             var redisDb = _connectionMultiplexer.GetDatabase();
-            var transaction = redisDb.CreateTransaction();
+
+            
 
             var redisKey = CreateRedisKey(grant.Key);
 
-            // Do not await transaction methods, the returned tasks only get completed once transaction.ExecuteAsync is called
-            // Ref: https://stackexchange.github.io/StackExchange.Redis/Transactions.html#and-in-stackexchangeredis
-            _ = transaction.HashSetAsync(redisKey, new HashEntry[]
+            var serializedGrant = MessagePackSerializer.Serialize(new StorablePersistedGrant
             {
-                new(TypeEntry, grant.Type),
-                new(SubjectIdEntry, grant.SubjectId),
-                new(SessionIdEntry, grant.SessionId != null ? grant.SessionId : RedisValue.EmptyString),
-                new(ClientIdEntry, grant.ClientId),
-                new(DescriptionEntry, grant.Description != null ? grant.Description : RedisValue.EmptyString),
-                new(CreationTimeEntry, grant.CreationTime.Ticks),
-                new(ConsumedTimeEntry, grant.ConsumedTime.HasValue ? grant.CreationTime.Ticks : RedisValue.EmptyString),
-                new(DataEntry, grant.Data),
+                Type = grant.Type,
+                SubjectId = grant.SubjectId,
+                SessionId = grant.SessionId,
+                ClientId = grant.ClientId,
+                Description = grant.Description,
+                CreationTime = grant.CreationTime,
+                ConsumedTime = grant.ConsumedTime,
+                Data = grant.Data,
             });
-            _ = transaction.KeyExpireAsync(redisKey, grant.Expiration.Value);
-            await transaction.ExecuteAsync();
+
+            await redisDb.StringSetAsync(redisKey, serializedGrant, grant.Expiration.Value - grant.CreationTime);
         }
         catch (Exception ex)
         {
@@ -196,5 +147,34 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
     private static RedisKey CreateRedisKey(string key)
     {
         return $"pg:{key}";
+    }
+
+    // TODO: .NET 8 Make all properties required
+    [MessagePackObject]
+    private class StorablePersistedGrant
+    {
+        [Key(0)]
+        public string Type { get; set; }
+
+        [Key(1)]
+        public string SubjectId { get; set; }
+
+        [Key(2)]
+        public string SessionId { get; set; }
+
+        [Key(3)]
+        public string ClientId { get; set; }
+
+        [Key(4)]
+        public string Description { get; set; }
+
+        [Key(5)]
+        public DateTime CreationTime { get; set; }
+
+        [Key(6)]
+        public DateTime? ConsumedTime { get; set; }
+
+        [Key(7)]
+        public string Data { get; set; }
     }
 }
