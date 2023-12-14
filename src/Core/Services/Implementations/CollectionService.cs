@@ -43,6 +43,9 @@ public class CollectionService : ICollectionService
         _featureService = featureService;
     }
 
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
     public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
         IEnumerable<CollectionAccessSelection> users = null)
     {
@@ -122,7 +125,7 @@ public class CollectionService : ICollectionService
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value, UseFlexibleCollections);
             orgCollections = collections.Where(c => c.OrganizationId == organizationId);
         }
 
