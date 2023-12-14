@@ -103,55 +103,55 @@ jobs:
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         run: git commit -m "Bumped version to ${{ inputs.version_number }}" -a
 
-      # - name: Push changes
-      #   if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-      #   env:
-      #     PR_BRANCH: ${{ steps.create-branch.outputs.name }}
-      #   run: git push -u origin $PR_BRANCH
+      - name: Push changes
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        env:
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
+        run: git push -u origin $PR_BRANCH
 
-      # - name: Create Version PR
-      #   if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-      #   id: create-pr
-      #   env:
-      #     GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
-      #     PR_BRANCH: ${{ steps.create-branch.outputs.name }}
-      #     TITLE: "Bump version to ${{ inputs.version_number }}"
-      #   run: |
-      #     PR_URL=$(gh pr create --title "$TITLE" \
-      #       --base "main" \
-      #       --head "$PR_BRANCH" \
-      #       --label "version update" \
-      #       --label "automated pr" \
-      #       --body "
-      #         ## Type of change
-      #         - [ ] Bug fix
-      #         - [ ] New feature development
-      #         - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
-      #         - [ ] Build/deploy pipeline (DevOps)
-      #         - [X] Other
+      - name: Create Version PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
+          TITLE: "Bump version to ${{ inputs.version_number }}"
+        run: |
+          PR_URL=$(gh pr create --title "$TITLE" \
+            --base "main" \
+            --head "$PR_BRANCH" \
+            --label "version update" \
+            --label "automated pr" \
+            --body "
+              ## Type of change
+              - [ ] Bug fix
+              - [ ] New feature development
+              - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
+              - [ ] Build/deploy pipeline (DevOps)
+              - [X] Other
 
-      #         ## Objective
-      #         Automated version bump to ${{ inputs.version_number }}")
-      #     echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
+              ## Objective
+              Automated version bump to ${{ inputs.version_number }}")
+          echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
 
-      # - name: Approve PR
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
-      #   run: gh pr review $PR_NUMBER --approve
+      - name: Approve PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr review $PR_NUMBER --approve
 
-      # - name: Merge PR
-      #   env:
-      #     GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
-      #     PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
-      #   run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
+      - name: Merge PR
+        env:
+          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
 
-  # cut_rc:
-  #   name: Cut RC Branch
-  #   if: ${{ inputs.cut_rc_branch == true }}
-  #   needs: bump_version
-  #   uses: ./.github/workflows/_cut_rc.yml
-  #   secrets: inherit
+  cut_rc:
+    name: Cut RC Branch
+    if: ${{ inputs.cut_rc_branch == true }}
+    needs: bump_version
+    uses: ./.github/workflows/_cut_rc.yml
+    secrets: inherit
 
   move-future-db-scripts:
     name: Move future DB scripts
