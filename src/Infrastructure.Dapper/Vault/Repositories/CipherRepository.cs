@@ -68,12 +68,16 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
+    public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
     {
+        var sprocName = useFlexibleCollections
+            ? $"[{Schema}].[Cipher_ReadCanEditByIdUserId_V2]"
+            : $"[{Schema}].[Cipher_ReadCanEditByIdUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.QueryFirstOrDefaultAsync<bool>(
-                $"[{Schema}].[Cipher_ReadCanEditByIdUserId]",
+                sprocName,
                 new { UserId = userId, Id = cipherId },
                 commandType: CommandType.StoredProcedure);
 

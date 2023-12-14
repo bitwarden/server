@@ -12,7 +12,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections);
     Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id);
     Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(Guid organizationId);
-    Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
+    Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections);
     Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true);
     Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);

@@ -697,7 +697,7 @@ public class CipherServiceTests
     [BitAutoData]
     public async Task RestoreAsync_UpdatesUserCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
     {
-        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
+        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id, Arg.Any<bool>()).Returns(true);
 
         var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
         cipher.DeletedDate = initialRevisionDate;
@@ -714,7 +714,7 @@ public class CipherServiceTests
     [BitAutoData]
     public async Task RestoreAsync_UpdatesOrganizationCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
     {
-        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
+        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id, Arg.Any<bool>()).Returns(true);
 
         var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
         cipher.DeletedDate = initialRevisionDate;

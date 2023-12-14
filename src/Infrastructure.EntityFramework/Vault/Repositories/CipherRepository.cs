@@ -327,12 +327,12 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
+    public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new CipherReadCanEditByIdUserIdQuery(userId, cipherId);
+            var query = new CipherReadCanEditByIdUserIdQuery(userId, cipherId, useFlexibleCollections);
             var canEdit = await query.Run(dbContext).AnyAsync();
             return canEdit;
         }

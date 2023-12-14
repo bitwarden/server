@@ -1000,7 +1000,7 @@ public class CipherService : ICipherService
             return true;
         }
 
-        return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id);
+        return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id, UseFlexibleCollections);
     }
 
     private void ValidateCipherLastKnownRevisionDateAsync(Cipher cipher, DateTime? lastKnownRevisionDate)
