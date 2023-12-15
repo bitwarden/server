@@ -76,8 +76,6 @@ jobs:
         env:
           PREFIX: ${{ needs.setup.outputs.migration_filename_prefix }}
         run: |
-          ls -alh "util/Migrator/DbScripts"
-          ls -alh "util/Migrator/DbScripts_finalization"
           src_dir="util/Migrator/DbScripts_finalization"
           dest_dir="util/Migrator/DbScripts"
           i=0
@@ -96,8 +94,6 @@ jobs:
             i=$((i+1))
           done
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
-          ls -alh "util/Migrator/DbScripts"
-          ls -alh "util/Migrator/DbScripts_finalization"
 
       - name: Login to Azure - Prod Subscription
         uses: Azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.5.1
