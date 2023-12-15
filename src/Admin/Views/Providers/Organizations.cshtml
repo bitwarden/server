@@ -2,6 +2,7 @@
 @model ProviderViewModel
 
 @await Html.PartialAsync("_ProviderScripts")
+@await Html.PartialAsync("_ProviderOrganizationScripts")
 
 <h2>Provider Organizations</h2>
 <div class="row">
@@ -32,26 +33,28 @@
                     }
                     else
                     {
-                        @foreach (var org in Model.ProviderOrganizations)
+                        @foreach (var providerOrganization in Model.ProviderOrganizations)
                         {
                             <tr>
                                 <td class="align-middle">
-                                    <a asp-controller="Organizations" asp-action="Edit" asp-route-id="@org.OrganizationId">@org.OrganizationName</a>
+                                    <a asp-controller="Organizations" asp-action="Edit" asp-route-id="@providerOrganization.OrganizationId">@providerOrganization.OrganizationName</a>
                                 </td>
                                 <td>
-                                    @org.Status
+                                    @providerOrganization.Status
                                 </td>
                                 <td>
                                     <div class="float-right">
-                                        @if (org.Status == OrganizationStatusType.Pending)
+                                        @if (true)
                                         {
-                                            <a href="#" class="float-right" onclick="return resendOwnerInvite('@org.OrganizationId');">
-                                                <i class="fa fa-envelope-o fa-lg" title="Resend Setup Invite"></i>
+                                            <a href="#" class="text-danger float-right" onclick="return unlinkProvider('@Model.Provider.Id', '@providerOrganization.Id', '@providerOrganization.OrganizationName');">
+                                                Unlink provider
                                             </a>
                                         }
-                                        else
+                                        @if (providerOrganization.Status == OrganizationStatusType.Pending)
                                         {
-                                            <i class="fa fa-envelope-o fa-lg text-secondary"></i>
+                                            <a href="#" class="float-right mr-3" onclick="return resendOwnerInvite('@providerOrganization.OrganizationId');">
+                                                Resend invitation
+                                            </a>
                                         }
                                     </div>
                                 </td>

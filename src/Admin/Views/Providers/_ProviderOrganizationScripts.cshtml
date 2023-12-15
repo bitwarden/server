@@ -1,0 +1,20 @@
+﻿<script>
+    function unlinkProvider(providerId, id, orgName) {
+        if (confirm(`Are you sure you want to unlink ${orgName} from this reseller?`)) {
+            $.ajax({
+                type: "POST",
+                url: `@Url.Action("Delete", "ProviderOrganizations")?providerId=${providerId}&id=${id}`,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    toastr.success("Successfully unlinked provider");
+                },
+                error: function (response) {
+                    toastr.error("Error!");
+                }
+            });
+        }
+        return false;
+    }
+</script>
