@@ -436,6 +436,21 @@
           "MimeKit": "4.2.0"
         }
       },
+      "MessagePack": {
+        "type": "Transitive",
+        "resolved": "2.5.140",
+        "contentHash": "nkIsgy8BkIfv40bSz9XZb4q//scI1PF3AYeB5X66nSlIhBIqbdpLz8Qk3gHvnjV3RZglQLO/ityK3eNfLii2NA==",
+        "dependencies": {
+          "MessagePack.Annotations": "2.5.140",
+          "Microsoft.NET.StringTools": "17.6.3",
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
+        }
+      },
+      "MessagePack.Annotations": {
+        "type": "Transitive",
+        "resolved": "2.5.140",
+        "contentHash": "JE3vwluOrsJ4t3hnfXzIxJUh6lhx6M/KR8Sark/HOUw1DJ5UKu5JsAnnuaQngg6poFkRx1lzHSLTkxHNJO7+uQ=="
+      },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Transitive",
         "resolved": "6.0.4",
@@ -1071,6 +1086,15 @@
           "Microsoft.CSharp": "4.5.0",
           "Microsoft.IdentityModel.Logging": "6.21.0",
           "System.Security.Cryptography.Cng": "4.5.0"
+        }
+      },
+      "Microsoft.NET.StringTools": {
+        "type": "Transitive",
+        "resolved": "17.6.3",
+        "contentHash": "N0ZIanl1QCgvUumEL1laasU0a7sOE5ZwLZVTn0pAePnfhq8P7SvTjF8Axq+CnavuQkmdQpGNXQ1efZtu5kDFbA==",
+        "dependencies": {
+          "System.Memory": "4.5.5",
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
         }
       },
       "Microsoft.NETCore.Platforms": {
@@ -2100,8 +2124,8 @@
       },
       "System.Memory": {
         "type": "Transitive",
-        "resolved": "4.5.4",
-        "contentHash": "1MbJTHS1lZ4bS4FmsJjnuGJOu88ZzTT2rLvrhW7Ygic+pC0NWA+3hgAen0HRdsocuQXCkUTdFn9yHJJhsijDXw=="
+        "resolved": "4.5.5",
+        "contentHash": "XIWiDvKPXaTveaB7HVganDlOCRoj03l+jrwNvcge/t8vhGYKvqV+dMv6G4SAX2NoNmN0wZfVPTAlFwZcZvVOUw=="
       },
       "System.Memory.Data": {
         "type": "Transitive",
@@ -2974,7 +2998,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2023.12.0, )",
+          "Core": "[2023.12.1, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -3026,15 +3050,16 @@
       "identity": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.12.0, )",
-          "SharedWeb": "[2023.12.0, )",
+          "Core": "[2023.12.1, )",
+          "MessagePack": "[2.5.140, )",
+          "SharedWeb": "[2023.12.1, )",
           "Swashbuckle.AspNetCore.SwaggerGen": "[6.5.0, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.12.0, )",
+          "Core": "[2023.12.1, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -3042,7 +3067,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.12.0, )",
+          "Core": "[2023.12.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -3054,8 +3079,8 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2023.12.0, )",
-          "Identity": "[2023.12.0, )",
+          "Common": "[2023.12.1, )",
+          "Identity": "[2023.12.1, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[6.0.5, )",
           "Microsoft.Extensions.Configuration": "[6.0.1, )"
         }
@@ -3063,16 +3088,16 @@
       "scim": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.12.0, )",
-          "SharedWeb": "[2023.12.0, )"
+          "Core": "[2023.12.1, )",
+          "SharedWeb": "[2023.12.1, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.12.0, )",
-          "Infrastructure.Dapper": "[2023.12.0, )",
-          "Infrastructure.EntityFramework": "[2023.12.0, )"
+          "Core": "[2023.12.1, )",
+          "Infrastructure.Dapper": "[2023.12.1, )",
+          "Infrastructure.EntityFramework": "[2023.12.1, )"
         }
       }
     }
