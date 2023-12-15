@@ -68,6 +68,7 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
         }
         catch (Exception ex) when (ex is RedisTimeoutException || ex is RedisConnectionException)
         {
+            _logger.LogWarning(ex, "Redis appears down, skipping rate limiting");
             // If this is the first timeout/connection error we've had, start a new counter and sliding window 
             timeoutCounter ??= new TimeoutCounter()
             {
