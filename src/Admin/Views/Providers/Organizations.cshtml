@@ -1,5 +1,12 @@
 @using Bit.Core.AdminConsole.Enums.Provider
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using Bit.Admin.Enums
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model ProviderViewModel
+
+@{
+    var canUnlinkFromProvider = AccessControlService.UserHasPermission(Permission.Provider_Edit);
+}
 
 @await Html.PartialAsync("_ProviderScripts")
 @await Html.PartialAsync("_ProviderOrganizationScripts")
@@ -44,7 +51,7 @@
                                 </td>
                                 <td>
                                     <div class="float-right">
-                                        @if (true)
+                                        @if (canUnlinkFromProvider)
                                         {
                                             <a href="#" class="text-danger float-right" onclick="return unlinkProvider('@Model.Provider.Id', '@providerOrganization.Id', '@providerOrganization.OrganizationName');">
                                                 Unlink provider

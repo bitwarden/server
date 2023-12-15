@@ -93,10 +93,12 @@
         }
         @if (canUnlinkFromProvider && Model.Provider is not null)
         {
-            <form asp-action="UnlinkOrganizationFromProvider" asp-route-id="@Model.Organization.Id"
-                  onsubmit="return confirm('Are you sure you want to unlink @Model.Name from this reseller?')">
-                <button class="btn btn-outline-danger mr-2" type="submit">Unlink provider</button>
-            </form>
+            <button
+                class="btn btn-outline-danger mr-2"
+                onclick="return unlinkProvider('@Model.Organization.Id', '@Model.Name');"
+            >
+                Unlink provider
+            </button>
         }
         @if (canDelete)
         {

@@ -299,8 +299,7 @@ public class OrganizationsController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
-    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> UnlinkOrganizationFromProviderAsync(Guid id)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
@@ -328,7 +327,7 @@ public class OrganizationsController : Controller
 
         await _removePaymentMethodCommand.RemovePaymentMethod(organization);
 
-        return RedirectToAction("Edit", new { id });
+        return Json(null);
     }
     private async Task<Organization> GetOrganization(Guid id, OrganizationEditModel model)
     {

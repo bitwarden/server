@@ -1,6 +1,6 @@
 ﻿<script>
     function unlinkProvider(providerId, id, orgName) {
-        if (confirm(`Are you sure you want to unlink ${orgName} from this reseller?`)) {
+        if (confirm(`Are you sure you want to unlink ${orgName} from this provider?`)) {
             $.ajax({
                 type: "POST",
                 url: `@Url.Action("Delete", "ProviderOrganizations")?providerId=${providerId}&id=${id}`,
