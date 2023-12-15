@@ -62,7 +62,6 @@ public class ProviderOrganizationsController : Controller
 
         await _removePaymentMethodCommand.RemovePaymentMethod(organization);
 
-        return RedirectToAction("Edit", "Providers", new { id = providerId });
-        // return Json(null);
+        return Json(null);
     }
 }

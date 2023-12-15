@@ -8,10 +8,11 @@
                 contentType: false,
                 processData: false,
                 success: function (response) {
-                    toastr.success("Successfully unlinked provider");
+                    alert("Successfully unlinked provider");
+                    window.location.href = `@Url.Action("Edit", "Providers")?id=${providerId}`;
                 },
                 error: function (response) {
-                    toastr.error("Error!");
+                    alert("Error!");
                 }
             });
         }
