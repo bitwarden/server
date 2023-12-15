@@ -4,7 +4,7 @@ namespace Bit.Api.Auth.Models.Public.Request;
 
 public class AssociationWithPermissionsRequestModel : AssociationWithPermissionsBaseModel
 {
-    public CollectionAccessSelection ToSelectionReadOnly()
+    public CollectionAccessSelection ToCollectionAccessSelection()
     {
         return new CollectionAccessSelection
         {
