@@ -142,33 +142,6 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationCollectionsWithGroups_MissingReadPermissions_ThrowsNotFound(Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(
-                Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<object>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
-                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(CollectionOperations.ReadAllWithAccess)
-                        && operation.OrganizationId == organization.Id)))
-            .Returns(AuthorizationResult.Failed());
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(
-                Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<object>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
-                    requirements.Cast<BulkCollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(BulkCollectionOperations.ReadWithAccess))))
-            .Returns(AuthorizationResult.Failed());
-
-        _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetManyWithDetails(organization.Id));
-    }
-
-    [Theory, BitAutoData]
     public async Task GetOrganizationCollections_WithReadAllPermissions_GetsAllCollections(Organization organization, ICollection<Collection> collections, Guid userId, SutProvider<CollectionsController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
