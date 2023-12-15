@@ -94,9 +94,8 @@ public class SyncController : Controller
 
         if (hasEnabledOrgs)
         {
-            collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
-            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
-            collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+            collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
         }
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);

@@ -7,13 +7,13 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
 {
     Task<int> GetCountByOrganizationIdAsync(Guid organizationId);
     Task<Tuple<Collection, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id);
-    Task<Tuple<CollectionDetails, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id, Guid userId);
+    Task<Tuple<CollectionDetails, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id, Guid userId, bool useFlexibleCollections);
     Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
-    Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId);
-    Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId);
+    Task<ICollection<Tuple<CollectionDetails, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId, bool useFlexibleCollections);
+    Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections);
     Task<ICollection<Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds);
-    Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);
+    Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections);
     Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);
     Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);
     Task DeleteUserAsync(Guid collectionId, Guid organizationUserId);
