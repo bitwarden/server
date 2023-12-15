@@ -17,6 +17,7 @@ public abstract class AssociationWithPermissionsBaseModel
     public bool? ReadOnly { get; set; }
     /// <summary>
     /// When true, the hide passwords permission will not allow the user or group to view passwords.
+    /// This prevents easy copy-and-paste of hidden items, however it may not completely prevent user access.
     /// </summary>
     [Required]
     public bool? HidePasswords { get; set; }
