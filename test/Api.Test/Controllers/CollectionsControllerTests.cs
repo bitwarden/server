@@ -195,9 +195,11 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationCollections_MissingReadAllPermissions_GetsAssignedCollections(Organization organization, ICollection<CollectionDetails> collections, Guid userId, SutProvider<CollectionsController> sutProvider)
+    public async Task GetOrganizationCollections_MissingReadAllPermissions_GetsManageableCollections(Organization organization, ICollection<CollectionDetails> collections, Guid userId, SutProvider<CollectionsController> sutProvider)
     {
         collections.First().OrganizationId = organization.Id;
+        collections.First().Manage = true;
+        collections.Skip(1).First().OrganizationId = organization.Id;
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
 
