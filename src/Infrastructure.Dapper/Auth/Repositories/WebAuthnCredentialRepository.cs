@@ -53,6 +53,6 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
             credential,
             commandType: CommandType.StoredProcedure);
 
-        return true;
+        return affectedRows > 0;
     }
 }

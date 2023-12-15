@@ -251,15 +251,9 @@ public class WebAuthnControllerTests
             .Returns(token);
 
         // Act
-        try
-        {
-            await sutProvider.Sut.UpdateCredential(requestModel);
-        }
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateCredential(requestModel));
         // Assert
-        catch (BadRequestException e)
-        {
-            Assert.Equal(e.Message, expectedMessage);
-        }
+        Assert.Equal(expectedMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -274,15 +268,9 @@ public class WebAuthnControllerTests
             .Returns(token);
 
         // Act
-        try
-        {
-            await sutProvider.Sut.UpdateCredential(requestModel);
-        }
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateCredential(requestModel));
         // Assert
-        catch (BadRequestException e)
-        {
-            Assert.Equal(e.Message, expectedMessage);
-        }
+        Assert.Equal(expectedMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -302,15 +290,9 @@ public class WebAuthnControllerTests
             .Returns((user, credential));
 
         // Act
-        try
-        {
-            await sutProvider.Sut.UpdateCredential(requestModel);
-        }
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateCredential(requestModel));
         // Assert
-        catch (BadRequestException e)
-        {
-            Assert.Equal(e.Message, expectedMessage);
-        }
+        Assert.Equal(expectedMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
