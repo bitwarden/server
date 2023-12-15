@@ -7,6 +7,8 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Validators;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Tools.Models.Request;
@@ -22,8 +24,8 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.UserFeatures.UserKey;
-using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
+using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Entities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
@@ -144,7 +146,7 @@ public class Startup
         services.AddScoped<AuthenticatorTokenProvider>();
 
         // Key Rotation
-        services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
+        services.AddUserKeyCommands(globalSettings);
         services
             .AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>,
                 CipherRotationValidator>();
@@ -157,6 +159,11 @@ public class Startup
         services
             .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
                 EmergencyAccessRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+                    IReadOnlyList<OrganizationUser>>
+                , OrganizationUserRotationValidator>();
+
 
         // Services
         services.AddBaseServices(globalSettings);
