@@ -46,6 +46,7 @@
     {
       "matchFileNames": ["src/Admin/package.json", "src/Sso/package.json"],
       "description": "Admin & SSO npm packages",
+      "commitMessagePrefix": "[deps] Auth:",
       "reviewers": ["team:team-auth-dev"]
     },
     {

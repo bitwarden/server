@@ -3,26 +3,22 @@ name: Version Bump
 run-name: Version Bump - v${{ inputs.version_number }}
 
 on:
-  workflow_call:
-    inputs:
-      version_number:
-        description: "New version (example: '2024.1.0')"
-        required: true
-        type: string
   workflow_dispatch:
     inputs:
       version_number:
         description: "New version (example: '2024.1.0')"
         required: true
+        type: string
+      cut_rc_branch:
+        description: "Cut RC branch?"
+        default: true
+        type: boolean
 
 jobs:
   bump_version:
     name: "Bump Version to v${{ inputs.version_number }}"
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout Branch
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
-
       - name: Login to Azure - CI Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
@@ -36,6 +32,12 @@ jobs:
           secrets: "github-gpg-private-key,
             github-gpg-private-key-passphrase,
             github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Checkout Branch
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        with:
+          ref: main
+          repository: bitwarden/server
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # v6.0.0
@@ -82,9 +84,6 @@ jobs:
           version: ${{ inputs.version_number }}
           file_path: "Directory.Build.props"
 
-      - name: Refresh lockfiles
-        run: dotnet restore -f --force-evaluate --no-cache
-
       - name: Setup git
         run: |
           git config --local user.email "106330231+bitwarden-devops-bot@users.noreply.github.com"
@@ -114,12 +113,12 @@ jobs:
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         id: create-pr
         env:
-          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
           TITLE: "Bump version to ${{ inputs.version_number }}"
         run: |
           PR_URL=$(gh pr create --title "$TITLE" \
-            --base "$GITHUB_REF" \
+            --base "main" \
             --head "$PR_BRANCH" \
             --label "version update" \
             --label "automated pr" \
@@ -146,3 +145,16 @@ jobs:
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
+
+  cut_rc:
+    name: Cut RC Branch
+    if: ${{ inputs.cut_rc_branch == true }}
+    needs: bump_version
+    uses: ./.github/workflows/_cut_rc.yml
+    secrets: inherit
+
+  move-future-db-scripts:
+    name: Move future DB scripts
+    needs: cut_rc
+    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    secrets: inherit
