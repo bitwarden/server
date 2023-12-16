@@ -209,7 +209,13 @@ public class DevicesController : Controller
     public async Task<bool> GetByIdentifierQuery(
         [FromHeader(Name = "X-Request-Email")] string email,
         [FromHeader(Name = "X-Device-Identifier")] string deviceIdentifier)
-        => await GetByIdentifier(CoreHelpers.Base64UrlDecodeString(email), deviceIdentifier);
+        {
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(deviceIdentifier))
+            {
+                throw new BadRequestException("Please provide an email and device identifier");
+            }
+            return await GetByIdentifier(CoreHelpers.Base64UrlDecodeString(email), deviceIdentifier);
+        }
 
     [Obsolete("Path is deprecated due to encoding issues, use /knowndevice instead.")]
     [AllowAnonymous]
