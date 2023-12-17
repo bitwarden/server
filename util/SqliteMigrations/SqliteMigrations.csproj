@@ -22,4 +22,10 @@
     <Compile Include="..\EfShared\MigrationBuilderExtensions.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="HelperScripts\2023-12-06_00_AccessAllCollectionGroups.sql" />
+    <EmbeddedResource Include="HelperScripts\2023-12-06_01_AccessAllCollectionUsers.sql" />
+    <EmbeddedResource Include="HelperScripts\2023-12-06_02_ManagersEditAssignedCollectionUsers.sql" />
+  </ItemGroup>
+
 </Project>
