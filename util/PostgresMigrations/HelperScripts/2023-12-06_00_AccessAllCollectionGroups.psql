@@ -1,0 +1,27 @@
+-- Create a temporary table to store the groups with AccessAll = true
+CREATE TEMPORARY TABLE TempGroup AS
+SELECT "Id" AS "GroupId", "OrganizationId"
+FROM "Group"
+WHERE "AccessAll" = true;
+
+-- Update existing rows in "CollectionGroups"
+UPDATE "CollectionGroups" CG
+SET
+    "ReadOnly" = false,
+    "HidePasswords" = false,
+    "Manage" = false
+    FROM "CollectionGroups" CGUpdate
+INNER JOIN "Collection" C ON CGUpdate."CollectionId" = C."Id"
+    INNER JOIN TempGroup TG ON CGUpdate."GroupId" = TG."GroupId"
+WHERE C."OrganizationId" = TG."OrganizationId";
+
+-- Insert new rows into "CollectionGroups"
+INSERT INTO "CollectionGroups" ("CollectionId", "GroupId", "ReadOnly", "HidePasswords", "Manage")
+SELECT C."Id", TG."GroupId", false, false, false
+FROM "Collection" C
+         INNER JOIN TempGroup TG ON C."OrganizationId" = TG."OrganizationId"
+         LEFT JOIN "CollectionGroups" CG ON CG."CollectionId" = C."Id" AND CG."GroupId" = TG."GroupId"
+WHERE CG."CollectionId" IS NULL;
+
+-- Drop the temporary table
+DROP TABLE IF EXISTS TempGroup;

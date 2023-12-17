@@ -1,0 +1,10 @@
+-- Update "CollectionUser" with "Manage" = 1 for all users with Manager role or 'EditAssignedCollections' permission
+UPDATE "CollectionUsers" cu
+SET "ReadOnly" = false,
+    "HidePasswords" = false,
+    "Manage" = true
+    FROM "OrganizationUser" ou
+WHERE cu."OrganizationUserId" = ou."Id"
+  AND (ou."Type" = 3 OR
+    (ou."Permissions" IS NOT NULL AND
+    (ou."Permissions"::text)::jsonb->>'editAssignedCollections' = 'true'));
