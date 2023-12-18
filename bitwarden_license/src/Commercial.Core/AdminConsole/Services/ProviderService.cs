@@ -414,7 +414,7 @@ public class ProviderService : IProviderService
         var extractedPlanType = PlanTypeMappings(organization);
         if (subscriptionItem != null)
         {
-            await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType));
+            await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
         }
 
         await _organizationRepository.UpsertAsync(organization);
@@ -431,7 +431,7 @@ public class ProviderService : IProviderService
         return StaticStore.GetPlan(planType).PasswordManager.StripeSeatPlanId;
     }
 
-    private async Task UpdateSubscriptionAsync(Stripe.SubscriptionItem subscriptionItem, string extractedPlanType)
+    private async Task UpdateSubscriptionAsync(Stripe.SubscriptionItem subscriptionItem, string extractedPlanType, Organization organization)
     {
         try
         {
@@ -442,7 +442,12 @@ public class ProviderService : IProviderService
                     {
                         Items = new List<Stripe.SubscriptionItemOptions>
                         {
-                            new() { Id = subscriptionItem.Id, Price = extractedPlanType },
+                            new()
+                            {
+                                Id = subscriptionItem.Id,
+                                Price = extractedPlanType,
+                                Quantity = organization.Seats.Value,
+                            },
                         }
                     });
             }
