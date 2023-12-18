@@ -17,7 +17,7 @@ on:
       - 'test/Infrastructure.IntegrationTest/**' # Any changes to the tests
   push:
     branches:
-      - 'master'
+      - 'main'
       - 'rc'
     paths:
       - '.github/workflows/infrastructure-tests.yml' # This file
@@ -55,7 +55,7 @@ jobs:
           cp .env.example .env
           docker compose --profile mssql --profile postgres --profile mysql up -d
         shell: pwsh
-      
+
       # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
       - name: Sleep
         run: sleep 15s
@@ -76,13 +76,13 @@ jobs:
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:PostgreSql:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
-      
+
       - name: Migrate Sqlite
         working-directory: 'util/SqliteMigrations'
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:Sqlite:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "Data Source=${{ runner.temp }}/test.db"
-        
+
       - name: Run Tests
         working-directory: 'test/Infrastructure.IntegrationTest'
         env:
@@ -109,7 +109,7 @@ jobs:
           path: "**/*-test-results.trx"
           reporter: dotnet-trx
           fail-on-error: true
-      
+
       - name: Docker compose down
         if: always()
         working-directory: "dev"

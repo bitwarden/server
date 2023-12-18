@@ -253,7 +253,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     {
         // List of collection Ids the acting user has access to
         var assignedCollectionIds =
-            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
+            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value, useFlexibleCollections: true))
             .Where(c =>
                 // Check Collections with Manage permission
                 (!requireManagePermission || c.Manage) && c.OrganizationId == org.Id)
