@@ -3,17 +3,16 @@ name: Version Bump
 run-name: Version Bump - v${{ inputs.version_number }}
 
 on:
-  workflow_call:
-    inputs:
-      version_number:
-        description: "New version (example: '2024.1.0')"
-        required: true
-        type: string
   workflow_dispatch:
     inputs:
       version_number:
         description: "New version (example: '2024.1.0')"
         required: true
+        type: string
+      cut_rc_branch:
+        description: "Cut RC branch?"
+        default: true
+        type: boolean
 
 jobs:
   bump_version:
@@ -37,9 +36,8 @@ jobs:
       - name: Checkout Branch
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
-          repository: bitwarden/server
           ref: main
-          token: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          repository: bitwarden/server
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # v6.0.0
@@ -147,3 +145,35 @@ jobs:
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
+
+  cut_rc:
+    name: Cut RC branch
+    needs: bump_version
+    if: ${{ inputs.cut_rc_branch == true }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: main
+
+      - name: Check if RC branch exists
+        run: |
+          remote_rc_branch_check=$(git ls-remote --heads origin rc | wc -l)
+          if [[ "${remote_rc_branch_check}" -gt 0 ]]; then
+            echo "Remote RC branch exists."
+            echo "Please delete current RC branch before running again."
+            exit 1
+          fi
+
+      - name: Cut RC branch
+        run: |
+          git switch --quiet --create rc
+          git push --quiet --set-upstream origin rc
+
+
+  move-future-db-scripts:
+    name: Move future DB scripts
+    needs: cut_rc
+    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    secrets: inherit
