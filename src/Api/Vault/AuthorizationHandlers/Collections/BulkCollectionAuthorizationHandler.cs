@@ -109,8 +109,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return;
         }
 
+        // Check for non-null org here: the user must be apart of the organization for this setting to take affect
         // If the limit collection management setting is disabled, allow any user to create collections
-        if (await GetOrganizationAbilityAsync() is { LimitCollectionCreationDeletion: false })
+        if (org is not null && await GetOrganizationAbilityAsync() is { LimitCollectionCreationDeletion: false })
         {
             context.Succeed(requirement);
             return;
@@ -235,9 +236,10 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return;
         }
 
+        // Check for non-null org here: the user must be apart of the organization for this setting to take affect
         // The limit collection management setting is disabled,
         // ensure acting user has manage permissions for all collections being deleted
-        if (org != null && await GetOrganizationAbilityAsync() is { LimitCollectionCreationDeletion: false })
+        if (org is not null && await GetOrganizationAbilityAsync() is { LimitCollectionCreationDeletion: false })
         {
             var canManageCollections = await IsAssignedToCollectionsAsync(resources, org, true);
             if (canManageCollections)

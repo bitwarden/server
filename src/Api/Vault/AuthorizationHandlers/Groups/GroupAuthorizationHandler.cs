@@ -79,8 +79,9 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
             return;
         }
 
+        // Check for non-null org here: the user must be apart of the organization for this setting to take affect
         // If the limit collection management setting is disabled, allow any user to read all groups
-        if (await GetOrganizationAbilityAsync(requirement.OrganizationId) is { LimitCollectionCreationDeletion: false })
+        if (org is not null && await GetOrganizationAbilityAsync(requirement.OrganizationId) is { LimitCollectionCreationDeletion: false })
         {
             context.Succeed(requirement);
             return;
