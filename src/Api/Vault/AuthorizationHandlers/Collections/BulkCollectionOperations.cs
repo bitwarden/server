@@ -11,6 +11,7 @@ public static class BulkCollectionOperations
     public static readonly BulkCollectionOperationRequirement ReadAccess = new() { Name = nameof(ReadAccess) };
     public static readonly BulkCollectionOperationRequirement ReadWithAccess = new() { Name = nameof(ReadWithAccess) };
     public static readonly BulkCollectionOperationRequirement Update = new() { Name = nameof(Update) };
+    public static readonly BulkCollectionOperationRequirement Export = new() { Name = nameof(Export) };
     /// <summary>
     /// The operation that represents creating, updating, or removing collection access.
     /// Combined together to allow for a single requirement to be used for each operation

@@ -998,11 +998,6 @@ public class CipherService : ICipherService
 
     public async Task<(IEnumerable<CipherOrganizationDetails>, Dictionary<Guid, IGrouping<Guid, CollectionCipher>>)> GetOrganizationManagedCiphers(Guid organizationId)
     {
-        if (!await _currentContext.ViewAssignedCollections(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
         IEnumerable<CipherOrganizationDetails> orgCiphers;
 
         var ciphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);

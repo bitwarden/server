@@ -1,14 +1,17 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe.Issuing;
 
 namespace Bit.Api.Controllers;
 
@@ -22,6 +25,7 @@ public class OrganizationExportController : Controller
     private readonly ICipherService _cipherService;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
+    private readonly IAuthorizationService _authorizationService;
 
     public OrganizationExportController(
         ICurrentContext currentContext,
@@ -29,7 +33,8 @@ public class OrganizationExportController : Controller
         ICollectionService collectionService,
         IUserService userService,
         GlobalSettings globalSettings,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IAuthorizationService authorizationService)
     {
         _currentContext = currentContext;
         _cipherService = cipherService;
@@ -37,6 +42,7 @@ public class OrganizationExportController : Controller
         _userService = userService;
         _globalSettings = globalSettings;
         _featureService = featureService;
+        _authorizationService = authorizationService;
     }
 
     private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
@@ -53,6 +59,9 @@ public class OrganizationExportController : Controller
         if (isManaged && FlexibleCollectionsIsEnabled)
         {
             orgCollections = await _collectionService.GetOrganizationManagedCollectionsAsync(organizationId);
+            if (!(await _authorizationService.AuthorizeAsync(User, orgCollections, BulkCollectionOperations.Update)).Succeeded){
+                throw new NotFoundException();
+            }
             (orgCiphers, collectionCiphersGroupDict) = await _cipherService.GetOrganizationManagedCiphers(organizationId);
         }
         else
