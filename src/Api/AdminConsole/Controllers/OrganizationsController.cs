@@ -240,20 +240,18 @@ public class OrganizationsController : Controller
     }
 
     [HttpGet("{id}/risks-subscription-failure")]
-    public async Task<OrganizationRisksSubscriptionFailureResponseModel> RisksSubscriptionFailure(string id)
+    public async Task<OrganizationRisksSubscriptionFailureResponseModel> RisksSubscriptionFailure(Guid id)
     {
-        var organizationId = new Guid(id);
-
-        if (!await _currentContext.EditPaymentMethods(organizationId))
+        if (!await _currentContext.EditPaymentMethods(id))
         {
-            return new OrganizationRisksSubscriptionFailureResponseModel(organizationId, false);
+            return new OrganizationRisksSubscriptionFailureResponseModel(id, false);
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        var organization = await _organizationRepository.GetByIdAsync(id);
 
         var risksSubscriptionFailure = await _paymentService.RisksSubscriptionFailure(organization);
 
-        return new OrganizationRisksSubscriptionFailureResponseModel(organizationId, risksSubscriptionFailure);
+        return new OrganizationRisksSubscriptionFailureResponseModel(id, risksSubscriptionFailure);
     }
 
     [HttpPost("")]
