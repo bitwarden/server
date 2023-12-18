@@ -7,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -26,6 +27,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
     public const string GrantType = "webauthn";
 
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
+    private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
 
     public WebAuthnGrantValidator(
         UserManager<User> userManager,
@@ -48,7 +50,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IDistributedCache distributedCache,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
         )
         : base(userManager, deviceRepository, deviceService, userService, eventService,
             organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
@@ -56,6 +59,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, distributedCache, userDecryptionOptionsBuilder)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
+        _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
     }
 
     string IExtensionGrantValidator.GrantType => "webauthn";
@@ -86,7 +90,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             return;
         }
 
-        var (user, credential) = await _userService.CompleteWebAuthLoginAssertionAsync(token.Options, deviceResponse);
+        var (user, credential) = await _assertWebAuthnLoginCredentialCommand.AssertWebAuthnLoginCredential(token.Options, deviceResponse);
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,

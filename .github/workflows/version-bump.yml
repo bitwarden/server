@@ -3,17 +3,16 @@ name: Version Bump
 run-name: Version Bump - v${{ inputs.version_number }}
 
 on:
-  workflow_call:
-    inputs:
-      version_number:
-        description: "New version (example: '2024.1.0')"
-        required: true
-        type: string
   workflow_dispatch:
     inputs:
       version_number:
         description: "New version (example: '2024.1.0')"
         required: true
+        type: string
+      cut_rc_branch:
+        description: "Cut RC branch?"
+        default: true
+        type: boolean
 
 jobs:
   bump_version:
@@ -37,9 +36,8 @@ jobs:
       - name: Checkout Branch
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
+          ref: main
           repository: bitwarden/server
-          ref: master
-          token: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # v6.0.0
@@ -120,7 +118,7 @@ jobs:
           TITLE: "Bump version to ${{ inputs.version_number }}"
         run: |
           PR_URL=$(gh pr create --title "$TITLE" \
-            --base "master" \
+            --base "main" \
             --head "$PR_BRANCH" \
             --label "version update" \
             --label "automated pr" \
@@ -147,3 +145,16 @@ jobs:
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
+
+  cut_rc:
+    name: Cut RC Branch
+    if: ${{ inputs.cut_rc_branch == true }}
+    needs: bump_version
+    uses: ./.github/workflows/_cut_rc.yml
+    secrets: inherit
+
+  move-future-db-scripts:
+    name: Move future DB scripts
+    needs: cut_rc
+    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    secrets: inherit

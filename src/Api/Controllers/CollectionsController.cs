@@ -104,7 +104,7 @@ public class CollectionsController : Controller
         else
         {
             (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id,
-                _currentContext.UserId.Value);
+                _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
             if (collection == null || collection.OrganizationId != orgId)
             {
                 throw new NotFoundException();
@@ -131,7 +131,8 @@ public class CollectionsController : Controller
 
         // We always need to know which collections the current user is assigned to
         var assignedOrgCollections =
-            await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
+            await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId,
+                FlexibleCollectionsIsEnabled);
 
         if (await _currentContext.ViewAllCollections(orgId) || await _currentContext.ManageUsers(orgId))
         {
@@ -190,7 +191,7 @@ public class CollectionsController : Controller
     public async Task<ListResponseModel<CollectionDetailsResponseModel>> GetUser()
     {
         var collections = await _collectionRepository.GetManyByUserIdAsync(
-            _userService.GetProperUserId(User).Value);
+            _userService.GetProperUserId(User).Value, FlexibleCollectionsIsEnabled);
         var responses = collections.Select(c => new CollectionDetailsResponseModel(c));
         return new ListResponseModel<CollectionDetailsResponseModel>(responses);
     }
@@ -416,7 +417,7 @@ public class CollectionsController : Controller
         }
         else if (await _currentContext.ViewAssignedCollections(orgId))
         {
-            collection = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value);
+            collection = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
         }
 
         if (collection == null || collection.OrganizationId != orgId)
@@ -459,7 +460,7 @@ public class CollectionsController : Controller
         if (await _currentContext.EditAssignedCollections(orgId))
         {
             var collectionDetails =
-                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
             return collectionDetails != null;
         }
 
@@ -484,7 +485,7 @@ public class CollectionsController : Controller
         if (await _currentContext.DeleteAssignedCollections(orgId))
         {
             var collectionDetails =
-                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
             return collectionDetails != null;
         }
 
@@ -519,7 +520,7 @@ public class CollectionsController : Controller
         if (await _currentContext.ViewAssignedCollections(orgId))
         {
             var collectionDetails =
-                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
             return collectionDetails != null;
         }
 
@@ -563,7 +564,7 @@ public class CollectionsController : Controller
     {
         // We always need to know which collections the current user is assigned to
         var assignedOrgCollections = await _collectionRepository
-            .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
+            .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId, FlexibleCollectionsIsEnabled);
 
         var readAllAuthorized =
             (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAllWithAccess(orgId))).Succeeded;
@@ -608,7 +609,7 @@ public class CollectionsController : Controller
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
             var readAuthorized = (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Read)).Succeeded;
             if (readAuthorized)
             {

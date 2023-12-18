@@ -4,30 +4,26 @@ using Fido2NetLib;
 
 namespace Bit.Api.Auth.Models.Request.Webauthn;
 
-public class WebAuthnCredentialRequestModel
+public class WebAuthnLoginCredentialUpdateRequestModel
 {
     [Required]
-    public AuthenticatorAttestationRawResponse DeviceResponse { get; set; }
-
-    [Required]
-    public string Name { get; set; }
+    public AuthenticatorAssertionRawResponse DeviceResponse { get; set; }
 
     [Required]
     public string Token { get; set; }
 
     [Required]
-    public bool SupportsPrf { get; set; }
-
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public string EncryptedUserKey { get; set; }
 
+    [Required]
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public string EncryptedPublicKey { get; set; }
 
+    [Required]
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public string EncryptedPrivateKey { get; set; }
 }
-
