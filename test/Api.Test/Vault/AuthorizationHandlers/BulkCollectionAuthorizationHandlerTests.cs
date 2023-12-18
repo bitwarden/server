@@ -35,6 +35,8 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, true);
+
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
             new ClaimsPrincipal(),
@@ -42,6 +44,7 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(organizationAbilities);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -58,15 +61,7 @@ public class BulkCollectionAuthorizationHandlerTests
 
         organization.Type = OrganizationUserType.User;
 
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { organization.Id,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = false
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, false);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -102,15 +97,7 @@ public class BulkCollectionAuthorizationHandlerTests
             ManageUsers = false
         };
 
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { organization.Id,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = true
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -133,15 +120,7 @@ public class BulkCollectionAuthorizationHandlerTests
         ICollection<Collection> collections,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
     {
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { collections.First().OrganizationId,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = true
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(collections.First().OrganizationId, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -763,6 +742,8 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, true);
+
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Delete },
             new ClaimsPrincipal(),
@@ -770,6 +751,8 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync()
+            .Returns(organizationAbilities);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -790,6 +773,8 @@ public class BulkCollectionAuthorizationHandlerTests
             DeleteAnyCollection = true
         };
 
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, true);
+
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Delete },
             new ClaimsPrincipal(),
@@ -797,6 +782,8 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync()
+            .Returns(organizationAbilities);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -814,15 +801,7 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { organization.Id,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = false
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, false);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -865,15 +844,7 @@ public class BulkCollectionAuthorizationHandlerTests
             ManageUsers = false
         };
 
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { organization.Id,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = true
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Delete },
@@ -1003,5 +974,19 @@ public class BulkCollectionAuthorizationHandlerTests
             // Recreate the SUT to reset the mocks/dependencies between tests
             sutProvider.Recreate();
         }
+    }
+
+    private static Dictionary<Guid, OrganizationAbility> ArrangeOrganizationAbilitiesDictionary(Guid orgId,
+        bool limitCollectionCreationDeletion)
+    {
+        return new Dictionary<Guid, OrganizationAbility>
+        {
+            { orgId,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = limitCollectionCreationDeletion
+                }
+            }
+        };
     }
 }

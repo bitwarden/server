@@ -30,6 +30,8 @@ public class GroupAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, true);
+
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
@@ -37,6 +39,7 @@ public class GroupAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(organizationAbilities);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -51,15 +54,7 @@ public class GroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { organization.Id,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = true
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organization.Id) },
@@ -102,15 +97,7 @@ public class GroupAuthorizationHandlerTests
             ManageUsers = manageUsers
         };
 
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { organization.Id,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = limitCollectionCreationDeletion
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, limitCollectionCreationDeletion);
 
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organization.Id) },
@@ -146,15 +133,7 @@ public class GroupAuthorizationHandlerTests
             AccessImportExport = false
         };
 
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { organization.Id,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = true
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organization.Id, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organization.Id) },
@@ -177,15 +156,7 @@ public class GroupAuthorizationHandlerTests
         Guid organizationId,
         SutProvider<GroupAuthorizationHandler> sutProvider)
     {
-        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { organizationId,
-                new OrganizationAbility
-                {
-                    LimitCollectionCreationDeletion = true
-                }
-            }
-        };
+        var organizationAbilities = ArrangeOrganizationAbilitiesDictionary(organizationId, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organizationId) },
@@ -237,5 +208,19 @@ public class GroupAuthorizationHandlerTests
 
         Assert.False(context.HasSucceeded);
         Assert.True(context.HasFailed);
+    }
+
+    private static Dictionary<Guid, OrganizationAbility> ArrangeOrganizationAbilitiesDictionary(Guid orgId,
+        bool limitCollectionCreationDeletion)
+    {
+        return new Dictionary<Guid, OrganizationAbility>
+        {
+            { orgId,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreationDeletion = limitCollectionCreationDeletion
+                }
+            }
+        };
     }
 }
