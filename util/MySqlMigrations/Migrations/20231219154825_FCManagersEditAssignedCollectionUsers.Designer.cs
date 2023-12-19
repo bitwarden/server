@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20231217125557_FlexibleCollections")]
-    partial class FlexibleCollections
+    [Migration("20231219154825_FCManagersEditAssignedCollectionUsers")]
+    partial class FCManagersEditAssignedCollectionUsers
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
