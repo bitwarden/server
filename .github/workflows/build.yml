@@ -617,6 +617,7 @@ jobs:
           UPLOAD_STATUS: ${{ needs.upload.result }}
           BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
           TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.self-host-build.result }}
+          TRIGGER_K8S_DEPLOY_STATUS: ${{ needs.trigger-k8s-deploy.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
@@ -633,6 +634,8 @@ jobs:
           elif [ "$BUILD_MSSQLMIGRATORUTILITY_STATUS" = "failure" ]; then
               exit 1
           elif [ "$TRIGGER_SELF_HOST_BUILD_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$TRIGGER_K8S_DEPLOY_STATUS" = "failure" ]; then
               exit 1
           fi
 
