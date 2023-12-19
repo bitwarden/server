@@ -116,7 +116,7 @@ public class StripeController : Controller
             var json = await sr.ReadToEndAsync();
             parsedEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
                 _billingSettings.StripeWebhookSecret,
-                throwOnApiVersionMismatch: _billingSettings.StripeEventParseThrowMismatch);
+                throwOnApiVersionMismatch: false);
         }
 
         if (StripeConfiguration.ApiVersion != parsedEvent.ApiVersion)
