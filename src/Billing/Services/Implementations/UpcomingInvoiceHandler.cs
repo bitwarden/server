@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Controllers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -19,7 +20,7 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
     private readonly IUserService _userService;
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeFacade _stripeFacade;
-    private readonly ILogger<UpcomingInvoiceHandler> _logger;
+    private readonly ILogger<StripeController> _logger;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
     private readonly IMailService _mailService;
@@ -29,7 +30,7 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
         IUserService userService,
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
-        ILogger<UpcomingInvoiceHandler> logger,
+        ILogger<StripeController> logger,
         ITaxRateRepository taxRateRepository,
         IValidateSponsorshipCommand validateSponsorshipCommand,
         IMailService mailService)

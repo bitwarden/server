@@ -1,36 +1,133 @@
-﻿using Bit.Billing.Constants;
-using Bit.Billing.Services;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Billing.Services;
+using Bit.Billing.Services.Implementations;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
-using Bit.Core.Utilities;
 using Braintree;
-using Braintree.Exceptions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Stripe;
-using Customer = Stripe.Customer;
 using Event = Stripe.Event;
-using PaymentMethod = Stripe.PaymentMethod;
-using Subscription = Stripe.Subscription;
-using TaxRate = Bit.Core.Entities.TaxRate;
-using Transaction = Bit.Core.Entities.Transaction;
-using TransactionType = Bit.Core.Enums.TransactionType;
 
 namespace Bit.Billing.Controllers;
 
 [Route("stripe")]
 public class StripeController : Controller
 {
-    private const decimal PremiumPlanAppleIapPrice = 14.99M;
+    private readonly BillingSettings _billingSettings;
+    private readonly IWebHostEnvironment _hostingEnvironment;
+    private readonly IOrganizationService _organizationService;
+    private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
+    private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly ITransactionRepository _transactionRepository;
+    private readonly IUserService _userService;
+    private readonly IAppleIapService _appleIapService;
+    private readonly IMailService _mailService;
+    private readonly ILogger<StripeController> _logger;
+    private readonly BraintreeGateway _btGateway;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly ITaxRateRepository _taxRateRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly ICurrentContext _currentContext;
+    private readonly GlobalSettings _globalSettings;
+    private readonly IStripeEventService _stripeEventService;
+    private readonly IStripeFacade _stripeFacade;
+    private readonly StripeWebhookHandler _webhookHandler;
+
+    public StripeController(
+        GlobalSettings globalSettings,
+        IOptions<BillingSettings> billingSettings,
+        IWebHostEnvironment hostingEnvironment,
+        IOrganizationService organizationService,
+        IValidateSponsorshipCommand validateSponsorshipCommand,
+        IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
+        IOrganizationRepository organizationRepository,
+        ITransactionRepository transactionRepository,
+        IUserService userService,
+        IAppleIapService appleIapService,
+        IMailService mailService,
+        IReferenceEventService referenceEventService,
+        ILogger<StripeController> logger,
+        ITaxRateRepository taxRateRepository,
+        IUserRepository userRepository,
+        ICurrentContext currentContext,
+        IStripeEventService stripeEventService,
+        IStripeFacade stripeFacade,
+        StripeWebhookHandler webhookHandler)
+    {
+        _billingSettings = billingSettings?.Value;
+        _hostingEnvironment = hostingEnvironment;
+        _organizationService = organizationService;
+        _validateSponsorshipCommand = validateSponsorshipCommand;
+        _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
+        _organizationRepository = organizationRepository;
+        _transactionRepository = transactionRepository;
+        _userService = userService;
+        _appleIapService = appleIapService;
+        _mailService = mailService;
+        _referenceEventService = referenceEventService;
+        _taxRateRepository = taxRateRepository;
+        _userRepository = userRepository;
+        _logger = logger;
+        _btGateway = new BraintreeGateway
+        {
+            Environment = globalSettings.Braintree.Production ?
+                Braintree.Environment.PRODUCTION : Braintree.Environment.SANDBOX,
+            MerchantId = globalSettings.Braintree.MerchantId,
+            PublicKey = globalSettings.Braintree.PublicKey,
+            PrivateKey = globalSettings.Braintree.PrivateKey
+        };
+        _currentContext = currentContext;
+        _globalSettings = globalSettings;
+        _stripeEventService = stripeEventService;
+        _stripeFacade = stripeFacade;
+        _webhookHandler = webhookHandler;
+
+        // Set up the chain of responsibility
+        var subscriptionDeletedHandler = new SubscriptionDeletedHandler(_organizationService, _userService, _stripeEventService);
+        var subscriptionUpdatedHandler = new SubscriptionUpdatedHandler(_organizationService, _userService,
+            _stripeEventService, _organizationSponsorshipRenewCommand);
+        var upcomingInvoiceHandler = new UpcomingInvoiceHandler(_organizationRepository, _userService,
+            _stripeEventService, _stripeFacade, _logger, _taxRateRepository, _validateSponsorshipCommand, _mailService);
+        var chargeSucceededHandler = new ChargeSucceededHandler(_transactionRepository, _logger, _stripeEventService);
+
+        subscriptionDeletedHandler.SetNextHandler(subscriptionUpdatedHandler);
+        subscriptionUpdatedHandler.SetNextHandler(upcomingInvoiceHandler);
+        upcomingInvoiceHandler.SetNextHandler(chargeSucceededHandler);
+
+        _webhookHandler = subscriptionDeletedHandler;
+    }
+
+    [HttpPost("webhook")]
+    public async Task<IActionResult> PostWebhook([FromQuery] string key)
+    {
+        // Parse the event and pass it to the handler chain
+        Event parsedEvent;
+        using (var sr = new StreamReader(HttpContext.Request.Body))
+        {
+            var json = await sr.ReadToEndAsync();
+            parsedEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
+                _billingSettings.StripeWebhookSecret,
+                throwOnApiVersionMismatch: _billingSettings.StripeEventParseThrowMismatch);
+        }
+
+        if (string.IsNullOrWhiteSpace(parsedEvent?.Id))
+        {
+            _logger.LogWarning("No event id.");
+            return new BadRequestResult();
+        }
+
+        // Pass the event to the handler chain
+        await _webhookHandler.HandleRequest(parsedEvent);
+
+        return new OkResult();
+    }
+
+    /*private const decimal PremiumPlanAppleIapPrice = 14.99M;
     private const string PremiumPlanId = "premium-annually";
     private const string PremiumPlanIdAppStore = "premium-annually-app";
 
@@ -269,7 +366,7 @@ public class StripeController : Controller
                  * Disabling this as part of a hot fix. It needs to check whether the organization
                  * belongs to a Reseller provider and only send an email to the organization owners if it does.
                  * It also requires a new email template as the current one contains too much billing information.
-                 */
+                 #1#
 
                 // var ownerEmails = await _organizationRepository.GetOwnerEmailAddressesById(organization.Id);
 
@@ -991,5 +1088,5 @@ public class StripeController : Controller
         {
             await invoiceService.VoidInvoiceAsync(invoice.Id);
         }
-    }
+    }*/
 }

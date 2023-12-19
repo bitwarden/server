@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Controllers;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -12,12 +13,12 @@ namespace Bit.Billing.Services.Implementations;
 public class ChargeSucceededHandler : StripeWebhookHandler
 {
     private readonly ITransactionRepository _transactionRepository;
-    private readonly ILogger<ChargeSucceededHandler> _logger;
+    private readonly ILogger<StripeController> _logger;
     private readonly IStripeEventService _stripeEventService;
 
     public ChargeSucceededHandler(
         ITransactionRepository transactionRepository,
-        ILogger<ChargeSucceededHandler> logger,
+        ILogger<StripeController> logger,
         IStripeEventService stripeEventService)
     {
         _transactionRepository = transactionRepository;
