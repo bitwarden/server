@@ -10,6 +10,7 @@ SET @MaxBatch := (SELECT MAX(Batch) FROM TempOrgUser);
 SET @CurrentBatch := 0;
 
 -- Create the stored procedure
+DROP PROCEDURE IF EXISTS ProcessBatches;
 CREATE PROCEDURE ProcessBatches(INOUT currentBatch INT, IN maxBatch INT)
 BEGIN
     WHILE currentBatch <= maxBatch DO
