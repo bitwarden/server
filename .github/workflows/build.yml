@@ -525,8 +525,7 @@ jobs:
   self-host-build:
     name: Trigger self-host build
     runs-on: ubuntu-22.04
-    needs:
-      - build-docker
+    needs: build-docker
     steps:
       - name: Login to Azure - CI Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
@@ -552,6 +551,40 @@ jobs:
               ref: 'main',
               inputs: {
                 server_branch: '${{ github.ref }}'
+              }
+            })
+
+  trigger-k8s-deploy:
+    name: Trigger k8s deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    needs: upload
+    steps:
+      - name: Login to Azure - CI Subscription
+        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve github PAT secrets
+        id: retrieve-secret-pat
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Trigger k8s deploy
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        with:
+          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'bitwarden',
+              repo: 'devops',
+              workflow_id: 'deploy-k8s.yml',
+              ref: 'main',
+              inputs: {
+                environment: 'US-DEV Cloud',
+                tag: 'main'
               }
             })
 
