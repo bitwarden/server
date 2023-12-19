@@ -1,12 +1,16 @@
 ﻿using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
+using Bit.Api.Vault.AuthorizationHandlers.Groups;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +27,10 @@ public class GroupsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IAuthorizationService _authorizationService;
+
+    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -31,7 +39,9 @@ public class GroupsController : Controller
         ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand,
-        IDeleteGroupCommand deleteGroupCommand)
+        IDeleteGroupCommand deleteGroupCommand,
+        IFeatureService featureService,
+        IAuthorizationService authorizationService)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
@@ -40,6 +50,8 @@ public class GroupsController : Controller
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
         _deleteGroupCommand = deleteGroupCommand;
+        _featureService = featureService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet("{id}")]
@@ -67,20 +79,26 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
-        var orgIdGuid = new Guid(orgId);
-        var canAccess = await _currentContext.ManageGroups(orgIdGuid) ||
-            await _currentContext.ViewAssignedCollections(orgIdGuid) ||
-            await _currentContext.ViewAllCollections(orgIdGuid) ||
-            await _currentContext.ManageUsers(orgIdGuid);
+        if (UseFlexibleCollections)
+        {
+            // New flexible collections logic
+            return await Get_vNext(orgId);
+        }
+
+        // Old pre-flexible collections logic follows
+        var canAccess = await _currentContext.ManageGroups(orgId) ||
+                        await _currentContext.ViewAssignedCollections(orgId) ||
+                        await _currentContext.ViewAllCollections(orgId) ||
+                        await _currentContext.ManageUsers(orgId);
 
         if (!canAccess)
         {
             throw new NotFoundException();
         }
 
-        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgIdGuid);
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
@@ -184,5 +202,19 @@ public class GroupsController : Controller
         }
 
         await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
+    }
+
+    private async Task<ListResponseModel<GroupDetailsResponseModel>> Get_vNext(Guid orgId)
+    {
+        var authorized =
+            (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
+        if (!authorized)
+        {
+            throw new NotFoundException();
+        }
+
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
+        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
+        return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 }
