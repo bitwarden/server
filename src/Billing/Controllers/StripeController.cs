@@ -119,6 +119,17 @@ public class StripeController : Controller
                 throwOnApiVersionMismatch: _billingSettings.StripeEventParseThrowMismatch);
         }
 
+        if (StripeConfiguration.ApiVersion != parsedEvent.ApiVersion)
+        {
+            _logger.LogWarning(
+                "Stripe {WebhookType} webhook's API version ({WebhookAPIVersion}) does not match SDK API Version ({SDKAPIVersion})",
+                parsedEvent.Type,
+                parsedEvent.ApiVersion,
+                StripeConfiguration.ApiVersion);
+
+            return new OkResult();
+        }
+
         if (string.IsNullOrWhiteSpace(parsedEvent?.Id))
         {
             _logger.LogWarning("No event id.");
