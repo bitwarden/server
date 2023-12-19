@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Net;
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -26,6 +27,7 @@ using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
 using DIM = Duende.IdentityServer.Models;
 
 namespace Bit.Sso.Controllers;
@@ -481,7 +483,7 @@ public class AccountController : Controller
             if (orgUser.Status == OrganizationUserStatusType.Invited)
             {
                 // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name));
+                throw new Exception(_i18nService.T("UserAlreadyInvited", email, WebUtility.HtmlDecode(organization.Name)));
             }
 
             // Accepted or Confirmed - create SSO link and return;
@@ -514,7 +516,7 @@ public class AccountController : Controller
                         await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
                     }
                     _logger.LogInformation(e, "SSO auto provisioning failed");
-                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
+                    throw new Exception(_i18nService.T("NoSeatsAvailable", WebUtility.HtmlDecode(organization.Name)));
                 }
             }
         }

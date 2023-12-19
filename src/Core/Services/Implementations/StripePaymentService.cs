@@ -1,4 +1,5 @@
-﻿using Bit.Billing.Models;
+﻿using System.Net;
+using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -130,7 +131,7 @@ public class StripePaymentService : IPaymentService
         {
             customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
             {
-                Description = org.BusinessName,
+                Description = WebUtility.HtmlDecode(org.BusinessName),
                 Email = org.BillingEmail,
                 Source = stipeCustomerSourceToken,
                 PaymentMethod = stipeCustomerPaymentMethodId,
