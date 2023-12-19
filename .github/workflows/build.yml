@@ -601,6 +601,7 @@ jobs:
       - upload
       - build-mssqlmigratorutility
       - self-host-build
+      - trigger-k8s-deploy
     steps:
       - name: Check if any job failed
         if: |
