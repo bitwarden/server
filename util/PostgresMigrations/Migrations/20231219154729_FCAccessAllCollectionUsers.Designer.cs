@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20231217125601_FlexibleCollections")]
-    partial class FlexibleCollections
+    [Migration("20231219154729_FCAccessAllCollectionUsers")]
+    partial class FCAccessAllCollectionUsers
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
