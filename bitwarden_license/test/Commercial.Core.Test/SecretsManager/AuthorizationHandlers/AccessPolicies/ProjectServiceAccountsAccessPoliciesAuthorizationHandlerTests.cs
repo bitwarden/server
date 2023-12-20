@@ -32,9 +32,8 @@ public class ProjectServiceAccountAccessPoliciesAuthorizationHandlerTests
                 (accessClientType, userId));
         sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(resource.Id, userId, accessClientType)
             .Returns((read, write));
-
-        //sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccounts(resource.ServiceAccountProjectsAccessPolicies.Select( s => s.Id).ToList(), userId, accessClientType)
-        //    .Returns((read, write));
+        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
+            .Returns((read, write));
     }
 
     private static void SetupOrganizationServiceAccounts(SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
@@ -88,7 +87,7 @@ public class ProjectServiceAccountAccessPoliciesAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
+    [BitAutoData(AccessClientType.User)]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     public async Task ReplaceProjectServiceAccount_ServiceAccountNotInOrg_DoesNotSucceed(AccessClientType accessClient,
         SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider, ProjectServiceAccountsAccessPolicies resource,
@@ -109,15 +108,15 @@ public class ProjectServiceAccountAccessPoliciesAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount, false, false, false)]
-    [BitAutoData(AccessClientType.ServiceAccount, false, true, true)]
-    [BitAutoData(AccessClientType.ServiceAccount, true, false, false)]
-    [BitAutoData(AccessClientType.ServiceAccount, true, true, true)]
+    [BitAutoData(AccessClientType.User, false, false, false)]
+    [BitAutoData(AccessClientType.User, false, true, true)]
+    [BitAutoData(AccessClientType.User, true, false, false)]
+    [BitAutoData(AccessClientType.User, true, true, true)]
     [BitAutoData(AccessClientType.NoAccessCheck, false, false, false)]
     [BitAutoData(AccessClientType.NoAccessCheck, false, true, true)]
     [BitAutoData(AccessClientType.NoAccessCheck, true, false, false)]
     [BitAutoData(AccessClientType.NoAccessCheck, true, true, true)]
-    public async Task ReplaceProjectServiceAccount_AccessCheck(AccessClientType accessClient, bool read, bool write,
+    public async Task ReplaceProjectServiceAccount_ProjectAccessCheck(AccessClientType accessClient, bool read, bool write,
         bool expected,
         SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider, ProjectServiceAccountsAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal, Guid userId)
@@ -133,4 +132,65 @@ public class ProjectServiceAccountAccessPoliciesAuthorizationHandlerTests
 
         Assert.Equal(expected, authzContext.HasSucceeded);
     }
+
+    [Theory]
+    [BitAutoData(AccessClientType.User, false, false, false)]
+    [BitAutoData(AccessClientType.User, false, true, true)]
+    [BitAutoData(AccessClientType.User, true, false, false)]
+    [BitAutoData(AccessClientType.User, true, true, true)]
+    [BitAutoData(AccessClientType.NoAccessCheck, false, false, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, false, true, true)]
+    [BitAutoData(AccessClientType.NoAccessCheck, true, false, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, true, true, true)]
+    public async Task ReplaceProjectServiceAccount_ServiceAccountsAccessCheck(AccessClientType accessClient, bool read, bool write,
+    bool expected,
+    SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider, ProjectServiceAccountsAccessPolicies resource,
+    ClaimsPrincipal claimsPrincipal, Guid userId)
+    {
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Replace;
+        SetupUserPermission(sutProvider, accessClient, resource, userId, true, true);
+        SetupOrganizationServiceAccounts(sutProvider, resource);
+
+
+        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClient).Returns((read, write));
+
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(AccessClientType.ServiceAccount, false, false, false)]
+    [BitAutoData(AccessClientType.ServiceAccount, false, true, false)]
+    [BitAutoData(AccessClientType.ServiceAccount, true, false, false)]
+    [BitAutoData(AccessClientType.ServiceAccount, true, true, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, false, false, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, false, true, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, true, false, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, true, true, false)]
+    public async Task ReplaceProjectServiceAccount_ProjectAccessFalseCheck(AccessClientType accessClient, bool read, bool write,
+    bool expected,
+    SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider, ProjectServiceAccountsAccessPolicies resource,
+    ClaimsPrincipal claimsPrincipal, Guid userId)
+    {
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Replace;
+        SetupUserPermission(sutProvider, accessClient, resource, userId, false, false);
+        SetupOrganizationServiceAccounts(sutProvider, resource);
+
+        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccountsAsync(resource.ServiceAccountProjectsAccessPolicies.Select(ap => ap.ServiceAccountId!.Value).ToList(), userId, accessClient)
+         .Returns((read, write));
+
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
+
+    //Test where we pass unsupported client types and it doesn't success. ServiceAccount/Organization.
+
 }
