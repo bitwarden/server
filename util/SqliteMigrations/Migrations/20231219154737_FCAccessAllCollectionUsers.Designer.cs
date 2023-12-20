@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20231217125605_FlexibleCollections")]
-    partial class FlexibleCollections
+    [Migration("20231219154737_FCAccessAllCollectionUsers")]
+    partial class FCAccessAllCollectionUsers
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
