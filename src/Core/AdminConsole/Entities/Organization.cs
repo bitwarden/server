@@ -24,7 +24,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     [MaxLength(50)]
     public string Name { get; set; }
     /// <summary>
-    /// For display purposes use the method OrganizationName() instead.
+    /// For display purposes use the method OrganizationBusinessName() instead.
     /// </summary>
     [MaxLength(50)]
     public string BusinessName { get; set; }
