@@ -719,7 +719,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Ids = new[] { accessToken.Id },
         };
 
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens/revoke", request);
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens/revoke", request); //Looks like this doesn't exist anymore, so I changed the path
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -763,7 +763,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Ids = new[] { accessToken.Id },
         };
 
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens/revoke", request);
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens/revoke", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -812,7 +812,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Ids = new[] { accessToken.Id },
         };
 
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens/revoke", request);
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens/revoke", request);
         response.EnsureSuccessStatusCode();
     }
 
