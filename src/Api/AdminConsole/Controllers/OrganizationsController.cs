@@ -272,7 +272,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.OrganizationBusinessName() ||
+        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.DisplayBusinessName() ||
                                                             model.BillingEmail != organization.BillingEmail);
 
         var hasRequiredPermissions = updateBilling

@@ -46,7 +46,7 @@
                             @Html.HiddenFor(m => Model.Items[i].Id, new { @readonly = "readonly", autocomplete = "off" })
                             @Html.CheckBoxFor(m => Model.Items[i].Selected)
                         </td>
-                        <td>@Html.ActionLink(Model.Items[i].OrganizationName(), "Edit", "Organizations", new { id = Model.Items[i].Id }, new { target = "_blank" })</td>
+                        <td>@Html.ActionLink(Model.Items[i].DisplayName(), "Edit", "Organizations", new { id = Model.Items[i].Id }, new { target = "_blank" })</td>
                         <td>@(Model.Items[i].PlanType.GetDisplayAttribute()?.Name ?? Model.Items[i].PlanType.ToString())</td>
                     </tr>
                 }

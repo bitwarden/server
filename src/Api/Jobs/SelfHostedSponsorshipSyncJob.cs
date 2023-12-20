@@ -58,7 +58,7 @@ public class SelfHostedSponsorshipSyncJob : BaseJob
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Sponsorship sync for organization {OrganizationName} Failed", org.OrganizationName());
+                        _logger.LogError(ex, "Sponsorship sync for organization {OrganizationName} Failed", org.DisplayName());
                     }
                 }
             }

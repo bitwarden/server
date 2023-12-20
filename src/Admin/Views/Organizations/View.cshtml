@@ -1,10 +1,10 @@
 ﻿@inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @model OrganizationViewModel
 @{
-    ViewData["Title"] = "Organization: " + Model.Organization.OrganizationName();
+    ViewData["Title"] = "Organization: " + Model.Organization.DisplayName();
 }
 
-<h1>Organization <small>@Model.Organization.OrganizationName()</small></h1>
+<h1>Organization <small>@Model.Organization.DisplayName()</small></h1>
 
 @if (Model.Provider != null)
 {

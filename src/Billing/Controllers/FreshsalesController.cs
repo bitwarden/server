@@ -95,7 +95,7 @@ public class FreshsalesController : Controller
 
             foreach (var org in orgs)
             {
-                noteItems.Add($"Org, {org.OrganizationName()}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
+                noteItems.Add($"Org, {org.DisplayName()}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
                 if (TryGetPlanName(org.PlanType, out var planName))
                 {
                     newTags.Add($"Org: {planName}");

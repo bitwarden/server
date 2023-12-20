@@ -776,7 +776,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.ForcePasswordReset = true;
 
         await _userRepository.ReplaceAsync(user);
-        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.OrganizationName());
+        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
         await _pushService.PushLogOutAsync(user.Id);
 
@@ -1399,7 +1399,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await organizationService.DeleteUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                organization.OrganizationName(), user.Email);
+                organization.DisplayName(), user.Email);
         }).ToArray();
 
         await Task.WhenAll(removeOrgUserTasks);

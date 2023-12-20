@@ -145,7 +145,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.OrganizationName()} Seat Count Has Increased", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Count Has Increased", ownerEmails);
         var model = new OrganizationSeatsAutoscaledViewModel
         {
             OrganizationId = organization.Id,
@@ -160,7 +160,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.OrganizationName()} Seat Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             OrganizationId = organization.Id,
@@ -179,7 +179,7 @@ public class HandlebarsMailService : IMailService
         var model = new OrganizationUserAcceptedViewModel
         {
             OrganizationId = organization.Id,
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.OrganizationName(), false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false),
             UserIdentifier = userIdentifier,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
@@ -896,7 +896,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.OrganizationName()} Secrets Manager Seat Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             OrganizationId = organization.Id,
@@ -911,7 +911,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.OrganizationName()} Secrets Manager Service Accounts Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Service Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
             OrganizationId = organization.Id,

@@ -19,12 +19,12 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     [MaxLength(50)]
     public string Identifier { get; set; }
     /// <summary>
-    /// For display purposes use the method OrganizationName() instead.
+    /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
     /// </summary>
     [MaxLength(50)]
     public string Name { get; set; }
     /// <summary>
-    /// For display purposes use the method OrganizationBusinessName() instead.
+    /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
     /// </summary>
     [MaxLength(50)]
     public string BusinessName { get; set; }
@@ -108,17 +108,17 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     }
 
     /// <summary>
-    /// Returns the name of the organization, decoded from HTML ready for display
+    /// Returns the name of the organization, HTML decoded ready for display.
     /// </summary>
-    public string OrganizationName()
+    public string DisplayName()
     {
         return WebUtility.HtmlDecode(Name);
     }
 
     /// <summary>
-    /// Returns the business name of the organization, decoded from HTML ready for display
+    /// Returns the business name of the organization, HTML decoded ready for display.
     /// </summary>
-    public string OrganizationBusinessName()
+    public string DisplayBusinessName()
     {
         return WebUtility.HtmlDecode(BusinessName);
     }
@@ -130,12 +130,12 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
 
     public string BillingName()
     {
-        return OrganizationBusinessName();
+        return DisplayBusinessName();
     }
 
     public string SubscriberName()
     {
-        return OrganizationName();
+        return DisplayName();
     }
 
     public string BraintreeCustomerIdPrefix()

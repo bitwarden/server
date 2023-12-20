@@ -15,7 +15,7 @@ public class OrganizationInvitesInfo
         bool initOrganization = false
         )
     {
-        OrganizationName = org.OrganizationName();
+        OrganizationName = org.DisplayName();
         OrgSsoIdentifier = org.Identifier;
 
         IsFreeOrg = org.PlanType == PlanType.Free;

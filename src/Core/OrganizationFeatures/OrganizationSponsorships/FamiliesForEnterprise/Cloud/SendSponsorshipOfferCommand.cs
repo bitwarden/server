@@ -65,6 +65,6 @@ public class SendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
             throw new BadRequestException("Cannot find an outstanding sponsorship offer for this organization.");
         }
 
-        await SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.OrganizationName());
+        await SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.DisplayName());
     }
 }

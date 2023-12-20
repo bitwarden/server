@@ -197,7 +197,7 @@ public class ProvidersController : Controller
             Items = unassignedOrganizations.Select(uo => new OrganizationSelectableViewModel
             {
                 Id = uo.Id,
-                Name = uo.OrganizationName(),
+                Name = uo.DisplayName(),
                 PlanType = uo.PlanType
             }).ToList()
         };

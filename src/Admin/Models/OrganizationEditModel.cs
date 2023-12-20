@@ -37,8 +37,8 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
-        Name = org.OrganizationName();
-        BusinessName = org.OrganizationBusinessName();
+        Name = org.DisplayName();
+        BusinessName = org.DisplayBusinessName();
         BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
