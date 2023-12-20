@@ -1,51 +1,22 @@
--- Step 1: Insert into a temporary table with an additional column for batch processing, update 50 k at a time
-CREATE TEMPORARY TABLE "TempOrgUser" AS
-SELECT "Id" AS "OrganizationUserId", "OrganizationId", CAST(ROW_NUMBER() OVER(ORDER BY "Id") / 50000 AS INT) AS "Batch"
-FROM "OrganizationUser"
-WHERE "AccessAll" = true;
-
--- Step 2: Get the maximum batch number
-DO $$
-DECLARE
-MaxBatch INT;
-    CurrentBatch INT := 0;
-BEGIN
-SELECT MAX("Batch") INTO MaxBatch FROM "TempOrgUser";
-
--- Step 3: Process each batch
-WHILE CurrentBatch <= MaxBatch LOOP
-        -- Update existing rows in "CollectionUsers"
-UPDATE "CollectionUsers" AS target
+-- Update existing rows in CollectionUsers
+UPDATE "CollectionUsers"
 SET
     "ReadOnly" = false,
     "HidePasswords" = false,
     "Manage" = false
-    FROM (
-            SELECT "C"."Id" AS "CollectionId", "T"."OrganizationUserId"
-            FROM "Collection" "C"
-            INNER JOIN "TempOrgUser" "T" ON "C"."OrganizationId" = "T"."OrganizationId" AND "T"."Batch" = CurrentBatch
-        ) AS source
-WHERE target."CollectionId" = source."CollectionId" AND target."OrganizationUserId" = source."OrganizationUserId";
+FROM "Collection" AS C
+INNER JOIN "CollectionUsers" AS CU ON CU."CollectionId" = C."Id"
+INNER JOIN "OrganizationUser" AS OU ON CU."CollectionId" = C."Id" AND C."OrganizationId" = OU."OrganizationId"
+WHERE OU."AccessAll" = true;
 
--- Insert new rows into "CollectionUsers"
+-- Insert new rows into CollectionUsers
 INSERT INTO "CollectionUsers" ("CollectionId", "OrganizationUserId", "ReadOnly", "HidePasswords", "Manage")
-SELECT source."CollectionId", source."OrganizationUserId", false, false, false
-FROM (
-         SELECT "C"."Id" AS "CollectionId", "T"."OrganizationUserId"
-         FROM "Collection" "C"
-                  INNER JOIN "TempOrgUser" "T" ON "C"."OrganizationId" = "T"."OrganizationId" AND "T"."Batch" = CurrentBatch
-     ) AS source
-WHERE NOT EXISTS (
+SELECT C."Id" AS "CollectionId", OU."Id" AS "OrganizationUserId", false, false, false
+FROM "Collection" AS C
+INNER JOIN "OrganizationUser" AS OU ON C."OrganizationId" = OU."OrganizationId"
+WHERE OU."AccessAll" = true
+  AND NOT EXISTS (
     SELECT 1
-    FROM "CollectionUsers" target
-    WHERE target."CollectionId" = source."CollectionId" AND target."OrganizationUserId" = source."OrganizationUserId"
+    FROM "CollectionUsers" AS CU
+    WHERE CU."CollectionId" = C."Id" AND CU."OrganizationUserId" = OU."Id"
 );
-
--- Move to the next batch
-CurrentBatch := CurrentBatch + 1;
-END LOOP;
-
-END $$;
-
--- Step 4: Drop the temporary table
-DROP TABLE "TempOrgUser";

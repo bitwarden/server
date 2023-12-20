@@ -1,10 +1,24 @@
--- Update "CollectionUser" with "Manage" = 1 for all users with Manager role or 'EditAssignedCollections' permission
+-- Update `CollectionUsers` with `Manage` = 1 for all users with Manager role or 'EditAssignedCollections' permission
 UPDATE "CollectionUsers" cu
-SET "ReadOnly" = false,
+SET
+    "ReadOnly" = false,
     "HidePasswords" = false,
     "Manage" = true
-    FROM "OrganizationUser" ou
+FROM "OrganizationUser" ou
 WHERE cu."OrganizationUserId" = ou."Id"
-  AND (ou."Type" = 3 OR
+AND (ou."Type" = 3 OR
     (ou."Permissions" IS NOT NULL AND
-    (ou."Permissions"::text)::jsonb->>'editAssignedCollections' = 'true'));
+    ((ou."Permissions"::text)::jsonb->>'editAssignedCollections') = 'true'));
+
+-- Insert rows into CollectionUsers for Managers and users with 'EditAssignedCollections' permission assigned to groups with collection access
+INSERT INTO "CollectionUsers" ("CollectionId", "OrganizationUserId", "ReadOnly", "HidePasswords", "Manage")
+SELECT cg."CollectionId", ou."Id", false, false, true
+FROM "CollectionGroups" cg
+INNER JOIN "GroupUser" gu ON cg."GroupId" = gu."GroupId"
+INNER JOIN "OrganizationUser" ou ON gu."OrganizationUserId" = ou."Id"
+WHERE (ou."Type" = 3 OR
+       (ou."Permissions" IS NOT NULL AND
+       ((ou."Permissions"::text)::jsonb->>'editAssignedCollections') = 'true'))
+  AND NOT EXISTS (
+    SELECT 1 FROM "CollectionUsers" cu
+    WHERE cu."CollectionId" = cg."CollectionId" AND cu."OrganizationUserId" = ou."Id");
