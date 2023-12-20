@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 
-namespace Bit.Api.Utilities;
+namespace Bit.Api.SecretsManager.Utilities;
 
 public class AccessPolicyHelpers
 {
@@ -28,4 +28,12 @@ public class AccessPolicyHelpers
         }
     }
 
+    public static void CheckAccessPoliciesHasReadPermission(IReadOnlyCollection<BaseAccessPolicy> accessPolicies)
+    {
+        var accessPoliciesPermission = accessPolicies.All(Policy => Policy.Read); //Has to be read, write can be true or false.
+        if (!accessPoliciesPermission)
+        {
+            throw new BadRequestException("Resources must be Read = true");
+        }
+    }
 }

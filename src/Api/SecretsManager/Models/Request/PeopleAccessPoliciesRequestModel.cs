@@ -1,4 +1,4 @@
-﻿using Bit.Api.Utilities;
+﻿using Bit.Api.SecretsManager.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;

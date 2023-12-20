@@ -110,11 +110,8 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
 
         var serviceAccount = dbContext.ServiceAccount.Where(sa => sa.Id == id);
 
-        var query = CheckUserServiceAccountReadWriteAccess(accessType, userId, serviceAccount);
-
-        var policy = await query.FirstOrDefaultAsync();
-
-        return (policy.Read, policy.Write);
+        var query = AccessToServiceAccountsAsync(serviceAccount.Select(s => s.Id), userId, accessType);
+        return (query.Result.Read, query.Result.Write);
     }
 
     public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
@@ -172,8 +169,19 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         var dbContext = GetDatabaseContext(scope);
 
         var serviceAccount = dbContext.ServiceAccount.Where(sa => ids.Contains(sa.Id));
-        var query = CheckUserServiceAccountReadWriteAccess(accessType, userId, serviceAccount);
-        var policies = query.ToList();
+        var query = AccessToServiceAccountsAsync(serviceAccount.Select(s => s.Id), userId, accessType);
+        return (query.Result.Read, query.Result.Write);
+    }
+
+    public async Task<(bool Read, bool Write)> AccessToServiceAccountsAsync(IEnumerable<Guid> ids, Guid userId, AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var serviceAccount = dbContext.ServiceAccount.Where(sa => ids.Contains(sa.Id));
+        var query = ToAccessQuery(serviceAccount, userId, accessType);
+
+        var policies = await query.ToListAsync();
 
         if (!policies.Any())
         {
@@ -186,12 +194,18 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return (read, write);
     }
 
-    private IQueryable<(bool Read, bool Write)> CheckUserServiceAccountReadWriteAccess(AccessClientType accessType, Guid userId, IQueryable<ServiceAccount> serviceAccount)
+    private class Access
     {
-        var result = accessType switch
+        public bool Read;
+        public bool Write;
+    }
+
+    private static IQueryable<Access> ToAccessQuery(IQueryable<ServiceAccount> serviceAccount, Guid userId, AccessClientType accessType)
+    {
+        return accessType switch
         {
-            AccessClientType.NoAccessCheck => serviceAccount.Select(_ => new { Read = true, Write = true }),
-            AccessClientType.User => serviceAccount.Select(sa => new
+            AccessClientType.NoAccessCheck => serviceAccount.Select(_ => new Access { Read = true, Write = true }),
+            AccessClientType.User => serviceAccount.Select(sa => new Access
             {
                 Read = sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
                        sa.GroupAccessPolicies.Any(ap =>
@@ -200,13 +214,9 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
                         sa.GroupAccessPolicies.Any(ap =>
                             ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
             }),
-            AccessClientType.ServiceAccount => serviceAccount.Select(_ => new { Read = false, Write = false }),
-            _ => serviceAccount.Select(_ => new { Read = false, Write = false }),
+            AccessClientType.ServiceAccount => serviceAccount.Select(_ => new Access { Read = false, Write = false }),
+            _ => serviceAccount.Select(_ => new Access { Read = false, Write = false }),
         };
-
-        return result.AsEnumerable()
-        .Select(x => (x.Read, x.Write))
-        .AsQueryable();
     }
 
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>

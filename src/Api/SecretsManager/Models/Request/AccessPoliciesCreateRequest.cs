@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using System.ComponentModel.DataAnnotations;
-using Bit.Api.Utilities;
+using Bit.Api.SecretsManager.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 
