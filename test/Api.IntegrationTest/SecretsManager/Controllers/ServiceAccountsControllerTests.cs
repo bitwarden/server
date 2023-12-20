@@ -170,7 +170,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Name = _mockEncryptedString,
         });
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}");
+        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}"); //TODO doesn't exist anymore
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -181,7 +181,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var serviceAccount = await SetupServiceAccountWithAccessAsync(permissionType);
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}");
+        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}"); //TODO Doesn't exist
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
         Assert.NotNull(result);
@@ -299,7 +299,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
         var request = new ServiceAccountUpdateRequestModel { Name = _mockNewName };
 
-        var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request);
+        var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request); //TODO this doesn't exist anymore
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -324,7 +324,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
         var request = new ServiceAccountUpdateRequestModel { Name = _mockNewName };
 
-        var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request);
+        var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request); //TODO this doesn't exist anymore
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
         Assert.NotNull(result);
@@ -425,7 +425,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
         var ids = new List<Guid> { serviceAccount.Id };
 
-        var response = await _client.PostAsJsonAsync("/service-accounts/delete", ids);
+        var response = await _client.PostAsJsonAsync("/service-accounts/delete", ids); //FIX
         response.EnsureSuccessStatusCode();
 
         var sa = await _serviceAccountRepository.GetManyByIds(ids);
@@ -451,7 +451,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Name = _mockEncryptedString,
         });
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-tokens");
+        var response = await _client.GetAsync($"{serviceAccount.Id}/access-tokens");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -475,7 +475,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = DateTime.UtcNow.AddDays(30),
         });
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-tokens");
+        var response = await _client.GetAsync($"{serviceAccount.Id}/access-tokens"); 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -517,7 +517,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         });
 
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-tokens");
+        var response = await _client.GetAsync($"{serviceAccount.Id}/access-tokens"); //TODO Fix
         response.EnsureSuccessStatusCode();
         var results = await response.Content.ReadFromJsonAsync<ListResponseModel<AccessTokenResponseModel>>();
         Assert.NotEmpty(results!.Data);
@@ -557,7 +557,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = mockExpiresAt,
         };
 
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -582,7 +582,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = mockExpiresAt,
         };
 
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
 
@@ -618,7 +618,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = mockExpiresAt,
         };
 
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
 
@@ -652,7 +652,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = mockExpiresAt,
         };
 
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -676,7 +676,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ExpireAt = null,
         };
 
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
 
@@ -719,7 +719,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Ids = new[] { accessToken.Id },
         };
 
-        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens/revoke", request); //Looks like this doesn't exist anymore, so I changed the path
+        var response = await _client.PostAsJsonAsync($"{serviceAccount.Id}/access-tokens/revoke", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
