@@ -30,7 +30,10 @@ public abstract class StripeWebhookHandler
         }
     }
 
-    public Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
+    protected abstract bool CanHandle(Event parsedEvent);
+    protected abstract Task<IActionResult> ProcessEvent(Event parsedEvent);
+
+    public static Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
     {
         if (metaData == null || !metaData.Any())
         {
@@ -72,7 +75,125 @@ public abstract class StripeWebhookHandler
     public static bool IsSponsoredSubscription(Subscription subscription) =>
         StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
 
-    protected abstract bool CanHandle(Event parsedEvent);
-    protected abstract Task<IActionResult> ProcessEvent(Event parsedEvent);
+    public static bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
+    {
+        return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
+               invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
+    }
+
+    public async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false)
+    {
+        var customerService = new CustomerService();
+        var customer = await customerService.GetAsync(invoice.CustomerId);
+        if (customer?.Metadata?.ContainsKey("appleReceipt") ?? false)
+        {
+            return await AttemptToPayInvoiceWithAppleReceiptAsync(invoice, customer);
+        }
+
+        if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
+        {
+            return await AttemptToPayInvoiceWithBraintreeAsync(invoice, customer);
+        }
+
+        if (attemptToPayWithStripe)
+        {
+            return await AttemptToPayInvoiceWithStripeAsync(invoice);
+        }
+
+        return false;
+    }
+
+    private async Task<bool> AttemptToPayInvoiceWithAppleReceiptAsync(Invoice invoice, Customer customer)
+    {
+        if (!customer?.Metadata?.ContainsKey("appleReceipt") ?? true)
+        {
+            return false;
+        }
+
+        var originalAppleReceiptTransactionId = customer.Metadata["appleReceipt"];
+        var appleReceiptRecord = await _appleIapService.GetReceiptAsync(originalAppleReceiptTransactionId);
+        if (string.IsNullOrWhiteSpace(appleReceiptRecord?.Item1) || !appleReceiptRecord.Item2.HasValue)
+        {
+            return false;
+        }
+
+        var subscriptionService = new SubscriptionService();
+        var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+        var ids = GetIdsFromMetaData(subscription?.Metadata);
+        if (!ids.Item2.HasValue)
+        {
+            // Apple receipt is only for user subscriptions
+            return false;
+        }
+
+        if (appleReceiptRecord.Item2.Value != ids.Item2.Value)
+        {
+            _logger.LogError("User Ids for Apple Receipt and subscription do not match: {0} != {1}.",
+                appleReceiptRecord.Item2.Value, ids.Item2.Value);
+            return false;
+        }
+
+        var appleReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(appleReceiptRecord.Item1);
+        if (appleReceiptStatus == null)
+        {
+            // TODO: cancel sub if receipt is cancelled?
+            return false;
+        }
+
+        var receiptExpiration = appleReceiptStatus.GetLastExpiresDate().GetValueOrDefault(DateTime.MinValue);
+        var invoiceDue = invoice.DueDate.GetValueOrDefault(DateTime.MinValue);
+        if (receiptExpiration <= invoiceDue)
+        {
+            _logger.LogWarning("Apple receipt expiration is before invoice due date. {0} <= {1}",
+                receiptExpiration, invoiceDue);
+            return false;
+        }
+
+        var receiptLastTransactionId = appleReceiptStatus.GetLastTransactionId();
+        var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
+            GatewayType.AppStore, receiptLastTransactionId);
+        if (existingTransaction != null)
+        {
+            _logger.LogWarning("There is already an existing transaction for this Apple receipt.",
+                receiptLastTransactionId);
+            return false;
+        }
+
+        var appleTransaction = appleReceiptStatus.BuildTransactionFromLastTransaction(
+            PremiumPlanAppleIapPrice, ids.Item2.Value);
+        appleTransaction.Type = TransactionType.Charge;
+
+        var invoiceService = new InvoiceService();
+        try
+        {
+            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+            {
+                Metadata = new Dictionary<string, string>
+                {
+                    ["appleReceipt"] = appleReceiptStatus.GetOriginalTransactionId(),
+                    ["appleReceiptTransactionId"] = receiptLastTransactionId
+                }
+            });
+
+            await _transactionRepository.CreateAsync(appleTransaction);
+            await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
+        }
+        catch (Exception e)
+        {
+            if (e.Message.Contains("Invoice is already paid"))
+            {
+                await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                {
+                    Metadata = invoice.Metadata
+                });
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        return true;
+    }
 
 }
