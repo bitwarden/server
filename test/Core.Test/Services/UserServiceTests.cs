@@ -1,11 +1,10 @@
 ﻿using System.Text.Json;
-using AutoFixture;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -14,7 +13,6 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -187,21 +185,6 @@ public class UserServiceTests
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
 
-    [Theory, BitAutoData]
-    public async void CompleteWebAuthLoginRegistrationAsync_ExceedsExistingCredentialsLimit_ReturnsFalse(SutProvider<UserService> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
-    {
-        // Arrange
-        var existingCredentials = credentialGenerator.Take(5).ToList();
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(existingCredentials);
-
-        // Act
-        var result = await sutProvider.Sut.CompleteWebAuthLoginRegistrationAsync(user, "name", options, response, false, null, null, null);
-
-        // Assert
-        Assert.False(result);
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().DidNotReceive();
-    }
-
     [Flags]
     public enum ShouldCheck
     {
@@ -277,9 +260,7 @@ public class UserServiceTests
             sutProvider.GetDependency<IAcceptOrgUserCommand>(),
             sutProvider.GetDependency<IProviderUserRepository>(),
             sutProvider.GetDependency<IStripeSyncService>(),
-            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
-            sutProvider.GetDependency<IWebAuthnCredentialRepository>(),
-            sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginTokenable>>()
+            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);

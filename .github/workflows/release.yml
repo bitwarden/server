@@ -41,7 +41,7 @@ jobs:
 
       - name: Check Release Version
         id: version
-        uses: bitwarden/gh-actions/release-version-check@master
+        uses: bitwarden/gh-actions/release-version-check@main
         with:
           release-type: ${{ github.event.inputs.release_type }}
           project-type: dotnet
@@ -89,7 +89,7 @@ jobs:
 
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@master
+        uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -98,11 +98,11 @@ jobs:
 
       - name: Dry Run - Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@master
+        uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: master
+          branch: main
           artifacts: ${{ matrix.name }}.zip
 
       - name: Login to Azure - CI subscription
@@ -274,7 +274,7 @@ jobs:
     steps:
       - name: Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@master
+        uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -287,11 +287,11 @@ jobs:
 
       - name: Dry Run - Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@master
+        uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: master
+          branch: main
           artifacts: "docker-stub-US.zip,
             docker-stub-US-sha256.txt,
             docker-stub-EU.zip,

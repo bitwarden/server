@@ -1,5 +1,5 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Tokens;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
@@ -35,7 +35,7 @@ public class SsoTokenable : ExpiringTokenable
             && organization.Id.Equals(OrganizationId);
     }
 
-    // Validates deserialized 
+    // Validates deserialized
     protected override bool TokenIsValid() =>
         Identifier == TokenIdentifier
         && OrganizationId != default

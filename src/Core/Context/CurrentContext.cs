@@ -5,9 +5,11 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -18,10 +20,13 @@ public class CurrentContext : ICurrentContext
 {
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
+    private readonly IFeatureService _featureService;
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
     private IEnumerable<ProviderUserOrganizationDetails> _providerUserOrganizations;
+
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, this);
 
     public virtual HttpContext HttpContext { get; set; }
     public virtual Guid? UserId { get; set; }
@@ -44,10 +49,12 @@ public class CurrentContext : ICurrentContext
 
     public CurrentContext(
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
+        IProviderUserRepository providerUserRepository,
+        IFeatureService featureService)
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
+        _featureService = featureService;
     }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
@@ -276,6 +283,11 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> OrganizationManager(Guid orgId)
     {
+        if (FlexibleCollectionsIsEnabled)
+        {
+            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
+        }
+
         return await OrganizationAdmin(orgId) ||
                (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Manager) ?? false);
     }
@@ -338,12 +350,22 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> EditAssignedCollections(Guid orgId)
     {
+        if (FlexibleCollectionsIsEnabled)
+        {
+            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
+        }
+
         return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.EditAssignedCollections ?? false)) ?? false);
     }
 
     public async Task<bool> DeleteAssignedCollections(Guid orgId)
     {
+        if (FlexibleCollectionsIsEnabled)
+        {
+            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
+        }
+
         return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.DeleteAssignedCollections ?? false)) ?? false);
     }
@@ -355,6 +377,12 @@ public class CurrentContext : ICurrentContext
          * Owner, Admin, Manager, and Provider checks are handled via the EditAssigned/DeleteAssigned context calls.
          * This entire method will be moved to the CollectionAuthorizationHandler in the future
          */
+
+        if (FlexibleCollectionsIsEnabled)
+        {
+            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
+        }
+
         var canCreateNewCollections = false;
         var org = GetOrganization(orgId);
         if (org != null)
