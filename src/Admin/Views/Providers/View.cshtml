@@ -1,9 +1,9 @@
 ﻿@model ProviderViewModel
 @{
-    ViewData["Title"] = "Provider: " + Model.Provider.ProviderName();
+    ViewData["Title"] = "Provider: " + Model.Provider.DisplayName();
 }
 
-<h1>Provider <small>@Model.Provider.ProviderName()</small></h1>
+<h1>Provider <small>@Model.Provider.DisplayName()</small></h1>
 
 <h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)

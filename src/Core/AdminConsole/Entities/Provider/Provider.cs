@@ -9,11 +9,11 @@ public class Provider : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     /// <summary>
-    /// For display purposes use the method ProviderName() instead.
+    /// For display purposes use the method DisplayName() instead.
     /// </summary>
     public string Name { get; set; }
     /// <summary>
-    /// For display purposes use the method ProviderBusinessName() instead.
+    /// For display purposes use the method DisplayBusinessName() instead.
     /// </summary>
     public string BusinessName { get; set; }
     public string BusinessAddress1 { get; set; }
@@ -41,7 +41,7 @@ public class Provider : ITableObject<Guid>
     /// <summary>
     /// Returns the name of the provider, decoded from HTML ready for display
     /// </summary>
-    public string ProviderName()
+    public string DisplayName()
     {
         return WebUtility.HtmlDecode(Name);
     }
@@ -49,7 +49,7 @@ public class Provider : ITableObject<Guid>
     /// <summary>
     /// Returns the business name of the provider, decoded from HTML ready for display
     /// </summary>
-    public string ProviderBusinessName()
+    public string DisplayBusinessName()
     {
         return WebUtility.HtmlDecode(BusinessName);
     }
