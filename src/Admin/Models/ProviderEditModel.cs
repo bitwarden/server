@@ -11,8 +11,8 @@ public class ProviderEditModel : ProviderViewModel
     public ProviderEditModel(Provider provider, IEnumerable<ProviderUserUserDetails> providerUsers, IEnumerable<ProviderOrganizationOrganizationDetails> organizations)
         : base(provider, providerUsers, organizations)
     {
-        Name = provider.Name;
-        BusinessName = provider.BusinessName;
+        Name = provider.ProviderName();
+        BusinessName = provider.ProviderBusinessName();
         BillingEmail = provider.BillingEmail;
         BillingPhone = provider.BillingPhone;
     }

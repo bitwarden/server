@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Jobs;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -59,7 +58,7 @@ public class SelfHostedSponsorshipSyncJob : BaseJob
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Sponsorship sync for organization {OrganizationName} Failed", WebUtility.HtmlDecode(org.Name));
+                        _logger.LogError(ex, "Sponsorship sync for organization {OrganizationName} Failed", org.OrganizationName());
                     }
                 }
             }

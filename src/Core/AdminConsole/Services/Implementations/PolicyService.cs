@@ -131,7 +131,7 @@ public class PolicyService : IPolicyService
                                 await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                     savingUserId);
                                 await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                    org.Name, orgUser.Email);
+                                    org.OrganizationName(), orgUser.Email);
                             }
                         }
                         break;
@@ -147,7 +147,7 @@ public class PolicyService : IPolicyService
                                 await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                     savingUserId);
                                 await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
-                                    org.Name, orgUser.Email);
+                                    org.OrganizationName(), orgUser.Email);
                             }
                         }
                         break;

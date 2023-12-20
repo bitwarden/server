@@ -132,7 +132,7 @@ public class OrganizationSponsorshipsController : Controller
         }
 
         var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
-        await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, offersToSend);
+        await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.OrganizationName(), offersToSend);
         return new OrganizationSponsorshipSyncResponseModel(syncResponseData);
     }
 

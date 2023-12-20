@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -483,7 +482,7 @@ public class AccountController : Controller
             if (orgUser.Status == OrganizationUserStatusType.Invited)
             {
                 // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                throw new Exception(_i18nService.T("UserAlreadyInvited", email, WebUtility.HtmlDecode(organization.Name)));
+                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.OrganizationName()));
             }
 
             // Accepted or Confirmed - create SSO link and return;
@@ -516,7 +515,7 @@ public class AccountController : Controller
                         await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
                     }
                     _logger.LogInformation(e, "SSO auto provisioning failed");
-                    throw new Exception(_i18nService.T("NoSeatsAvailable", WebUtility.HtmlDecode(organization.Name)));
+                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.OrganizationName()));
                 }
             }
         }

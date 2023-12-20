@@ -775,7 +775,7 @@ public class OrganizationService : IOrganizationService
             await customerService.UpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Email = organization.BillingEmail,
-                Description = organization.BusinessName
+                Description = organization.OrganizationBusinessName()
             });
         }
     }
@@ -1219,7 +1219,7 @@ public class OrganizationService : IOrganizationService
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.OrganizationName(), user.Email);
                 await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));

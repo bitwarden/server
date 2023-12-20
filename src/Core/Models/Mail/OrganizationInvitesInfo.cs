@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -16,7 +15,7 @@ public class OrganizationInvitesInfo
         bool initOrganization = false
         )
     {
-        OrganizationName = WebUtility.HtmlDecode(org.Name);
+        OrganizationName = org.OrganizationName();
         OrgSsoIdentifier = org.Identifier;
 
         IsFreeOrg = org.PlanType == PlanType.Free;
