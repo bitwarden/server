@@ -1,4 +1,3 @@
-@using System.Net
 @using Bit.Core.AdminConsole.Enums.Provider
 @model ProviderViewModel
 
@@ -37,7 +36,7 @@
                         {
                             <tr>
                                 <td class="align-middle">
-                                    <a asp-controller="Organizations" asp-action="Edit" asp-route-id="@org.OrganizationId">@WebUtility.HtmlDecode(org.OrganizationName)</a>
+                                    <a asp-controller="Organizations" asp-action="Edit" asp-route-id="@org.OrganizationId">@org.DecodedOrganizationName()</a>
                                 </td>
                                 <td>
                                     @org.Status

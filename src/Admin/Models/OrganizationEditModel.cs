@@ -37,8 +37,8 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
-        Name = WebUtility.HtmlDecode(org.Name);
-        BusinessName = WebUtility.HtmlDecode(org.BusinessName);
+        Name = org.OrganizationName();
+        BusinessName = org.OrganizationBusinessName();
         BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;

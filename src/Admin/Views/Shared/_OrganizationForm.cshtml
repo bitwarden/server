@@ -1,7 +1,6 @@
 @using Bit.SharedWeb.Utilities
 @using Bit.Admin.Enums;
 @using Bit.Core.AdminConsole.Enums.Provider
-@using System.Net
 @inject Bit.Admin.Services.IAccessControlService AccessControlService;
 
 @model OrganizationEditModel
@@ -28,7 +27,7 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="Name"></label>
-                    <input type="text" class="form-control" asp-for="Name" value="@WebUtility.HtmlDecode(Model.Name)" required>
+                    <input type="text" class="form-control" asp-for="Name" value="@Model.Name" required>
                 </div>
             </div>
         </div>
@@ -68,7 +67,7 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="BusinessName"></label>
-                    <input type="text" class="form-control" asp-for="BusinessName" value="@WebUtility.HtmlDecode(Model.BusinessName)">
+                    <input type="text" class="form-control" asp-for="BusinessName" value="@Model.BusinessName">
                 </div>
             </div>
         </div>

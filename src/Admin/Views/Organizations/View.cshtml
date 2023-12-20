@@ -1,11 +1,10 @@
 ﻿@inject Bit.Core.Settings.GlobalSettings GlobalSettings
-@using System.Net
 @model OrganizationViewModel
 @{
-    ViewData["Title"] = "Organization: " + WebUtility.HtmlDecode(Model.Organization.Name);
+    ViewData["Title"] = "Organization: " + Model.Organization.OrganizationName();
 }
 
-<h1>Organization <small>@WebUtility.HtmlDecode(Model.Organization.Name)</small></h1>
+<h1>Organization <small>@Model.Organization.OrganizationName()</small></h1>
 
 @if (Model.Provider != null)
 {

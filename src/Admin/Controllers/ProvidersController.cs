@@ -185,8 +185,9 @@ public class ProvidersController : Controller
             count = 1;
         }
 
+        var encodedName = WebUtility.HtmlEncode(name);
         var skip = (page - 1) * count;
-        var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(WebUtility.HtmlEncode(name), ownerEmail, skip, count);
+        var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(encodedName, ownerEmail, skip, count);
         var viewModel = new OrganizationUnassignedToProviderSearchViewModel
         {
             OrganizationName = string.IsNullOrWhiteSpace(name) ? null : name,
@@ -196,7 +197,7 @@ public class ProvidersController : Controller
             Items = unassignedOrganizations.Select(uo => new OrganizationSelectableViewModel
             {
                 Id = uo.Id,
-                Name = WebUtility.HtmlDecode(uo.Name),
+                Name = uo.OrganizationName(),
                 PlanType = uo.PlanType
             }).ToList()
         };

@@ -1,5 +1,4 @@
-﻿@using System.Net
-@model OrganizationsModel
+﻿@model OrganizationsModel
 @{
     ViewData["Title"] = "Organizations";
 }
@@ -47,7 +46,7 @@
                 {
                     <tr>
                         <td>
-                            <a asp-action="@Model.Action" asp-route-id="@org.Id">@WebUtility.HtmlDecode(org.Name)</a>
+                            <a asp-action="@Model.Action" asp-route-id="@org.Id">@org.OrganizationName()</a>
                         </td>
                         <td>
                             @org.Plan

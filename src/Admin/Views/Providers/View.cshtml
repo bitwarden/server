@@ -1,10 +1,9 @@
-﻿@using System.Net
-@model ProviderViewModel
+﻿@model ProviderViewModel
 @{
-    ViewData["Title"] = "Provider: " + WebUtility.HtmlDecode(Model.Provider.Name);
+    ViewData["Title"] = "Provider: " + Model.Provider.ProviderName();
 }
 
-<h1>Provider <small>@WebUtility.HtmlDecode(Model.Provider.Name)</small></h1>
+<h1>Provider <small>@Model.Provider.ProviderName()</small></h1>
 
 <h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)

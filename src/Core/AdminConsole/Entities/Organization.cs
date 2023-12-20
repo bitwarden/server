@@ -101,6 +101,22 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         }
     }
 
+    /// <summary>
+    /// Returns the name of the organization, decoded from HTML ready for display
+    /// </summary>
+    public string OrganizationName()
+    {
+        return WebUtility.HtmlDecode(Name);
+    }
+
+    /// <summary>
+    /// Returns the business name of the organization, decoded from HTML ready for display
+    /// </summary>
+    public string OrganizationBusinessName()
+    {
+        return WebUtility.HtmlDecode(BusinessName);
+    }
+
     public string BillingEmailAddress()
     {
         return BillingEmail?.ToLowerInvariant()?.Trim();

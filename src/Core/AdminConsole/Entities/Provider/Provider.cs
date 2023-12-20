@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
+﻿using System.Net;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -29,5 +30,21 @@ public class Provider : ITableObject<Guid>
         {
             Id = CoreHelpers.GenerateComb();
         }
+    }
+
+    /// <summary>
+    /// Returns the name of the provider, decoded from HTML ready for display
+    /// </summary>
+    public string ProviderName()
+    {
+        return WebUtility.HtmlDecode(Name);
+    }
+
+    /// <summary>
+    /// Returns the business name of the provider, decoded from HTML ready for display
+    /// </summary>
+    public string ProviderBusinessName()
+    {
+        return WebUtility.HtmlDecode(BusinessName);
     }
 }

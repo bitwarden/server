@@ -1,15 +1,14 @@
 ﻿@using Bit.Admin.Enums;
-@using System.Net
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 
 @model ProviderEditModel
 @{
-    ViewData["Title"] = "Provider: " + WebUtility.HtmlDecode(Model.Provider.Name);
+    ViewData["Title"] = "Provider: " + Model.Provider.ProviderName();
 
     var canEdit = AccessControlService.UserHasPermission(Permission.Provider_Edit);
 }
 
-<h1>Provider <small>@WebUtility.HtmlDecode(Model.Provider.Name)</small></h1>
+<h1>Provider <small>@Model.Provider.ProviderName()</small></h1>
 
 <h2>Provider Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
@@ -18,12 +17,12 @@
     <h2>General</h2>
     <dl class="row">
         <dt class="col-sm-4 col-lg-3">Name</dt>
-        <dd class="col-sm-8 col-lg-9">@WebUtility.HtmlDecode(Model.Provider.Name)</dd>
+        <dd class="col-sm-8 col-lg-9">@Model.Provider.ProviderName()</dd>
     </dl>
     <h2>Business Information</h2>
     <dl class="row">
         <dt class="col-sm-4 col-lg-3">Business Name</dt>
-        <dd class="col-sm-8 col-lg-9">@WebUtility.HtmlDecode(Model.Provider.BusinessName)</dd>
+        <dd class="col-sm-8 col-lg-9">@Model.Provider.ProviderBusinessName()</dd>
     </dl>
     <h2>Billing</h2>
     <div class="row">

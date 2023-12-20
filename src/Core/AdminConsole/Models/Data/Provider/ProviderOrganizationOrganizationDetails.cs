@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Net;
+using System.Text.Json.Serialization;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
@@ -19,4 +20,12 @@ public class ProviderOrganizationOrganizationDetails
     public int? Seats { get; set; }
     public string Plan { get; set; }
     public OrganizationStatusType Status { get; set; }
+
+    /// <summary>
+    /// Returns the name of the organization, decoded from HTML ready for display
+    /// </summary>
+    public string DecodedOrganizationName()
+    {
+        return WebUtility.HtmlDecode(OrganizationName);
+    }
 }
