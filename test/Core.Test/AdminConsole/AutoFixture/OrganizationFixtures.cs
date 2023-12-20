@@ -158,7 +158,8 @@ internal class TeamsStarterOrganizationCustomization : ICustomization
             composer
                 .With(organization => organization.Id, organizationId)
                 .With(organization => organization.PlanType, planType)
-                .With(organization => organization.Seats, 10));
+                .With(organization => organization.Seats, 10)
+                .Without(organization => organization.MaxStorageGb));
     }
 }
 
@@ -174,9 +175,9 @@ internal class TeamsMonthlyWithAddOnsOrganizationCustomization : ICustomization
                 .With(organization => organization.Id, organizationId)
                 .With(organization => organization.PlanType, planType)
                 .With(organization => organization.Seats, 20)
+                .With(organization => organization.UseSecretsManager, true)
                 .With(organization => organization.SmSeats, 5)
-                .With(organization => organization.SmServiceAccounts, 3)
-                .With(organization => organization.Storage, 5));
+                .With(organization => organization.SmServiceAccounts, 53));
     }
 }
 

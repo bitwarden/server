@@ -104,6 +104,7 @@ public class UpgradeOrganizationPlanCommandTests
             organization,
             StaticStore.GetPlan(planType),
             organizationUpgrade.AdditionalSeats,
+            organizationUpgrade.UseSecretsManager,
             organizationUpgrade.AdditionalSmSeats,
             5,
             3);

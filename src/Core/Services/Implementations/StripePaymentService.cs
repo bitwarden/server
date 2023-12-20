@@ -862,10 +862,11 @@ public class StripePaymentService : IPaymentService
     public Task<string> AdjustSubscription(
         Organization organization,
         StaticStore.Plan updatedPlan,
-        int updatedPasswordManagerSeats,
-        int? updatedSecretsManagerSeats,
-        int? updatedSecretsManagerServiceAccounts,
-        long? updatedStorage,
+        int newlyPurchasedPasswordManagerSeats,
+        bool subscribedToSecretsManager,
+        int? newlyPurchasedSecretsManagerSeats,
+        int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+        int newlyPurchasedAdditionalStorage,
         DateTime? prorationDate = null)
         => FinalizeSubscriptionChangeAsync(
             organization,
@@ -874,10 +875,11 @@ public class StripePaymentService : IPaymentService
                 new SubscriptionData
                 {
                     Plan = updatedPlan,
-                    PasswordManagerSeats = updatedPasswordManagerSeats,
-                    SecretsManagerSeats = updatedSecretsManagerSeats,
-                    SecretsManagerServiceAccounts = updatedSecretsManagerServiceAccounts,
-                    Storage = updatedStorage
+                    PurchasedPasswordManagerSeats = newlyPurchasedPasswordManagerSeats,
+                    SubscribedToSecretsManager = subscribedToSecretsManager,
+                    PurchasedSecretsManagerSeats = newlyPurchasedSecretsManagerSeats,
+                    PurchasedAdditionalSecretsManagerServiceAccounts = newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+                    PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage
                 }),
             prorationDate);
 

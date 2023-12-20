@@ -11,10 +11,11 @@ namespace Bit.Core.Models.Business;
 public class SubscriptionData
 {
     public StaticStore.Plan Plan { get; init; }
-    public int PasswordManagerSeats { get; init; }
-    public int? SecretsManagerSeats { get; init; }
-    public int? SecretsManagerServiceAccounts { get; init; }
-    public long? Storage { get; init; }
+    public int PurchasedPasswordManagerSeats { get; init; }
+    public bool SubscribedToSecretsManager { get; set; }
+    public int? PurchasedSecretsManagerSeats { get; init; }
+    public int? PurchasedAdditionalSecretsManagerServiceAccounts { get; init; }
+    public int PurchasedAdditionalStorage { get; init; }
 }
 
 public class CompleteSubscriptionUpdate : SubscriptionUpdate
@@ -67,17 +68,18 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
             GetPasswordManagerOptions(subscription, _updatedSubscription, _currentSubscription)
         };
 
-        if (_updatedSubscription.SecretsManagerSeats.HasValue)
+        if (_updatedSubscription.SubscribedToSecretsManager || _currentSubscription.SubscribedToSecretsManager)
         {
             subscriptionItemOptions.Add(GetSecretsManagerOptions(subscription, _updatedSubscription, _currentSubscription));
+
+            if (_updatedSubscription.PurchasedAdditionalSecretsManagerServiceAccounts != 0 ||
+                _currentSubscription.PurchasedAdditionalSecretsManagerServiceAccounts != 0)
+            {
+                subscriptionItemOptions.Add(GetServiceAccountsOptions(subscription, _updatedSubscription, _currentSubscription));
+            }
         }
 
-        if (_updatedSubscription.SecretsManagerServiceAccounts.HasValue)
-        {
-            subscriptionItemOptions.Add(GetServiceAccountsOptions(subscription, _updatedSubscription, _currentSubscription));
-        }
-
-        if (_updatedSubscription.Storage.HasValue)
+        if (_updatedSubscription.PurchasedAdditionalStorage != 0 || _currentSubscription.PurchasedAdditionalStorage != 0)
         {
             subscriptionItemOptions.Add(GetStorageOptions(subscription, _updatedSubscription, _currentSubscription));
         }
@@ -139,7 +141,8 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
             var subscriptionItem = FindSubscriptionItem(subscription, currentPlanId);
 
             return (subscriptionItem.Plan.Id != options.Plan && subscriptionItem.Price.Id != options.Plan) ||
-                   subscriptionItem.Quantity != options.Quantity;
+                   subscriptionItem.Quantity != options.Quantity ||
+                   subscriptionItem.Deleted != options.Deleted;
         }
     }
 
@@ -155,17 +158,18 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
             GetPasswordManagerOptions(subscription, _currentSubscription, _updatedSubscription)
         };
 
-        if (_updatedSubscription.SecretsManagerSeats.HasValue)
+        if (_currentSubscription.SubscribedToSecretsManager || _updatedSubscription.SubscribedToSecretsManager)
         {
             subscriptionItemOptions.Add(GetSecretsManagerOptions(subscription, _currentSubscription, _updatedSubscription));
+
+            if (_currentSubscription.PurchasedAdditionalSecretsManagerServiceAccounts != 0 ||
+                _updatedSubscription.PurchasedAdditionalSecretsManagerServiceAccounts != 0)
+            {
+                subscriptionItemOptions.Add(GetServiceAccountsOptions(subscription, _currentSubscription, _updatedSubscription));
+            }
         }
 
-        if (_updatedSubscription.SecretsManagerServiceAccounts.HasValue)
-        {
-            subscriptionItemOptions.Add(GetServiceAccountsOptions(subscription, _currentSubscription, _updatedSubscription));
-        }
-
-        if (_updatedSubscription.Storage.HasValue)
+        if (_currentSubscription.PurchasedAdditionalStorage != 0 || _updatedSubscription.PurchasedAdditionalStorage != 0)
         {
             subscriptionItemOptions.Add(GetStorageOptions(subscription, _currentSubscription, _updatedSubscription));
         }
@@ -195,7 +199,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         {
             Id = subscriptionItem.Id,
             Price = updatedPlanId,
-            Quantity = IsNonSeatBasedPlan(to.Plan) ? 1 : to.PasswordManagerSeats
+            Quantity = IsNonSeatBasedPlan(to.Plan) ? 1 : to.PurchasedPasswordManagerSeats
         };
     }
 
@@ -218,8 +222,8 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         {
             Id = subscriptionItem?.Id,
             Price = updatedPlanId,
-            Quantity = to.SecretsManagerSeats,
-            Deleted = subscriptionItem?.Id != null && to.SecretsManagerSeats == 0
+            Quantity = to.PurchasedSecretsManagerSeats,
+            Deleted = subscriptionItem?.Id != null && to.PurchasedSecretsManagerSeats == 0
                 ? true
                 : null
         };
@@ -244,8 +248,8 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         {
             Id = subscriptionItem?.Id,
             Price = updatedPlanId,
-            Quantity = to.SecretsManagerServiceAccounts,
-            Deleted = subscriptionItem?.Id != null && to.SecretsManagerServiceAccounts == 0
+            Quantity = to.PurchasedAdditionalSecretsManagerServiceAccounts,
+            Deleted = subscriptionItem?.Id != null && to.PurchasedAdditionalSecretsManagerServiceAccounts == 0
                 ? true
                 : null
         };
@@ -268,8 +272,8 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         {
             Id = subscriptionItem?.Id,
             Price = updatedPlanId,
-            Quantity = to.Storage,
-            Deleted = subscriptionItem?.Id != null && to.Storage == 0
+            Quantity = to.PurchasedAdditionalStorage,
+            Deleted = subscriptionItem?.Id != null && to.PurchasedAdditionalStorage == 0
                 ? true
                 : null
         };
@@ -295,14 +299,23 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
             : plan.PasswordManager.StripeSeatPlanId;
 
     private static SubscriptionData GetSubscriptionDataFor(Organization organization)
-        => new()
+    {
+        var plan = Utilities.StaticStore.GetPlan(organization.PlanType);
+
+        return new SubscriptionData
         {
-            Plan = Utilities.StaticStore.GetPlan(organization.PlanType),
-            PasswordManagerSeats = organization.Seats.GetValueOrDefault(),
-            SecretsManagerSeats = organization.SmSeats,
-            SecretsManagerServiceAccounts = organization.SmServiceAccounts,
-            Storage = organization.Storage
+            Plan = plan,
+            PurchasedPasswordManagerSeats = organization.Seats.HasValue
+                ? organization.Seats.Value - plan.PasswordManager.BaseSeats
+                : 0,
+            SubscribedToSecretsManager = organization.UseSecretsManager,
+            PurchasedSecretsManagerSeats = organization.SmSeats - plan.SecretsManager.BaseSeats,
+            PurchasedAdditionalSecretsManagerServiceAccounts = organization.SmServiceAccounts - plan.SecretsManager.BaseServiceAccount,
+            PurchasedAdditionalStorage = organization.MaxStorageGb.HasValue
+                ? organization.MaxStorageGb.Value - (plan.PasswordManager.BaseStorageGb ?? 0) :
+                0
         };
+    }
 
     private static bool IsNonSeatBasedPlan(StaticStore.Plan plan)
         => plan.Type is
