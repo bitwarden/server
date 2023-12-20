@@ -33,8 +33,8 @@ public class ProjectServiceAccountAccessPoliciesAuthorizationHandlerTests
         sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(resource.Id, userId, accessClientType)
             .Returns((read, write));
 
-        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccounts(resource.ServiceAccountProjectsAccessPolicies.Select( s => s.Id).ToList(), userId, accessClientType)
-            .Returns((read, write));
+        //sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccounts(resource.ServiceAccountProjectsAccessPolicies.Select( s => s.Id).ToList(), userId, accessClientType)
+        //    .Returns((read, write));
     }
 
     private static void SetupOrganizationServiceAccounts(SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,

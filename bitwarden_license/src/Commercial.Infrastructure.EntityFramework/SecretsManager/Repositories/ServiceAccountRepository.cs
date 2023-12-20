@@ -108,10 +108,11 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var serviceAccount = dbContext.ServiceAccount.Where(sa => sa.Id == id);
+        var serviceAccountQuery = dbContext.ServiceAccount.Where(sa => sa.Id == id);
 
-        var query = AccessToServiceAccountsAsync(serviceAccount.Select(s => s.Id), userId, accessType);
-        return (query.Result.Read, query.Result.Write);
+        var query = ToAccessQuery(serviceAccountQuery, userId, accessType);
+        var policy = await query.FirstOrDefaultAsync();
+        return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
     public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
@@ -162,24 +163,13 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return results;
     }
 
-    public (bool Read, bool Write) AccessToServiceAccounts(IEnumerable<Guid> ids, Guid userId,
-       AccessClientType accessType)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        var serviceAccount = dbContext.ServiceAccount.Where(sa => ids.Contains(sa.Id));
-        var query = AccessToServiceAccountsAsync(serviceAccount.Select(s => s.Id), userId, accessType);
-        return (query.Result.Read, query.Result.Write);
-    }
-
     public async Task<(bool Read, bool Write)> AccessToServiceAccountsAsync(IEnumerable<Guid> ids, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var serviceAccount = dbContext.ServiceAccount.Where(sa => ids.Contains(sa.Id));
-        var query = ToAccessQuery(serviceAccount, userId, accessType);
+        var serviceAccountQuery = dbContext.ServiceAccount.Where(sa => ids.Contains(sa.Id));
+        var query = ToAccessQuery(serviceAccountQuery, userId, accessType);
 
         var policies = await query.ToListAsync();
 

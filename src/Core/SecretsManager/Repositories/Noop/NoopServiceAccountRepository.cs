@@ -59,5 +59,5 @@ public class NoopServiceAccountRepository : IServiceAccountRepository
     }
 
     public Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdWithSecretsDetailsAsync(Guid organizationId, Guid userId, AccessClientType accessType) => throw new NotImplementedException();
-    public (bool Read, bool Write) AccessToServiceAccounts(IEnumerable<Guid> ids, Guid userId, AccessClientType accessType) => throw new NotImplementedException();
+    public Task<(bool Read, bool Write)> AccessToServiceAccountsAsync(IEnumerable<Guid> ids, Guid userId, AccessClientType accessType) => throw new NotImplementedException();
 }
