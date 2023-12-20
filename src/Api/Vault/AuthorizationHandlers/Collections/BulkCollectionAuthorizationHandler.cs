@@ -109,9 +109,8 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return;
         }
 
-        // Check for non-null org here: the user must be apart of the organization for this setting to take affect
         // If the limit collection management setting is disabled, allow any user to create collections
-        if (org is not null && await GetOrganizationAbilityAsync() is { LimitCollectionCreationDeletion: false })
+        if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
         {
             context.Succeed(requirement);
             return;
@@ -239,7 +238,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // Check for non-null org here: the user must be apart of the organization for this setting to take affect
         // The limit collection management setting is disabled,
         // ensure acting user has manage permissions for all collections being deleted
-        if (org is not null && await GetOrganizationAbilityAsync() is { LimitCollectionCreationDeletion: false })
+        if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
         {
             var canManageCollections = await IsAssignedToCollectionsAsync(resources, org, true);
             if (canManageCollections)
@@ -274,10 +273,17 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         return targetCollections.All(tc => assignedCollectionIds.Contains(tc.Id));
     }
 
-    private async Task<OrganizationAbility?> GetOrganizationAbilityAsync()
+    private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(CurrentContextOrganization? organization)
     {
+        // If the CurrentContextOrganization is null, then the user isn't a member of the org so the setting is
+        // irrelevant
+        if (organization == null)
+        {
+            return null;
+        }
+
         (await _applicationCacheService.GetOrganizationAbilitiesAsync())
-            .TryGetValue(_targetOrganizationId, out var organizationAbility);
+            .TryGetValue(organization.Id, out var organizationAbility);
 
         return organizationAbility;
     }
