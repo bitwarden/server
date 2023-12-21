@@ -204,12 +204,17 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanReadAsync_WhenUserIsAssignedToCollections_Success(
+    public async Task CanReadAsync_WhenUserCanManageCollections_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
 
         organization.Type = OrganizationUserType.User;
         organization.LimitCollectionCreationDeletion = false;
