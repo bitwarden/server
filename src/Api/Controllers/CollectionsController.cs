@@ -584,11 +584,6 @@ public class CollectionsController : Controller
 
         // Filter the assigned collections to only return those where the user has Manage permission
         var manageableOrgCollections = assignedOrgCollections.Where(c => c.Item1.Manage).ToList();
-        var readAssignedAuthorized = await _authorizationService.AuthorizeAsync(User, manageableOrgCollections.Select(c => c.Item1), BulkCollectionOperations.ReadWithAccess);
-        if (!readAssignedAuthorized.Succeeded)
-        {
-            throw new NotFoundException();
-        }
 
         return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
             new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
@@ -609,16 +604,8 @@ public class CollectionsController : Controller
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
-            var readAuthorized = (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Read)).Succeeded;
-            if (readAuthorized)
-            {
-                orgCollections = collections.Where(c => c.OrganizationId == orgId);
-            }
-            else
-            {
-                throw new NotFoundException();
-            }
+            var assignedCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
+            orgCollections = assignedCollections.Where(c => c.OrganizationId == orgId && c.Manage).ToList();
         }
 
         var responses = orgCollections.Select(c => new CollectionResponseModel(c));
