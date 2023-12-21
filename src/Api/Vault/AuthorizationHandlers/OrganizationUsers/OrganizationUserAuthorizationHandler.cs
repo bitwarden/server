@@ -81,7 +81,7 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
 
         // Check for non-null org here: the user must be apart of the organization for this setting to take affect
         // If the limit collection management setting is disabled, allow any user to read all organization users
-        if (org is not null && await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
+        if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
         {
             context.Succeed(requirement);
             return;
