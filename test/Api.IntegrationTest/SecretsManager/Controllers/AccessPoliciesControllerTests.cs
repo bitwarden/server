@@ -1261,7 +1261,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
-        var (project, _) = await SetupProjectServiceAccountPermissionAsync(permissionType, organizationUser);
+        var (_, project) = await SetupProjectServiceAccountPermissionAsync(permissionType, organizationUser);
 
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/service-accounts");
         response.EnsureSuccessStatusCode();
@@ -1351,25 +1351,26 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
-        var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
+        var (project, request) = await SetupProjectServiceAccountRequestAsync(permissionType, organizationUser);
 
         var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/service-accounts", request);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectServiceAccountsAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Equal(request.UserAccessPolicyRequests.First().GranteeId,
-            result!.UserAccessPolicies.First().OrganizationUserId);
-        Assert.True(result.UserAccessPolicies.First().Read);
-        Assert.True(result.UserAccessPolicies.First().Write);
+        Assert.Equal(request.ProjectServiceAccountsAccessPolicyRequests.First().GranteeId,
+            result!.ServiceAccountsAccessPolicies.First().Id);
+
+        Assert.True(result.ServiceAccountsAccessPolicies.First().Read);
+        Assert.True(result.ServiceAccountsAccessPolicies.First().Write);
 
         var createdAccessPolicy =
-            await _accessPolicyRepository.GetByIdAsync(result.UserAccessPolicies.First().Id);
+            await _accessPolicyRepository.GetByIdAsync(result.ServiceAccountsAccessPolicies.First().Id);
         Assert.NotNull(createdAccessPolicy);
-        Assert.Equal(result.UserAccessPolicies.First().Read, createdAccessPolicy!.Read);
-        Assert.Equal(result.UserAccessPolicies.First().Write, createdAccessPolicy.Write);
-        Assert.Equal(result.UserAccessPolicies.First().Id, createdAccessPolicy.Id);
+        Assert.Equal(result.ServiceAccountsAccessPolicies.First().Read, createdAccessPolicy!.Read);
+        Assert.Equal(result.ServiceAccountsAccessPolicies.First().Write, createdAccessPolicy.Write);
+        Assert.Equal(result.ServiceAccountsAccessPolicies.First().Id, createdAccessPolicy.Id);
     }
 
     private async Task<RequestSetupData> SetupAccessPolicyRequest(Guid organizationId)
