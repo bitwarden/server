@@ -236,7 +236,10 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return providers[provider];
     }
 
-    public void UpdateFromLicense(OrganizationLicense license, bool flexibleCollectionsIsEnabled)
+    public void UpdateFromLicense(
+        OrganizationLicense license,
+        bool flexibleCollectionsMvpIsEnabled,
+        bool flexibleCollectionsV1IsEnabled)
     {
         Name = license.Name;
         BusinessName = license.BusinessName;
@@ -267,6 +270,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-        LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled || license.LimitCollectionCreationDeletion;
+        LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion;
+        AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems;
     }
 }
