@@ -1261,7 +1261,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
-        var(project, _) = await SetupProjectServiceAccountPermissionAsync(permissionType, organizationUser);
+        var (serviceAccount, project) = await SetupProjectServiceAccountPermissionAsync(permissionType, organizationUser);
 
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/service-accounts");
         response.EnsureSuccessStatusCode();
@@ -1285,7 +1285,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (_, organizationUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
-        var(project, _) = await SetupProjectServiceAccountPermissionAsync(PermissionType.RunAsAdmin, organizationUser);
+        var (project, _) = await SetupProjectServiceAccountPermissionAsync(PermissionType.RunAsAdmin, organizationUser);
         var (serviceAccount, request) = await SetupProjectServiceAccountRequestAsync(PermissionType.RunAsAdmin, organizationUser);
 
         var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/service-accounts", request);
@@ -1361,8 +1361,8 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         Assert.NotNull(result);
         Assert.Equal(request.ProjectServiceAccountsAccessPolicyRequests.First().GranteeId,
-            result!.ServiceAccountsAccessPolicies.First().Id);
-
+            result!.ServiceAccountsAccessPolicies.First().ServiceAccountId);
+        
         Assert.True(result.ServiceAccountsAccessPolicies.First().Read);
         Assert.True(result.ServiceAccountsAccessPolicies.First().Write);
 
@@ -1473,6 +1473,12 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
        PermissionType permissionType,
        OrganizationUser organizationUser)
     {
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = organizationUser.OrganizationId,
+            Name = _mockEncryptedString
+        });
+
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
@@ -1480,33 +1486,32 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             organizationUser = orgUser;
         }
 
-        var project = await _projectRepository.CreateAsync(new Project
-        {
-            OrganizationId = organizationUser.OrganizationId,
-            Name = _mockEncryptedString
-        });
-
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = organizationUser.OrganizationId, 
+            OrganizationId = organizationUser.OrganizationId,
             Name = _mockEncryptedString,
         });
 
         var accessPolicies = new List<BaseAccessPolicy>
         {
+            new UserServiceAccountAccessPolicy
+            {
+                GrantedServiceAccountId = serviceAccount.Id, OrganizationUserId = organizationUser.Id, Read = true, Write = true,
+            },
+
             new UserProjectAccessPolicy
             {
                 GrantedProjectId = project.Id, OrganizationUserId = organizationUser.Id, Read = true, Write = true,
             },
 
-                new ServiceAccountProjectAccessPolicy
-                {
-                    ServiceAccountId = serviceAccount.Id,
-                    GrantedProjectId = project.Id,
-                    Read = true,
-                    Write = true,
-                },
-            };
+            new ServiceAccountProjectAccessPolicy
+            {
+                ServiceAccountId = serviceAccount.Id,
+                GrantedProjectId = project.Id,
+                Read = true,
+                Write = true,
+            },
+        };
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);
 
         return (serviceAccount, project);
