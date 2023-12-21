@@ -1196,7 +1196,7 @@ public class AccessPoliciesControllerTests
         var result = await sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>());
+            .GetServiceAccountPoliciesByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
         Assert.Empty(result.ServiceAccountsAccessPolicies);
     }
@@ -1268,13 +1268,13 @@ public class AccessPoliciesControllerTests
                 break;
         }
 
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeoplePoliciesByGrantedProjectIdAsync(default, default)
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetServiceAccountPoliciesByGrantedProjectIdAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultServiceAccountProject });
 
         var result = await sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>());
+            .GetServiceAccountPoliciesByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
         Assert.NotEmpty(result.ServiceAccountsAccessPolicies);
     }
