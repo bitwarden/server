@@ -5,7 +5,6 @@ using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
@@ -1262,7 +1261,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
-        var (_, project) = await SetupProjectServiceAccountPermissionAsync(permissionType, organizationUser);
+        var(project, _) = await SetupProjectServiceAccountPermissionAsync(permissionType, organizationUser);
 
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/service-accounts");
         response.EnsureSuccessStatusCode();
@@ -1286,7 +1285,8 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (_, organizationUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
-        var (project, request) = await SetupProjectServiceAccountPermissionAsync(PermissionType.RunAsAdmin, organizationUser);
+        var(project, _) = await SetupProjectServiceAccountPermissionAsync(PermissionType.RunAsAdmin, organizationUser);
+        var (serviceAccount, request) = await SetupProjectServiceAccountRequestAsync(PermissionType.RunAsAdmin, organizationUser);
 
         var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/service-accounts", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -1473,7 +1473,6 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
        PermissionType permissionType,
        OrganizationUser organizationUser)
     {
-
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
@@ -1495,14 +1494,19 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var accessPolicies = new List<BaseAccessPolicy>
         {
-            new ServiceAccountProjectAccessPolicy
+            new UserProjectAccessPolicy
             {
-                ServiceAccountId = serviceAccount.Id,
-                GrantedProjectId = project.Id,
-                Read = true,
-                Write = true
-            }
-        };
+                GrantedProjectId = project.Id, OrganizationUserId = organizationUser.Id, Read = true, Write = true,
+            },
+
+                new ServiceAccountProjectAccessPolicy
+                {
+                    ServiceAccountId = serviceAccount.Id,
+                    GrantedProjectId = project.Id,
+                    Read = true,
+                    Write = true,
+                },
+            };
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);
 
         return (serviceAccount, project);

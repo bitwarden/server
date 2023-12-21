@@ -62,6 +62,4 @@ public class ServiceAccountProjectAccessPolicy : BaseAccessPolicy
     public ServiceAccount? ServiceAccount { get; set; }
     public Guid? GrantedProjectId { get; set; }
     public Project? GrantedProject { get; set; }
-
-    //TODO should I have organizationuserID?
 }
