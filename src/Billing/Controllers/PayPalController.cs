@@ -1,5 +1,6 @@
 ﻿using System.Text;
-using Bit.Billing.Utilities;
+using Bit.Billing.Models;
+using Bit.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -15,220 +16,250 @@ namespace Bit.Billing.Controllers;
 public class PayPalController : Controller
 {
     private readonly BillingSettings _billingSettings;
-    private readonly PayPalIpnClient _paypalIpnClient;
-    private readonly ITransactionRepository _transactionRepository;
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IMailService _mailService;
-    private readonly IPaymentService _paymentService;
     private readonly ILogger<PayPalController> _logger;
+    private readonly IMailService _mailService;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IPaymentService _paymentService;
+    private readonly IPayPalIPNClient _payPalIPNClient;
+    private readonly ITransactionRepository _transactionRepository;
+    private readonly IUserRepository _userRepository;
 
     public PayPalController(
         IOptions<BillingSettings> billingSettings,
-        PayPalIpnClient paypalIpnClient,
-        ITransactionRepository transactionRepository,
-        IOrganizationRepository organizationRepository,
-        IUserRepository userRepository,
+        ILogger<PayPalController> logger,
         IMailService mailService,
+        IOrganizationRepository organizationRepository,
         IPaymentService paymentService,
-        ILogger<PayPalController> logger)
+        IPayPalIPNClient payPalIPNClient,
+        ITransactionRepository transactionRepository,
+        IUserRepository userRepository)
     {
         _billingSettings = billingSettings?.Value;
-        _paypalIpnClient = paypalIpnClient;
-        _transactionRepository = transactionRepository;
-        _organizationRepository = organizationRepository;
-        _userRepository = userRepository;
-        _mailService = mailService;
-        _paymentService = paymentService;
         _logger = logger;
+        _mailService = mailService;
+        _organizationRepository = organizationRepository;
+        _paymentService = paymentService;
+        _payPalIPNClient = payPalIPNClient;
+        _transactionRepository = transactionRepository;
+        _userRepository = userRepository;
     }
 
     [HttpPost("ipn")]
     public async Task<IActionResult> PostIpn()
     {
-        _logger.LogDebug("PayPal webhook has been hit.");
-        if (HttpContext?.Request?.Query == null)
-        {
-            return new BadRequestResult();
-        }
+        var key = HttpContext.Request.Query.ContainsKey("key")
+            ? HttpContext.Request.Query["key"].ToString()
+            : null;
 
-        var key = HttpContext.Request.Query.ContainsKey("key") ?
-            HttpContext.Request.Query["key"].ToString() : null;
         if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.PayPal.WebhookKey))
         {
-            _logger.LogWarning("PayPal webhook key is incorrect or does not exist.");
+            _logger.LogError("PayPal IPN: Webhook key is incorrect or does not exist");
             return new BadRequestResult();
         }
 
-        string body = null;
-        using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
-        {
-            body = await reader.ReadToEndAsync();
-        }
+        using var streamReader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8);
 
-        if (string.IsNullOrWhiteSpace(body))
+        var requestContent = await streamReader.ReadToEndAsync();
+
+        if (string.IsNullOrWhiteSpace(requestContent))
         {
+            _logger.LogError("PayPal IPN: Webhook request content was null or empty");
             return new BadRequestResult();
         }
 
-        var verified = await _paypalIpnClient.VerifyIpnAsync(body);
+        var transactionModel = new PayPalIPNTransactionModel(requestContent);
+
+        var entityId = transactionModel.UserId ?? transactionModel.OrganizationId;
+
+        if (!entityId.HasValue)
+        {
+            _logger.LogWarning("PayPal IPN ({Id}): Webhook did not contain User ID or Organization ID", transactionModel.TransactionId);
+            return new OkResult();
+        }
+
+        var verified = await _payPalIPNClient.VerifyIPN(entityId.Value, requestContent);
+
         if (!verified)
         {
-            _logger.LogWarning("Unverified IPN received.");
+            _logger.LogError("PayPal IPN ({Id}): Could not verify request content", transactionModel.TransactionId);
             return new BadRequestResult();
         }
 
-        var ipnTransaction = new PayPalIpnClient.IpnTransaction(body);
-        if (ipnTransaction.TxnType != "web_accept" && ipnTransaction.TxnType != "merch_pmt" &&
-            ipnTransaction.PaymentStatus != "Refunded")
+        if (transactionModel.TransactionType != "web_accept" &&
+            transactionModel.TransactionType != "merch_pmt" &&
+            transactionModel.PaymentStatus != "Refunded")
         {
-            // Only processing billing agreement payments, buy now button payments, and refunds for now.
+            _logger.LogWarning("PayPal IPN ({Id}): Transaction type ({Type}) not supported for payments",
+                transactionModel.TransactionId,
+                transactionModel.TransactionType);
+
             return new OkResult();
         }
 
-        if (ipnTransaction.ReceiverId != _billingSettings.PayPal.BusinessId)
+        if (transactionModel.ReceiverId != _billingSettings.PayPal.BusinessId)
         {
-            _logger.LogWarning("Receiver was not proper business id. " + ipnTransaction.ReceiverId);
+            _logger.LogError(
+                "PayPal IPN ({Id}): Receiver ID ({ReceiverId}) does not match Bitwarden business ID ({BusinessId})",
+                transactionModel.TransactionId,
+                transactionModel.ReceiverId,
+                _billingSettings.PayPal.BusinessId);
+
             return new BadRequestResult();
         }
 
-        if (ipnTransaction.PaymentStatus == "Refunded" && ipnTransaction.ParentTxnId == null)
+        if (transactionModel.PaymentStatus == "Refunded" && string.IsNullOrEmpty(transactionModel.ParentTransactionId))
         {
-            // Refunds require parent transaction
+            _logger.LogWarning("PayPal IPN ({Id}): Parent transaction ID is required for refund", transactionModel.TransactionId);
             return new OkResult();
         }
 
-        if (ipnTransaction.PaymentType == "echeck" && ipnTransaction.PaymentStatus != "Refunded")
+        if (transactionModel.PaymentType == "echeck" && transactionModel.PaymentStatus != "Refunded")
         {
-            // Not accepting eChecks, unless it is a refund
-            _logger.LogWarning("Got an eCheck payment. " + ipnTransaction.TxnId);
+            _logger.LogWarning("PayPal IPN ({Id}): Transaction was an eCheck payment", transactionModel.TransactionId);
             return new OkResult();
         }
 
-        if (ipnTransaction.McCurrency != "USD")
+        if (transactionModel.MerchantCurrency != "USD")
         {
-            // Only process USD payments
-            _logger.LogWarning("Received a payment not in USD. " + ipnTransaction.TxnId);
+            _logger.LogWarning("PayPal IPN ({Id}): Transaction was not in USD ({Currency})",
+                transactionModel.TransactionId,
+                transactionModel.MerchantCurrency);
+
             return new OkResult();
         }
 
-        var ids = ipnTransaction.GetIdsFromCustom();
-        if (!ids.Item1.HasValue && !ids.Item2.HasValue)
+        switch (transactionModel.PaymentStatus)
         {
-            return new OkResult();
-        }
-
-        if (ipnTransaction.PaymentStatus == "Completed")
-        {
-            var transaction = await _transactionRepository.GetByGatewayIdAsync(
-                GatewayType.PayPal, ipnTransaction.TxnId);
-            if (transaction != null)
-            {
-                _logger.LogWarning("Already processed this completed transaction. #" + ipnTransaction.TxnId);
-                return new OkResult();
-            }
-
-            var isAccountCredit = ipnTransaction.IsAccountCredit();
-            try
-            {
-                var tx = new Transaction
+            case "Completed":
                 {
-                    Amount = ipnTransaction.McGross,
-                    CreationDate = ipnTransaction.PaymentDate,
-                    OrganizationId = ids.Item1,
-                    UserId = ids.Item2,
-                    Type = isAccountCredit ? TransactionType.Credit : TransactionType.Charge,
-                    Gateway = GatewayType.PayPal,
-                    GatewayId = ipnTransaction.TxnId,
-                    PaymentMethodType = PaymentMethodType.PayPal,
-                    Details = ipnTransaction.TxnId
-                };
-                await _transactionRepository.CreateAsync(tx);
+                    var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal,
+                        transactionModel.TransactionId);
 
-                if (isAccountCredit)
-                {
-                    string billingEmail = null;
-                    if (tx.OrganizationId.HasValue)
+                    if (existingTransaction != null)
                     {
-                        var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
-                        if (org != null)
+                        _logger.LogWarning("PayPal IPN ({Id}): Already processed this completed transaction", transactionModel.TransactionId);
+                        return new OkResult();
+                    }
+
+                    try
+                    {
+                        var transaction = new Transaction
                         {
-                            billingEmail = org.BillingEmailAddress();
-                            if (await _paymentService.CreditAccountAsync(org, tx.Amount))
-                            {
-                                await _organizationRepository.ReplaceAsync(org);
-                            }
+                            Amount = transactionModel.MerchantGross,
+                            CreationDate = transactionModel.PaymentDate,
+                            OrganizationId = transactionModel.OrganizationId,
+                            UserId = transactionModel.UserId,
+                            Type = transactionModel.IsAccountCredit ? TransactionType.Credit : TransactionType.Charge,
+                            Gateway = GatewayType.PayPal,
+                            GatewayId = transactionModel.TransactionId,
+                            PaymentMethodType = PaymentMethodType.PayPal,
+                            Details = transactionModel.TransactionId
+                        };
+
+                        await _transactionRepository.CreateAsync(transaction);
+
+                        if (transactionModel.IsAccountCredit)
+                        {
+                            await ApplyCreditAsync(transaction);
                         }
                     }
-                    else
+                    // Catch foreign key violations because user/org could have been deleted.
+                    catch (SqlException sqlException) when (sqlException.Number == 547)
                     {
-                        var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
-                        if (user != null)
+                        _logger.LogError("PayPal IPN ({Id}): SQL Exception | {Message}", transactionModel.TransactionId, sqlException.Message);
+                    }
+
+                    break;
+                }
+            case "Refunded" or "Reversed":
+                {
+                    var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal,
+                        transactionModel.TransactionId);
+
+                    if (existingTransaction != null)
+                    {
+                        _logger.LogWarning("PayPal IPN ({Id}): Already processed this refunded transaction", transactionModel.TransactionId);
+                        return new OkResult();
+                    }
+
+                    var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal,
+                        transactionModel.ParentTransactionId);
+
+                    if (parentTransaction == null)
+                    {
+                        _logger.LogError("PayPal IPN ({Id}): Could not find parent transaction", transactionModel.TransactionId);
+                        return new BadRequestResult();
+                    }
+
+                    var refundAmount = Math.Abs(transactionModel.MerchantGross);
+
+                    var remainingAmount = parentTransaction.Amount - parentTransaction.RefundedAmount.GetValueOrDefault();
+
+                    if (refundAmount > 0 && !parentTransaction.Refunded.GetValueOrDefault() && remainingAmount >= refundAmount)
+                    {
+                        parentTransaction.RefundedAmount = parentTransaction.RefundedAmount.GetValueOrDefault() + refundAmount;
+
+                        if (parentTransaction.RefundedAmount == parentTransaction.Amount)
                         {
-                            billingEmail = user.BillingEmailAddress();
-                            if (await _paymentService.CreditAccountAsync(user, tx.Amount))
-                            {
-                                await _userRepository.ReplaceAsync(user);
-                            }
+                            parentTransaction.Refunded = true;
                         }
+
+                        await _transactionRepository.ReplaceAsync(parentTransaction);
+
+                        await _transactionRepository.CreateAsync(new Transaction
+                        {
+                            Amount = refundAmount,
+                            CreationDate = transactionModel.PaymentDate,
+                            OrganizationId = transactionModel.OrganizationId,
+                            UserId = transactionModel.UserId,
+                            Type = TransactionType.Refund,
+                            Gateway = GatewayType.PayPal,
+                            GatewayId = transactionModel.TransactionId,
+                            PaymentMethodType = PaymentMethodType.PayPal,
+                            Details = transactionModel.TransactionId
+                        });
                     }
 
-                    if (!string.IsNullOrWhiteSpace(billingEmail))
-                    {
-                        await _mailService.SendAddedCreditAsync(billingEmail, tx.Amount);
-                    }
+                    break;
                 }
-            }
-            // Catch foreign key violations because user/org could have been deleted.
-            catch (SqlException e) when (e.Number == 547) { }
-        }
-        else if (ipnTransaction.PaymentStatus == "Refunded" || ipnTransaction.PaymentStatus == "Reversed")
-        {
-            var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                GatewayType.PayPal, ipnTransaction.TxnId);
-            if (refundTransaction != null)
-            {
-                _logger.LogWarning("Already processed this refunded transaction. #" + ipnTransaction.TxnId);
-                return new OkResult();
-            }
-
-            var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                GatewayType.PayPal, ipnTransaction.ParentTxnId);
-            if (parentTransaction == null)
-            {
-                _logger.LogWarning("Parent transaction was not found. " + ipnTransaction.TxnId);
-                return new BadRequestResult();
-            }
-
-            var refundAmount = System.Math.Abs(ipnTransaction.McGross);
-            var remainingAmount = parentTransaction.Amount -
-                parentTransaction.RefundedAmount.GetValueOrDefault();
-            if (refundAmount > 0 && !parentTransaction.Refunded.GetValueOrDefault() &&
-                remainingAmount >= refundAmount)
-            {
-                parentTransaction.RefundedAmount =
-                    parentTransaction.RefundedAmount.GetValueOrDefault() + refundAmount;
-                if (parentTransaction.RefundedAmount == parentTransaction.Amount)
-                {
-                    parentTransaction.Refunded = true;
-                }
-
-                await _transactionRepository.ReplaceAsync(parentTransaction);
-                await _transactionRepository.CreateAsync(new Transaction
-                {
-                    Amount = refundAmount,
-                    CreationDate = ipnTransaction.PaymentDate,
-                    OrganizationId = ids.Item1,
-                    UserId = ids.Item2,
-                    Type = TransactionType.Refund,
-                    Gateway = GatewayType.PayPal,
-                    GatewayId = ipnTransaction.TxnId,
-                    PaymentMethodType = PaymentMethodType.PayPal,
-                    Details = ipnTransaction.TxnId
-                });
-            }
         }
 
         return new OkResult();
+    }
+
+    private async Task ApplyCreditAsync(Transaction transaction)
+    {
+        string billingEmail = null;
+
+        if (transaction.OrganizationId.HasValue)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(transaction.OrganizationId.Value);
+
+            if (await _paymentService.CreditAccountAsync(organization, transaction.Amount))
+            {
+                await _organizationRepository.ReplaceAsync(organization);
+
+                billingEmail = organization.BillingEmailAddress();
+            }
+        }
+        else if (transaction.UserId.HasValue)
+        {
+            var user = await _userRepository.GetByIdAsync(transaction.UserId.Value);
+
+            if (await _paymentService.CreditAccountAsync(user, transaction.Amount))
+            {
+                await _userRepository.ReplaceAsync(user);
+
+                billingEmail = user.BillingEmailAddress();
+            }
+        }
+
+        if (!string.IsNullOrEmpty(billingEmail))
+        {
+            await _mailService.SendAddedCreditAsync(billingEmail, transaction.Amount);
+        }
     }
 }
