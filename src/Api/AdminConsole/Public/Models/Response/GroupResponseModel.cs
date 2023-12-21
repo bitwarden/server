@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Api.Auth.Models.Public.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Data;
