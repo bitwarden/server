@@ -309,8 +309,12 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
                 ? organization.Seats.Value - plan.PasswordManager.BaseSeats
                 : 0,
             SubscribedToSecretsManager = organization.UseSecretsManager,
-            PurchasedSecretsManagerSeats = organization.SmSeats - plan.SecretsManager.BaseSeats,
-            PurchasedAdditionalSecretsManagerServiceAccounts = organization.SmServiceAccounts - plan.SecretsManager.BaseServiceAccount,
+            PurchasedSecretsManagerSeats = plan.SecretsManager is not null
+                ? organization.SmSeats - plan.SecretsManager.BaseSeats
+                : 0,
+            PurchasedAdditionalSecretsManagerServiceAccounts = plan.SecretsManager is not null
+                ? organization.SmServiceAccounts - plan.SecretsManager.BaseServiceAccount
+                : 0,
             PurchasedAdditionalStorage = organization.MaxStorageGb.HasValue
                 ? organization.MaxStorageGb.Value - (plan.PasswordManager.BaseStorageGb ?? 0) :
                 0
