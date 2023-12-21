@@ -5,6 +5,7 @@ using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
@@ -1266,10 +1267,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/service-accounts");
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectServiceAccountsAccessPoliciesResponseModel>();
 
-        Assert.NotNull(result?.UserAccessPolicies);
-        Assert.Single(result!.UserAccessPolicies);
+        Assert.NotNull(result?.ServiceAccountsAccessPolicies);
+        Assert.Single(result!.ServiceAccountsAccessPolicies);
     }
 
     [Theory]
@@ -1472,6 +1473,14 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
        PermissionType permissionType,
        OrganizationUser organizationUser)
     {
+
+        if (permissionType == PermissionType.RunAsUserWithPermission)
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await LoginAsync(email);
+            organizationUser = orgUser;
+        }
+
         var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = organizationUser.OrganizationId,
@@ -1480,16 +1489,9 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = organizationUser.OrganizationId, //TODO?
+            OrganizationId = organizationUser.OrganizationId, 
             Name = _mockEncryptedString,
         });
-
-        if (permissionType == PermissionType.RunAsUserWithPermission)
-        {
-            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await LoginAsync(email);
-            organizationUser = orgUser; //TODO?
-        }
 
         var accessPolicies = new List<BaseAccessPolicy>
         {
