@@ -1325,14 +1325,15 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
-        var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
+        var (project, request) = await SetupProjectServiceAccountRequestAsync(permissionType, organizationUser);
         var newOrg = await _organizationHelper.CreateSmOrganizationAsync();
         var group = await _groupRepository.CreateAsync(new Group
         {
             OrganizationId = newOrg.Id,
             Name = _mockEncryptedString
         });
-        request.GroupAccessPolicyRequests = new List<AccessPolicyRequest>
+
+        request.ProjectServiceAccountsAccessPolicyRequests = new List<AccessPolicyRequest>
         {
             new() { GranteeId = group.Id, Read = true, Write = true }
         };
@@ -1470,7 +1471,6 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
        PermissionType permissionType,
        OrganizationUser organizationUser)
     {
-
         var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = organizationUser.OrganizationId,
@@ -1515,6 +1515,20 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             UserAccessPolicyRequests = new List<AccessPolicyRequest>
             {
                 new() { GranteeId = currentUser.Id, Read = true, Write = true }
+            }
+        };
+        return (project, request);
+    }
+
+    private async Task<(Project project, ServiceAccountsAccessPoliciesRequestModel request)> SetupProjectServiceAccountRequestAsync(
+     PermissionType permissionType, OrganizationUser organizationUser)
+    {
+        var (serviceAccount, project) = await SetupProjectServiceAccountPermissionAsync(permissionType, organizationUser);
+        var request = new ServiceAccountsAccessPoliciesRequestModel
+        {
+            ProjectServiceAccountsAccessPolicyRequests = new List<AccessPolicyRequest>
+            {
+                new() { GranteeId = serviceAccount.Id, Read = true, Write = true }
             }
         };
         return (project, request);
