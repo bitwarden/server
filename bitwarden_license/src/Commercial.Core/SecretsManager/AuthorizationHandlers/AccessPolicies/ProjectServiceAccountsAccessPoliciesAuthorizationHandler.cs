@@ -77,7 +77,7 @@ public class
                 }
 
                 var serviceAccountAccess = await _serviceAccountRepository.AccessToServiceAccountsAsync(serviceAccountIds, userId, accessClient);
-                if(!serviceAccountAccess.Write)
+                if (!serviceAccountAccess.Write)
                 {
                     return;
                 }

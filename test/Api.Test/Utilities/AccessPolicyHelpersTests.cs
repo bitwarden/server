@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Bit.Api.SecretsManager.Utilities;
+﻿using Bit.Api.SecretsManager.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Xunit;

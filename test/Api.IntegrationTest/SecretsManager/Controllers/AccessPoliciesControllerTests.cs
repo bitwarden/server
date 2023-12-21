@@ -1362,7 +1362,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         Assert.NotNull(result);
         Assert.Equal(request.ProjectServiceAccountsAccessPolicyRequests.First().GranteeId,
             result!.ServiceAccountsAccessPolicies.First().ServiceAccountId);
-        
+
         Assert.True(result.ServiceAccountsAccessPolicies.First().Read);
         Assert.True(result.ServiceAccountsAccessPolicies.First().Write);
 
