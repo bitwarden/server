@@ -6,6 +6,8 @@ GO
 
 CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
+WITH
+    RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
