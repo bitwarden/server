@@ -1893,11 +1893,6 @@ public class OrganizationService : IOrganizationService
 
     public void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException("Invalid Password Manager plan selected.");
-        }
-
         ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
 
         if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
@@ -2412,12 +2407,8 @@ public class OrganizationService : IOrganizationService
     public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException("Invalid plan selected.");
-        }
 
-        if (plan.Disabled)
+        if (plan!.Disabled)
         {
             throw new BadRequestException("Plan not found.");
         }
