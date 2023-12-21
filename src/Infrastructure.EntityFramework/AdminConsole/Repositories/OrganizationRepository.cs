@@ -157,6 +157,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await deleteCiphersTransaction.CommitAsync();
 
             var organizationDeleteTransaction = await dbContext.Database.BeginTransactionAsync();
+            await dbContext.AuthRequests.Where(ar => ar.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             await dbContext.SsoUsers.Where(su => su.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.SsoConfigs.Where(sc => sc.OrganizationId == organization.Id)
