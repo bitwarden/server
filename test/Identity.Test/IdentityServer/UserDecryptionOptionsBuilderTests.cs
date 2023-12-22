@@ -26,7 +26,7 @@ public class UserDecryptionOptionsBuilderTests
         _currentContext = Substitute.For<ICurrentContext>();
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _builder = new UserDecryptionOptionsBuilder(_currentContext, _featureService, _deviceRepository, _organizationUserRepository);
+        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository);
     }
 
     [Theory]

@@ -1,12 +1,10 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Identity.Utilities;
 
 namespace Bit.Identity.IdentityServer;
@@ -20,7 +18,6 @@ namespace Bit.Identity.IdentityServer;
 public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
@@ -31,13 +28,11 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
 
     public UserDecryptionOptionsBuilder(
         ICurrentContext currentContext,
-        IFeatureService featureService,
         IDeviceRepository deviceRepository,
         IOrganizationUserRepository organizationUserRepository
     )
     {
         _currentContext = currentContext;
-        _featureService = featureService;
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
     }
