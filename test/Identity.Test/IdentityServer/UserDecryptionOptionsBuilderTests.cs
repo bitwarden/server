@@ -1,11 +1,9 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
