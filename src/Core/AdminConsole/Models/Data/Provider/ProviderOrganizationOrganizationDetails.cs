@@ -10,6 +10,9 @@ public class ProviderOrganizationOrganizationDetails
     public Guid Id { get; set; }
     public Guid ProviderId { get; set; }
     public Guid OrganizationId { get; set; }
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
+    /// </summary>
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string OrganizationName { get; set; }
     public string Key { get; set; }
@@ -22,9 +25,9 @@ public class ProviderOrganizationOrganizationDetails
     public OrganizationStatusType Status { get; set; }
 
     /// <summary>
-    /// Returns the name of the organization, decoded from HTML ready for display
+    /// Returns the name of the organization, HTML decoded ready for display.
     /// </summary>
-    public string DecodedOrganizationName()
+    public string DisplayName()
     {
         return WebUtility.HtmlDecode(OrganizationName);
     }
