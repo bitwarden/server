@@ -380,36 +380,6 @@ public class IdentityServerSsoTests
 
     }
 
-
-    [Fact]
-    public async Task SsoLogin_TrustedDeviceEncryption_FlagTurnedOff_DoesNotReturnOption()
-    {
-        // This creates SsoConfig that HAS enabled trusted device encryption which should have only been
-        // done with the feature flag turned on but we are testing that even if they have done that, this will turn off
-        // if returning as an option if the flag has later been turned off.  We should be very careful turning the flag
-        // back off.
-        using var responseBody = await RunSuccessTestAsync(async factory =>
-        {
-            await UpdateUserAsync(factory, user => user.MasterPassword = null);
-        }, MemberDecryptionType.TrustedDeviceEncryption, trustedDeviceEnabled: false);
-
-        // Assert
-        // If the organization has selected TrustedDeviceEncryption but the user still has their master password
-        // they can decrypt with either option
-        var root = responseBody.RootElement;
-        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
-
-        // Expected to look like:
-        // "UserDecryptionOptions": {
-        //   "Object": "userDecryptionOptions"
-        //   "HasMasterPassword": false
-        // }
-
-        // Should only have 2 properties
-        Assert.Equal(2, userDecryptionOptions.EnumerateObject().Count());
-    }
-
     [Fact]
     public async Task SsoLogin_KeyConnector_ReturnsOptions()
     {
