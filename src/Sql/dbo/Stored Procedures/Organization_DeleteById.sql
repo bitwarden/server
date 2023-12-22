@@ -27,6 +27,12 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[AuthRequest]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
         [dbo].[SsoUser]
     WHERE
         [OrganizationId] = @Id
