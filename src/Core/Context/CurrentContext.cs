@@ -521,6 +521,10 @@ public class CurrentContext : ICurrentContext
     {
         if (Organizations == null)
         {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
             var userOrgs = await organizationUserRepository.GetManyDetailsByUserAsync(userId);
             Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
                 .Select(ou => new CurrentContextOrganization(ou)).ToList();
@@ -533,6 +537,10 @@ public class CurrentContext : ICurrentContext
     {
         if (Providers == null)
         {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
             var userProviders = await providerUserRepository.GetManyByUserAsync(userId);
             Providers = userProviders.Where(ou => ou.Status == ProviderUserStatusType.Confirmed)
                 .Select(ou => new CurrentContextProvider(ou)).ToList();
