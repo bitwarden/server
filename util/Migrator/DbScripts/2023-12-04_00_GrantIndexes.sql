@@ -1,3 +1,19 @@
+IF EXISTS(SELECT name
+FROM sys.indexes
+WHERE name = 'IX_Grant_SubjectId_ClientId_Type')
+    BEGIN
+    DROP INDEX [IX_Grant_SubjectId_ClientId_Type] ON [dbo].[Grant]
+END
+GO
+
+IF EXISTS(SELECT name
+FROM sys.indexes
+WHERE name = 'IX_Grant_SubjectId_SessionId_Type')
+    BEGIN
+    DROP INDEX [IX_Grant_SubjectId_SessionId_Type] ON [dbo].[Grant]
+END
+GO
+
 IF COL_LENGTH('[dbo].[Grant]', 'Id') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Grant]
@@ -28,20 +44,4 @@ AS
         *
     FROM
         [dbo].[Grant]
-GO
-
-IF EXISTS(SELECT name
-FROM sys.indexes
-WHERE name = 'IX_Grant_SubjectId_ClientId_Type')
-    BEGIN
-    DROP INDEX [IX_Grant_SubjectId_ClientId_Type] ON [dbo].[Grant]
-END
-GO
-
-IF EXISTS(SELECT name
-FROM sys.indexes
-WHERE name = 'IX_Grant_SubjectId_SessionId_Type')
-    BEGIN
-    DROP INDEX [IX_Grant_SubjectId_SessionId_Type] ON [dbo].[Grant]
-END
 GO
