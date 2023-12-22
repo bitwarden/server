@@ -74,8 +74,11 @@ public class OrganizationController : Controller
             var organization =
                 await _organizationRepository.GetByIdAsync(organizationId);
 
-            var organizationUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization);
-            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
+            if (organization.UseSecretsManager)
+            {
+                var organizationUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization);
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
+            }
         }
     }
 }
