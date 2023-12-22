@@ -764,8 +764,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (model.Data.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption &&
-            !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
+        if (model.Data.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
         {
             throw new BadRequestException(nameof(model.Data.MemberDecryptionType), "Invalid member decryption type.");
         }

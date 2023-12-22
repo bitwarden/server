@@ -17,7 +17,6 @@ namespace Bit.Identity.Test.IdentityServer;
 public class UserDecryptionOptionsBuilderTests
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly UserDecryptionOptionsBuilder _builder;
@@ -25,7 +24,6 @@ public class UserDecryptionOptionsBuilderTests
     public UserDecryptionOptionsBuilderTests()
     {
         _currentContext = Substitute.For<ICurrentContext>();
-        _featureService = Substitute.For<IFeatureService>();
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _builder = new UserDecryptionOptionsBuilder(_currentContext, _featureService, _deviceRepository, _organizationUserRepository);
@@ -79,7 +77,6 @@ public class UserDecryptionOptionsBuilderTests
     [Theory, BitAutoData]
     public async Task Build_WhenTrustedDeviceIsEnabled_ShouldReturnTrustedDeviceOptions(SsoConfig ssoConfig, SsoConfigurationData configurationData, Device device)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
 
@@ -91,23 +88,9 @@ public class UserDecryptionOptionsBuilderTests
         Assert.False(result.TrustedDeviceOption!.HasManageResetPasswordPermission);
     }
 
-    // TODO: Remove when FeatureFlagKeys.TrustedDeviceEncryption is removed
-    [Theory, BitAutoData]
-    public async Task Build_WhenTrustedDeviceIsEnabledButFeatureFlagIsDisabled_ShouldNotReturnTrustedDeviceOptions(SsoConfig ssoConfig, SsoConfigurationData configurationData, Device device)
-    {
-        _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(false);
-        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
-        ssoConfig.Data = configurationData.Serialize();
-
-        var result = await _builder.WithSso(ssoConfig).WithDevice(device).BuildAsync();
-
-        Assert.Null(result.TrustedDeviceOption);
-    }
-
     [Theory, BitAutoData]
     public async Task Build_WhenDeviceIsTrusted_ShouldReturnKeys(SsoConfig ssoConfig, SsoConfigurationData configurationData, Device device)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         device.EncryptedPrivateKey = "encryptedPrivateKey";
@@ -123,7 +106,6 @@ public class UserDecryptionOptionsBuilderTests
     [Theory, BitAutoData]
     public async Task Build_WhenHasLoginApprovingDevice_ShouldApprovingDeviceTrue(SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         approvingDevice.Type = LoginApprovingDeviceTypes.Types.First();
@@ -140,7 +122,6 @@ public class UserDecryptionOptionsBuilderTests
         SsoConfigurationData configurationData,
         CurrentContextOrganization organization)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         ssoConfig.OrganizationId = organization.Id;
@@ -159,7 +140,6 @@ public class UserDecryptionOptionsBuilderTests
         OrganizationUser organizationUser,
         User user)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         organizationUser.ResetPasswordKey = "resetPasswordKey";

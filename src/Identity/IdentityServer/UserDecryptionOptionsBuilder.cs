@@ -95,7 +95,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     private async Task BuildTrustedDeviceOptions()
     {
         // TrustedDeviceEncryption only exists for SSO, if that changes then these guards should change
-        if (_ssoConfig == null || !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
+        if (_ssoConfig == null)
         {
             return;
         }

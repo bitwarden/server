@@ -1,18 +1,15 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
@@ -509,12 +506,6 @@ public class IdentityServerSsoTests
         {
             service.GetAuthorizationCodeAsync("test_code")
                 .Returns(authorizationCode);
-        });
-
-        factory.SubstitueService<IFeatureService>(service =>
-        {
-            service.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, Arg.Any<ICurrentContext>())
-                .Returns(trustedDeviceEnabled);
         });
 
         // This starts the server and finalizes services
