@@ -103,19 +103,26 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         // established ownership in this context.
         IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
 
-        var res = await _fido2.MakeAssertionAsync(clientResponse, options, webAuthCred.Item2.PublicKey, webAuthCred.Item2.SignatureCounter, callback);
+        try {
+            var res = await _fido2.MakeAssertionAsync(clientResponse, options, webAuthCred.Item2.PublicKey, webAuthCred.Item2.SignatureCounter, callback);
 
-        provider.MetaData.Remove("login");
+            provider.MetaData.Remove("login");
 
-        // Update SignatureCounter
-        webAuthCred.Item2.SignatureCounter = res.Counter;
+            // Update SignatureCounter
+            webAuthCred.Item2.SignatureCounter = res.Counter;
 
-        var providers = user.GetTwoFactorProviders();
-        providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
-        user.SetTwoFactorProviders(providers);
-        await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
+            var providers = user.GetTwoFactorProviders();
+            providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
+            user.SetTwoFactorProviders(providers);
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
 
-        return res.Status == "ok";
+            return res.Status == "ok";
+        }
+        catch (Fido2VerificationException)
+        {
+            return false;
+        }
+
     }
 
     private bool HasProperMetaData(TwoFactorProvider provider)
