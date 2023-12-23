@@ -103,7 +103,8 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         // established ownership in this context.
         IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
 
-        try {
+        try
+        {
             var res = await _fido2.MakeAssertionAsync(clientResponse, options, webAuthCred.Item2.PublicKey, webAuthCred.Item2.SignatureCounter, callback);
 
             provider.MetaData.Remove("login");
