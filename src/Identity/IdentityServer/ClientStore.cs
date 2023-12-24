@@ -90,11 +90,11 @@ public class ClientStore : IClientStore
 
     private async Task<Client> CreateApiKeyClientAsync(string clientId)
     {
-        if(!Guid.TryParse(clientId, out var guid))
+        if (!Guid.TryParse(clientId, out var guid))
         {
             return null;
         }
-        
+
         var apiKey = await _apiKeyRepository.GetDetailsByIdAsync(guid);
 
         if (apiKey == null || apiKey.ExpireAt <= DateTime.Now)
