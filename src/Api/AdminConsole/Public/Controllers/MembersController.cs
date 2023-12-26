@@ -2,9 +2,11 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,6 +25,7 @@ public class MembersController : Controller
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IFeatureService _featureService;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -30,7 +33,8 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -38,7 +42,11 @@ public class MembersController : Controller
         _userService = userService;
         _currentContext = currentContext;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _featureService = featureService;
     }
+
+    private bool FlexibleCollectionsIsEnabled =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     /// <summary>
     /// Retrieve a member.
@@ -130,6 +138,11 @@ public class MembersController : Controller
         var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
             model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
         var response = new MemberResponseModel(user, associations);
+        // If Flexible Collections is enabled, downgrade any Manager roles to User
+        if (FlexibleCollectionsIsEnabled && response.Type == OrganizationUserType.Manager)
+        {
+            response.Type = OrganizationUserType.User;
+        }
         return new JsonResult(response);
     }
 
@@ -166,6 +179,11 @@ public class MembersController : Controller
         else
         {
             response = new MemberResponseModel(updatedUser, associations);
+        }
+        // If Flexible Collections is enabled, downgrade any Manager roles to User
+        if (FlexibleCollectionsIsEnabled && response.Type == OrganizationUserType.Manager)
+        {
+            response.Type = OrganizationUserType.User;
         }
         return new JsonResult(response);
     }

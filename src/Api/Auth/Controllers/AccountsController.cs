@@ -65,7 +65,7 @@ public class AccountsController : Controller
     private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
 
-    private bool UseFlexibleCollections =>
+    private bool FlexibleCollectionsIsEnabled =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
@@ -446,7 +446,7 @@ public class AccountsController : Controller
             var ciphers = new List<Cipher>();
             if (model.Ciphers.Any())
             {
-                var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: UseFlexibleCollections);
+                var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: FlexibleCollectionsIsEnabled);
                 ciphers.AddRange(existingCiphers
                     .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing)));
             }
@@ -539,6 +539,17 @@ public class AccountsController : Controller
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
             hasPremiumFromOrg);
+        // If Flexible Collections is enabled, downgrade any Manager roles to User
+        if (FlexibleCollectionsIsEnabled)
+        {
+            foreach (var org in response.Organizations)
+            {
+                if (org.Type == OrganizationUserType.Manager)
+                {
+                    org.Type = OrganizationUserType.User;
+                }
+            }
+        }
         return response;
     }
 
@@ -549,6 +560,17 @@ public class AccountsController : Controller
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value,
             OrganizationUserStatusType.Confirmed);
         var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o));
+        // If Flexible Collections is enabled, downgrade any Manager roles to User
+        if (FlexibleCollectionsIsEnabled)
+        {
+            foreach (var profile in responseData)
+            {
+                if (profile.Type == OrganizationUserType.Manager)
+                {
+                    profile.Type = OrganizationUserType.User;
+                }
+            }
+        }
         return new ListResponseModel<ProfileOrganizationResponseModel>(responseData);
     }
 
@@ -564,6 +586,17 @@ public class AccountsController : Controller
 
         await _userService.SaveUserAsync(model.ToUser(user));
         var response = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user), await _userService.HasPremiumFromOrganization(user));
+        // If Flexible Collections is enabled, downgrade any Manager roles to User
+        if (FlexibleCollectionsIsEnabled)
+        {
+            foreach (var org in response.Organizations)
+            {
+                if (org.Type == OrganizationUserType.Manager)
+                {
+                    org.Type = OrganizationUserType.User;
+                }
+            }
+        }
         return response;
     }
 

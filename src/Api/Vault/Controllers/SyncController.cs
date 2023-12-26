@@ -12,6 +12,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +36,7 @@ public class SyncController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
-    private bool UseFlexibleCollections =>
+    private bool FlexibleCollectionsIsEnabled =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public SyncController(
@@ -77,6 +78,23 @@ public class SyncController : Controller
 
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
             OrganizationUserStatusType.Confirmed);
+        // If Flexible Collections is enabled, downgrade any Manager roles to User and set Edit/Delete Assigned Collections to false
+        if (FlexibleCollectionsIsEnabled)
+        {
+            foreach (var orgUser in organizationUserDetails)
+            {
+                if (orgUser.Type == OrganizationUserType.Manager)
+                {
+                    orgUser.Type = OrganizationUserType.User;
+                }
+
+                var permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
+                permissions.EditAssignedCollections = false;
+                permissions.DeleteAssignedCollections = false;
+                orgUser.Permissions = CoreHelpers.ClassToJsonData(permissions);
+            }
+        }
+
         var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
             ProviderUserStatusType.Confirmed);
         var providerUserOrganizationDetails =
@@ -85,7 +103,7 @@ public class SyncController : Controller
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
 
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: UseFlexibleCollections, withOrganizations: hasEnabledOrgs);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: FlexibleCollectionsIsEnabled, withOrganizations: hasEnabledOrgs);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
@@ -94,8 +112,8 @@ public class SyncController : Controller
 
         if (hasEnabledOrgs)
         {
-            collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
-            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
+            collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, FlexibleCollectionsIsEnabled);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id, FlexibleCollectionsIsEnabled);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 

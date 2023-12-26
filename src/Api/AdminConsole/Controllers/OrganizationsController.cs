@@ -210,6 +210,20 @@ public class OrganizationsController : Controller
         var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
         var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o));
+        // If Flexible Collections is enabled, downgrade any Manager roles to User and set Edit/Delete Assigned Collections to false
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
+        {
+            foreach (var response in responses)
+            {
+                if (response.Type == OrganizationUserType.Manager)
+                {
+                    response.Type = OrganizationUserType.User;
+                }
+
+                response.Permissions.EditAssignedCollections = false;
+                response.Permissions.DeleteAssignedCollections = false;
+            }
+        }
         return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
     }
 
@@ -389,7 +403,20 @@ public class OrganizationsController : Controller
         var organizationDetails = await _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
             OrganizationUserStatusType.Confirmed);
 
-        return new ProfileOrganizationResponseModel(organizationDetails);
+        var response = new ProfileOrganizationResponseModel(organizationDetails);
+        // If Flexible Collections is enabled, downgrade any Manager roles to User and set Edit/Delete Assigned Collections to false
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
+        {
+            if (response.Type == OrganizationUserType.Manager)
+            {
+                response.Type = OrganizationUserType.User;
+            }
+
+            response.Permissions.EditAssignedCollections = false;
+            response.Permissions.DeleteAssignedCollections = false;
+        }
+
+        return response;
     }
 
     [HttpPost("{id}/seat")]
