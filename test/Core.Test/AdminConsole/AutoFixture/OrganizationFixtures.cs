@@ -147,6 +147,40 @@ public class SecretsManagerOrganizationCustomization : ICustomization
     }
 }
 
+internal class TeamsStarterOrganizationCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        var organizationId = Guid.NewGuid();
+        const PlanType planType = PlanType.TeamsStarter;
+
+        fixture.Customize<Organization>(composer =>
+            composer
+                .With(organization => organization.Id, organizationId)
+                .With(organization => organization.PlanType, planType)
+                .With(organization => organization.Seats, 10)
+                .Without(organization => organization.MaxStorageGb));
+    }
+}
+
+internal class TeamsMonthlyWithAddOnsOrganizationCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        var organizationId = Guid.NewGuid();
+        const PlanType planType = PlanType.TeamsMonthly;
+
+        fixture.Customize<Organization>(composer =>
+            composer
+                .With(organization => organization.Id, organizationId)
+                .With(organization => organization.PlanType, planType)
+                .With(organization => organization.Seats, 20)
+                .With(organization => organization.UseSecretsManager, true)
+                .With(organization => organization.SmSeats, 5)
+                .With(organization => organization.SmServiceAccounts, 53));
+    }
+}
+
 internal class OrganizationCustomizeAttribute : BitCustomizeAttribute
 {
     public bool UseGroups { get; set; }
@@ -187,6 +221,16 @@ internal class SecretsManagerOrganizationCustomizeAttribute : BitCustomizeAttrib
 {
     public override ICustomization GetCustomization() =>
         new SecretsManagerOrganizationCustomization();
+}
+
+internal class TeamsStarterOrganizationCustomizeAttribute : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() => new TeamsStarterOrganizationCustomization();
+}
+
+internal class TeamsMonthlyWithAddOnsOrganizationCustomizeAttribute : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() => new TeamsMonthlyWithAddOnsOrganizationCustomization();
 }
 
 internal class EphemeralDataProtectionCustomization : ICustomization

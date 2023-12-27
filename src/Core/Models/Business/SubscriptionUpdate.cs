@@ -9,7 +9,7 @@ public abstract class SubscriptionUpdate
     public abstract List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription);
     public abstract List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription);
 
-    public bool UpdateNeeded(Subscription subscription)
+    public virtual bool UpdateNeeded(Subscription subscription)
     {
         var upgradeItemsOptions = UpgradeItemsOptions(subscription);
         foreach (var upgradeItemOptions in upgradeItemsOptions)
