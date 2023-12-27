@@ -1,6 +1,13 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
-WITH RECOMPILE
+WITH
+    RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -45,9 +52,9 @@ BEGIN
         [OrganizationId] = @Id
 
     DELETE CU
-    FROM 
+    FROM
         [dbo].[CollectionUser] CU
-    INNER JOIN 
+        INNER JOIN
         [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
     WHERE 
         [OU].[OrganizationId] = @Id
@@ -55,7 +62,7 @@ BEGIN
     DELETE AP
     FROM
         [dbo].[AccessPolicy] AP
-    INNER JOIN
+        INNER JOIN
         [dbo].[OrganizationUser] OU ON [AP].[OrganizationUserId] = [OU].[Id]
     WHERE
         [OU].[OrganizationId] = @Id
@@ -63,7 +70,7 @@ BEGIN
     DELETE GU
     FROM
         [dbo].[GroupUser] GU
-    INNER JOIN
+        INNER JOIN
         [dbo].[OrganizationUser] OU ON [GU].[OrganizationUserId] = [OU].[Id]
     WHERE
         [OU].[OrganizationId] = @Id
@@ -100,7 +107,7 @@ BEGIN
     DELETE AK
     FROM
         [dbo].[ApiKey] AK
-    INNER JOIN
+        INNER JOIN
         [dbo].[ServiceAccount] SA ON [AK].[ServiceAccountId] = [SA].[Id]
     WHERE
         [SA].[OrganizationId] = @Id
@@ -108,7 +115,7 @@ BEGIN
     DELETE AP
     FROM
         [dbo].[AccessPolicy] AP
-    INNER JOIN
+        INNER JOIN
         [dbo].[ServiceAccount] SA ON [AP].[GrantedServiceAccountId] = [SA].[Id]
     WHERE
         [SA].[OrganizationId] = @Id
