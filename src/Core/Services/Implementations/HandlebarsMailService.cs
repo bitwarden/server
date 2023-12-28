@@ -263,7 +263,7 @@ public class HandlebarsMailService : IMailService
             });
         var model = new PasswordlessSignInModel
         {
-            Url = url.AbsoluteUri
+            Url = url.OriginalString
         };
         await AddMessageContentAsync(message, "Auth.PasswordlessSignIn", model);
         message.Category = "PasswordlessSignIn";
