@@ -213,7 +213,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId,
-        bool includeGroups, bool includeCollections)
+        bool includeGroups, bool includeCollections, bool flexibleCollectionsIsEnabled)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -244,8 +244,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             if (includeCollections)
             {
+                var userCollectionsSprocName = flexibleCollectionsIsEnabled
+                    ? "[dbo].[CollectionUser_ReadByOrganizationUserIds_V2]"
+                    : "[dbo].[CollectionUser_ReadByOrganizationUserIds]";
+
                 userCollections = (await connection.QueryAsync<CollectionUser>(
-                    "[dbo].[CollectionUser_ReadByOrganizationUserIds]",
+                    userCollectionsSprocName,
                     new { OrganizationUserIds = orgUserIds },
                     commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
             }

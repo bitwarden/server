@@ -109,7 +109,9 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
+        var organizationUsers =
+            await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections,
+            flexibleCollectionsIsEnabled: UseFlexibleCollections);
         var responseTasks = organizationUsers.Select(async o => new OrganizationUserUserDetailsResponseModel(o,
             await _userService.TwoFactorIsEnabledAsync(o)));
         var responses = await Task.WhenAll(responseTasks);

@@ -23,7 +23,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
         GetDetailsByIdWithCollectionsAsync(Guid id);
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId);
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId,
-        bool includeGroups, bool includeCollections);
+        bool includeGroups, bool includeCollections, bool flexibleCollectionsIsEnabled);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId,

@@ -304,8 +304,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId,
-        bool includeGroups, bool includeCollections)
+        bool includeGroups, bool includeCollections, bool flexibleCollectionsIsEnabled)
     {
+        // Note: Dapper implementation used AccessAll logic so it needed the feature flag
+        // EF does not use AccessAll logic, so the parameter is unused here but still added to fit the interface
+
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
