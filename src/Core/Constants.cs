@@ -23,7 +23,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
-    public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
+    public const string CipherKeyEncryptionMinimumVersion = "2024.1.0";
 
     /// <summary>
     /// When you set the ProrationBehavior to create_prorations,
