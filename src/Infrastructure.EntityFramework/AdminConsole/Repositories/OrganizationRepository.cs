@@ -88,7 +88,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseResetPassword = e.UseResetPassword,
                 UseScim = e.UseScim,
                 UseCustomPermissions = e.UseCustomPermissions,
-                UsePolicies = e.UsePolicies
+                UsePolicies = e.UsePolicies,
+                LimitCollectionCreationDeletion = e.LimitCollectionCreationDeletion,
+                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems
             }).ToListAsync();
         }
     }
