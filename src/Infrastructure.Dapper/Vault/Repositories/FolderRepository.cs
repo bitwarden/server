@@ -44,6 +44,11 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
         }
     }
 
+    public override Task DeleteAsync(Folder folder)
+    {
+        throw new NotImplementedException("Use the overload for FolderRepository.DeleteAsync instead.");
+    }
+
     public async Task DeleteAsync(Folder folder, bool useFlexibleCollections)
     {
         var sprocName = useFlexibleCollections
