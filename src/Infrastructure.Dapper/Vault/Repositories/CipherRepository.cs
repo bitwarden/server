@@ -126,8 +126,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
+    public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled)
     {
+        var sprocName = flexibleCollectionsIsEnabled
+            ? $"[{Schema}].[Cipher_CreateWithCollections_V2]"
+            : $"[{Schema}].[Cipher_CreateWithCollections]";
+
         cipher.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<CipherWithCollections>(
             JsonSerializer.Serialize(cipher));
@@ -135,7 +139,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Cipher_CreateWithCollections]",
+                sprocName,
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -153,16 +157,21 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
+    public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled)
     {
         cipher.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<CipherDetailsWithCollections>(
             JsonSerializer.Serialize(cipher));
         objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
+
+        var sprocName = flexibleCollectionsIsEnabled
+            ? $"[{Schema}].[CipherDetails_CreateWithCollections_V2]"
+            : $"[{Schema}].[CipherDetails_CreateWithCollections]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[CipherDetails_CreateWithCollections]",
+                sprocName,
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -191,16 +200,20 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
+    public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled)
     {
         var objWithCollections = JsonSerializer.Deserialize<CipherWithCollections>(
             JsonSerializer.Serialize(obj));
         objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
 
+        var sprocName = flexibleCollectionsIsEnabled
+            ? $"[{Schema}].[Cipher_UpdateWithCollections_V2]"
+            : $"[{Schema}].[Cipher_UpdateWithCollections]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.ExecuteScalarAsync<int>(
-                $"[{Schema}].[Cipher_UpdateWithCollections]",
+                sprocName,
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
             return result >= 0;

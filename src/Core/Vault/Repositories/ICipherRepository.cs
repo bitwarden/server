@@ -15,12 +15,12 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections);
     Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true);
     Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
-    Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
+    Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled);
     Task CreateAsync(CipherDetails cipher);
-    Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds);
+    Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled);
     Task ReplaceAsync(CipherDetails cipher);
     Task UpsertAsync(CipherDetails cipher);
-    Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
+    Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled);
     Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
     Task UpdateAttachmentAsync(CipherAttachment attachment);
     Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);

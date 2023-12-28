@@ -82,14 +82,14 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task CreateAsync(Core.Vault.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
+    public async Task CreateAsync(Core.Vault.Entities.Cipher cipher, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled)
     {
         cipher = await CreateAsync(cipher);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             await UpdateCollectionsAsync(dbContext, cipher.Id,
-                cipher.UserId, cipher.OrganizationId, collectionIds);
+                cipher.UserId, cipher.OrganizationId, collectionIds, flexibleCollectionsIsEnabled);
             await dbContext.SaveChangesAsync();
         }
     }
@@ -132,14 +132,14 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         return cipher;
     }
 
-    public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
+    public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled)
     {
         cipher = await CreateAsyncReturnCipher(cipher);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             await UpdateCollectionsAsync(dbContext, cipher.Id,
-                cipher.UserId, cipher.OrganizationId, collectionIds);
+                cipher.UserId, cipher.OrganizationId, collectionIds, flexibleCollectionsIsEnabled);
             await dbContext.SaveChangesAsync();
         }
     }
@@ -517,7 +517,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    private static async Task<int> UpdateCollectionsAsync(DatabaseContext context, Guid id, Guid? userId, Guid? organizationId, IEnumerable<Guid> collectionIds)
+    private static async Task<int> UpdateCollectionsAsync(DatabaseContext context, Guid id, Guid? userId, Guid? organizationId, IEnumerable<Guid> collectionIds, bool flexibleCollectionsIsEnabled)
     {
         if (!organizationId.HasValue || !collectionIds.Any())
         {
@@ -532,11 +532,17 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 .Where(c => c.OrganizationId == organizationId.Value)
                 .Select(c => c.Id);
         }
+        else if (flexibleCollectionsIsEnabled)
+        {
+            // UserId has value but using new Flexible Collections logic
+            var query = new CollectionsReadByOrganizationIdUserIdQuery(organizationId, userId.Value);
+            availableCollectionsQuery = query.Run(context).Select(c => c.Id);
+        }
         else
         {
+            // UserId has value but NOT using new Flexible Collections logic
             availableCollectionsQuery = from c in context.Collections
-                                        join o in context.Organizations
-                                            on c.OrganizationId equals o.Id
+                                        join o in context.Organizations on c.OrganizationId equals o.Id
                                         join ou in context.OrganizationUsers
                                             on new { OrganizationId = o.Id, UserId = userId } equals
                                             new { ou.OrganizationId, ou.UserId }
@@ -580,7 +586,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         return 0;
     }
 
-    public async Task<bool> ReplaceAsync(Core.Vault.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
+    public async Task<bool> ReplaceAsync(Core.Vault.Entities.Cipher cipher, IEnumerable<Guid> collectionIds,
+        bool flexibleCollectionsIsEnabled)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -588,7 +595,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var transaction = await dbContext.Database.BeginTransactionAsync();
             var successes = await UpdateCollectionsAsync(
                 dbContext, cipher.Id, cipher.UserId,
-                cipher.OrganizationId, collectionIds);
+                cipher.OrganizationId, collectionIds, flexibleCollectionsIsEnabled);
 
             if (successes < 0)
             {

@@ -106,7 +106,8 @@ public class CipherRepositoryTests
         }, new List<Guid>
         {
             collection.Id,
-        });
+        },
+        flexibleCollectionsIsEnabled: true);
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
 

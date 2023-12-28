@@ -96,7 +96,7 @@ public class CipherService : ICipherService
                     // Set user ID to limit scope of collection ids in the create sproc
                     cipher.UserId = savingUserId;
                 }
-                await _cipherRepository.CreateAsync(cipher, collectionIds);
+                await _cipherRepository.CreateAsync(cipher, collectionIds, UseFlexibleCollections);
 
                 await _referenceEventService.RaiseEventAsync(
                     new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value), _currentContext));
@@ -140,7 +140,7 @@ public class CipherService : ICipherService
                 {
                     throw new BadRequestException("Specified CollectionId does not exist on the specified Organization.");
                 }
-                await _cipherRepository.CreateAsync(cipher, collectionIds);
+                await _cipherRepository.CreateAsync(cipher, collectionIds, UseFlexibleCollections);
             }
             else
             {
@@ -549,7 +549,7 @@ public class CipherService : ICipherService
                 cipher.SetAttachments(attachmentsToUpdateMetadata);
             }
 
-            if (!await _cipherRepository.ReplaceAsync(cipher, collectionIds))
+            if (!await _cipherRepository.ReplaceAsync(cipher, collectionIds, UseFlexibleCollections))
             {
                 throw new BadRequestException("Unable to save.");
             }
