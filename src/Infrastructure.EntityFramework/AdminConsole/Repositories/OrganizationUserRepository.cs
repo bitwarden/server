@@ -204,16 +204,30 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>> GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>>
+        GetDetailsByIdWithCollectionsAsync(Guid id, bool flexibleCollectionsIsEnabled)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from ou in dbContext.OrganizationUsers
-                        join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-                        where !ou.AccessAll && ou.Id == id
-                        select cu;
+
+            IQueryable<CollectionUser> query;
+            if (flexibleCollectionsIsEnabled)
+            {
+                query = from ou in dbContext.OrganizationUsers
+                            join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
+                            where ou.Id == id
+                            select cu;
+            }
+            else
+            {
+                query = from ou in dbContext.OrganizationUsers
+                            join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
+                            where !ou.AccessAll && ou.Id == id
+                            select cu;
+            }
+
             var collections = await query.Select(cu => new CollectionAccessSelection
             {
                 Id = cu.CollectionId,
@@ -221,6 +235,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 HidePasswords = cu.HidePasswords,
                 Manage = cu.Manage
             }).ToListAsync();
+
             return new Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>(organizationUserUserDetails, collections);
         }
     }

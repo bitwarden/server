@@ -184,13 +184,18 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.SingleOrDefault();
         }
     }
+
     public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>>
-        GetDetailsByIdWithCollectionsAsync(Guid id)
+        GetDetailsByIdWithCollectionsAsync(Guid id, bool flexibleCollectionsIsEnabled)
     {
+        var sprocName = flexibleCollectionsIsEnabled
+            ? "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById_V2]"
+            : "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]",
+                sprocName,
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 

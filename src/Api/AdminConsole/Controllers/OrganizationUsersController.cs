@@ -79,7 +79,8 @@ public class OrganizationUsersController : Controller
     [HttpGet("{id}")]
     public async Task<OrganizationUserDetailsResponseModel> Get(string id, bool includeGroups = false)
     {
-        var organizationUser = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(new Guid(id));
+        var organizationUser =
+            await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(new Guid(id), UseFlexibleCollections);
         if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
         {
             throw new NotFoundException();
