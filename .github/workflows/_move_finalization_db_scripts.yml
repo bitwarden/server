@@ -1,0 +1,164 @@
+---
+
+name: _move_finalization_db_scripts
+run-name: Move finalization db scripts
+
+on:
+  workflow_call:
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+
+  setup:
+    name: Setup
+    runs-on: ubuntu-22.04
+    outputs:
+      migration_filename_prefix: ${{ steps.prefix.outputs.prefix }}
+      copy_finalization_scripts: ${{ steps.check-finalization-scripts-existence.outputs.copy_finalization_scripts }}
+    steps:
+      - name: Login to Azure
+        uses: Azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.5.1
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Checkout Branch
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          token: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+
+      - name: Get script prefix
+        id: prefix
+        run: echo "prefix=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Check if any files in db finalization
+        id: check-finalization-scripts-existence
+        run: |
+          if [ -f util/Migrator/DbScripts_finalization/* ]; then
+            echo "copy_finalization_scripts=true" >> $GITHUB_OUTPUT
+          else
+            echo "copy_finalization_scripts=false" >> $GITHUB_OUTPUT
+          fi
+
+  move-finalization-db-scripts:
+    name: Move finalization db scripts
+    runs-on: ubuntu-22.04
+    needs: setup
+    if: ${{ needs.setup.outputs.copy_finalization_scripts == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Generate branch name
+        id: branch_name
+        env:
+          PREFIX: ${{ needs.setup.outputs.migration_filename_prefix }}
+        run: echo "branch_name=move_finalization_db_scripts_$PREFIX" >> $GITHUB_OUTPUT
+
+      - name: "Create branch"
+        env:
+          BRANCH: ${{ steps.branch_name.outputs.branch_name }}
+        run: git switch -c $BRANCH
+
+      - name: Move DbScripts_finalization
+        id: move-files
+        env:
+          PREFIX: ${{ needs.setup.outputs.migration_filename_prefix }}
+        run: |
+          src_dir="util/Migrator/DbScripts_finalization"
+          dest_dir="util/Migrator/DbScripts"
+          i=0
+
+          moved_files=""
+          for file in "$src_dir"/*; do
+            filenumber=$(printf "%02d" $i)
+
+            filename=$(basename "$file")
+            new_filename="${PREFIX}_${filenumber}_${filename}"
+            dest_file="$dest_dir/$new_filename"
+
+            mv "$file" "$dest_file"
+            moved_files="$moved_files \n $filename -> $new_filename"
+
+            i=$((i+1))
+          done
+          echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
+
+      - name: Login to Azure - Prod Subscription
+        uses: Azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.5.1
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve Secrets
+        id: retrieve-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-gpg-private-key,
+            github-gpg-private-key-passphrase,
+            devops-alerts-slack-webhook-url"
+
+      - name: Import GPG keys
+        uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # v6.0.0
+        with:
+          gpg_private_key: ${{ steps.retrieve-secrets.outputs.github-gpg-private-key }}
+          passphrase: ${{ steps.retrieve-secrets.outputs.github-gpg-private-key-passphrase }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Commit and push changes
+        id: commit
+        run: |
+          git config --local user.email "106330231+bitwarden-devops-bot@users.noreply.github.com"
+          git config --local user.name "bitwarden-devops-bot"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "Move DbScripts_finalization to DbScripts" -a
+            git push -u origin ${{ steps.branch_name.outputs.branch_name }}
+            echo "pr_needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes to commit!";
+            echo "pr_needed=false" >> $GITHUB_OUTPUT
+            echo "### :mega: No changes to commit! PR was ommited." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create PR for ${{ steps.branch_name.outputs.branch_name }}
+        if: ${{ steps.commit.outputs.pr_needed == 'true' }}
+        id: create-pr
+        env:
+          BRANCH: ${{ steps.branch_name.outputs.branch_name }}
+          GH_TOKEN: ${{ github.token }}
+          MOVED_FILES: ${{ steps.move-files.outputs.moved_files }}
+          TITLE: "Move finalization db scripts"
+        run: |
+          PR_URL=$(gh pr create --title "$TITLE" \
+            --base "main" \
+            --head "$BRANCH" \
+            --label "automated pr" \
+            --body "
+              ## Automated movement of DbScripts_finalization to DbScripts
+
+              ## Files moved:
+              $(echo -e "$MOVED_FILES")
+              ")
+          echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
+
+      - name: Notify Slack about creation of PR
+        if: ${{ steps.commit.outputs.pr_needed == 'true' }}
+        uses: act10ns/slack@ed1309ab9862e57e9e583e51c7889486b9a00b0f # v2.0.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+        with:
+          message: "Created PR for moving DbScripts_finalization to DbScripts: ${{ steps.create-pr.outputs.pr_url }}"
+          status: ${{ job.status }}

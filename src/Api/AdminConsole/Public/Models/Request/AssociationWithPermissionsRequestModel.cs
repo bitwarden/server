@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Data;
 
-namespace Bit.Api.Auth.Models.Public.Request;
+namespace Bit.Api.AdminConsole.Public.Models.Request;
 
 public class AssociationWithPermissionsRequestModel : AssociationWithPermissionsBaseModel
 {

@@ -23,12 +23,18 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
-    public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
+    public const string CipherKeyEncryptionMinimumVersion = "2024.1.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
     /// </summary>
     public const string IdentityProvider = "bitwarden";
+
+    /// <summary>
+    /// Date identifier used in ProviderService to determine if a provider was created before Nov 6, 2023.
+    /// If true, the organization plan assigned to that provider is updated to a 2020 plan.
+    /// </summary>
+    public static readonly DateTime ProviderCreatedPriorNov62023 = new DateTime(2023, 11, 6);
 }
 
 public static class AuthConstants

@@ -38,6 +38,10 @@
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
+      "matchManagers": ["github-actions", "dockerfile", "docker-compose"],
+      "commitMessagePrefix": "[deps] DevOps:"
+    },
+    {
       "matchPackageNames": ["DnsClient", "Quartz"],
       "description": "Admin Console owned dependencies",
       "commitMessagePrefix": "[deps] AC:",
