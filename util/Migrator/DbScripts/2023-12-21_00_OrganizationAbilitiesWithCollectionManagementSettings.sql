@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
+--Update stored procedure to include LimitCollectionCreationDeletion property
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -8,11 +9,11 @@ BEGIN
         [UseEvents],
         [Use2fa],
         CASE
-        WHEN [Use2fa] = 1 AND [TwoFactorProviders] IS NOT NULL AND [TwoFactorProviders] != '{}' THEN
-            1
-        ELSE
-            0
-        END AS [Using2fa],
+            WHEN [Use2fa] = 1 AND [TwoFactorProviders] IS NOT NULL AND [TwoFactorProviders] != '{}' THEN
+                1
+            ELSE
+                0
+            END AS [Using2fa],
         [UsersGetPremium],
         [UseCustomPermissions],
         [UseSso],
@@ -26,3 +27,4 @@ BEGIN
     FROM
         [dbo].[Organization]
 END
+GO

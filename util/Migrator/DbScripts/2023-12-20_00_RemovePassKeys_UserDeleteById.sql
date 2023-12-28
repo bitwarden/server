@@ -1,6 +1,13 @@
-﻿CREATE PROCEDURE [dbo].[User_DeleteById]
+IF OBJECT_ID('[dbo].[User_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[User_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[User_DeleteById]
     @Id UNIQUEIDENTIFIER
-WITH RECOMPILE
+WITH
+    RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
