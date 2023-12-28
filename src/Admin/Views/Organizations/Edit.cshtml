@@ -8,6 +8,7 @@
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_View);
     var canInitiateTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateTrial);
     var canDelete = AccessControlService.UserHasPermission(Permission.Org_Delete);
+    var canUnlinkFromProvider = AccessControlService.UserHasPermission(Permission.Provider_Edit);
 }
 
 @section Scripts {
@@ -81,13 +82,22 @@
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
     <div class="ml-auto d-flex">
-        @if (canInitiateTrial)
+        @if (canInitiateTrial && Model.Provider is null)
         {
             <button class="btn btn-secondary mr-2" type="button" id="teams-trial">
                 Teams Trial
             </button>
             <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
                 Enterprise Trial
+            </button>
+        }
+        @if (canUnlinkFromProvider && Model.Provider is not null)
+        {
+            <button
+                class="btn btn-outline-danger mr-2"
+                onclick="return unlinkProvider('@Model.Organization.Id', '@Model.Name');"
+            >
+                Unlink provider
             </button>
         }
         @if (canDelete)
