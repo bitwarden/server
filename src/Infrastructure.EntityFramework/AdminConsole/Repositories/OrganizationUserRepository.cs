@@ -131,31 +131,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
-    {
-        var organizationUser = await base.GetByIdAsync(id);
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = await (
-                from ou in dbContext.OrganizationUsers
-                join cu in dbContext.CollectionUsers
-                    on ou.Id equals cu.OrganizationUserId
-                where !ou.AccessAll &&
-                    ou.Id == id
-                select cu).ToListAsync();
-            var collections = query.Select(cu => new CollectionAccessSelection
-            {
-                Id = cu.CollectionId,
-                ReadOnly = cu.ReadOnly,
-                HidePasswords = cu.HidePasswords,
-                Manage = cu.Manage,
-            });
-            return new Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>(
-                organizationUser, collections.ToList());
-        }
-    }
-
     public async Task<Core.Entities.OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
