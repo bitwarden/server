@@ -6,18 +6,18 @@ namespace Bit.Billing.Models;
 
 public class PayPalIPNTransactionModel
 {
-    public string TransactionId { get; init; }
-    public string TransactionType { get; init; }
-    public string ParentTransactionId { get; init; }
-    public string PaymentStatus { get; init; }
-    public string PaymentType { get; init; }
-    public decimal MerchantGross { get; init; }
-    public string MerchantCurrency { get; init; }
-    public string ReceiverId { get; init; }
-    public DateTime PaymentDate { get; init; }
-    public Guid? UserId { get; init; }
-    public Guid? OrganizationId { get; init; }
-    public bool IsAccountCredit { get; init; }
+    public string TransactionId { get; }
+    public string TransactionType { get; }
+    public string ParentTransactionId { get; }
+    public string PaymentStatus { get; }
+    public string PaymentType { get; }
+    public decimal MerchantGross { get; }
+    public string MerchantCurrency { get; }
+    public string ReceiverId { get; }
+    public DateTime PaymentDate { get; }
+    public Guid? UserId { get; }
+    public Guid? OrganizationId { get; }
+    public bool IsAccountCredit { get; }
 
     public PayPalIPNTransactionModel(string formData)
     {

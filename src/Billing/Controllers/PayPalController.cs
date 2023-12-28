@@ -51,20 +51,26 @@ public class PayPalController : Controller
             ? HttpContext.Request.Query["key"].ToString()
             : null;
 
+        if (string.IsNullOrEmpty(key))
+        {
+            _logger.LogError("PayPal IPN: Key is missing");
+            return BadRequest();
+        }
+
         if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.PayPal.WebhookKey))
         {
-            _logger.LogError("PayPal IPN: Webhook key is incorrect or does not exist");
-            return new BadRequestResult();
+            _logger.LogError("PayPal IPN: Key is incorrect");
+            return BadRequest();
         }
 
         using var streamReader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8);
 
         var requestContent = await streamReader.ReadToEndAsync();
 
-        if (string.IsNullOrWhiteSpace(requestContent))
+        if (string.IsNullOrEmpty(requestContent))
         {
-            _logger.LogError("PayPal IPN: Webhook request content was null or empty");
-            return new BadRequestResult();
+            _logger.LogError("PayPal IPN: Request body is null or empty");
+            return BadRequest();
         }
 
         var transactionModel = new PayPalIPNTransactionModel(requestContent);
@@ -73,16 +79,16 @@ public class PayPalController : Controller
 
         if (!entityId.HasValue)
         {
-            _logger.LogWarning("PayPal IPN ({Id}): Webhook did not contain User ID or Organization ID", transactionModel.TransactionId);
-            return new OkResult();
+            _logger.LogError("PayPal IPN ({Id}): 'custom' did not contain a User ID or Organization ID", transactionModel.TransactionId);
+            return BadRequest();
         }
 
         var verified = await _payPalIPNClient.VerifyIPN(entityId.Value, requestContent);
 
         if (!verified)
         {
-            _logger.LogError("PayPal IPN ({Id}): Could not verify request content", transactionModel.TransactionId);
-            return new BadRequestResult();
+            _logger.LogError("PayPal IPN ({Id}): Verification failed", transactionModel.TransactionId);
+            return BadRequest();
         }
 
         if (transactionModel.TransactionType != "web_accept" &&
@@ -93,30 +99,30 @@ public class PayPalController : Controller
                 transactionModel.TransactionId,
                 transactionModel.TransactionType);
 
-            return new OkResult();
+            return Ok();
         }
 
         if (transactionModel.ReceiverId != _billingSettings.PayPal.BusinessId)
         {
-            _logger.LogError(
+            _logger.LogWarning(
                 "PayPal IPN ({Id}): Receiver ID ({ReceiverId}) does not match Bitwarden business ID ({BusinessId})",
                 transactionModel.TransactionId,
                 transactionModel.ReceiverId,
                 _billingSettings.PayPal.BusinessId);
 
-            return new BadRequestResult();
+            return Ok();
         }
 
         if (transactionModel.PaymentStatus == "Refunded" && string.IsNullOrEmpty(transactionModel.ParentTransactionId))
         {
             _logger.LogWarning("PayPal IPN ({Id}): Parent transaction ID is required for refund", transactionModel.TransactionId);
-            return new OkResult();
+            return Ok();
         }
 
         if (transactionModel.PaymentType == "echeck" && transactionModel.PaymentStatus != "Refunded")
         {
             _logger.LogWarning("PayPal IPN ({Id}): Transaction was an eCheck payment", transactionModel.TransactionId);
-            return new OkResult();
+            return Ok();
         }
 
         if (transactionModel.MerchantCurrency != "USD")
@@ -125,7 +131,7 @@ public class PayPalController : Controller
                 transactionModel.TransactionId,
                 transactionModel.MerchantCurrency);
 
-            return new OkResult();
+            return Ok();
         }
 
         switch (transactionModel.PaymentStatus)
@@ -139,7 +145,7 @@ public class PayPalController : Controller
                     if (existingTransaction != null)
                     {
                         _logger.LogWarning("PayPal IPN ({Id}): Already processed this completed transaction", transactionModel.TransactionId);
-                        return new OkResult();
+                        return Ok();
                     }
 
                     try
@@ -181,7 +187,7 @@ public class PayPalController : Controller
                     if (existingTransaction != null)
                     {
                         _logger.LogWarning("PayPal IPN ({Id}): Already processed this refunded transaction", transactionModel.TransactionId);
-                        return new OkResult();
+                        return Ok();
                     }
 
                     var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -191,7 +197,7 @@ public class PayPalController : Controller
                     if (parentTransaction == null)
                     {
                         _logger.LogError("PayPal IPN ({Id}): Could not find parent transaction", transactionModel.TransactionId);
-                        return new BadRequestResult();
+                        return BadRequest();
                     }
 
                     var refundAmount = Math.Abs(transactionModel.MerchantGross);
@@ -227,7 +233,7 @@ public class PayPalController : Controller
                 }
         }
 
-        return new OkResult();
+        return Ok();
     }
 
     private async Task ApplyCreditAsync(Transaction transaction)
