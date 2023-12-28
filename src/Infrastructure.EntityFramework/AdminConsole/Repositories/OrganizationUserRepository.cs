@@ -290,7 +290,21 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new OrganizationUserUserDetailsViewQuery();
+            var users = await (from ou in view.Run(dbContext)
+                               where ou.OrganizationId == organizationId
+                               select ou).ToListAsync();
+            return users;
+        }
+    }
+
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId,
+        bool includeGroups, bool includeCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
