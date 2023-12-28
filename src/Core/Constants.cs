@@ -23,7 +23,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
-    public const string CipherKeyEncryptionMinimumVersion = "2024.1.0";
+    public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
