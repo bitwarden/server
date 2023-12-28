@@ -1,4 +1,9 @@
--- Flexible Collections: create new UserCipherDetails sproc that doesn't use AccessAll logic
+-- 2023-11-28_00_DeprecateAccessAll_UserCipherDetails introduced a bug in UserCipherDetails_V2 which inverted
+-- the ReadOnly and HidePasswords logic. That should have been fixed in 2023-11-29_00_FixUserCipherDetails_V2
+-- but for some reason that sproc was not being run in cloud environments, and/or may not have refreshed
+-- metadata of sprocs that used that function.
+
+-- This migration just replicates the original 2023-11-28 migration but with the fix from 2023-11-29.
 
 CREATE OR ALTER FUNCTION [dbo].[UserCipherDetails_V2](@UserId UNIQUEIDENTIFIER)
 RETURNS TABLE
