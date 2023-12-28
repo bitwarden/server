@@ -216,16 +216,16 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             if (flexibleCollectionsIsEnabled)
             {
                 query = from ou in dbContext.OrganizationUsers
-                            join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-                            where ou.Id == id
-                            select cu;
+                        join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
+                        where ou.Id == id
+                        select cu;
             }
             else
             {
                 query = from ou in dbContext.OrganizationUsers
-                            join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-                            where !ou.AccessAll && ou.Id == id
-                            select cu;
+                        join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
+                        where !ou.AccessAll && ou.Id == id
+                        select cu;
             }
 
             var collections = await query.Select(cu => new CollectionAccessSelection
