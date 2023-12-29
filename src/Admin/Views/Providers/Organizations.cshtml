@@ -53,7 +53,7 @@
                                     <div class="float-right">
                                         @if (canUnlinkFromProvider)
                                         {
-                                            <a href="#" class="text-danger float-right" onclick="return unlinkProvider('@Model.Provider.Id', '@providerOrganization.Id', '@providerOrganization.OrganizationName');">
+                                            <a href="#" class="text-danger float-right" onclick="return unlinkProvider('@Model.Provider.Id', '@providerOrganization.Id');">
                                                 Unlink provider
                                             </a>
                                         }

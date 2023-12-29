@@ -113,8 +113,8 @@
         }
     }
 
-    function unlinkProvider(id, orgName) {
-        if (confirm(`Are you sure you want to unlink ${orgName} from this provider?`)) {
+    function unlinkProvider(id) {
+        if (confirm('Are you sure you want to unlink this organization from its provider?')) {
             $.ajax({
                 type: "POST",
                 url: `@Url.Action("UnlinkOrganizationFromProvider", "Organizations")?id=${id}`,
