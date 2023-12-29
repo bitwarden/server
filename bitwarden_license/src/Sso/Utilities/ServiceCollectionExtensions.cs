@@ -4,8 +4,8 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.IdentityServer;
 using Bit.Sso.Models;
-using IdentityServer4.Models;
-using IdentityServer4.ResponseHandling;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.ResponseHandling;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Sustainsys.Saml2.AspNetCore2;
 
@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         var identityServerBuilder = services
             .AddIdentityServer(options =>
             {
+                options.LicenseKey = globalSettings.IdentityServer.LicenseKey;
                 options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";
                 if (env.IsDevelopment())
                 {
@@ -59,6 +60,7 @@ public static class ServiceCollectionExtensions
                     options.UserInteraction.ErrorIdParameter = "errorId";
                 }
                 options.InputLengthRestrictions.UserName = 256;
+                options.KeyManagement.Enabled = false;
             })
             .AddInMemoryCaching()
             .AddInMemoryClients(new List<Client>

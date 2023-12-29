@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Tools.Entities;
 using Bit.Infrastructure.EFIntegration.Test.Tools.AutoFixture;

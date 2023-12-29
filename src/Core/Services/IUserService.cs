@@ -33,7 +33,6 @@ public interface IUserService
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
-    Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key, string orgIdentifier = null);
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
@@ -74,6 +73,9 @@ public interface IUserService
     Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
     Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
+
+    Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
+        bool validatePassword = true, bool refreshStamp = true);
     Task RotateApiKeyAsync(User user);
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);

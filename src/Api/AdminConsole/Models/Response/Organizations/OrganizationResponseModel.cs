@@ -1,5 +1,5 @@
 ﻿using Bit.Api.Models.Response;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
@@ -54,6 +54,8 @@ public class OrganizationResponseModel : ResponseModel
         SmServiceAccounts = organization.SmServiceAccounts;
         MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
+        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
     }
 
     public Guid Id { get; set; }
@@ -93,6 +95,8 @@ public class OrganizationResponseModel : ResponseModel
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool AllowAdminAccessToAllCollectionItems { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
@@ -112,7 +116,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
-        Discount = subscription.Discount != null ? new BillingCustomerDiscount(subscription.Discount) : null;
+        CustomerDiscount = subscription.CustomerDiscount != null ? new BillingCustomerDiscount(subscription.CustomerDiscount) : null;
         Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
 
         if (hideSensitiveData)
@@ -143,7 +147,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 
     public string StorageName { get; set; }
     public double? StorageGb { get; set; }
-    public BillingCustomerDiscount Discount { get; set; }
+    public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
 

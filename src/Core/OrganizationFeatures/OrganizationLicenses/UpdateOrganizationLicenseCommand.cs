@@ -1,7 +1,8 @@
 ﻿#nullable enable
 
 using System.Text.Json;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
@@ -17,15 +18,21 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     private readonly ILicensingService _licensingService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationService _organizationService;
+    private readonly IFeatureService _featureService;
+    private readonly ICurrentContext _currentContext;
 
     public UpdateOrganizationLicenseCommand(
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService,
+        IFeatureService featureService,
+        ICurrentContext currentContext)
     {
         _licensingService = licensingService;
         _globalSettings = globalSettings;
         _organizationService = organizationService;
+        _featureService = featureService;
+        _currentContext = currentContext;
     }
 
     public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
@@ -58,8 +65,10 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
 
     private async Task UpdateOrganizationAsync(SelfHostedOrganizationDetails selfHostedOrganizationDetails, OrganizationLicense license)
     {
+        var flexibleCollectionsMvpIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        var flexibleCollectionsV1IsEnabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
         var organization = selfHostedOrganizationDetails.ToOrganization();
-        organization.UpdateFromLicense(license);
+        organization.UpdateFromLicense(license, flexibleCollectionsMvpIsEnabled, flexibleCollectionsV1IsEnabled);
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }

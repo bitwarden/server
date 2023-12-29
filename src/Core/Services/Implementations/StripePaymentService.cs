@@ -1,7 +1,9 @@
 ﻿using Bit.Billing.Models;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -667,7 +669,7 @@ public class StripePaymentService : IPaymentService
 
             if (!stripePaymentMethod && subInvoiceMetadata.Any())
             {
-                var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
+                var invoices = await _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
                 {
                     Subscription = subscription.Id
                 });
@@ -739,7 +741,6 @@ public class StripePaymentService : IPaymentService
         SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate)
     {
         // remember, when in doubt, throw
-
         var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId);
         if (sub == null)
         {
@@ -858,9 +859,38 @@ public class StripePaymentService : IPaymentService
         return paymentIntentClientSecret;
     }
 
+    public Task<string> AdjustSubscription(
+        Organization organization,
+        StaticStore.Plan updatedPlan,
+        int newlyPurchasedPasswordManagerSeats,
+        bool subscribedToSecretsManager,
+        int? newlyPurchasedSecretsManagerSeats,
+        int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+        int newlyPurchasedAdditionalStorage,
+        DateTime? prorationDate = null)
+        => FinalizeSubscriptionChangeAsync(
+            organization,
+            new CompleteSubscriptionUpdate(
+                organization,
+                new SubscriptionData
+                {
+                    Plan = updatedPlan,
+                    PurchasedPasswordManagerSeats = newlyPurchasedPasswordManagerSeats,
+                    SubscribedToSecretsManager = subscribedToSecretsManager,
+                    PurchasedSecretsManagerSeats = newlyPurchasedSecretsManagerSeats,
+                    PurchasedAdditionalSecretsManagerServiceAccounts = newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+                    PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage
+                }),
+            prorationDate);
+
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
     {
         return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
+    }
+
+    public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
+    {
+        return FinalizeSubscriptionChangeAsync(organization, new SmSeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
     }
 
     public Task<string> AdjustServiceAccountsAsync(Organization organization, StaticStore.Plan plan, int additionalServiceAccounts, DateTime? prorationDate = null)
@@ -1563,7 +1593,7 @@ public class StripePaymentService : IPaymentService
 
             if (customer.Discount != null)
             {
-                subscriptionInfo.Discount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
             }
 
             if (subscriber.IsUser())
@@ -1845,15 +1875,26 @@ public class StripePaymentService : IPaymentService
             return null;
         }
 
-        var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
+        var options = new StripeInvoiceListOptions
         {
             Customer = customer.Id,
-            Limit = 50
-        });
+            SelectAll = true
+        };
 
-        return invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
-            .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
+        try
+        {
+            var invoices = await _stripeAdapter.InvoiceListAsync(options);
 
+            return invoices
+                .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
+                .OrderByDescending(invoice => invoice.Created)
+                .Select(invoice => new BillingInfo.BillingInvoice(invoice));
+        }
+        catch (Stripe.StripeException exception)
+        {
+            _logger.LogError(exception, "An error occurred while listing Stripe invoices");
+            throw new GatewayException("Failed to retrieve current invoices", exception);
+        }
     }
 
     // We are taking only first 30 characters of the SubscriberName because stripe provide
