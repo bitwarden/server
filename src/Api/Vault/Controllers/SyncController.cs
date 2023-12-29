@@ -96,6 +96,7 @@ public class SyncController : Controller
         {
             collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
+            collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
