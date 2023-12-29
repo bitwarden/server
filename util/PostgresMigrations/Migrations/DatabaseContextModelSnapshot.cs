@@ -1616,9 +1616,19 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("DeletedDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId", "OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "OrganizationId"), new[] { "Type", "Data", "Favorites", "Folders", "Attachments", "CreationDate", "RevisionDate", "DeletedDate" });
 
                     b.ToTable("Cipher", (string)null);
                 });
@@ -1642,7 +1652,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId"), new[] { "Name", "CreationDate", "RevisionDate" });
 
                     b.ToTable("Folder", (string)null);
                 });

@@ -1603,9 +1603,18 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("DeletedDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId", "OrganizationId")
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "Type", "Data", "Favorites", "Folders", "Attachments", "CreationDate", "RevisionDate", "DeletedDate" })
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Cipher", (string)null);
                 });
@@ -1629,7 +1638,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "Name", "CreationDate", "RevisionDate" })
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Folder", (string)null);
                 });
