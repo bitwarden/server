@@ -93,7 +93,6 @@ public class DatabaseContext : DbContext
         var eProviderOrganization = builder.Entity<ProviderOrganization>();
         var eSend = builder.Entity<Send>();
         var eSsoConfig = builder.Entity<SsoConfig>();
-        var eSsoUser = builder.Entity<SsoUser>();
         var eTaxRate = builder.Entity<TaxRate>();
         var eTransaction = builder.Entity<Transaction>();
         var eUser = builder.Entity<User>();
@@ -147,7 +146,7 @@ public class DatabaseContext : DbContext
             // see https://www.npgsql.org/efcore/misc/collations-and-case-sensitivity.html#database-collation
             builder.HasCollation(postgresIndetermanisticCollation, locale: "en-u-ks-primary", provider: "icu", deterministic: false);
             eUser.Property(e => e.Email).UseCollation(postgresIndetermanisticCollation);
-            eSsoUser.Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
+            builder.Entity<SsoUser>().Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
             eOrganization.Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
             //
         }
@@ -171,7 +170,6 @@ public class DatabaseContext : DbContext
         eProviderOrganization.ToTable(nameof(ProviderOrganization));
         eSend.ToTable(nameof(Send));
         eSsoConfig.ToTable(nameof(SsoConfig));
-        eSsoUser.ToTable(nameof(SsoUser));
         eTaxRate.ToTable(nameof(TaxRate));
         eTransaction.ToTable(nameof(Transaction));
         eUser.ToTable(nameof(User));
