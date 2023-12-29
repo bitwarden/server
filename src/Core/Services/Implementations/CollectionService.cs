@@ -63,7 +63,7 @@ public class CollectionService : ICollectionService
         {
             var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
             var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
-            if (!groupHasManageAccess && !userHasManageAccess)
+            if (!groupHasManageAccess && !userHasManageAccess && !org.AllowAdminAccessToAllCollectionItems)
             {
                 throw new BadRequestException(
                     "At least one member or group must have can manage permission.");

@@ -116,6 +116,7 @@ public class CollectionServiceTest
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
             .Returns(true);
+        organization.AllowAdminAccessToAllCollectionItems = false;
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, users));
         Assert.Contains("At least one member or group must have can manage permission.", ex.Message);
