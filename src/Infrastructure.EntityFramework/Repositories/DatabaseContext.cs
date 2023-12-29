@@ -91,7 +91,6 @@ public class DatabaseContext : DbContext
         var eProvider = builder.Entity<Provider>();
         var eProviderUser = builder.Entity<ProviderUser>();
         var eProviderOrganization = builder.Entity<ProviderOrganization>();
-        var eSend = builder.Entity<Send>();
         var eSsoConfig = builder.Entity<SsoConfig>();
         var eSsoUser = builder.Entity<SsoUser>();
         var eTaxRate = builder.Entity<TaxRate>();
@@ -122,7 +121,6 @@ public class DatabaseContext : DbContext
         eProvider.Property(c => c.Id).ValueGeneratedNever();
         eProviderUser.Property(c => c.Id).ValueGeneratedNever();
         eProviderOrganization.Property(c => c.Id).ValueGeneratedNever();
-        eSend.Property(c => c.Id).ValueGeneratedNever();
         eTransaction.Property(c => c.Id).ValueGeneratedNever();
         eUser.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
@@ -169,7 +167,6 @@ public class DatabaseContext : DbContext
         eProvider.ToTable(nameof(Provider));
         eProviderUser.ToTable(nameof(ProviderUser));
         eProviderOrganization.ToTable(nameof(ProviderOrganization));
-        eSend.ToTable(nameof(Send));
         eSsoConfig.ToTable(nameof(SsoConfig));
         eSsoUser.ToTable(nameof(SsoUser));
         eTaxRate.ToTable(nameof(TaxRate));
