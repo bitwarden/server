@@ -1,4 +1,6 @@
 ﻿using Bit.Core;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -59,6 +61,7 @@ public class DatabaseContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
+    public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -78,7 +81,6 @@ public class DatabaseContext : DbContext
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eEvent = builder.Entity<Event>();
         var eFolder = builder.Entity<Folder>();
-        var eGrant = builder.Entity<Grant>();
         var eGroup = builder.Entity<Group>();
         var eGroupUser = builder.Entity<GroupUser>();
         var eInstallation = builder.Entity<Installation>();
@@ -98,6 +100,7 @@ public class DatabaseContext : DbContext
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
+        var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -107,6 +110,12 @@ public class DatabaseContext : DbContext
         eGroup.Property(c => c.Id).ValueGeneratedNever();
         eInstallation.Property(c => c.Id).ValueGeneratedNever();
         eOrganization.Property(c => c.Id).ValueGeneratedNever();
+        eOrganization.Property(c => c.LimitCollectionCreationDeletion)
+            .ValueGeneratedNever()
+            .HasDefaultValue(true);
+        eOrganization.Property(c => c.AllowAdminAccessToAllCollectionItems)
+            .ValueGeneratedNever()
+            .HasDefaultValue(true);
         eOrganizationSponsorship.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationUser.Property(c => c.Id).ValueGeneratedNever();
         ePolicy.Property(c => c.Id).ValueGeneratedNever();
@@ -119,11 +128,11 @@ public class DatabaseContext : DbContext
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
+        aWebAuthnCredential.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
-        eGrant.HasKey(x => x.Key);
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
@@ -150,7 +159,6 @@ public class DatabaseContext : DbContext
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eEvent.ToTable(nameof(Event));
         eFolder.ToTable(nameof(Folder));
-        eGrant.ToTable(nameof(Grant));
         eGroup.ToTable(nameof(Group));
         eGroupUser.ToTable(nameof(GroupUser));
         eInstallation.ToTable(nameof(Installation));
@@ -170,6 +178,7 @@ public class DatabaseContext : DbContext
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
+        aWebAuthnCredential.ToTable(nameof(WebAuthnCredential));
 
         ConfigureDateTimeUtcQueries(builder);
     }

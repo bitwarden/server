@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using LaunchDarkly.Logging;
 using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Integrations;
@@ -16,6 +17,16 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
     {
         var ldConfig = Configuration.Builder(globalSettings.LaunchDarkly?.SdkKey);
         ldConfig.Logging(Components.Logging().Level(LogLevel.Error));
+
+        if (!string.IsNullOrEmpty(globalSettings.ProjectName))
+        {
+            ldConfig.ApplicationInfo(Components.ApplicationInfo()
+                .ApplicationId(globalSettings.ProjectName)
+                .ApplicationName(globalSettings.ProjectName)
+                .ApplicationVersion(AssemblyHelpers.GetGitHash() ?? $"v{AssemblyHelpers.GetVersion()}")
+                .ApplicationVersionName(AssemblyHelpers.GetVersion())
+            );
+        }
 
         if (string.IsNullOrEmpty(globalSettings.LaunchDarkly?.SdkKey))
         {

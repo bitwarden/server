@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 
@@ -10,12 +11,13 @@ public class UpdateKeyRequestModel
     [StringLength(300)]
     public string MasterPasswordHash { get; set; }
     [Required]
-    public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
-    [Required]
-    public IEnumerable<FolderWithIdRequestModel> Folders { get; set; }
-    public IEnumerable<SendWithIdRequestModel> Sends { get; set; }
+    public string Key { get; set; }
     [Required]
     public string PrivateKey { get; set; }
-    [Required]
-    public string Key { get; set; }
+    public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
+    public IEnumerable<FolderWithIdRequestModel> Folders { get; set; }
+    public IEnumerable<SendWithIdRequestModel> Sends { get; set; }
+    public IEnumerable<EmergencyAccessWithIdRequestModel> EmergencyAccessKeys { get; set; }
+    public IEnumerable<ResetPasswordWithOrgIdRequestModel> ResetPasswordKeys { get; set; }
+
 }

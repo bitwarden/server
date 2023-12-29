@@ -31,8 +31,8 @@ public record EnterprisePlan : Models.StaticStore.Plan
         UsersGetPremium = true;
         HasCustomPermissions = true;
 
-        UpgradeSortOrder = 3;
-        DisplaySortOrder = 3;
+        UpgradeSortOrder = 4;
+        DisplaySortOrder = 4;
 
         PasswordManager = new EnterprisePasswordManagerFeatures(isAnnual);
         SecretsManager = new EnterpriseSecretsManagerFeatures(isAnnual);
@@ -85,14 +85,14 @@ public record EnterprisePlan : Models.StaticStore.Plan
             {
                 AdditionalStoragePricePerGb = 4;
                 StripeStoragePlanId = "storage-gb-annually";
-                StripeSeatPlanId = "2020-enterprise-org-seat-annually";
-                SeatPrice = 60;
+                StripeSeatPlanId = "2023-enterprise-org-seat-annually";
+                SeatPrice = 72;
             }
             else
             {
-                StripeSeatPlanId = "2020-enterprise-seat-monthly";
+                StripeSeatPlanId = "2023-enterprise-seat-monthly";
                 StripeStoragePlanId = "storage-gb-monthly";
-                SeatPrice = 6;
+                SeatPrice = 7;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }

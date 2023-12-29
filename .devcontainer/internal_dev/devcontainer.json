@@ -1,0 +1,22 @@
+{
+  "name": "Bitwarden Dev",
+  "dockerComposeFile": [
+    "../../.devcontainer/bitwarden_common/docker-compose.yml",
+    "../../.devcontainer/internal_dev/docker-compose.override.yml"
+  ],  "service": "bitwarden_server",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "features": {},
+      "extensions": ["ms-dotnettools.csdevkit"]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh",
+  "portsAttributes": {
+    "1080": {
+      "label": "Mail Catcher",
+      "onAutoForward": "notify"
+    }
+  }
+}

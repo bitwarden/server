@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -44,6 +45,27 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
             UnprotectData(results);
             return results.SingleOrDefault();
+        }
+    }
+
+    public async Task<IEnumerable<User>> GetManyByEmailsAsync(IEnumerable<string> emails)
+    {
+        var emailTable = new DataTable();
+        emailTable.Columns.Add("Email", typeof(string));
+        foreach (var email in emails)
+        {
+            emailTable.Rows.Add(email);
+        }
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                $"[{Schema}].[{Table}_ReadByEmails]",
+                new { Emails = emailTable.AsTableValuedParameter("dbo.EmailArray") },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
         }
     }
 
@@ -174,6 +196,52 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 commandType: CommandType.StoredProcedure);
         }
     }
+
+    /// <inheritdoc />
+    public async Task UpdateUserKeyAndEncryptedDataAsync(
+        User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            // Update user
+            await using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
+                cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
+
+                cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value =
+                    string.IsNullOrWhiteSpace(user.PrivateKey) ? DBNull.Value : user.PrivateKey;
+
+                cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
+                cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value =
+                    user.AccountRevisionDate;
+                cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
+                    user.LastKeyRotationDate;
+                cmd.ExecuteNonQuery();
+            }
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                await action(connection, transaction);
+            }
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
 
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
     {
