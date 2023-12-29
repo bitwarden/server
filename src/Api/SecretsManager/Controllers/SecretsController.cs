@@ -249,7 +249,7 @@ public class SecretsController : Controller
         return new ListResponseModel<BaseSecretResponseModel>(responses);
     }
 
-    [HttpPost("secrets/{organizationId}/move")]
+    [HttpPost("organizations/{organizationId}/secrets/move")]
     public async Task BulkMoveToProjectAsync(Guid organizationId, [FromBody] BulkMoveToProjectsRequestModel request)
     {
         var secrets = (await _secretRepository.GetManyByIds(request.Secrets)).ToList();
