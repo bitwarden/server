@@ -13,8 +13,8 @@ public class MoveSecretsCommand : IMoveSecretsCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task MoveSecretsAsync(IEnumerable<Secret> secrets, IEnumerable<Guid> projects)
+    public async Task MoveSecretsAsync(IEnumerable<Secret> secrets, Guid project)
     {
-        await _secretRepository.MoveSecretsAsync(secrets, projects);
+        await _secretRepository.MoveSecretsAsync(secrets, project);
     }
 }

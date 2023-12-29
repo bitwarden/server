@@ -89,7 +89,7 @@ public class NoopSecretRepository : ISecretRepository
         return Task.FromResult(0);
     }
 
-    public Task MoveSecretsAsync(IEnumerable<Secret> secrets, IEnumerable<Guid> projectIds)
+    public Task MoveSecretsAsync(IEnumerable<Secret> secrets, Guid projectIds)
     {
         return Task.CompletedTask;
     }

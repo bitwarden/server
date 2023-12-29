@@ -24,6 +24,11 @@ public class ProjectEntityTypeConfiguration : IEntityTypeConfiguration<Project>
             .HasIndex(s => s.OrganizationId)
             .IsClustered(false);
 
+        builder
+            .HasMany(p => p.Secrets)
+            .WithMany(s => s.Projects)
+            .UsingEntity<ProjectSecret>();
+
         builder.ToTable(nameof(Project));
     }
 }

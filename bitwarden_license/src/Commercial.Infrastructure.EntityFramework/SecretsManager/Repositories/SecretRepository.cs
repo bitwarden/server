@@ -313,25 +313,25 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task MoveSecretsAsync(IEnumerable<Core.SecretsManager.Entities.Secret> secrets, IEnumerable<Guid> projectIds)
+    public async Task MoveSecretsAsync(IEnumerable<Core.SecretsManager.Entities.Secret> secrets, Guid projectId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var projectSecretsSet = dbContext.Set<Dictionary<string, object>>("ProjectSecret");
+        var projectSecretsSet = dbContext.Set<ProjectSecret>(nameof(ProjectSecret));
 
-        using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var secretIds = secrets.Select(s => s.Id).ToList();
 
-        var projectSecrets = secretIds.SelectMany(s => projectIds.Select(p => new Dictionary<string, object>
+        var projectSecrets = secretIds.Select(secretId => new ProjectSecret
         {
-            ["ProjectsId"] = p,
-            ["SecretsId"] = s
-        }));
+            ProjectsId = projectId,
+            SecretsId = secretId
+        });
 
         await projectSecretsSet
-            .Where(ps => secretIds.Contains((Guid)ps["SecretsId"]))
+            .Where(ps => secretIds.Contains(ps.SecretsId))
             .ExecuteDeleteAsync();
 
         projectSecretsSet.AddRange(projectSecrets);

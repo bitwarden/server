@@ -273,11 +273,6 @@ public class SecretsController : Controller
             }
         }
 
-        if (request.Projects.Count != 1)
-        {
-            throw new BadRequestException("You are only allowed to assign a single project.");
-        }
-
-        await _moveSecretsCommand.MoveSecretsAsync(secrets, request.Projects);
+        await _moveSecretsCommand.MoveSecretsAsync(secrets, request.Project);
     }
 }

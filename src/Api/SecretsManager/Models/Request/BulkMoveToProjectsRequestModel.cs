@@ -8,5 +8,5 @@ public class BulkMoveToProjectsRequestModel
     public IReadOnlyList<Guid> Secrets { get; set; }
 
     [Required]
-    public IReadOnlyList<Guid> Projects { get; set; }
+    public Guid Project { get; set; }
 }
