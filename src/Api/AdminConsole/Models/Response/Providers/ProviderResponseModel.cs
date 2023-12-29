@@ -21,6 +21,7 @@ public class ProviderResponseModel : ResponseModel
         BusinessCountry = provider.BusinessCountry;
         BusinessTaxNumber = provider.BusinessTaxNumber;
         BillingEmail = provider.BillingEmail;
+        CreationDate = provider.CreationDate;
     }
 
     public Guid Id { get; set; }
@@ -32,4 +33,5 @@ public class ProviderResponseModel : ResponseModel
     public string BusinessCountry { get; set; }
     public string BusinessTaxNumber { get; set; }
     public string BillingEmail { get; set; }
+    public DateTime CreationDate { get; set; }
 }
