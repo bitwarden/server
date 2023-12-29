@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Bit.Infrastructure.EntityFramework.Configurations;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Configurations;
 
 public class PolicyEntityTypeConfiguration : IEntityTypeConfiguration<Policy>
 {

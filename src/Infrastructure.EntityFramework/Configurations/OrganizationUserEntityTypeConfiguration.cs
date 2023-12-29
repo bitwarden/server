@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Configurations;
+namespace Bit.Infrastructure.EntityFramework.Configurations;
 
 public class OrganizationUserEntityTypeConfiguration : IEntityTypeConfiguration<OrganizationUser>
 {
