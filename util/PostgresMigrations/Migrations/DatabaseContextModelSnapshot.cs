@@ -529,6 +529,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
+                    b.HasIndex("ExpirationDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.HasIndex("Key")
                         .IsUnique();
 
@@ -589,9 +592,20 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("OrganizationId", "ExternalId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("OrganizationId", "ExternalId"), new[] { "UserId" });
+
+                    b.HasIndex("OrganizationId", "UserId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("SsoUser", (string)null);
                 });
