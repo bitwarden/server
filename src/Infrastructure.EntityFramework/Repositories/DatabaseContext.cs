@@ -72,7 +72,6 @@ public class DatabaseContext : DbContext
 
         // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
         // Entity Framework code first database configurations.
-        var eCipher = builder.Entity<Cipher>();
         var eCollection = builder.Entity<Collection>();
         var eCollectionCipher = builder.Entity<CollectionCipher>();
         var eCollectionUser = builder.Entity<CollectionUser>();
@@ -80,7 +79,6 @@ public class DatabaseContext : DbContext
         var eDevice = builder.Entity<Device>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eEvent = builder.Entity<Event>();
-        var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
         var eGroupUser = builder.Entity<GroupUser>();
         var eInstallation = builder.Entity<Installation>();
@@ -102,11 +100,9 @@ public class DatabaseContext : DbContext
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
-        eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
         eEvent.Property(c => c.Id).ValueGeneratedNever();
-        eFolder.Property(c => c.Id).ValueGeneratedNever();
         eGroup.Property(c => c.Id).ValueGeneratedNever();
         eInstallation.Property(c => c.Id).ValueGeneratedNever();
         eOrganization.Property(c => c.Id).ValueGeneratedNever();
@@ -152,13 +148,11 @@ public class DatabaseContext : DbContext
             //
         }
 
-        eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
         eDevice.ToTable(nameof(Device));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eEvent.ToTable(nameof(Event));
-        eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));
         eGroupUser.ToTable(nameof(GroupUser));
         eInstallation.ToTable(nameof(Installation));
