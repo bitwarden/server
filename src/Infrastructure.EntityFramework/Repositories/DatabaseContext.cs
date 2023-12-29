@@ -62,6 +62,7 @@ public class DatabaseContext : DbContext
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
+    public DbSet<ProjectSecret> ProjectSecrets { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -179,6 +180,8 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
         aWebAuthnCredential.ToTable(nameof(WebAuthnCredential));
+
+        builder.Entity<ProjectSecret>(b => b.ToTable(nameof(ProjectSecret)));
 
         ConfigureDateTimeUtcQueries(builder);
     }

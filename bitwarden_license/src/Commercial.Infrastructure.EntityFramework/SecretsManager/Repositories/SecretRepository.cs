@@ -318,8 +318,6 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var projectSecretsSet = dbContext.Set<ProjectSecret>(nameof(ProjectSecret));
-
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var secretIds = secrets.Select(s => s.Id).ToList();
@@ -330,11 +328,11 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             SecretsId = secretId
         });
 
-        await projectSecretsSet
+        await dbContext.ProjectSecrets
             .Where(ps => secretIds.Contains(ps.SecretsId))
             .ExecuteDeleteAsync();
 
-        projectSecretsSet.AddRange(projectSecrets);
+        dbContext.ProjectSecrets.AddRange(projectSecrets);
 
         await dbContext.SaveChangesAsync();
 

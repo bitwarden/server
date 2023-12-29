@@ -1494,6 +1494,21 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("Project", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ProjectSecret", b =>
+                {
+                    b.Property<Guid>("ProjectsId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SecretsId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ProjectsId", "SecretsId");
+
+                    b.HasIndex("SecretsId");
+
+                    b.ToTable("ProjectSecret", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1630,21 +1645,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Folder", (string)null);
-                });
-
-            modelBuilder.Entity("ProjectSecret", b =>
-                {
-                    b.Property<Guid>("ProjectsId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("SecretsId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("ProjectsId", "SecretsId");
-
-                    b.HasIndex("SecretsId");
-
-                    b.ToTable("ProjectSecret");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupProjectAccessPolicy", b =>
@@ -2101,6 +2101,21 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ProjectSecret", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", null)
+                        .WithMany()
+                        .HasForeignKey("SecretsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -2147,21 +2162,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("ProjectSecret", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", null)
-                        .WithMany()
-                        .HasForeignKey("ProjectsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", null)
-                        .WithMany()
-                        .HasForeignKey("SecretsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupProjectAccessPolicy", b =>
