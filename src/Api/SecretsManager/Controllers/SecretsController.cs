@@ -264,13 +264,20 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        foreach (var secret in secrets)
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User, secrets.AsReadOnly(), SecretOperations.BulkUpdate);
+
+        if (!authorizationResult.Succeeded)
         {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Update);
-            if (!authorizationResult.Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
+        }
+
+        var project = await _projectRepository.GetByIdAsync(request.Project);
+        authorizationResult = await _authorizationService.AuthorizeAsync(User, project, ProjectOperations.Update);
+
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
         }
 
         await _moveSecretsCommand.MoveSecretsAsync(secrets, request.Project);

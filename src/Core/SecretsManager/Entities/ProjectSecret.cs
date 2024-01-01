@@ -1,4 +1,4 @@
-namespace Bit.Core.SecretsManager.Entities;
+﻿namespace Bit.Core.SecretsManager.Entities;
 
 public class ProjectSecret
 {
