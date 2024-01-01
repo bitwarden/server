@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
@@ -799,6 +800,70 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.NotNull(result);
         Assert.NotEmpty(result!.Data);
         Assert.Equal(secretIds.Count, result!.Data.Count());
+    }
+
+    [Fact]
+    public async Task BulkMoveToProjectAsync_Success()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await LoginAsync(_email);
+        var (project, secretIds) = await CreateSecretsAsync(org.Id);
+        var (newProject, _) = await CreateSecretsAsync(org.Id);
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets/move", new BulkMoveToProjectsRequestModel
+        {
+            Secrets = secretIds,
+            Project = newProject.Id,
+        });
+        response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task BulkMoveToProjectAsync_MoveToUnownedProject_Fails()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        var otherOrg = await _organizationHelper.CreateSmOrganizationAsync();
+        
+        await LoginAsync(_email);
+        var (project, secretIds) = await CreateSecretsAsync(org.Id);
+        var (newProject, _) = await CreateSecretsAsync(otherOrg.Id);
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets/move", new BulkMoveToProjectsRequestModel
+        {
+            Secrets = secretIds,
+            Project = newProject.Id,
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task BulkMoveToProjectAsync_CannotEditSecret_Fails()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+
+        var (project, secretIds) = await CreateSecretsAsync(org.Id);
+        var (otherProject, _) = await CreateSecretsAsync(org.Id);
+
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var accessPolicies = new List<BaseAccessPolicy>
+        {
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = false,
+            },
+        };
+        await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets/move", new BulkMoveToProjectsRequestModel
+        {
+            Secrets = secretIds,
+            Project = otherProject.Id,
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private async Task<(Project Project, List<Guid> secretIds)> CreateSecretsAsync(Guid orgId, int numberToCreate = 3)
