@@ -781,12 +781,17 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{id}/collection-management")]
-    [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        // Check organization-level feature flag is enabled
+        if (!organization.FlexibleCollections)
         {
             throw new NotFoundException();
         }
