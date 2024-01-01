@@ -265,7 +265,7 @@ public class SecretsController : Controller
         }
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(
-            User, secrets.AsReadOnly(), SecretOperations.BulkUpdate);
+            User, secrets.AsReadOnly(), BulkSecretOperations.Update);
 
         if (!authorizationResult.Succeeded)
         {

@@ -20,5 +20,5 @@ public static class SecretOperations
 
 public static class BulkSecretOperations
 {
-    public static readonly BulkSecretOperationRequirement Update = new () { Name = nameof(Update) };
+    public static readonly BulkSecretOperationRequirement Update = new() { Name = nameof(Update) };
 }

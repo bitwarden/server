@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
@@ -823,7 +822,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var otherOrg = await _organizationHelper.CreateSmOrganizationAsync();
-        
+
         await LoginAsync(_email);
         var (project, secretIds) = await CreateSecretsAsync(org.Id);
         var (newProject, _) = await CreateSecretsAsync(otherOrg.Id);
