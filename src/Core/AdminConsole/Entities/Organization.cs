@@ -91,6 +91,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     /// </remarks>
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    /// <summary>
+    /// Organization level feature flag enabling Flexible Collections changes.
+    /// This must only be set to true once data migrations have been run for this organization.
+    /// </summary>
+    public bool FlexibleCollections { get; set; }
 
     public void SetNewId()
     {
