@@ -19,8 +19,6 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
     public GroupAuthorizationHandler(
         ICurrentContext currentContext,
         IFeatureService featureService,
@@ -34,12 +32,6 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         GroupOperationRequirement requirement)
     {
-        if (!FlexibleCollectionsIsEnabled)
-        {
-            // Flexible collections is OFF, should not be using this handler
-            throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
-        }
-
         // Acting user is not authenticated, fail
         if (!_currentContext.UserId.HasValue)
         {

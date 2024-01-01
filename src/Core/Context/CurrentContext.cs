@@ -26,8 +26,6 @@ public class CurrentContext : ICurrentContext
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
     private IEnumerable<ProviderUserOrganizationDetails> _providerUserOrganizations;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, this);
-
     public virtual HttpContext HttpContext { get; set; }
     public virtual Guid? UserId { get; set; }
     public virtual User User { get; set; }
@@ -283,11 +281,6 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> OrganizationManager(Guid orgId)
     {
-        if (FlexibleCollectionsIsEnabled)
-        {
-            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
-        }
-
         return await OrganizationAdmin(orgId) ||
                (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Manager) ?? false);
     }
@@ -350,22 +343,12 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> EditAssignedCollections(Guid orgId)
     {
-        if (FlexibleCollectionsIsEnabled)
-        {
-            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
-        }
-
         return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.EditAssignedCollections ?? false)) ?? false);
     }
 
     public async Task<bool> DeleteAssignedCollections(Guid orgId)
     {
-        if (FlexibleCollectionsIsEnabled)
-        {
-            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
-        }
-
         return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.DeleteAssignedCollections ?? false)) ?? false);
     }
@@ -377,11 +360,6 @@ public class CurrentContext : ICurrentContext
          * Owner, Admin, Manager, and Provider checks are handled via the EditAssigned/DeleteAssigned context calls.
          * This entire method will be moved to the CollectionAuthorizationHandler in the future
          */
-
-        if (FlexibleCollectionsIsEnabled)
-        {
-            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
-        }
 
         var org = GetOrganization(orgId);
         return await EditAssignedCollections(orgId)
