@@ -40,8 +40,7 @@ public class CipherService : ICipherService
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool UseFlexibleCollections => false;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -788,15 +787,16 @@ public class CipherService : ICipherService
             {
                 collection.SetNewId();
                 newCollections.Add(collection);
-                if (UseFlexibleCollections)
-                {
-                    newCollectionUsers.Add(new CollectionUser
-                    {
-                        CollectionId = collection.Id,
-                        OrganizationUserId = importingOrgUser.Id,
-                        Manage = true
-                    });
-                }
+                // TODO: is this required, or just enforce on front-end?
+                // if (UseFlexibleCollections)
+                // {
+                //     newCollectionUsers.Add(new CollectionUser
+                //     {
+                //         CollectionId = collection.Id,
+                //         OrganizationUserId = importingOrgUser.Id,
+                //         Manage = true
+                //     });
+                // }
             }
         }
 

@@ -16,8 +16,7 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool UseFlexibleCollections => false;
 
     public CipherRotationValidator(ICipherRepository cipherRepository, ICurrentContext currentContext,
         IFeatureService featureService)

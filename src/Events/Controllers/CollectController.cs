@@ -35,7 +35,7 @@ public class CollectController : Controller
         _featureService = featureService;
     }
 
-    bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    bool UseFlexibleCollections => false;
 
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] IEnumerable<EventModel> model)
@@ -75,10 +75,9 @@ public class CollectController : Controller
                     }
                     else
                     {
-                        var useFlexibleCollections = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value,
                            _currentContext.UserId.Value,
-                           useFlexibleCollections);
+                           UseFlexibleCollections);
                     }
                     if (cipher == null)
                     {

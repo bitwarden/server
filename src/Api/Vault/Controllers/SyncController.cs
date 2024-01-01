@@ -35,8 +35,7 @@ public class SyncController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool UseFlexibleCollections => false;
 
     public SyncController(
         IUserService userService,

@@ -43,8 +43,7 @@ public class CollectionService : ICollectionService
         _featureService = featureService;
     }
 
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool UseFlexibleCollections => false;
 
     public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
         IEnumerable<CollectionAccessSelection> users = null)
@@ -59,7 +58,7 @@ public class CollectionService : ICollectionService
         var usersList = users?.ToList();
 
         // If using Flexible Collections - a collection should always have someone with Can Manage permissions
-        if (UseFlexibleCollections)
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext))
         {
             var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
             var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
