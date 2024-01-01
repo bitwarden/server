@@ -46,7 +46,7 @@ public class BulkSecretAuthorizationHandler : AuthorizationHandler<BulkSecretOpe
 
         var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, organizationId);
 
-        if (requirement == SecretOperations.BulkUpdate)
+        if (requirement == BulkSecretOperations.Update)
         {
             if (!await CanBulkUpdateSecretsAsync(resource, accessClient, userId))
             {

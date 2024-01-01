@@ -16,5 +16,9 @@ public static class SecretOperations
     public static readonly SecretOperationRequirement Read = new() { Name = nameof(Read) };
     public static readonly SecretOperationRequirement Update = new() { Name = nameof(Update) };
     public static readonly SecretOperationRequirement Delete = new() { Name = nameof(Delete) };
-    public static readonly BulkSecretOperationRequirement BulkUpdate = new() { Name = nameof(BulkUpdate) };
+}
+
+public static class BulkSecretOperations
+{
+    public static readonly BulkSecretOperationRequirement Update = new () { Name = nameof(Update) };
 }
