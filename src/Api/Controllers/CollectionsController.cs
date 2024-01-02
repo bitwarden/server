@@ -297,10 +297,6 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("bulk-access")]
-    [RequireFeature(FeatureFlagKeys.BulkCollectionAccess)]
-    // Also gated behind Flexible Collections flag because it only has new authorization logic.
-    // Could be removed if legacy authorization logic were implemented for many collections.
-    [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
     public async Task PostBulkCollectionAccess([FromBody] BulkCollectionAccessRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
@@ -308,6 +304,18 @@ public class CollectionsController : Controller
         if (collections.Count != model.CollectionIds.Count())
         {
             throw new NotFoundException("One or more collections not found.");
+        }
+
+        var orgId = collections.First().OrganizationId;
+        if (collections.All(c => c.OrganizationId != orgId))
+        {
+            throw new BadRequestException("All collections must belong to the same organization");
+        }
+
+        // Authorization logic assumes flexible collections is enabled, so it's tied to this flag
+        if (!await FlexibleCollectionsIsEnabledAsync(orgId))
+        {
+            throw new NotFoundException();
         }
 
         var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess);
