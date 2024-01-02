@@ -43,7 +43,7 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         }
         optionsBuilder.UseMySql(
             connectionString,
-            ServerVersion.Create(new Version(8, 0, 0), Pomelo.EntityFrameworkCore.MySql.Infrastructure.ServerType.MySql),
+            ServerVersion.AutoDetect(connectionString),
             b => b.MigrationsAssembly("MySqlMigrations"))
            .UseApplicationServiceProvider(serviceProvider);
         return new DatabaseContext(optionsBuilder.Options);
