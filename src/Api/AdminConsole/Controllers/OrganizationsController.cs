@@ -834,7 +834,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        // TODO: call migration scripts
+        await _organizationRepository.EnableCollectionEnhancements(id);
 
         organization.FlexibleCollections = true;
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);

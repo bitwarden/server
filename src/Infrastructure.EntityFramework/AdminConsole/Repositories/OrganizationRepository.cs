@@ -256,4 +256,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         return await query.ToListAsync();
     }
+
+    public Task EnableCollectionEnhancements(Guid organizationId)
+    {
+        // TODO
+        throw new NotImplementedException();
+    }
 }
