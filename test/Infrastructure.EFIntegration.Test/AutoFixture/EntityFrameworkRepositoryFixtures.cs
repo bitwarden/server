@@ -4,6 +4,8 @@ using AutoFixture.Kernel;
 using AutoMapper;
 using Bit.Core.Settings;
 using Bit.Infrastructure.EFIntegration.Test.Helpers;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;

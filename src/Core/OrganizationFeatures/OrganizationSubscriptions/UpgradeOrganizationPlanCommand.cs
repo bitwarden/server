@@ -1,9 +1,10 @@
-﻿using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -94,11 +95,6 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         if (existingPlan.UpgradeSortOrder >= newPlan.UpgradeSortOrder)
         {
             throw new BadRequestException("You cannot upgrade to this plan.");
-        }
-
-        if (existingPlan.Type != PlanType.Free)
-        {
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
         }
 
         _organizationService.ValidatePasswordManagerPlan(newPlan, upgrade);
@@ -225,8 +221,16 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         }
         else
         {
-            // TODO: Update existing sub
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
+            paymentIntentClientSecret = await _paymentService.AdjustSubscription(
+                organization,
+                newPlan,
+                upgrade.AdditionalSeats,
+                upgrade.UseSecretsManager,
+                upgrade.AdditionalSmSeats,
+                upgrade.AdditionalServiceAccounts,
+                upgrade.AdditionalStorageGb);
+
+            success = string.IsNullOrEmpty(paymentIntentClientSecret);
         }
 
         organization.BusinessName = upgrade.BusinessName;

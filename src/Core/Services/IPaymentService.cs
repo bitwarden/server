@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
@@ -17,6 +18,15 @@ public interface IPaymentService
     Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan, OrganizationUpgrade upgrade);
     Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
         short additionalStorageGb, TaxInfo taxInfo);
+    Task<string> AdjustSubscription(
+        Organization organization,
+        Plan updatedPlan,
+        int newlyPurchasedPasswordManagerSeats,
+        bool subscribedToSecretsManager,
+        int? newlyPurchasedSecretsManagerSeats,
+        int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+        int newlyPurchasedAdditionalStorage,
+        DateTime? prorationDate = null);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
     Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);

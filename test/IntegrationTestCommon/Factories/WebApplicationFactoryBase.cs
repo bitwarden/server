@@ -7,6 +7,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +20,6 @@ namespace Bit.IntegrationTestCommon.Factories;
 
 public static class FactoryConstants
 {
-    public const string DefaultDatabaseName = "test_database";
     public const string WhitelistedIp = "1.1.1.1";
 }
 
@@ -27,14 +27,16 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     where T : class
 {
     /// <summary>
-    /// The database name to use for this instance of the factory. By default it will use a shared database name so all instances will connect to the same database during it's lifetime.
+    /// The database to use for this instance of the factory. By default it will use a shared database so all instances will connect to the same database during it's lifetime.
     /// </summary>
     /// <remarks>
     /// This will need to be set BEFORE using the <c>Server</c> property
     /// </remarks>
-    public string DatabaseName { get; set; } = Guid.NewGuid().ToString();
+    public SqliteConnection SqliteConnection { get; set; }
 
     private readonly List<Action<IServiceCollection>> _configureTestServices = new();
+    private bool _handleSqliteDisposal { get; set; }
+
 
     public void SubstitueService<TService>(Action<TService> mockService)
         where TService : class
@@ -52,10 +54,17 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     }
 
     /// <summary>
-    /// Configure the web host to use an EF in memory database
+    /// Configure the web host to use a SQLite in memory database
     /// </summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        if (SqliteConnection == null)
+        {
+            SqliteConnection = new SqliteConnection("DataSource=:memory:");
+            SqliteConnection.Open();
+            _handleSqliteDisposal = true;
+        }
+
         builder.ConfigureAppConfiguration(c =>
         {
             c.SetBasePath(AppContext.BaseDirectory)
@@ -79,6 +88,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { "globalSettings:send:connectionString", null},
                 { "globalSettings:notifications:connectionString", null},
                 { "globalSettings:storage:connectionString", null},
+
+                // This will force it to use an ephemeral key for IdentityServer
+                { "globalSettings:developmentDirectory", null }
             });
         });
 
@@ -89,10 +101,12 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddScoped(services =>
             {
                 return new DbContextOptionsBuilder<DatabaseContext>()
-                    .UseInMemoryDatabase(DatabaseName)
+                    .UseSqlite(SqliteConnection)
                     .UseApplicationServiceProvider(services)
                     .Options;
             });
+
+            MigrateDbContext<DatabaseContext>(services);
 
             // QUESTION: The normal licensing service should run fine on developer machines but not in CI
             // should we have a fork here to leave the normal service for developers?
@@ -181,5 +195,24 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     {
         var scope = Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<TS>();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (_handleSqliteDisposal)
+        {
+            SqliteConnection.Dispose();
+        }
+    }
+
+    private static void MigrateDbContext<TContext>(IServiceCollection serviceCollection) where TContext : DbContext
+    {
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        var services = scope.ServiceProvider;
+        var context = services.GetService<TContext>();
+        context.Database.EnsureDeleted();
+        context.Database.EnsureCreated();
     }
 }

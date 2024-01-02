@@ -1,7 +1,7 @@
-﻿using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Models.Business;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services;
@@ -53,12 +53,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg, bool initOrganization = false)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg, bool initOrganization = false)
+    public Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
         return Task.FromResult(0);
     }
