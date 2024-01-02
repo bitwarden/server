@@ -50,7 +50,8 @@ public class RedisPersistedGrantStoreTests
             new GrantRepository(
                 sqlConnectionString,
                 sqlConnectionString
-            )
+            ),
+            g => new Bit.Core.Auth.Entities.Grant(g)
         );
 
         var creationTime = new DateTime(638350407400000000, DateTimeKind.Utc);

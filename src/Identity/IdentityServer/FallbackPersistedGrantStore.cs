@@ -5,17 +5,20 @@ using Duende.IdentityServer.Stores;
 
 namespace Bit.Identity.IdentityServer;
 
-public class PersistedGrantStore : IPersistedGrantStore
+public class FallbackPersistedGrantStore : IPersistedGrantStore
 {
     private readonly IGrantRepository _grantRepository;
     private readonly Func<PersistedGrant, IGrant> _toGrant;
+    private readonly IPersistedGrantStore _fallbackGrantStore;
 
-    public PersistedGrantStore(
+    public FallbackPersistedGrantStore(
         IGrantRepository grantRepository,
-        Func<PersistedGrant, IGrant> toGrant)
+        Func<PersistedGrant, IGrant> toGrant,
+        IPersistedGrantStore fallbackGrantStore)
     {
         _grantRepository = grantRepository;
         _toGrant = toGrant;
+        _fallbackGrantStore = fallbackGrantStore;
     }
 
     public async Task<PersistedGrant> GetAsync(string key)
@@ -23,6 +26,11 @@ public class PersistedGrantStore : IPersistedGrantStore
         var grant = await _grantRepository.GetByKeyAsync(key);
         if (grant == null)
         {
+            if (_fallbackGrantStore != null)
+            {
+                // It wasn't found, there is a chance is was instead stored in the fallback store
+                return await _fallbackGrantStore.GetAsync(key);
+            }
             return null;
         }
 
@@ -30,17 +38,14 @@ public class PersistedGrantStore : IPersistedGrantStore
         return pGrant;
     }
 
-    public async Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)
+    public Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)
     {
-        var grants = await _grantRepository.GetManyAsync(filter.SubjectId, filter.SessionId,
-            filter.ClientId, filter.Type);
-        var pGrants = grants.Select(g => ToPersistedGrant(g));
-        return pGrants;
+        return Task.FromResult(Enumerable.Empty<PersistedGrant>());
     }
 
-    public async Task RemoveAllAsync(PersistedGrantFilter filter)
+    public Task RemoveAllAsync(PersistedGrantFilter filter)
     {
-        await _grantRepository.DeleteManyAsync(filter.SubjectId, filter.SessionId, filter.ClientId, filter.Type);
+        return Task.CompletedTask;
     }
 
     public async Task RemoveAsync(string key)

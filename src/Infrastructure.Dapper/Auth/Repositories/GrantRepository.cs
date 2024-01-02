@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -18,11 +19,11 @@ public class GrantRepository : BaseRepository, IGrantRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<Grant> GetByKeyAsync(string key)
+    public async Task<IGrant> GetByKeyAsync(string key)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<Grant>(
+            var results = await connection.QueryAsync<IGrant>(
                 "[dbo].[Grant_ReadByKey]",
                 new { Key = key },
                 commandType: CommandType.StoredProcedure);
@@ -31,12 +32,12 @@ public class GrantRepository : BaseRepository, IGrantRepository
         }
     }
 
-    public async Task<ICollection<Grant>> GetManyAsync(string subjectId, string sessionId,
+    public async Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId,
         string clientId, string type)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<Grant>(
+            var results = await connection.QueryAsync<IGrant>(
                 "[dbo].[Grant_Read]",
                 new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
                 commandType: CommandType.StoredProcedure);
@@ -45,24 +46,29 @@ public class GrantRepository : BaseRepository, IGrantRepository
         }
     }
 
-    public async Task SaveAsync(Grant obj)
+    public async Task SaveAsync(IGrant obj)
     {
+        if (!(obj is Grant gObj))
+        {
+            throw new ArgumentException(null, nameof(obj));
+        }
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[Grant_Save]",
                 new
                 {
-                    obj.Key,
-                    obj.Type,
-                    obj.SubjectId,
-                    obj.SessionId,
-                    obj.ClientId,
-                    obj.Description,
-                    obj.CreationDate,
-                    obj.ExpirationDate,
-                    obj.ConsumedDate,
-                    obj.Data
+                    gObj.Key,
+                    gObj.Type,
+                    gObj.SubjectId,
+                    gObj.SessionId,
+                    gObj.ClientId,
+                    gObj.Description,
+                    gObj.CreationDate,
+                    gObj.ExpirationDate,
+                    gObj.ConsumedDate,
+                    gObj.Data
                 },
                 commandType: CommandType.StoredProcedure);
         }

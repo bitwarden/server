@@ -1,4 +1,5 @@
-﻿using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.Repositories;
+using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
@@ -51,28 +52,54 @@ public static class ServiceCollectionExtensions
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>();
 
-        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
+        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.StorageConnectionString))
         {
-            // If we have redis, prefer it
-
-            // Add the original persisted grant store via it's implementation type
-            // so we can inject it right after.
-            services.AddSingleton<PersistedGrantStore>();
+            // If we have table storage, prefer it
 
             services.AddSingleton<IPersistedGrantStore>(sp =>
             {
+                var sqlFallbackStore = new PersistedGrantStore(
+                    sp.GetRequiredService<IGrantRepository>(),
+                    g => new Core.Auth.Entities.Grant(g));
+
+                var redisFallbackStore = new RedisPersistedGrantStore(
+                    // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
+                    ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
+                    sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
+                    sqlFallbackStore // Fallback grant store
+                );
+
+                return new FallbackPersistedGrantStore(
+                    new Core.Auth.Repositories.TableStorage.GrantRepository(globalSettings),
+                    g => new Core.Auth.Models.Data.GrantTableEntity(g),
+                    redisFallbackStore);
+            });
+        }
+        else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
+        {
+            services.AddSingleton<IPersistedGrantStore>(sp =>
+            {
+                var sqlFallbackStore = new PersistedGrantStore(
+                    sp.GetRequiredService<IGrantRepository>(),
+                    g => new Core.Auth.Entities.Grant(g));
+
                 return new RedisPersistedGrantStore(
                     // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
                     ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
                     sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-                    sp.GetRequiredService<PersistedGrantStore>() // Fallback grant store
+                    sqlFallbackStore // Fallback grant store
                 );
             });
         }
         else
         {
             // Use the original grant store
-            identityServerBuilder.AddPersistedGrantStore<PersistedGrantStore>();
+            services.AddTransient<IPersistedGrantStore>(sp =>
+            {
+                return new PersistedGrantStore(
+                    sp.GetRequiredService<IGrantRepository>(),
+                    g => new Core.Auth.Entities.Grant(g));
+            });
         }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -42,7 +43,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         }
     }
 
-    public async Task<Core.Auth.Entities.Grant> GetByKeyAsync(string key)
+    public async Task<IGrant> GetByKeyAsync(string key)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -55,7 +56,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         }
     }
 
-    public async Task<ICollection<Core.Auth.Entities.Grant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
+    public async Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -67,26 +68,31 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
                             g.Type == type
                         select g;
             var grants = await query.ToListAsync();
-            return (ICollection<Core.Auth.Entities.Grant>)grants;
+            return (ICollection<IGrant>)grants;
         }
     }
 
-    public async Task SaveAsync(Core.Auth.Entities.Grant obj)
+    public async Task SaveAsync(IGrant obj)
     {
+        if (!(obj is Grant gObj))
+        {
+            throw new ArgumentException(null, nameof(obj));
+        }
+
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var existingGrant = await (from g in dbContext.Grants
-                                       where g.Key == obj.Key
+                                       where g.Key == gObj.Key
                                        select g).FirstOrDefaultAsync();
             if (existingGrant != null)
             {
-                obj.Id = existingGrant.Id;
-                dbContext.Entry(existingGrant).CurrentValues.SetValues(obj);
+                gObj.Id = existingGrant.Id;
+                dbContext.Entry(existingGrant).CurrentValues.SetValues(gObj);
             }
             else
             {
-                var entity = Mapper.Map<Grant>(obj);
+                var entity = Mapper.Map<Grant>(gObj);
                 await dbContext.AddAsync(entity);
                 await dbContext.SaveChangesAsync();
             }
