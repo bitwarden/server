@@ -12,5 +12,11 @@
       "extensions": ["ms-dotnettools.csdevkit"]
     }
   },
-  "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh"
+  "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh",
+  "portsAttributes": {
+    "1080": {
+      "label": "Mail Catcher",
+      "onAutoForward": "notify"
+    }
+  }
 }

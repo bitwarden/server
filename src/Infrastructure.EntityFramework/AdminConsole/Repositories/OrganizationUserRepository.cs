@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -638,6 +639,37 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     {
         var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
         return await GetCountFromQuery(query);
+    }
+
+    /// <inheritdoc />
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid userId, IEnumerable<Core.Entities.OrganizationUser> resetPasswordKeys)
+    {
+        return async (_, _) =>
+        {
+            var newOrganizationUsers = resetPasswordKeys.ToList();
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            // Get user organization users
+            var userOrganizationUsers = await GetDbSet(dbContext)
+                .Where(c => c.UserId == userId)
+                .ToListAsync();
+
+            // Filter to only organization users that are included
+            var validOrganizationUsers = userOrganizationUsers
+                .Where(organizationUser =>
+                    newOrganizationUsers.Any(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id));
+
+            foreach (var organizationUser in validOrganizationUsers)
+            {
+                var updateOrganizationUser =
+                    newOrganizationUsers.First(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id);
+                organizationUser.ResetPasswordKey = updateOrganizationUser.ResetPasswordKey;
+            }
+
+            await dbContext.SaveChangesAsync();
+        };
     }
 
 }
