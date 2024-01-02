@@ -14,7 +14,7 @@
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER
+    @CipherId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -36,7 +36,7 @@ BEGIN
         [DeletionDate],
         [Disabled],
         [HideEmail],
-        [CiperId]
+        [CipherId]
     )
     VALUES
     (
