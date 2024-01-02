@@ -14,7 +14,7 @@
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER = NULL,
+    @CipherId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON

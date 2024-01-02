@@ -18,7 +18,7 @@
     CONSTRAINT [PK_Send] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Send_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Send_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
-    CONSTRAINT [FK_Send_Cipher] FOREIGN KEY ([CipherId]) REFERENCES [dbo].[Cipher]([[Id]])
+    CONSTRAINT [FK_Send_Cipher] FOREIGN KEY ([CipherId]) REFERENCES [dbo].[Cipher] ([Id])
 );
 
 GO
