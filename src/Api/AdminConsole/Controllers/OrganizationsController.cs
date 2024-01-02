@@ -834,6 +834,11 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
+        if (organization.FlexibleCollections)
+        {
+            throw new BadRequestException("Organization has already been migrated to the new collection enhancements");
+        }
+
         await _organizationRepository.EnableCollectionEnhancements(id);
 
         organization.FlexibleCollections = true;
