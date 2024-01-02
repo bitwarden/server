@@ -167,7 +167,8 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
         await connection.QueryAsync(
             $"[{Schema}].[{Table}_EnableCollectionEnhancements]",
-            new { OrganizationId = organizationId },
+            // TODO: name this OrganizationId instead to make sproc clearer
+            new { Id = organizationId },
             commandType: CommandType.StoredProcedure);
     }
 }
