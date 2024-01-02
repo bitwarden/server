@@ -24,6 +24,7 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
     private readonly IMailService _mailService;
+    private readonly IWebhookUtility _webhookUtility;
 
 
     public UpcomingInvoiceHandler(IOrganizationRepository organizationRepository,
@@ -33,7 +34,8 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
         ILogger<StripeController> logger,
         ITaxRateRepository taxRateRepository,
         IValidateSponsorshipCommand validateSponsorshipCommand,
-        IMailService mailService)
+        IMailService mailService,
+        IWebhookUtility webhookUtility)
     {
         _organizationRepository = organizationRepository;
         _userService = userService;
@@ -43,6 +45,7 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
         _taxRateRepository = taxRateRepository;
         _validateSponsorshipCommand = validateSponsorshipCommand;
         _mailService = mailService;
+        _webhookUtility = webhookUtility;
     }
 
     protected override bool CanHandle(Event parsedEvent)
@@ -71,7 +74,7 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
 
         var updatedSubscription = await VerifyCorrectTaxRateForCharge(invoice, subscription);
 
-        var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
+        var (organizationId, userId) = _webhookUtility.GetIdsFromMetaData(updatedSubscription.Metadata);
 
         var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
 
@@ -92,7 +95,7 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
 
         if (organizationId.HasValue)
         {
-            if (IsSponsoredSubscription(updatedSubscription))
+            if (_webhookUtility.IsSponsoredSubscription(updatedSubscription))
             {
                 await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
             }

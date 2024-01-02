@@ -16,6 +16,7 @@ public class ChargeSucceededHandler : StripeWebhookHandler
     private readonly ILogger<StripeController> _logger;
     private readonly IStripeEventService _stripeEventService;
 
+
     public ChargeSucceededHandler(
         ITransactionRepository transactionRepository,
         ILogger<StripeController> logger,

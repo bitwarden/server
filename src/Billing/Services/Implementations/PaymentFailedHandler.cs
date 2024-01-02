@@ -8,10 +8,13 @@ namespace Bit.Billing.Services.Implementations;
 public class PaymentFailedHandler : StripeWebhookHandler
 {
     private readonly IStripeEventService _stripeEventService;
+    private readonly IWebhookUtility _webhookUtility;
 
-    public PaymentFailedHandler(IStripeEventService stripeEventService)
+    public PaymentFailedHandler(IStripeEventService stripeEventService,
+        IWebhookUtility webhookUtility)
     {
         _stripeEventService = stripeEventService;
+        _webhookUtility = webhookUtility;
     }
     protected override bool CanHandle(Event parsedEvent)
     {
@@ -26,7 +29,7 @@ public class PaymentFailedHandler : StripeWebhookHandler
 
     private async Task HandlePaymentFailedAsync(Invoice invoice)
     {
-        if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+        if (!invoice.Paid && invoice.AttemptCount > 1 && _webhookUtility.UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
         {
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
@@ -34,7 +37,7 @@ public class PaymentFailedHandler : StripeWebhookHandler
             if (invoice.AttemptCount <= 3 ||
                 !subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
             {
-                await AttemptToPayInvoiceAsync(invoice);
+                await _webhookUtility.AttemptToPayInvoice(invoice);
             }
         }
     }

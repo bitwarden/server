@@ -10,14 +10,17 @@ public class SubscriptionDeletedHandler : StripeWebhookHandler
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IStripeEventService _stripeEventService;
+    private readonly IWebhookUtility _webhookUtility;
 
     public SubscriptionDeletedHandler(IOrganizationService organizationService,
         IUserService userService,
-        IStripeEventService stripeEventService)
+        IStripeEventService stripeEventService,
+        IWebhookUtility webhookUtility)
     {
         _organizationService = organizationService;
         _userService = userService;
         _stripeEventService = stripeEventService;
+        _webhookUtility = webhookUtility;
     }
 
     protected override bool CanHandle(Event parsedEvent)
@@ -30,7 +33,7 @@ public class SubscriptionDeletedHandler : StripeWebhookHandler
         if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted))
         {
             var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-            var ids = GetIdsFromMetaData(subscription.Metadata);
+            var ids = _webhookUtility.GetIdsFromMetaData(subscription.Metadata);
             var organizationId = ids.Item1 ?? Guid.Empty;
             var userId = ids.Item2 ?? Guid.Empty;
             var subCanceled = subscription.Status == StripeSubscriptionStatus.Canceled;
