@@ -10,29 +10,29 @@ using Microsoft.AspNetCore.Authorization;
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 
 public class
-    ProjectPeopleAccessPoliciesAuthorizationHandler : AuthorizationHandler<
-        ProjectPeopleAccessPoliciesOperationRequirement,
-        ProjectPeopleAccessPolicies>
+    ServiceAccountPeopleAccessPoliciesAuthorizationHandler : AuthorizationHandler<
+        ServiceAccountPeopleAccessPoliciesOperationRequirement,
+        ServiceAccountPeopleAccessPolicies>
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
-    private readonly IProjectRepository _projectRepository;
     private readonly ISameOrganizationQuery _sameOrganizationQuery;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public ProjectPeopleAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
+    public ServiceAccountPeopleAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
         ISameOrganizationQuery sameOrganizationQuery,
-        IProjectRepository projectRepository)
+        IServiceAccountRepository serviceAccountRepository)
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
         _sameOrganizationQuery = sameOrganizationQuery;
-        _projectRepository = projectRepository;
+        _serviceAccountRepository = serviceAccountRepository;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        ProjectPeopleAccessPoliciesOperationRequirement requirement,
-        ProjectPeopleAccessPolicies resource)
+        ServiceAccountPeopleAccessPoliciesOperationRequirement requirement,
+        ServiceAccountPeopleAccessPolicies resource)
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -49,8 +49,8 @@ public class
 
         switch (requirement)
         {
-            case not null when requirement == ProjectPeopleAccessPoliciesOperations.Replace:
-                await CanReplaceProjectPeopleAsync(context, requirement, resource, accessClient, userId);
+            case not null when requirement == ServiceAccountPeopleAccessPoliciesOperations.Replace:
+                await CanReplaceServiceAccountPeopleAsync(context, requirement, resource, accessClient, userId);
                 break;
             default:
                 throw new ArgumentException("Unsupported operation requirement type provided.",
@@ -58,11 +58,11 @@ public class
         }
     }
 
-    private async Task CanReplaceProjectPeopleAsync(AuthorizationHandlerContext context,
-        ProjectPeopleAccessPoliciesOperationRequirement requirement, ProjectPeopleAccessPolicies resource,
+    private async Task CanReplaceServiceAccountPeopleAsync(AuthorizationHandlerContext context,
+        ServiceAccountPeopleAccessPoliciesOperationRequirement requirement, ServiceAccountPeopleAccessPolicies resource,
         AccessClientType accessClient, Guid userId)
     {
-        var access = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId, accessClient);
         if (access.Write)
         {
             if (resource.UserAccessPolicies != null && resource.UserAccessPolicies.Any())
