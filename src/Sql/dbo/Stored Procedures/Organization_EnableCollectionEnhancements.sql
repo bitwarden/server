@@ -35,6 +35,12 @@ BEGIN
             LEFT JOIN [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = TG.[GroupId]
         WHERE CG.[CollectionId] IS NULL;
 
+        -- Update Group to clear AccessAll flag
+        UPDATE G
+        SET [AccessAll] = 0
+        FROM [dbo].[Group] G
+            INNER JOIN #TempGroup TG ON G.[Id] = TG.[GroupId]
+
         -- Drop the temporary table
         DROP TABLE #TempGroup;
 
@@ -87,6 +93,12 @@ BEGIN
             SET @CurrentBatch = @CurrentBatch + 1;
         END;
 
+        -- Update OrganizationUser to clear AccessAll flag
+        UPDATE OU
+        SET [AccessAll] = 0
+        FROM [dbo].[OrganizationUser] OU
+            INNER JOIN #TempOrgUser T ON OU.[Id] = T.[OrganizationUserId]
+
         -- Step 4: Drop the temporary table
         DROP TABLE #TempOrgUser;
 
@@ -120,6 +132,14 @@ BEGIN
                 SELECT 1 FROM [dbo].[CollectionUser] cu
                 WHERE cu.[CollectionId] = cg.[CollectionId] AND cu.[OrganizationUserId] = ou.[Id]
             )
+
+        -- Set all Managers to Users
+        UPDATE [dbo].[OrganizationUser]
+        SET [Type] = 2  -- User
+        WHERE [OrganizationId] = @Id
+            AND [Type] = 3;
+
+        -- TODO: clear custom permissions JSON? Probably should, but not actually used by any code once we enable FC
 
     COMMIT TRANSACTION;
 END
