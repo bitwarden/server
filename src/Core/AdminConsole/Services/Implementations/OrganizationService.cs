@@ -483,7 +483,8 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
             LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled,
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
+            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled,
+            FlexibleCollections = flexibleCollectionsIsEnabled
         };
 
         if (signup.UseSecretsManager)
@@ -603,8 +604,11 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
-            LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion,
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems
+            LimitCollectionCreationDeletion =
+                !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion,
+            AllowAdminAccessToAllCollectionItems =
+                !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems,
+            FlexibleCollections = flexibleCollectionsMvpIsEnabled && license.FlexibleCollections
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);

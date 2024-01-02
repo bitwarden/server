@@ -277,5 +277,6 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         SmServiceAccounts = license.SmServiceAccounts;
         LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems;
+        FlexibleCollections = flexibleCollectionsMvpIsEnabled && license.FlexibleCollections;
     }
 }
