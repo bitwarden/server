@@ -821,14 +821,14 @@ public class OrganizationsController : Controller
     /// <exception cref="NotFoundException"></exception>
     [HttpPost("{id}/enable-collection-enhancements")]
     [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
-    public async Task<OrganizationResponseModel> MigrateToFlexibleCollections(Guid organizationId)
+    public async Task MigrateToFlexibleCollections(Guid id)
     {
-        if (!await _currentContext.OrganizationOwner(organizationId))
+        if (!await _currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {
             throw new NotFoundException();
@@ -838,8 +838,6 @@ public class OrganizationsController : Controller
 
         organization.FlexibleCollections = true;
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-
-        return new OrganizationResponseModel(organization);
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
