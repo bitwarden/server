@@ -51,7 +51,19 @@ public class GrantRepository : BaseRepository, IGrantRepository
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[Grant_Save]",
-                obj,
+                new
+                {
+                    obj.Key,
+                    obj.Type,
+                    obj.SubjectId,
+                    obj.SessionId,
+                    obj.ClientId,
+                    obj.Description,
+                    obj.CreationDate,
+                    obj.ExpirationDate,
+                    obj.ConsumedDate,
+                    obj.Data
+                },
                 commandType: CommandType.StoredProcedure);
         }
     }
