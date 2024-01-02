@@ -24,8 +24,8 @@ public record TeamsPlan : Models.StaticStore.Plan
         HasApi = true;
         UsersGetPremium = true;
 
-        UpgradeSortOrder = 2;
-        DisplaySortOrder = 2;
+        UpgradeSortOrder = 3;
+        DisplaySortOrder = 3;
 
         PasswordManager = new TeamsPasswordManagerFeatures(isAnnual);
         SecretsManager = new TeamsSecretsManagerFeatures(isAnnual);
