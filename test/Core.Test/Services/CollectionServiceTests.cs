@@ -114,7 +114,7 @@ public class CollectionServiceTest
         collection.Id = default;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
+            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
             .Returns(true);
         organization.AllowAdminAccessToAllCollectionItems = false;
 
