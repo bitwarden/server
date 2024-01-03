@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[Grant_Save]
-  @Key  NVARCHAR(200),
+CREATE OR ALTER PROCEDURE [dbo].[Grant_Save]
+    @Key  NVARCHAR(200),
     @Type  NVARCHAR(50),
     @SubjectId NVARCHAR(200),
     @SessionId NVARCHAR(100),
