@@ -123,7 +123,7 @@ public class CollectionService : ICollectionService
         else
         {
             var collections = await _collectionRepository.GetManyByUserIdAsync(
-                _currentContext.UserId.Value, 
+                _currentContext.UserId.Value,
                 _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext)
             );
             orgCollections = collections.Where(c => c.OrganizationId == organizationId);
