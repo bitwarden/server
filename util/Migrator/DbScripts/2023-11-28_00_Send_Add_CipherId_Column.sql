@@ -38,7 +38,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER
+    @CipherId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -110,7 +110,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Update]
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER
+    @CipherId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
