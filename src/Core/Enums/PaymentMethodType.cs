@@ -17,8 +17,10 @@ public enum PaymentMethodType : byte
     [Display(Name = "Wire Transfer")]
     WireTransfer = 5,
     [Display(Name = "Apple In-App Purchase")]
+    [Obsolete("In-app purchase payment method is not allowed.")]
     AppleInApp = 6,
     [Display(Name = "Google In-App Purchase")]
+    [Obsolete("In-app purchase payment method is not allowed.")]
     GoogleInApp = 7,
     [Display(Name = "Check")]
     Check = 8,

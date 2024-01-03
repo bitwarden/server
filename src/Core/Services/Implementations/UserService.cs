@@ -255,7 +255,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             try
             {
-                await CancelPremiumAsync(user, null, true);
+                await CancelPremiumAsync(user);
             }
             catch (GatewayException) { }
         }
@@ -1039,29 +1039,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             paymentIntentClientSecret);
     }
 
-    public async Task IapCheckAsync(User user, PaymentMethodType paymentMethodType)
-    {
-        if (paymentMethodType != PaymentMethodType.AppleInApp)
-        {
-            throw new BadRequestException("Payment method not supported for in-app purchases.");
-        }
-
-        if (user.Premium)
-        {
-            throw new BadRequestException("Already a premium user.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(user.GatewayCustomerId))
-        {
-            var customerService = new Stripe.CustomerService();
-            var customer = await customerService.GetAsync(user.GatewayCustomerId);
-            if (customer != null && customer.Balance != 0)
-            {
-                throw new BadRequestException("Customer balance cannot exist when using in-app purchases.");
-            }
-        }
-    }
-
     public async Task UpdateLicenseAsync(User user, UserLicense license)
     {
         if (!_globalSettings.SelfHosted)
@@ -1136,7 +1113,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null, bool accountDelete = false)
+    public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
     {
         var eop = endOfPeriod.GetValueOrDefault(true);
         if (!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
@@ -1144,11 +1121,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             eop = false;
         }
-        await _paymentService.CancelSubscriptionAsync(user, eop, accountDelete);
+        await _paymentService.CancelSubscriptionAsync(user, eop);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.CancelSubscription, user, _currentContext)
             {
-                EndOfPeriod = eop,
+                EndOfPeriod = eop
             });
     }
 

@@ -42,6 +42,7 @@ public class SubscriptionResponseModel : ResponseModel
     public BillingSubscription Subscription { get; set; }
     public UserLicense License { get; set; }
     public DateTime? Expiration { get; set; }
+    [Obsolete("In-app purchase payment method is not allowed.")]
     public bool UsingInAppPurchase { get; set; }
 }
 
