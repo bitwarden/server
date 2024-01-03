@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -17,6 +16,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.Mail;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -68,11 +68,15 @@ public class OrganizationServiceTests
         existingUsers.First().Type = OrganizationUserType.Owner;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id)
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
+        organizationUserRepository.GetManyDetailsByOrganizationAsync(org.Id)
             .Returns(existingUsers);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id)
+        organizationUserRepository.GetCountByOrganizationIdAsync(org.Id)
             .Returns(existingUsers.Count);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(org.Id, OrganizationUserType.Owner)
+        organizationUserRepository.GetManyByOrganizationAsync(org.Id, OrganizationUserType.Owner)
             .Returns(existingUsers.Select(u => new OrganizationUser { Status = OrganizationUserStatusType.Confirmed, Type = OrganizationUserType.Owner, Id = u.Id }).ToList());
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
 
@@ -98,9 +102,10 @@ public class OrganizationServiceTests
         // Create new users
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
+
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(org.Name,
-            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), org.PlanType == PlanType.Free);
+            .SendOrganizationInviteEmailsAsync(
+                Arg.Is<OrganizationInvitesInfo>(info => info.OrgUserTokenPairs.Count() == expectedNewUsersCount && info.IsFreeOrg == (org.PlanType == PlanType.Free) && info.OrganizationName == org.Name));
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -139,8 +144,14 @@ public class OrganizationServiceTests
             .Returns(existingUsers.Count);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(reInvitedUser.Id)
             .Returns(new OrganizationUser { Id = reInvitedUser.Id });
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(org.Id, OrganizationUserType.Owner)
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        organizationUserRepository.GetManyByOrganizationAsync(org.Id, OrganizationUserType.Owner)
             .Returns(existingUsers.Select(u => new OrganizationUser { Status = OrganizationUserStatusType.Confirmed, Type = OrganizationUserType.Owner, Id = u.Id }).ToList());
+
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
         currentContext.ManageUsers(org.Id).Returns(true);
 
@@ -170,9 +181,10 @@ public class OrganizationServiceTests
         // Created and invited new users
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
+
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(org.Name,
-            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), org.PlanType == PlanType.Free);
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserTokenPairs.Count() == expectedNewUsersCount && info.IsFreeOrg == (org.PlanType == PlanType.Free) && info.OrganizationName == org.Name));
 
         // Sent events
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -396,6 +408,9 @@ public class OrganizationServiceTests
         organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new[] { owner });
 
+        // Must set guids in order for dictionary of guids to not throw aggregate exceptions
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
         // Mock tokenable factory to return a token that expires in 5 days
         sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
             .CreateToken(Arg.Any<OrganizationUser>())
@@ -406,11 +421,64 @@ public class OrganizationServiceTests
                 }
                 );
 
+
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invite.Emails.Distinct().Count()), organization.PlanType == PlanType.Free);
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserTokenPairs.Count() == invite.Emails.Distinct().Count() &&
+                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
+                info.OrganizationName == organization.Name));
+
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize, BitAutoData]
+    public async Task InviteUser_SsoOrgWithNullSsoConfig_Passes(Organization organization, OrganizationUser invitor,
+                [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
+    {
+        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        // Org must be able to use SSO to trigger this proper test case as we currently only call to retrieve
+        // an org's SSO config if the org can use SSO
+        organization.UseSso = true;
+
+        // Return null for sso config
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new[] { owner });
+
+        // Must set guids in order for dictionary of guids to not throw aggregate exceptions
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
+        // Mock tokenable factory to return a token that expires in 5 days
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(
+                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+                {
+                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+                }
+                );
+
+
+
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
+
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserTokenPairs.Count() == invite.Emails.Distinct().Count() &&
+                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
+                info.OrganizationName == organization.Name));
+
     }
 
     [Theory]
@@ -516,6 +584,9 @@ public class OrganizationServiceTests
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new[] { invitor });
+
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
         currentContext.OrganizationOwner(organization.Id).Returns(true);
         currentContext.ManageUsers(organization.Id).Returns(true);
 
@@ -543,6 +614,9 @@ public class OrganizationServiceTests
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new[] { invitor });
+
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
         currentContext.OrganizationOwner(organization.Id).Returns(true);
         currentContext.ManageUsers(organization.Id).Returns(true);
 
@@ -567,6 +641,8 @@ public class OrganizationServiceTests
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
         currentContext.OrganizationCustom(organization.Id).Returns(true);
         currentContext.ManageUsers(organization.Id).Returns(false);
 
@@ -618,6 +694,9 @@ public class OrganizationServiceTests
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new[] { invitor });
+
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
         currentContext.OrganizationOwner(organization.Id).Returns(true);
         currentContext.ManageUsers(organization.Id).Returns(true);
 
@@ -683,11 +762,16 @@ public class OrganizationServiceTests
                 }
             );
 
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+        SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
+
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()), organization.PlanType == PlanType.Free);
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserTokenPairs.Count() == invites.SelectMany(i => i.invite.Emails).Count() &&
+                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
+                info.OrganizationName == organization.Name));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
     }
@@ -719,6 +803,10 @@ public class OrganizationServiceTests
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new[] { owner });
+
+        SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
         currentContext.ManageUsers(organization.Id).Returns(true);
 
         // Mock tokenable factory to return a token that expires in 5 days
@@ -734,8 +822,10 @@ public class OrganizationServiceTests
         await sutProvider.Sut.InviteUsersAsync(organization.Id, eventSystemUser, invites);
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()), organization.PlanType == PlanType.Free);
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserTokenPairs.Count() == invites.SelectMany(i => i.invite.Emails).Count() &&
+                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
+                info.OrganizationName == organization.Name));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>());
     }
@@ -759,6 +849,10 @@ public class OrganizationServiceTests
         // Assume we need to add seats for all invited SM users
         sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
             .CountNewSmSeatsRequiredAsync(organization.Id, invitedSmUsers).Returns(invitedSmUsers);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+        SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites);
 
@@ -824,6 +918,26 @@ public class OrganizationServiceTests
                     !update.MaxAutoscaleSmSeatsChanged &&
                     !update.MaxAutoscaleSmSeatsChanged));
         });
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteUser_WithFCEnabled_WhenInvitingManager_Throws(Organization organization, OrganizationUserInvite invite,
+        OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
+    {
+        invite.Type = OrganizationUserType.Manager;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManageUsers(organization.Id)
+            .Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
+
+        Assert.Contains("manager role is deprecated", exception.Message.ToLowerInvariant());
     }
 
     private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
@@ -1104,6 +1218,38 @@ public class OrganizationServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveUserAsync(newUserData, oldUserData.UserId, collections, groups));
         Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithFCEnabled_WhenUpgradingToManager_Throws(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Manager)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManageUsers(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(oldUserData.Id)
+            .Returns(oldUserData);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = CoreHelpers.ClassToJsonData(new Permissions());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveUserAsync(newUserData, oldUserData.UserId, collections, groups));
+
+        Assert.Contains("manager role is deprecated", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
@@ -2021,5 +2167,36 @@ public class OrganizationServiceTests
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, invitePermissions));
 
         Assert.Contains("custom users can only grant the same custom permissions that they have.", exception.Message.ToLowerInvariant());
+    }
+
+    // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
+    private void SetupOrgUserRepositoryCreateManyAsyncMock(IOrganizationUserRepository organizationUserRepository)
+    {
+        organizationUserRepository.CreateManyAsync(Arg.Any<IEnumerable<OrganizationUser>>()).Returns(
+            info =>
+            {
+                var orgUsers = info.Arg<IEnumerable<OrganizationUser>>();
+                foreach (var orgUser in orgUsers)
+                {
+                    orgUser.Id = Guid.NewGuid();
+                }
+
+                return Task.FromResult<ICollection<Guid>>(orgUsers.Select(u => u.Id).ToList());
+            }
+        );
+    }
+
+    // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
+    private void SetupOrgUserRepositoryCreateAsyncMock(IOrganizationUserRepository organizationUserRepository)
+    {
+        organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>(),
+            Arg.Any<IEnumerable<CollectionAccessSelection>>()).Returns(
+            info =>
+            {
+                var orgUser = info.Arg<OrganizationUser>();
+                orgUser.Id = Guid.NewGuid();
+                return Task.FromResult<Guid>(orgUser.Id);
+            }
+        );
     }
 }

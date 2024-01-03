@@ -21,7 +21,13 @@ public static class OrganizationLicenseFileFixtures
     private const string Version13 =
         "{\n  'LicenseKey': 'myLicenseKey',\n  'InstallationId': '78900000-0000-0000-0000-000000000123',\n  'Id': '12300000-0000-0000-0000-000000000456',\n  'Name': 'myOrg',\n  'BillingEmail': 'myBillingEmail',\n  'BusinessName': 'myBusinessName',\n  'Enabled': true,\n  'Plan': 'myPlan',\n  'PlanType': 11,\n  'Seats': 10,\n  'MaxCollections': 2,\n  'UsePolicies': true,\n  'UseSso': true,\n  'UseKeyConnector': true,\n  'UseScim': true,\n  'UseGroups': true,\n  'UseEvents': true,\n  'UseDirectory': true,\n  'UseTotp': true,\n  'Use2fa': true,\n  'UseApi': true,\n  'UseResetPassword': true,\n  'MaxStorageGb': 100,\n  'SelfHost': true,\n  'UsersGetPremium': true,\n  'UseCustomPermissions': true,\n  'Version': 12,\n  'Issued': '2023-11-23T03:25:24.265409Z',\n  'Refresh': '2023-11-30T03:25:24.265409Z',\n  'Expires': '2023-11-30T03:25:24.265409Z',\n  'ExpirationWithoutGracePeriod': null,\n  'UsePasswordManager': true,\n  'UseSecretsManager': true,\n  'SmSeats': 5,\n  'SmServiceAccounts': 8,\n  'Trial': true,\n  'LicenseType': 1,\n  'Hash': 'hZ4WcSX/7ooRZ6asDRMJ/t0K5hZkQdvkgEyy6wY\\u002BwQk=',\n  'Signature': ''\n}";
 
-    private static readonly Dictionary<int, string> LicenseVersions = new() { { 12, Version12 }, { 13, Version13 } };
+    private const string Version14 =
+        "{\n  'LicenseKey': 'myLicenseKey',\n  'InstallationId': '78900000-0000-0000-0000-000000000123',\n  'Id': '12300000-0000-0000-0000-000000000456',\n  'Name': 'myOrg',\n  'BillingEmail': 'myBillingEmail',\n  'BusinessName': 'myBusinessName',\n  'Enabled': true,\n  'Plan': 'myPlan',\n  'PlanType': 11,\n  'Seats': 10,\n  'MaxCollections': 2,\n  'UsePolicies': true,\n  'UseSso': true,\n  'UseKeyConnector': true,\n  'UseScim': true,\n  'UseGroups': true,\n  'UseEvents': true,\n  'UseDirectory': true,\n  'UseTotp': true,\n  'Use2fa': true,\n  'UseApi': true,\n  'UseResetPassword': true,\n  'MaxStorageGb': 100,\n  'SelfHost': true,\n  'UsersGetPremium': true,\n  'UseCustomPermissions': true,\n  'Version': 13,\n  'Issued': '2023-11-29T22:42:33.970597Z',\n  'Refresh': '2023-12-06T22:42:33.970597Z',\n  'Expires': '2023-12-06T22:42:33.970597Z',\n  'ExpirationWithoutGracePeriod': null,\n  'UsePasswordManager': true,\n  'UseSecretsManager': true,\n  'SmSeats': 5,\n  'SmServiceAccounts': 8,\n  'LimitCollectionCreationDeletion': true,\n  'Trial': true,\n  'LicenseType': 1,\n  'Hash': '4G2u\\u002BWKO9EOiVnDVNr7uPxxRkv7TtaOmDl7kAYH05Fw=',\n  'Signature': ''\n}";
+
+    private const string Version15 =
+        "{\n  'LicenseKey': 'myLicenseKey',\n  'InstallationId': '78900000-0000-0000-0000-000000000123',\n  'Id': '12300000-0000-0000-0000-000000000456',\n  'Name': 'myOrg',\n  'BillingEmail': 'myBillingEmail',\n  'BusinessName': 'myBusinessName',\n  'Enabled': true,\n  'Plan': 'myPlan',\n  'PlanType': 11,\n  'Seats': 10,\n  'MaxCollections': 2,\n  'UsePolicies': true,\n  'UseSso': true,\n  'UseKeyConnector': true,\n  'UseScim': true,\n  'UseGroups': true,\n  'UseEvents': true,\n  'UseDirectory': true,\n  'UseTotp': true,\n  'Use2fa': true,\n  'UseApi': true,\n  'UseResetPassword': true,\n  'MaxStorageGb': 100,\n  'SelfHost': true,\n  'UsersGetPremium': true,\n  'UseCustomPermissions': true,\n  'Version': 14,\n  'Issued': '2023-12-14T02:03:33.374297Z',\n  'Refresh': '2023-12-07T22:42:33.970597Z',\n  'Expires': '2023-12-21T02:03:33.374297Z',\n  'ExpirationWithoutGracePeriod': null,\n  'UsePasswordManager': true,\n  'UseSecretsManager': true,\n  'SmSeats': 5,\n  'SmServiceAccounts': 8,\n  'LimitCollectionCreationDeletion': true,\n  'AllowAdminAccessToAllCollectionItems': true,\n  'Trial': true,\n  'LicenseType': 1,\n  'Hash': 'EZl4IvJaa1E5mPmlfp4p5twAtlmaxlF1yoZzVYP4vog=',\n  'Signature': ''\n}";
+
+    private static readonly Dictionary<int, string> LicenseVersions = new() { { 12, Version12 }, { 13, Version13 }, { 14, Version14 }, { 15, Version15 } };
 
     public static OrganizationLicense GetVersion(int licenseVersion)
     {
@@ -105,6 +111,7 @@ public static class OrganizationLicenseFileFixtures
             MaxAutoscaleSmSeats = 101,
             MaxAutoscaleSmServiceAccounts = 102,
             SecretsManagerBeta = true,
-            LimitCollectionCreationDeletion = true
+            LimitCollectionCreationDeletion = true,
+            AllowAdminAccessToAllCollectionItems = true,
         };
 }

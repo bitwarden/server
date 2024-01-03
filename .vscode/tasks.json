@@ -211,6 +211,42 @@
                 "clear": false
             },
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Setup Secrets",
+            "type": "shell",
+            "command": "pwsh -WorkingDirectory ${workspaceFolder}/dev -Command '${workspaceFolder}/dev/setup_secrets.ps1 -clear:$${input:setupSecretsClear}'",
+            "problemMatcher": []
+        },
+        {
+            "label": "Install Dev Cert",
+            "type": "shell",
+            "command": "dotnet tool install -g dotnet-certificate-tool -g && certificate-tool add --file ${workspaceFolder}/dev/dev.pfx --password '${input:certPassword}'",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "setupSecretsClear",
+            "type": "pickString",
+            "default": "true",
+            "description": "Whether or not to clear existing secrets",
+            "options": [
+                {
+                    "label": "true",
+                    "value": "true"
+                },
+                {
+                    "label": "false",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "id": "certPassword",
+            "type": "promptString",
+            "description": "Password for your dev certificate.",
+            "password": true
         }
     ]
 }

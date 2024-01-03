@@ -1,10 +1,12 @@
 ﻿using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.ResponseHandling;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
+using StackExchange.Redis;
 
 namespace Bit.Identity.Utilities;
 
@@ -23,6 +25,7 @@ public static class ServiceCollectionExtensions
         var identityServerBuilder = services
             .AddIdentityServer(options =>
             {
+                options.LicenseKey = globalSettings.IdentityServer.LicenseKey;
                 options.Endpoints.EnableIntrospectionEndpoint = false;
                 options.Endpoints.EnableEndSessionEndpoint = false;
                 options.Endpoints.EnableUserInfoEndpoint = false;
@@ -44,10 +47,33 @@ public static class ServiceCollectionExtensions
             .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
             .AddProfileService<ProfileService>()
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
-            .AddPersistedGrantStore<PersistedGrantStore>()
             .AddClientStore<ClientStore>()
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>();
+
+        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
+        {
+            // If we have redis, prefer it
+
+            // Add the original persisted grant store via it's implementation type
+            // so we can inject it right after.
+            services.AddSingleton<PersistedGrantStore>();
+
+            services.AddSingleton<IPersistedGrantStore>(sp =>
+            {
+                return new RedisPersistedGrantStore(
+                    // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
+                    ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
+                    sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
+                    sp.GetRequiredService<PersistedGrantStore>() // Fallback grant store
+                );
+            });
+        }
+        else
+        {
+            // Use the original grant store
+            identityServerBuilder.AddPersistedGrantStore<PersistedGrantStore>();
+        }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;

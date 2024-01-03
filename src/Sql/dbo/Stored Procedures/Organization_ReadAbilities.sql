@@ -20,7 +20,9 @@ BEGIN
         [UseScim],
         [UseResetPassword],
         [UsePolicies],
-        [Enabled]
+        [Enabled],
+        [LimitCollectionCreationDeletion],
+        [AllowAdminAccessToAllCollectionItems]
     FROM
         [dbo].[Organization]
 END

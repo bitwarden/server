@@ -61,28 +61,14 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Restore
-        run: dotnet restore --locked-mode
-        shell: pwsh
-
       - name: Remove SQL proj
         run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
 
-      - name: Build OSS solution
-        run: dotnet build bitwarden-server.sln -p:Configuration=Debug -p:DefineConstants="OSS" --verbosity minimal
-        shell: pwsh
-
-      - name: Build solution
-        run: dotnet build bitwarden-server.sln -p:Configuration=Debug --verbosity minimal
-        shell: pwsh
-
       - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx"
-        shell: pwsh
+        run: dotnet test ./test --configuration Release --logger "trx;LogFileName=oss-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx"
-        shell: pwsh
+        run: dotnet test ./bitwarden_license/test --configuration Release --logger "trx;LogFileName=bw-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
 
       - name: Report test results
         uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226 # v1.6.0
@@ -92,6 +78,11 @@ jobs:
           path: "**/*-test-results.trx"
           reporter: dotnet-trx
           fail-on-error: true
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   build-artifacts:
     name: Build artifacts
@@ -155,14 +146,6 @@ jobs:
           npm --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-
-      - name: Restore/Clean project
-        working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
-        run: |
-          echo "Restore"
-          dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
 
       - name: Build node
         if: ${{ matrix.node }}
@@ -250,7 +233,7 @@ jobs:
 
       - name: Check Branch to Publish
         env:
-          PUBLISH_BRANCHES: "master,rc,hotfix-rc"
+          PUBLISH_BRANCHES: "main,rc,hotfix-rc"
         id: publish-branch-check
         run: |
           IFS="," read -a publish_branches <<< $PUBLISH_BRANCHES
@@ -287,7 +270,7 @@ jobs:
         id: tag
         run: |
           IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-          if [[ "$IMAGE_TAG" == "master" ]]; then
+          if [[ "$IMAGE_TAG" == "main" ]]; then
             IMAGE_TAG=dev
           fi
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
@@ -357,17 +340,14 @@ jobs:
       - name: Login to PROD ACR
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
-      - name: Restore
-        run: dotnet tool restore
-
       - name: Make Docker stubs
-        if: github.ref == 'refs/heads/master' ||
+        if: github.ref == 'refs/heads/main' ||
           github.ref == 'refs/heads/rc' ||
           github.ref == 'refs/heads/hotfix-rc'
         run: |
           # Set proper setup image based on branch
           case "${{ github.ref }}" in
-            "refs/heads/master")
+            "refs/heads/main")
                 SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
                 ;;
             "refs/heads/rc")
@@ -403,13 +383,13 @@ jobs:
           cd docker-stub/EU; zip -r ../../docker-stub-EU.zip *; cd ../..
 
       - name: Make Docker stub checksums
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         run: |
           sha256sum docker-stub-US.zip > docker-stub-US-sha256.txt
           sha256sum docker-stub-EU.zip > docker-stub-EU-sha256.txt
 
       - name: Upload Docker stub US artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: docker-stub-US.zip
@@ -417,7 +397,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub EU artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: docker-stub-EU.zip
@@ -425,7 +405,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub US checksum artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: docker-stub-US-sha256.txt
@@ -433,7 +413,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub EU checksum artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: docker-stub-EU-sha256.txt
@@ -443,10 +423,8 @@ jobs:
       - name: Build Swagger
         run: |
           cd ./src/Api
-          echo "Restore"
-          dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
+          echo "Restore tools"
+          dotnet tool restore
           echo "Publish"
           dotnet publish -c "Release" -o obj/build-output/publish
 
@@ -495,11 +473,6 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Restore project
-        run: |
-          echo "Restore"
-          dotnet restore
-
       - name: Publish project
         run: |
           dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} -p:PublishSingleFile=true \
@@ -521,12 +494,10 @@ jobs:
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
 
-
   self-host-build:
     name: Trigger self-host build
     runs-on: ubuntu-22.04
-    needs:
-      - build-docker
+    needs: build-docker
     steps:
       - name: Login to Azure - CI Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
@@ -549,9 +520,43 @@ jobs:
               owner: 'bitwarden',
               repo: 'self-host',
               workflow_id: 'build-unified.yml',
-              ref: 'master',
+              ref: 'main',
               inputs: {
                 server_branch: '${{ github.ref }}'
+              }
+            })
+
+  trigger-k8s-deploy:
+    name: Trigger k8s deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    needs: build-docker
+    steps:
+      - name: Login to Azure - CI Subscription
+        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve github PAT secrets
+        id: retrieve-secret-pat
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Trigger k8s deploy
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        with:
+          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'bitwarden',
+              repo: 'devops',
+              workflow_id: 'deploy-k8s.yml',
+              ref: 'main',
+              inputs: {
+                environment: 'US-DEV Cloud',
+                tag: 'main'
               }
             })
 
@@ -568,10 +573,11 @@ jobs:
       - upload
       - build-mssqlmigratorutility
       - self-host-build
+      - trigger-k8s-deploy
     steps:
       - name: Check if any job failed
         if: |
-          github.ref == 'refs/heads/master'
+          github.ref == 'refs/heads/main'
           || github.ref == 'refs/heads/rc'
           || github.ref == 'refs/heads/hotfix-rc'
         env:
@@ -583,6 +589,7 @@ jobs:
           UPLOAD_STATUS: ${{ needs.upload.result }}
           BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
           TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.self-host-build.result }}
+          TRIGGER_K8S_DEPLOY_STATUS: ${{ needs.trigger-k8s-deploy.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
@@ -599,6 +606,8 @@ jobs:
           elif [ "$BUILD_MSSQLMIGRATORUTILITY_STATUS" = "failure" ]; then
               exit 1
           elif [ "$TRIGGER_SELF_HOST_BUILD_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$TRIGGER_K8S_DEPLOY_STATUS" = "failure" ]; then
               exit 1
           fi
 

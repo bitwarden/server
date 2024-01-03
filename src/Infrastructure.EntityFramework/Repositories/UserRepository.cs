@@ -24,6 +24,18 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
+    public async Task<IEnumerable<Core.Entities.User>> GetManyByEmailsAsync(IEnumerable<string> emails)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var users = await GetDbSet(dbContext)
+                .Where(u => emails.Contains(u.Email))
+                .ToListAsync();
+            return Mapper.Map<List<Core.Entities.User>>(users);
+        }
+    }
+
     public async Task<DataModel.UserKdfInformation> GetKdfInformationByEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -198,6 +210,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             var transaction = await dbContext.Database.BeginTransactionAsync();
 
+            dbContext.WebAuthnCredentials.RemoveRange(dbContext.WebAuthnCredentials.Where(w => w.UserId == user.Id));
             dbContext.Ciphers.RemoveRange(dbContext.Ciphers.Where(c => c.UserId == user.Id));
             dbContext.Folders.RemoveRange(dbContext.Folders.Where(f => f.UserId == user.Id));
             dbContext.AuthRequests.RemoveRange(dbContext.AuthRequests.Where(s => s.UserId == user.Id));

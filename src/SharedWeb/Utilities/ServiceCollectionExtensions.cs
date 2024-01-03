@@ -511,6 +511,11 @@ public static class ServiceCollectionExtensions
         {
             identityServerBuilder.AddSigningCredential(certificate);
         }
+        else if (env.IsDevelopment() && !string.IsNullOrEmpty(globalSettings.DevelopmentDirectory))
+        {
+            var developerSigningKeyPath = Path.Combine(globalSettings.DevelopmentDirectory, "signingkey.jwk");
+            identityServerBuilder.AddDeveloperSigningCredential(true, developerSigningKeyPath);
+        }
         else if (env.IsDevelopment())
         {
             identityServerBuilder.AddDeveloperSigningCredential(false);
