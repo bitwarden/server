@@ -12,16 +12,19 @@ public class SubscriptionUpdatedHandler : StripeWebhookHandler
     private readonly IUserService _userService;
     private readonly IStripeEventService _stripeEventService;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
+    private readonly IWebhookUtility _webhookUtility;
 
     public SubscriptionUpdatedHandler(IOrganizationService organizationService,
         IUserService userService,
         IStripeEventService stripeEventService,
-        IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand)
+        IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
+        IWebhookUtility webhookUtility)
     {
         _organizationService = organizationService;
         _userService = userService;
         _stripeEventService = stripeEventService;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
+        _webhookUtility = webhookUtility;
     }
     protected override bool CanHandle(Event parsedEvent)
     {
@@ -33,7 +36,7 @@ public class SubscriptionUpdatedHandler : StripeWebhookHandler
         if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated))
         {
             var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-            var ids = GetIdsFromMetaData(subscription.Metadata);
+            var ids = _webhookUtility.GetIdsFromMetaData(subscription.Metadata);
             var organizationId = ids.Item1 ?? Guid.Empty;
             var userId = ids.Item2 ?? Guid.Empty;
             var subActive = subscription.Status == StripeSubscriptionStatus.Active;
@@ -51,7 +54,7 @@ public class SubscriptionUpdatedHandler : StripeWebhookHandler
 
                 await _organizationService.UpdateExpirationDateAsync(organizationId, subscription.CurrentPeriodEnd);
 
-                if (IsSponsoredSubscription(subscription))
+                if (_webhookUtility.IsSponsoredSubscription(subscription))
                 {
                     await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId,
                         subscription.CurrentPeriodEnd);

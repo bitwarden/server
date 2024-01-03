@@ -15,16 +15,19 @@ public class ChargeSucceededHandler : StripeWebhookHandler
     private readonly ITransactionRepository _transactionRepository;
     private readonly ILogger<StripeController> _logger;
     private readonly IStripeEventService _stripeEventService;
+    private readonly IWebhookUtility _webhookUtility;
 
 
     public ChargeSucceededHandler(
         ITransactionRepository transactionRepository,
         ILogger<StripeController> logger,
-        IStripeEventService stripeEventService)
+        IStripeEventService stripeEventService,
+        IWebhookUtility webhookUtility)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
         _stripeEventService = stripeEventService;
+        _webhookUtility = webhookUtility;
     }
 
     protected override bool CanHandle(Event parsedEvent)
@@ -54,7 +57,7 @@ public class ChargeSucceededHandler : StripeWebhookHandler
             if (invoice?.SubscriptionId != null)
             {
                 subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                ids = GetIdsFromMetaData(subscription?.Metadata);
+                ids = _webhookUtility.GetIdsFromMetaData(subscription?.Metadata);
             }
         }
 
@@ -68,7 +71,7 @@ public class ChargeSucceededHandler : StripeWebhookHandler
             {
                 if (sub.Status != StripeSubscriptionStatus.Canceled && sub.Status != StripeSubscriptionStatus.IncompleteExpired)
                 {
-                    ids = GetIdsFromMetaData(sub.Metadata);
+                    ids = _webhookUtility.GetIdsFromMetaData(sub.Metadata);
                     if (ids.Item1.HasValue || ids.Item2.HasValue)
                     {
                         subscription = sub;

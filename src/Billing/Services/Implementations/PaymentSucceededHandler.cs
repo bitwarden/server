@@ -21,6 +21,7 @@ public class PaymentSucceededHandler : StripeWebhookHandler
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
+    private readonly IWebhookUtility _webhookUtility;
 
     public PaymentSucceededHandler(IStripeEventService stripeEventService,
         IOrganizationService organizationService,
@@ -28,7 +29,8 @@ public class PaymentSucceededHandler : StripeWebhookHandler
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IUserService userService,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IWebhookUtility webhookUtility)
     {
         _stripeEventService = stripeEventService;
         _organizationService = organizationService;
@@ -37,6 +39,7 @@ public class PaymentSucceededHandler : StripeWebhookHandler
         _currentContext = currentContext;
         _userService = userService;
         _userRepository = userRepository;
+        _webhookUtility = webhookUtility;
     }
     protected override bool CanHandle(Event parsedEvent)
     {
@@ -57,7 +60,7 @@ public class PaymentSucceededHandler : StripeWebhookHandler
                     await Task.Delay(5000);
                 }
 
-                var ids = GetIdsFromMetaData(subscription.Metadata);
+                var ids = _webhookUtility.GetIdsFromMetaData(subscription.Metadata);
                 // org
                 if (ids.Item1.HasValue)
                 {
