@@ -6,12 +6,14 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
 
 public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProviderCommand
 {
     private readonly IEventService _eventService;
+    private readonly ILogger<RemoveOrganizationFromProviderCommand> _logger;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
@@ -19,12 +21,14 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
+        ILogger<RemoveOrganizationFromProviderCommand> logger,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository)
     {
         _eventService = eventService;
+        _logger = logger;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
@@ -55,7 +59,13 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         var organizationOwnerEmails =
             (await _organizationRepository.GetOwnerEmailAddressesById(organization.Id)).ToList();
 
+        var loggedEmails = string.Join(", ", organizationOwnerEmails);
+
+        _logger.LogInformation("AC-1758: Owner Emails -> {LoggedEmails}", loggedEmails);
+
         organization.BillingEmail = organizationOwnerEmails.MinBy(email => email);
+
+        _logger.LogInformation("AC-1758: Billing Email -> {BillingEmail}", organization.BillingEmail);
 
         await _organizationRepository.ReplaceAsync(organization);
 
