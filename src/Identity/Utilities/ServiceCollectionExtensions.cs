@@ -71,7 +71,7 @@ public static class ServiceCollectionExtensions
                     sqlFallbackStore // Fallback grant store
                 );
 
-                return new FallbackPersistedGrantStore(
+                return new PersistedGrantStore(
                     new Core.Auth.Repositories.TableStorage.GrantRepository(globalSettings),
                     g => new Core.Auth.Models.Data.GrantTableEntity(g),
                     redisFallbackStore);
