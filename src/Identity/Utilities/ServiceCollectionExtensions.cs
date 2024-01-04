@@ -80,7 +80,7 @@ public static class ServiceCollectionExtensions
         return new PersistedGrantStore(
             new Core.Auth.Repositories.Cosmos.GrantRepository(globalSettings),
             g => new Core.Auth.Entities.Grant(g),
-            BuildRedisStore(sp, globalSettings));
+            fallbackGrantStore: BuildRedisStore(sp, globalSettings));
     }
 
     private static PersistedGrantStore BuildTableStorageStore(IServiceProvider sp, GlobalSettings globalSettings)
@@ -88,7 +88,7 @@ public static class ServiceCollectionExtensions
         return new PersistedGrantStore(
             new Core.Auth.Repositories.TableStorage.GrantRepository(globalSettings),
             g => new Core.Auth.Models.Data.GrantTableEntity(g),
-            BuildRedisStore(sp, globalSettings));
+            fallbackGrantStore: BuildRedisStore(sp, globalSettings));
     }
 
     private static RedisPersistedGrantStore BuildRedisStore(IServiceProvider sp, GlobalSettings globalSettings)
@@ -97,8 +97,7 @@ public static class ServiceCollectionExtensions
             // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
             ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
             sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-            BuildSqlStore(sp, globalSettings) // Fallback grant store
-        );
+            fallbackGrantStore: BuildSqlStore(sp, globalSettings));
     }
 
     private static PersistedGrantStore BuildSqlStore(IServiceProvider sp, GlobalSettings globalSettings)
