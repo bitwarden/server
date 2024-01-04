@@ -1,4 +1,5 @@
-﻿using Duende.IdentityServer.Models;
+﻿using Bit.Core.Utilities;
+using Duende.IdentityServer.Models;
 using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Auth.Models.Data;
@@ -59,6 +60,10 @@ public class GrantTableEntity : TableEntity, IGrant
         // TODO: How do we want to partition? Or do we? refs:
         // https://learn.microsoft.com/en-us/rest/api/storageservices/designing-a-scalable-partitioning-strategy-for-azure-table-storage
         // https://stackoverflow.com/questions/19671357/use-the-same-partitionkey-and-rowkey
-        return (grantKey, string.Empty);
+
+        // Partition keys cannot contain certain special characters, change it to B64 URL format
+        var keyBytes = Convert.FromBase64String(grantKey);
+        var b64 = CoreHelpers.Base64UrlEncode(keyBytes);
+        return (b64, string.Empty);
     }
 }
