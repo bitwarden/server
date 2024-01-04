@@ -7,19 +7,8 @@ BEGIN
 END
 GO
 
--- Recreate View
-IF OBJECT_ID('[dbo].[SendView]') IS NOT NULL
-BEGIN
-    DROP VIEW [dbo].[SendView]
-END
-GO
-
-CREATE VIEW [dbo].[SendView]
-AS
-    SELECT
-        *
-    FROM
-        [dbo].[Send]
+-- Refresh View
+EXECUTE sp_refreshview N'[dbo].[SendView]'
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
