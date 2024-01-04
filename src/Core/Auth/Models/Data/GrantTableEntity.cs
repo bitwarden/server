@@ -43,7 +43,6 @@ public class GrantTableEntity : TableEntity, IGrant
         Data = g.Data;
     }
 
-    public int Id { get; set; }
     public string Key { get; set; }
     public string Type { get; set; }
     public string SubjectId { get; set; }
