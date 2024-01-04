@@ -59,6 +59,6 @@ public class GrantTableEntity : TableEntity, IGrant
         // TODO: How do we want to partition? Or do we? refs:
         // https://learn.microsoft.com/en-us/rest/api/storageservices/designing-a-scalable-partitioning-strategy-for-azure-table-storage
         // https://stackoverflow.com/questions/19671357/use-the-same-partitionkey-and-rowkey
-        return (grantKey, grantKey);
+        return (grantKey, string.Empty);
     }
 }
