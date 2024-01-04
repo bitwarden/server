@@ -193,7 +193,7 @@ END
 GO
 
 
---Alter `Organization_Update` sproc to include `AllowAdminAccessToAllCollectionItems` column
+--Alter `Organization_Update` sproc to include new column and default value
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
@@ -320,7 +320,7 @@ GO
   ORGANIZATION VIEWS
  */
 
---Add 'AllowAdminAccessToAllCollectionItems` to OrganizationUserOrganizationDetailsView
+-- Update OrganizationUserOrganizationDetailsView to include new column and default value
 CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
