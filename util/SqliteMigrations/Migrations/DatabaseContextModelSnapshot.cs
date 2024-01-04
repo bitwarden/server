@@ -63,6 +63,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("FlexibleCollections")
+                        .HasColumnType("INTEGER");
+
                     b.Property<byte?>("Gateway")
                         .HasColumnType("INTEGER");
 
