@@ -32,7 +32,12 @@ public class GrantRepository : IGrantRepository
 
     public async Task SaveAsync(IGrant obj)
     {
-        await _container.UpsertItemAsync(obj, new PartitionKey(obj.Key));
+        if (obj is not GrantItem item)
+        {
+            item = new GrantItem(obj);
+        }
+        item.SetTtl();
+        await _container.UpsertItemAsync(item, new PartitionKey(item.Key));
     }
 
     public async Task DeleteByKeyAsync(string key)

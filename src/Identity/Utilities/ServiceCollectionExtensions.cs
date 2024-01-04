@@ -68,7 +68,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddTransient<IPersistedGrantStore>(sp => BuildSqlStore(sp, globalSettings));
+            services.AddTransient<IPersistedGrantStore>(sp => BuildSqlStore(sp));
         }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
@@ -79,7 +79,7 @@ public static class ServiceCollectionExtensions
     {
         return new PersistedGrantStore(
             new Core.Auth.Repositories.Cosmos.GrantRepository(globalSettings),
-            g => new Core.Auth.Entities.Grant(g),
+            g => new Core.Auth.Models.Data.GrantItem(g),
             fallbackGrantStore: BuildRedisStore(sp, globalSettings));
     }
 
@@ -97,10 +97,10 @@ public static class ServiceCollectionExtensions
             // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
             ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
             sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-            fallbackGrantStore: BuildSqlStore(sp, globalSettings));
+            fallbackGrantStore: BuildSqlStore(sp));
     }
 
-    private static PersistedGrantStore BuildSqlStore(IServiceProvider sp, GlobalSettings globalSettings)
+    private static PersistedGrantStore BuildSqlStore(IServiceProvider sp)
     {
         return new PersistedGrantStore(sp.GetRequiredService<IGrantRepository>(),
             g => new Core.Auth.Entities.Grant(g));
