@@ -366,6 +366,11 @@ public class StripePaymentService : IPaymentService
 
         if (user.Gateway == GatewayType.Stripe && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
         {
+            if (!string.IsNullOrWhiteSpace(paymentToken))
+            {
+                await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, taxInfo);
+            }
+
             try
             {
                 customer = await _stripeAdapter.CustomerGetAsync(user.GatewayCustomerId);
