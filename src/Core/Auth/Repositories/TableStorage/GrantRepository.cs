@@ -82,9 +82,8 @@ public class GrantRepository : IGrantRepository
 
     private CloudTable GetTableShard(string key)
     {
-        var hashCode = key.GetHashCode();
-        var positiveHashCode = (hashCode == int.MinValue) ? 0 : Math.Abs(hashCode);
-        var shardNumber = positiveHashCode % _tables.Length;
+        var keyInt = Convert.ToInt32(key[0]);
+        var shardNumber = keyInt % _tables.Length;
         return _tables[shardNumber];
     }
 }
