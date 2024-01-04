@@ -7,8 +7,6 @@ public class SubscriptionInfo
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingUpcomingInvoice UpcomingInvoice { get; set; }
-    [Obsolete("In-app purchase payment method is not allowed.")]
-    public bool UsingInAppPurchase { get; set; }
 
     public class BillingCustomerDiscount
     {
