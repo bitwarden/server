@@ -52,7 +52,9 @@ public static class ServiceCollectionExtensions
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>();
 
-        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.StorageConnectionString))
+        if (globalSettings.IdentityServer.StorageConnectionStrings != null &&
+            globalSettings.IdentityServer.StorageConnectionStrings.Length > 0 &&
+            CoreHelpers.SettingHasValue(globalSettings.IdentityServer.StorageConnectionStrings[0]))
         {
             // If we have table storage, prefer it
 

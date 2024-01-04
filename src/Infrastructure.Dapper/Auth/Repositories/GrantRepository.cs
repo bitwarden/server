@@ -48,7 +48,7 @@ public class GrantRepository : BaseRepository, IGrantRepository
 
     public async Task SaveAsync(IGrant obj)
     {
-        if (!(obj is Grant gObj))
+        if (obj is not Grant gObj)
         {
             throw new ArgumentException(null, nameof(obj));
         }
@@ -59,16 +59,16 @@ public class GrantRepository : BaseRepository, IGrantRepository
                 "[dbo].[Grant_Save]",
                 new
                 {
-                    gObj.Key,
-                    gObj.Type,
-                    gObj.SubjectId,
-                    gObj.SessionId,
-                    gObj.ClientId,
-                    gObj.Description,
-                    gObj.CreationDate,
-                    gObj.ExpirationDate,
-                    gObj.ConsumedDate,
-                    gObj.Data
+                    obj.Key,
+                    obj.Type,
+                    obj.SubjectId,
+                    obj.SessionId,
+                    obj.ClientId,
+                    obj.Description,
+                    obj.CreationDate,
+                    obj.ExpirationDate,
+                    obj.ConsumedDate,
+                    obj.Data
                 },
                 commandType: CommandType.StoredProcedure);
         }
