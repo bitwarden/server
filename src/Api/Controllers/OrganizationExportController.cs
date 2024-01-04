@@ -1,7 +1,9 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Models.Data;
@@ -18,30 +20,49 @@ public class OrganizationExportController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly ICollectionService _collectionService;
+    private readonly ICollectionRepository _collectionRepository;
     private readonly ICipherService _cipherService;
+    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
+
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationExportController(
         ICurrentContext currentContext,
         ICipherService cipherService,
         ICollectionService collectionService,
+        ICollectionRepository collectionRepository,
         IUserService userService,
+        IFeatureService featureService,
         GlobalSettings globalSettings)
     {
         _currentContext = currentContext;
         _cipherService = cipherService;
         _collectionService = collectionService;
+        _collectionRepository = collectionRepository;
         _userService = userService;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     [HttpGet("export")]
     public async Task<IActionResult> Export(Guid organizationId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-
-        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollectionsAsync(organizationId);
-        (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
+        IEnumerable<Collection> orgCollections;
+        IEnumerable<CipherOrganizationDetails> orgCiphers;
+        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict;
+        if (UseFlexibleCollections)
+        {
+            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
+            (orgCiphers, collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
+        }
+        else
+        {
+            orgCollections = await _collectionService.GetOrganizationCollectionsAsync(organizationId);
+            (orgCiphers, collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
+        }
 
         if (_currentContext.ClientVersion == null || _currentContext.ClientVersion >= new Version("2023.1.0"))
         {
