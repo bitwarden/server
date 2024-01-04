@@ -1,8 +1,6 @@
 ﻿#nullable enable
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,8 +17,6 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
     public OrganizationUserAuthorizationHandler(
         ICurrentContext currentContext,
         IFeatureService featureService,
@@ -34,12 +30,6 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         OrganizationUserOperationRequirement requirement)
     {
-        if (!FlexibleCollectionsIsEnabled)
-        {
-            // Flexible collections is OFF, should not be using this handler
-            throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
-        }
-
         if (!_currentContext.UserId.HasValue)
         {
             context.Fail();
