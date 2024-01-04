@@ -8,7 +8,7 @@ END
 GO
 
 -- Refresh View
-EXECUTE sp_refreshview N'[dbo].[{SendView}]'
+EXECUTE sp_refreshview N'[dbo].[SendView]'
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
