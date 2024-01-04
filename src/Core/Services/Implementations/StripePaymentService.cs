@@ -339,8 +339,7 @@ public class StripePaymentService : IPaymentService
         {
             throw new BadRequestException("Your account does not have any credit available.");
         }
-        if (paymentMethodType is PaymentMethodType.BankAccount or PaymentMethodType.GoogleInApp
-            or PaymentMethodType.AppleInApp)
+        if (paymentMethodType is PaymentMethodType.BankAccount)
         {
             throw new GatewayException("Payment method is not supported at this time.");
         }
@@ -1152,11 +1151,6 @@ public class StripePaymentService : IPaymentService
         var stripePaymentMethod = paymentMethodType is PaymentMethodType.Card or PaymentMethodType.BankAccount;
 
         Stripe.Customer customer = null;
-
-        if (paymentMethodType is PaymentMethodType.AppleInApp or PaymentMethodType.GoogleInApp)
-        {
-            throw new GatewayException("In-app purchase payment method is not allowed.");
-        }
 
         if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {

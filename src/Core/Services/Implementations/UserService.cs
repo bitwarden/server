@@ -973,12 +973,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("You can't subtract storage!");
         }
 
-        if ((paymentMethodType == PaymentMethodType.GoogleInApp ||
-            paymentMethodType == PaymentMethodType.AppleInApp) && additionalStorageGb > 0)
-        {
-            throw new BadRequestException("You cannot add storage with this payment method.");
-        }
-
         string paymentIntentClientSecret = null;
         IPaymentService paymentService = null;
         if (_globalSettings.SelfHosted)
