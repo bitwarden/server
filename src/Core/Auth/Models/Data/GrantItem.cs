@@ -1,4 +1,5 @@
 ﻿using Duende.IdentityServer.Models;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Auth.Models.Data;
 
@@ -36,24 +37,39 @@ public class GrantItem : IGrant
         SetTtl();
     }
 
+    [JsonProperty("id")]
     public string Key { get; set; }
+    [JsonProperty("typ")]
     public string Type { get; set; }
+    [JsonProperty("sub")]
     public string SubjectId { get; set; }
+    [JsonProperty("sid")]
     public string SessionId { get; set; }
+    [JsonProperty("cid")]
     public string ClientId { get; set; }
+    [JsonProperty("des")]
     public string Description { get; set; }
+    [JsonProperty("cre")]
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+    [JsonProperty("exp")]
     public DateTime? ExpirationDate { get; set; }
+    [JsonProperty("con")]
     public DateTime? ConsumedDate { get; set; }
+    [JsonProperty("data")]
     public string Data { get; set; }
     // https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-time-to-live?tabs=dotnet-sdk-v3#set-time-to-live-on-an-item-using-an-sdk
-    public int ttl { get; set; }
+    [JsonProperty("ttl")]
+    public int Ttl { get; set; } = -1;
 
     public void SetTtl()
     {
         if (ExpirationDate != null)
         {
-            ttl = (int)(ExpirationDate.Value - DateTime.UtcNow).TotalSeconds;
+            var sec = (ExpirationDate.Value - DateTime.UtcNow).TotalSeconds;
+            if (sec > 0)
+            {
+                Ttl = (int)sec;
+            }
         }
     }
 }

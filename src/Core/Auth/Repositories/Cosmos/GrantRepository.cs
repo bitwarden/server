@@ -1,5 +1,4 @@
-﻿using Azure.Identity;
-using Bit.Core.Auth.Models.Data;
+﻿using Bit.Core.Auth.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Azure.Cosmos;
 
@@ -17,7 +16,15 @@ public class GrantRepository : IGrantRepository
 
     public GrantRepository(string cosmosConnectionString)
     {
-        _client = new CosmosClient(cosmosConnectionString, new DefaultAzureCredential());
+        var options = new CosmosClientOptions
+        {
+            SerializerOptions = new CosmosSerializationOptions
+            {
+                IgnoreNullValues = true,
+                Indented = false
+            }
+        };
+        _client = new CosmosClient(cosmosConnectionString, options);
         _database = _client.GetDatabase("identity");
         _container = _database.GetContainer("grant");
     }
