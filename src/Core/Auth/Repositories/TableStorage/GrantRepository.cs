@@ -44,7 +44,7 @@ public class GrantRepository : IGrantRepository
 
     public async Task SaveAsync(IGrant obj)
     {
-        if (!(obj is GrantTableEntity entity))
+        if (obj is not GrantTableEntity entity)
         {
             entity = new GrantTableEntity(obj);
         }
