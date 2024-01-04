@@ -52,59 +52,58 @@ public static class ServiceCollectionExtensions
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>();
 
+        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
+        {
+            services.AddSingleton<IPersistedGrantStore>(sp => BuildCosmosStore(sp, globalSettings));
+        }
         if (globalSettings.IdentityServer.StorageConnectionStrings != null &&
             globalSettings.IdentityServer.StorageConnectionStrings.Length > 0 &&
             CoreHelpers.SettingHasValue(globalSettings.IdentityServer.StorageConnectionStrings[0]))
         {
-            // If we have table storage, prefer it
-
-            services.AddSingleton<IPersistedGrantStore>(sp =>
-            {
-                var sqlFallbackStore = new PersistedGrantStore(
-                    sp.GetRequiredService<IGrantRepository>(),
-                    g => new Core.Auth.Entities.Grant(g));
-
-                var redisFallbackStore = new RedisPersistedGrantStore(
-                    // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
-                    ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
-                    sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-                    sqlFallbackStore // Fallback grant store
-                );
-
-                return new PersistedGrantStore(
-                    new Core.Auth.Repositories.TableStorage.GrantRepository(globalSettings),
-                    g => new Core.Auth.Models.Data.GrantTableEntity(g),
-                    redisFallbackStore);
-            });
+            services.AddSingleton<IPersistedGrantStore>(sp => BuildTableStorageStore(sp, globalSettings));
         }
         else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
         {
-            services.AddSingleton<IPersistedGrantStore>(sp =>
-            {
-                var sqlFallbackStore = new PersistedGrantStore(
-                    sp.GetRequiredService<IGrantRepository>(),
-                    g => new Core.Auth.Entities.Grant(g));
-
-                return new RedisPersistedGrantStore(
-                    // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
-                    ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
-                    sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-                    sqlFallbackStore // Fallback grant store
-                );
-            });
+            services.AddSingleton<IPersistedGrantStore>(sp => BuildRedisStore(sp, globalSettings));
         }
         else
         {
-            // Use the original grant store
-            services.AddTransient<IPersistedGrantStore>(sp =>
-            {
-                return new PersistedGrantStore(
-                    sp.GetRequiredService<IGrantRepository>(),
-                    g => new Core.Auth.Entities.Grant(g));
-            });
+            services.AddTransient<IPersistedGrantStore>(sp => BuildSqlStore(sp, globalSettings));
         }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;
+    }
+
+    private static PersistedGrantStore BuildCosmosStore(IServiceProvider sp, GlobalSettings globalSettings)
+    {
+        return new PersistedGrantStore(
+            new Core.Auth.Repositories.Cosmos.GrantRepository(globalSettings),
+            g => new Core.Auth.Entities.Grant(g),
+            BuildRedisStore(sp, globalSettings));
+    }
+
+    private static PersistedGrantStore BuildTableStorageStore(IServiceProvider sp, GlobalSettings globalSettings)
+    {
+        return new PersistedGrantStore(
+            new Core.Auth.Repositories.TableStorage.GrantRepository(globalSettings),
+            g => new Core.Auth.Models.Data.GrantTableEntity(g),
+            BuildRedisStore(sp, globalSettings));
+    }
+
+    private static RedisPersistedGrantStore BuildRedisStore(IServiceProvider sp, GlobalSettings globalSettings)
+    {
+        return new RedisPersistedGrantStore(
+            // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
+            ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
+            sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
+            BuildSqlStore(sp, globalSettings) // Fallback grant store
+        );
+    }
+
+    private static PersistedGrantStore BuildSqlStore(IServiceProvider sp, GlobalSettings globalSettings)
+    {
+        return new PersistedGrantStore(sp.GetRequiredService<IGrantRepository>(),
+            g => new Core.Auth.Entities.Grant(g));
     }
 }
