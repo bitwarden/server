@@ -3,7 +3,7 @@ IF COL_LENGTH('[dbo].[Send]', 'CipherId') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Send] 
         ADD [CipherId] UNIQUEIDENTIFIER NULL,
-        CONSTRAINT [FK_Send_Cipher] FOREIGN KEY ([CipherId]) REFERENCES [dbo].[Cipher]([[Id]]);
+        CONSTRAINT [FK_Send_Cipher] FOREIGN KEY ([CipherId]) REFERENCES [dbo].[Cipher]([Id]);
 END
 GO
 
