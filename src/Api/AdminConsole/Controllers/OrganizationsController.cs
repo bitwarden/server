@@ -808,6 +808,40 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(organization);
     }
 
+    /// <summary>
+    /// Migrates user, collection, and group data to the new Flexible Collections permissions scheme,
+    /// then sets organization.FlexibleCollections to true to enable these new features for the organization.
+    /// This is irreversible.
+    /// </summary>
+    /// <param name="organizationId"></param>
+    /// <exception cref="NotFoundException"></exception>
+    [HttpPost("{id}/enable-collection-enhancements")]
+    [RequireFeature(FeatureFlagKeys.FlexibleCollectionsMigration)]
+    public async Task EnableCollectionEnhancements(Guid id)
+    {
+        if (!await _currentContext.OrganizationOwner(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (organization.FlexibleCollections)
+        {
+            throw new BadRequestException("Organization has already been migrated to the new collection enhancements");
+        }
+
+        // TODO: add migration query
+        // await _organizationRepository.EnableCollectionEnhancements(id);
+
+        organization.FlexibleCollections = true;
+        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+    }
+
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
     {
         var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
