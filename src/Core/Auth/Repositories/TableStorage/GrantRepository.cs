@@ -7,17 +7,21 @@ namespace Bit.Core.Auth.Repositories.TableStorage;
 
 public class GrantRepository : IGrantRepository
 {
-    private readonly CloudTable _table;
+    private readonly CloudTable[] _tables;
 
     public GrantRepository(GlobalSettings globalSettings)
-        : this(globalSettings.IdentityServer.StorageConnectionString)
+        : this(globalSettings.IdentityServer.StorageConnectionStrings)
     { }
 
-    public GrantRepository(string storageConnectionString)
+    public GrantRepository(string[] storageConnectionStrings)
     {
-        var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
-        var tableClient = storageAccount.CreateCloudTableClient();
-        _table = tableClient.GetTableReference("grant");
+        _tables = new CloudTable[storageConnectionStrings.Length];
+        for (var i = 0; i < storageConnectionStrings.Length; i++)
+        {
+            var storageAccount = CloudStorageAccount.Parse(storageConnectionStrings[i]);
+            var tableClient = storageAccount.CreateCloudTableClient();
+            _tables[i] = tableClient.GetTableReference("grant");
+        }
     }
 
     public async Task<IGrant> GetByKeyAsync(string key)
@@ -25,7 +29,8 @@ public class GrantRepository : IGrantRepository
         try
         {
             var (partitionKey, rowKey) = GrantTableEntity.CreateTableEntityKeys(key);
-            var result = await _table.ExecuteAsync(TableOperation.Retrieve<GrantTableEntity>(partitionKey, rowKey));
+            var table = GetTableShard(key);
+            var result = await table.ExecuteAsync(TableOperation.Retrieve<GrantTableEntity>(partitionKey, rowKey));
             var entity = result.Result as GrantTableEntity;
             return entity;
         }
@@ -44,7 +49,8 @@ public class GrantRepository : IGrantRepository
             entity = new GrantTableEntity(obj);
         }
 
-        await _table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
+        var table = GetTableShard(obj);
+        await table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
     }
 
     public async Task DeleteByKeyAsync(string key)
@@ -58,7 +64,8 @@ public class GrantRepository : IGrantRepository
                 RowKey = rowKey,
                 ETag = "*"
             };
-            await _table.ExecuteAsync(TableOperation.Delete(entity));
+            var table = GetTableShard(key);
+            await table.ExecuteAsync(TableOperation.Delete(entity));
         }
         catch (StorageException e) when (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
         {
@@ -67,4 +74,17 @@ public class GrantRepository : IGrantRepository
     }
 
     public Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type) => throw new NotImplementedException();
+
+    private CloudTable GetTableShard(IGrant grant)
+    {
+        return GetTableShard(grant.Key);
+    }
+
+    private CloudTable GetTableShard(string key)
+    {
+        var hashCode = key.GetHashCode();
+        var positiveHashCode = (hashCode == int.MinValue) ? 0 : Math.Abs(hashCode);
+        var shardNumber = positiveHashCode % _tables.Length;
+        return _tables[shardNumber];
+    }
 }
