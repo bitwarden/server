@@ -22,7 +22,14 @@ FROM
     [dbo].[Send]
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
+-- Recreate procedures
+IF OBJECT_ID('[dbo].[Send_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Send_Create]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Send_Create]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -94,7 +101,13 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Send_Update]
+IF OBJECT_ID('[dbo].[Send_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Send_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Send_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
