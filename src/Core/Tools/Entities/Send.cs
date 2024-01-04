@@ -120,9 +120,6 @@ public class Send : ITableObject<Guid>
     /// <summary>
     /// Identifies the Cipher associated with this send.
     /// </summary>
-    /// <remarks>
-    /// Not presently in-use by client applications.
-    /// </remarks>
     public Guid? CipherId { get; set; }
 
     /// <summary>
