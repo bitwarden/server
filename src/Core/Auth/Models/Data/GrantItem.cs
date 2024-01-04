@@ -47,13 +47,13 @@ public class GrantItem : IGrant
     public DateTime? ConsumedDate { get; set; }
     public string Data { get; set; }
     // https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-time-to-live?tabs=dotnet-sdk-v3#set-time-to-live-on-an-item-using-an-sdk
-    public double ttl { get; set; }
+    public int ttl { get; set; }
 
     public void SetTtl()
     {
         if (ExpirationDate != null)
         {
-            ttl = (ExpirationDate.Value - DateTime.UtcNow).TotalSeconds;
+            ttl = (int)(ExpirationDate.Value - DateTime.UtcNow).TotalSeconds;
         }
     }
 }
