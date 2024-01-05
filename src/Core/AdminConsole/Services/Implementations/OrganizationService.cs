@@ -65,8 +65,6 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
     public OrganizationService(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -2010,9 +2008,9 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
+    public async Task ValidateOrganizationUserUpdatePermissions(Organization organization, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
     {
-        if (await _currentContext.OrganizationOwner(organizationId))
+        if (await _currentContext.OrganizationOwner(organization.Id))
         {
             return;
         }
@@ -2022,12 +2020,12 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Only an Owner can configure another Owner's account.");
         }
 
-        if (await _currentContext.OrganizationAdmin(organizationId))
+        if (await _currentContext.OrganizationAdmin(organization.Id))
         {
             return;
         }
 
-        if (!await _currentContext.ManageUsers(organizationId))
+        if (!await _currentContext.ManageUsers(organization.Id))
         {
             throw new BadRequestException("Your account does not have permission to manage users.");
         }
@@ -2037,14 +2035,14 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
         }
 
-        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organizationId, permissions))
+        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organization.Id, permissions))
         {
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
 
-        if (FlexibleCollectionsIsEnabled && newType == OrganizationUserType.Manager && oldType is not OrganizationUserType.Manager)
+        if (organization.FlexibleCollections && newType == OrganizationUserType.Manager && oldType is not OrganizationUserType.Manager)
         {
-            throw new BadRequestException("Manager role is deprecated after Flexible Collections.");
+            throw new BadRequestException("Manager role is deprecated after collection management enhancements");
         }
     }
 

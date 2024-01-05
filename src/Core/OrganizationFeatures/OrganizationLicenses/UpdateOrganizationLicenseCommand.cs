@@ -65,10 +65,9 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
 
     private async Task UpdateOrganizationAsync(SelfHostedOrganizationDetails selfHostedOrganizationDetails, OrganizationLicense license)
     {
-        var flexibleCollectionsMvpIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
         var flexibleCollectionsV1IsEnabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
         var organization = selfHostedOrganizationDetails.ToOrganization();
-        organization.UpdateFromLicense(license, flexibleCollectionsMvpIsEnabled, flexibleCollectionsV1IsEnabled);
+        organization.UpdateFromLicense(license, flexibleCollectionsV1IsEnabled: flexibleCollectionsV1IsEnabled);
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }

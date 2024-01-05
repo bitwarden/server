@@ -775,7 +775,6 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{id}/collection-management")]
-    [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
@@ -788,6 +787,11 @@ public class OrganizationsController : Controller
         if (!await _currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
+        }
+
+        if (!organization.FlexibleCollections)
+        {
+            throw new BadRequestException("Organization does not have collection enhancements enabled");
         }
 
         var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);

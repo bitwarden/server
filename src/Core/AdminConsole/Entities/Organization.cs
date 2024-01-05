@@ -243,7 +243,6 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
 
     public void UpdateFromLicense(
         OrganizationLicense license,
-        bool flexibleCollectionsMvpIsEnabled,
         bool flexibleCollectionsV1IsEnabled)
     {
         Name = license.Name;
