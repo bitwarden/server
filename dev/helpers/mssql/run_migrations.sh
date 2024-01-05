@@ -6,6 +6,7 @@
 sleep 0.1;
 
 MIGRATE_DIRECTORY="/mnt/migrator/DbScripts"
+HELPERS_DIRECTORY="/mnt/helpers"
 SERVER='mssql'
 DATABASE="vault_dev"
 USER="SA"
@@ -59,8 +60,7 @@ GO
 echo "Return code: $?"
 
 # Create or update the ReadRequiredMigrations sproc every time for simplicity
-READ_REQUIRED_MIGRATIONS="/mnt/helpers/read_required_migrations.sql";
-/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -i "$READ_REQUIRED_MIGRATIONS"
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -i "$HELPERS_DIRECTORY/read_required_migrations.sql"
 
 record_migration () {
   echo "recording $1"
@@ -81,10 +81,10 @@ get_migrations_to_run() {
   # this exceeds the max command length, so we save it to a file that MSSQL can use to bulk insert from
   # tr replaces newlines with semicolons
   # sed removes the trailing semicolon
-  echo `(cd $MIGRATE_DIRECTORY && ls -1 *.sql) | tr '\n' ';' | sed 's/;$//'` > /mnt/helpers/all_migrations.txt
+  echo -n `(cd $MIGRATE_DIRECTORY && ls -1 *.sql) | tr '\n' ';' | sed 's/;$//'` > "$HELPERS_DIRECTORY/all_migrations.txt"
 
   ## this query returns a space delimited list of migrations that need to be run
-  local query="EXEC ReadRequiredMigrations"
+  local query="EXEC ReadRequiredMigrations '$HELPERS_DIRECTORY/all_migrations.txt'"
   echo `/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query" -W -h-1`
 }
 
