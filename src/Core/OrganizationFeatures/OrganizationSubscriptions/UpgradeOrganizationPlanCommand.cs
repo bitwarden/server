@@ -97,11 +97,6 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             throw new BadRequestException("You cannot upgrade to this plan.");
         }
 
-        if (existingPlan.Type != PlanType.Free)
-        {
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
-        }
-
         _organizationService.ValidatePasswordManagerPlan(newPlan, upgrade);
 
         if (upgrade.UseSecretsManager)
@@ -226,8 +221,16 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         }
         else
         {
-            // TODO: Update existing sub
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
+            paymentIntentClientSecret = await _paymentService.AdjustSubscription(
+                organization,
+                newPlan,
+                upgrade.AdditionalSeats,
+                upgrade.UseSecretsManager,
+                upgrade.AdditionalSmSeats,
+                upgrade.AdditionalServiceAccounts,
+                upgrade.AdditionalStorageGb);
+
+            success = string.IsNullOrEmpty(paymentIntentClientSecret);
         }
 
         organization.BusinessName = upgrade.BusinessName;

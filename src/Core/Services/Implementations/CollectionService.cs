@@ -56,11 +56,11 @@ public class CollectionService : ICollectionService
         var usersList = users?.ToList();
 
         // If using Flexible Collections - a collection should always have someone with Can Manage permissions
-        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext))
         {
             var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
             var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
-            if (!groupHasManageAccess && !userHasManageAccess)
+            if (!groupHasManageAccess && !userHasManageAccess && !org.AllowAdminAccessToAllCollectionItems)
             {
                 throw new BadRequestException(
                     "At least one member or group must have can manage permission.");
@@ -122,7 +122,10 @@ public class CollectionService : ICollectionService
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+            var collections = await _collectionRepository.GetManyByUserIdAsync(
+                _currentContext.UserId.Value,
+                _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext)
+            );
             orgCollections = collections.Where(c => c.OrganizationId == organizationId);
         }
 

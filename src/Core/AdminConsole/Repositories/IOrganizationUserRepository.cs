@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -42,4 +43,13 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
     Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType);
     Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
+    /// Updates encrypted data for organization users during a key rotation
+    /// </summary>
+    /// <param name="userId">The user that initiated the key rotation</param>
+    /// <param name="resetPasswordKeys">A list of organization users with updated reset password keys</param>
+    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+        IEnumerable<OrganizationUser> resetPasswordKeys);
+
 }
