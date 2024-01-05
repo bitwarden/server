@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Azure.Cosmos;
@@ -19,11 +21,11 @@ public class GrantRepository : IGrantRepository
     {
         var options = new CosmosClientOptions
         {
-            SerializerOptions = new CosmosSerializationOptions
+            Serializer = new SystemTextJsonCosmosSerializer(new JsonSerializerOptions
             {
-                IgnoreNullValues = true,
-                Indented = false
-            }
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                WriteIndented = false,
+            })
         };
         _client = new CosmosClient(cosmosConnectionString, options);
         _database = _client.GetDatabase("identity");
@@ -32,9 +34,10 @@ public class GrantRepository : IGrantRepository
 
     public async Task<IGrant> GetByKeyAsync(string key)
     {
+        var id = Base64IdStringConverter.ToId(key);
         try
         {
-            var response = await _container.ReadItemAsync<GrantItem>(key, new PartitionKey(key));
+            var response = await _container.ReadItemAsync<GrantItem>(id, new PartitionKey(id));
             return response.Resource;
         }
         catch (CosmosException e)
@@ -57,12 +60,14 @@ public class GrantRepository : IGrantRepository
             item = new GrantItem(obj);
         }
         item.SetTtl();
-        await _container.UpsertItemAsync(item, new PartitionKey(item.Key));
+        var id = Base64IdStringConverter.ToId(item.Key);
+        await _container.UpsertItemAsync(item, new PartitionKey(id));
     }
 
     public async Task DeleteByKeyAsync(string key)
     {
-        await _container.DeleteItemAsync<IGrant>(key, new PartitionKey(key));
+        var id = Base64IdStringConverter.ToId(key);
+        await _container.DeleteItemAsync<IGrant>(id, new PartitionKey(id));
     }
 
     public Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)

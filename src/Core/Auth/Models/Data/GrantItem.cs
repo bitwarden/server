@@ -1,5 +1,6 @@
-﻿using Duende.IdentityServer.Models;
-using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Auth.Repositories.Cosmos;
+using Duende.IdentityServer.Models;
 
 namespace Bit.Core.Auth.Models.Data;
 
@@ -37,28 +38,29 @@ public class GrantItem : IGrant
         SetTtl();
     }
 
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
+    [JsonConverter(typeof(Base64IdStringConverter))]
     public string Key { get; set; }
-    [JsonProperty("typ")]
+    [JsonPropertyName("typ")]
     public string Type { get; set; }
-    [JsonProperty("sub")]
+    [JsonPropertyName("sub")]
     public string SubjectId { get; set; }
-    [JsonProperty("sid")]
+    [JsonPropertyName("sid")]
     public string SessionId { get; set; }
-    [JsonProperty("cid")]
+    [JsonPropertyName("cid")]
     public string ClientId { get; set; }
-    [JsonProperty("des")]
+    [JsonPropertyName("des")]
     public string Description { get; set; }
-    [JsonProperty("cre")]
+    [JsonPropertyName("cre")]
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
-    [JsonProperty("exp")]
+    [JsonPropertyName("exp")]
     public DateTime? ExpirationDate { get; set; }
-    [JsonProperty("con")]
+    [JsonPropertyName("con")]
     public DateTime? ConsumedDate { get; set; }
-    [JsonProperty("data")]
+    [JsonPropertyName("data")]
     public string Data { get; set; }
     // https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-time-to-live?tabs=dotnet-sdk-v3#set-time-to-live-on-an-item-using-an-sdk
-    [JsonProperty("ttl")]
+    [JsonPropertyName("ttl")]
     public int Ttl { get; set; } = -1;
 
     public void SetTtl()
