@@ -13,8 +13,13 @@ public class RedisPersistedGrantStoreTests
 {
     const string SQL = nameof(SQL);
     const string Redis = nameof(Redis);
+    const string Cosmos = nameof(Cosmos);
+    const string TableStorage = nameof(TableStorage);
+
     private readonly IPersistedGrantStore _redisGrantStore;
     private readonly IPersistedGrantStore _sqlGrantStore;
+    private readonly IPersistedGrantStore _cosmosGrantStore;
+    private readonly IPersistedGrantStore _tableStorageGrantStore;
     private readonly PersistedGrant _updateGrant;
 
     private IPersistedGrantStore _grantStore = null!;
@@ -45,13 +50,24 @@ public class RedisPersistedGrantStoreTests
         );
 
         var sqlConnectionString = "YOUR CONNECTION STRING HERE";
-
         _sqlGrantStore = new PersistedGrantStore(
             new GrantRepository(
                 sqlConnectionString,
                 sqlConnectionString
             ),
             g => new Bit.Core.Auth.Entities.Grant(g)
+        );
+
+        var cosmosConnectionString = "YOUR CONNECTION STRING HERE";
+        _cosmosGrantStore = new PersistedGrantStore(
+            new Bit.Core.Auth.Repositories.Cosmos.GrantRepository(cosmosConnectionString),
+            g => new Bit.Core.Auth.Models.Data.GrantItem(g)
+        );
+
+        var storageConnectionStrings = new string[] { "YOUR CONNECTION STRING HERE" };
+        _cosmosGrantStore = new PersistedGrantStore(
+            new Bit.Core.Auth.Repositories.TableStorage.GrantRepository(storageConnectionStrings),
+            g => new Bit.Core.Auth.Models.Data.GrantTableEntity(g)
         );
 
         var creationTime = new DateTime(638350407400000000, DateTimeKind.Utc);
@@ -70,7 +86,7 @@ public class RedisPersistedGrantStoreTests
         };
     }
 
-    [Params(Redis, SQL)]
+    [Params(Redis, SQL, Cosmos, TableStorage)]
     public string StoreType { get; set; } = null!;
 
     [GlobalSetup]
@@ -83,6 +99,14 @@ public class RedisPersistedGrantStoreTests
         else if (StoreType == SQL)
         {
             _grantStore = _sqlGrantStore;
+        }
+        else if (StoreType == Cosmos)
+        {
+            _grantStore = _cosmosGrantStore;
+        }
+        else if (StoreType == TableStorage)
+        {
+            _grantStore = _tableStorageGrantStore;
         }
         else
         {
