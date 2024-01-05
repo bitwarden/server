@@ -62,8 +62,7 @@ public class GrantTableEntity : TableEntity, IGrant
         // https://stackoverflow.com/questions/19671357/use-the-same-partitionkey-and-rowkey
 
         // Partition keys cannot contain certain special characters, change it to B64 URL format
-        var keyBytes = Convert.FromBase64String(grantKey);
-        var b64 = CoreHelpers.Base64UrlEncode(keyBytes);
-        return (b64, string.Empty);
+        var b64Url = CoreHelpers.TransformToBase64Url(grantKey);
+        return (b64Url, string.Empty);
     }
 }
