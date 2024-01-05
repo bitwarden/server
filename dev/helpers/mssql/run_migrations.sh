@@ -89,6 +89,11 @@ get_migrations_to_run() {
 }
 
 MIGRATIONS_TO_RUN=$(get_migrations_to_run)
+if [[ -z $MIGRATIONS_TO_RUN ]]; then
+ echo "No migrations required - already up to date."
+ exit
+fi
+
 for f in $MIGRATIONS_TO_RUN; do
   migrate "$MIGRATE_DIRECTORY/$f"
   record_migration $f
