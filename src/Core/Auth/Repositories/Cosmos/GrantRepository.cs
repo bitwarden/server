@@ -47,7 +47,8 @@ public class GrantRepository : IGrantRepository
         }
     }
 
-    public Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type) => throw new NotImplementedException();
+    public Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
+        => throw new NotImplementedException();
 
     public async Task SaveAsync(IGrant obj)
     {
@@ -64,5 +65,6 @@ public class GrantRepository : IGrantRepository
         await _container.DeleteItemAsync<IGrant>(key, new PartitionKey(key));
     }
 
-    public Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type) => throw new NotImplementedException();
+    public Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)
+        => throw new NotImplementedException();
 }
