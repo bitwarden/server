@@ -102,6 +102,8 @@ public static class FeatureFlagKeys
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
+    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
+    public const string FlexibleCollectionsSignup = "flexible-collections-signup";
 
     public static List<string> GetAllKeys()
     {

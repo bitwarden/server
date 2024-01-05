@@ -275,7 +275,17 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-        LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion;
-        AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems;
+
+        // Only update collection management settings if the respective feature flag has been enabled
+        // This avoids setting latent values which surprise the user later when the feature is turned on for self-hosted
+        if (FlexibleCollections)
+        {
+            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
+        }
+
+        if (flexibleCollectionsV1IsEnabled)
+        {
+            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
+        }
     }
 }
