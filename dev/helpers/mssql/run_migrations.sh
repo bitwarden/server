@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# There seems to be [a bug with docker-compose](https://github.com/docker/compose/issues/4076#issuecomment-324932294) 
+# There seems to be [a bug with docker-compose](https://github.com/docker/compose/issues/4076#issuecomment-324932294)
 # where it takes ~40ms to connect to the terminal output of the container, so stuff logged to the terminal in this time is lost.
 # The best workaround seems to be adding tiny delay like so:
 sleep 0.1;
@@ -58,16 +58,9 @@ GO
 /opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$QUERY"
 echo "Return code: $?"
 
-should_migrate () {
-  local file=$(basename $1)
-  local query="SELECT * FROM [migrations] WHERE [Filename] = '$file'"
-  local result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
-  if [[ "$result" =~ .*"$file".* ]]; then
-    return 1;
-  else
-    return 0;
-  fi
-}
+# Create or update the ReadRequiredMigrations sproc every time for simplicity
+READ_REQUIRED_MIGRATIONS="/mnt/helpers/read_required_migrations.sql";
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -i "$READ_REQUIRED_MIGRATIONS"
 
 record_migration () {
   echo "recording $1"
@@ -83,12 +76,20 @@ migrate () {
   /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $file
 }
 
-for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
-  BASENAME=$(basename $f)
-  if should_migrate $f == 1 ; then
-    migrate $f
-    record_migration $f
-  else
-    echo "Skipping $f, $BASENAME"
-  fi
+get_migrations_to_run() {
+  # get a semicolon delimited list of all migrations
+  # this exceeds the max command length, so we save it to a file that MSSQL can use to bulk insert from
+  # tr replaces newlines with semicolons
+  # sed removes the trailing semicolon
+  echo `(cd $MIGRATE_DIRECTORY && ls -1 *.sql) | tr '\n' ';' | sed 's/;$//'` > /mnt/helpers/all_migrations.txt
+
+  ## this query returns a space delimited list of migrations that need to be run
+  local query="EXEC ReadRequiredMigrations"
+  echo `/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query" -W -h-1`
+}
+
+MIGRATIONS_TO_RUN=$(get_migrations_to_run)
+for f in $MIGRATIONS_TO_RUN; do
+  migrate "$MIGRATE_DIRECTORY/$f"
+  record_migration $f
 done;
