@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Data;
+﻿using System.Net;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Azure.Cosmos;
 
@@ -31,8 +32,19 @@ public class GrantRepository : IGrantRepository
 
     public async Task<IGrant> GetByKeyAsync(string key)
     {
-        var response = await _container.ReadItemAsync<IGrant>(key, new PartitionKey(key));
-        return response.Resource;
+        try
+        {
+            var response = await _container.ReadItemAsync<GrantItem>(key, new PartitionKey(key));
+            return response.Resource;
+        }
+        catch (CosmosException e)
+        {
+            if (e.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+            throw;
+        }
     }
 
     public Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type) => throw new NotImplementedException();
