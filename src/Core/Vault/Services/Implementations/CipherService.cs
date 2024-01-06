@@ -1013,7 +1013,7 @@ public class CipherService : ICipherService
         if ((cipher.RevisionDate - lastKnownRevisionDate.Value).Duration() > TimeSpan.FromSeconds(1))
         {
             throw new BadRequestException(
-                "Your vault is out of sync & changes could not be saved. Please logout & back in to your vault and try again."
+                "The item cannot be saved because it is out of date. To edit this item, first sync your vault, or log out and back in."
             );
         }
     }
