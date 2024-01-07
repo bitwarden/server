@@ -6,7 +6,7 @@ BEGIN
 
     CREATE TABLE #InputMigrations (Filename NVARCHAR(MAX))
 
-    DECLARE @bulkInsertSql NVARCHAR(4000) = 'BULK INSERT #InputMigrations FROM ''' + @migrationsFile + ''' WITH (FIELDTERMINATOR = '';'', ROWTERMINATOR = '';'')';
+    DECLARE @bulkInsertSql NVARCHAR(4000) = 'BULK INSERT #InputMigrations FROM ''' + @MigrationsFile + ''' WITH (FIELDTERMINATOR = '';'', ROWTERMINATOR = '';'')';
     EXEC(@bulkInsertSql);
 
     -- Select migrations that do not appear in the [dbo].[migrations] table
