@@ -119,7 +119,7 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
-        var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection());
         var invite = new OrganizationUserInvite
         {
             Emails = new List<string> { model.Email },
@@ -154,7 +154,7 @@ public class MembersController : Controller
             return new NotFoundResult();
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
-        var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection());
         await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
