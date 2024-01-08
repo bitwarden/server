@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "GrantLoader": {
-      "commandName": "Project",
-      "commandLineArgs": "cosmos\r\n10000\r\n100"
-    }
-  }
-}
