@@ -2,7 +2,7 @@
 using Azure.Core.Serialization;
 using Microsoft.Azure.Cosmos;
 
-namespace Bit.Core.Auth.Repositories.Cosmos;
+namespace Bit.Core.Utilities;
 
 // ref: https://github.com/Azure/azure-cosmos-dotnet-v3/blob/master/Microsoft.Azure.Cosmos.Samples/Usage/SystemTextJson/CosmosSystemTextJsonSerializer.cs
 public class SystemTextJsonCosmosSerializer : CosmosSerializer

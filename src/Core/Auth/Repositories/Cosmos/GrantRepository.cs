@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Azure.Cosmos;
 
 namespace Bit.Core.Auth.Repositories.Cosmos;
