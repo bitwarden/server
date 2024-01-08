@@ -71,14 +71,28 @@ public static class ServiceCollectionExtensions
 
     private static PersistedGrantStore BuildCosmosStore(IServiceProvider sp, GlobalSettings globalSettings)
     {
+        if (!CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
+        {
+            throw new ArgumentException("No cosmos config string available.");
+        }
         return new PersistedGrantStore(
             new Core.Auth.Repositories.Cosmos.GrantRepository(globalSettings),
             g => new Core.Auth.Models.Data.GrantItem(g),
-            fallbackGrantStore: BuildRedisStore(sp, globalSettings));
+            fallbackGrantStore: BuildRedisStore(sp, globalSettings, true));
     }
 
-    private static RedisPersistedGrantStore BuildRedisStore(IServiceProvider sp, GlobalSettings globalSettings)
+    private static RedisPersistedGrantStore BuildRedisStore(IServiceProvider sp,
+        GlobalSettings globalSettings, bool allowNull = false)
     {
+        if (!CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
+        {
+            if (allowNull)
+            {
+                return null;
+            }
+            throw new ArgumentException("No redis config string available.");
+        }
+
         return new RedisPersistedGrantStore(
             // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
             ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
