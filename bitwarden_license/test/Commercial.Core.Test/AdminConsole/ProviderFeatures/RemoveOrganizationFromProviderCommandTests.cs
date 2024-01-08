@@ -9,6 +9,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using Stripe;
 using Xunit;
 
 namespace Bit.Commercial.Core.Test.AdminConsole.ProviderFeatures;
@@ -104,6 +105,10 @@ public class RemoveOrganizationFromProviderCommandTests
 
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.Id == organization.Id && org.BillingEmail == "a@gmail.com"));
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(
+            organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
+                options => options.Coupon == string.Empty));
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendProviderUpdatePaymentMethod(
             organization.Id,
