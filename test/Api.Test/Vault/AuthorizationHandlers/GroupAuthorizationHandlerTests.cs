@@ -16,7 +16,6 @@ using Xunit;
 namespace Bit.Api.Test.Vault.AuthorizationHandlers;
 
 [SutProviderCustomize]
-[FeatureServiceCustomize(FeatureFlagKeys.FlexibleCollections)]
 public class GroupAuthorizationHandlerTests
 {
     [Theory]

@@ -663,9 +663,7 @@ public class CollectionsController : Controller
 
     private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
     {
-        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
-            .TryGetValue(organizationId, out var organizationAbility);
-
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
         return organizationAbility?.FlexibleCollections ?? false;
     }
 }
