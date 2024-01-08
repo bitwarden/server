@@ -106,9 +106,15 @@ public class RemoveOrganizationFromProviderCommandTests
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.Id == organization.Id && org.BillingEmail == "a@gmail.com"));
 
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        await stripeAdapter.Received(1).CustomerUpdateAsync(
             organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
                 options => options.Coupon == string.Empty));
+
+        await stripeAdapter.Received(1).SubscriptionUpdateAsync(
+            organization.GatewaySubscriptionId, Arg.Is<SubscriptionUpdateOptions>(
+                options => options.CollectionMethod == "send_invoice" && options.DaysUntilDue == 30));
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendProviderUpdatePaymentMethod(
             organization.Id,

@@ -80,6 +80,14 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
 
+        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+        {
+            CollectionMethod = "send_invoice",
+            DaysUntilDue = 30
+        };
+
+        await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
             organization.Name,
