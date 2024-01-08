@@ -24,7 +24,7 @@ public class GrantRepository : IGrantRepository
             Serializer = new SystemTextJsonCosmosSerializer(new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                WriteIndented = false,
+                WriteIndented = false
             })
         };
         _client = new CosmosClient(cosmosConnectionString, options);
