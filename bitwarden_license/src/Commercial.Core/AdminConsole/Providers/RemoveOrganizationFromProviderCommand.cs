@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
+using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
 
@@ -18,6 +19,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IStripeAdapter _stripeAdapter;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -25,7 +27,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
-        IProviderOrganizationRepository providerOrganizationRepository)
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IStripeAdapter stripeAdapter)
     {
         _eventService = eventService;
         _logger = logger;
@@ -33,6 +36,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
+        _stripeAdapter = stripeAdapter;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -68,6 +72,13 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _logger.LogInformation("AC-1758: Billing Email -> {BillingEmail}", organization.BillingEmail);
 
         await _organizationRepository.ReplaceAsync(organization);
+
+        var customerUpdateOptions = new CustomerUpdateOptions
+        {
+            Coupon = string.Empty
+        };
+
+        await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
 
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
