@@ -43,14 +43,8 @@ public class AccessPolicyHelpersTests
                 }
             };
 
-        try
-        {
-            AccessPolicyHelpers.CheckForDistinctAccessPolicies(accessPolicies);
-        }
-        catch (Exception ex)
-        {
-            Assert.True(false, $"Unexpected exception: {ex.Message}");
-        }
+        var exception = Record.Exception(() => AccessPolicyHelpers.CheckForDistinctAccessPolicies(accessPolicies));
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -77,13 +71,7 @@ public class AccessPolicyHelpersTests
                 new GroupProjectAccessPolicy { Read = true, Write = false }
             };
 
-        try
-        {
-            AccessPolicyHelpers.CheckAccessPoliciesHasReadPermission(accessPolicies);
-        }
-        catch (Exception ex)
-        {
-            Assert.True(false, $"Unexpected exception: {ex.Message}");
-        }
+        var exception = Record.Exception(() => AccessPolicyHelpers.CheckAccessPoliciesHasReadPermission(accessPolicies);
+        Assert.Null(exception);
     }
 }

@@ -1285,8 +1285,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (_, organizationUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
-        var (project, _) = await SetupProjectServiceAccountPermissionAsync(PermissionType.RunAsAdmin, organizationUser);
-        var (serviceAccount, request) = await SetupProjectServiceAccountRequestAsync(PermissionType.RunAsAdmin, organizationUser);
+        var (project, request) = await SetupProjectServiceAccountRequestAsync(PermissionType.RunAsAdmin, organizationUser);
 
         var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/service-accounts", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

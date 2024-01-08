@@ -1221,16 +1221,13 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetProjectServiceAccountAccessPolicies_ProjectsExist_UserWithoutPermission_Throws(
+    public async void GetProjectServiceAccountAccessPolicies_ProjectsDoesNotExist_UserWithPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project data,
         UserProjectAccessPolicy resultAccessPolicy)
     {
-        SetupUserWithoutPermission(sutProvider, data.OrganizationId);
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
-            .Returns((false, false));
+        SetupUserWithPermission(sutProvider, data.OrganizationId);
 
         sutProvider.GetDependency<IAccessPolicyRepository>().GetPeoplePoliciesByGrantedProjectIdAsync(default, default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
@@ -1310,6 +1307,25 @@ public class AccessPoliciesControllerTests
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceProjectServiceAccountsAsync(Arg.Any<ProjectServiceAccountsAccessPolicies>());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async void PutProjectServiceAccountAccessPoliciesAsync_UnsupportedPermissions_Throws(
+    SutProvider<AccessPoliciesController> sutProvider,
+    Project project,
+    ServiceAccountsAccessPoliciesRequestModel request)
+    {
+        var dup = new AccessPolicyRequest { GranteeId = Guid.NewGuid(), Read = true, Write = false };
+        request.ProjectServiceAccountsAccessPolicyRequests = new[] { dup, dup };
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(project);
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(project.Id, request));
+
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceProjectServiceAccountsAsync(Arg.Any<ProjectServiceAccountsAccessPolicies>());
+    }
+
 
     [Theory]
     [BitAutoData]
