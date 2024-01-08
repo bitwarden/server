@@ -56,12 +56,6 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<IPersistedGrantStore>(sp => BuildCosmosStore(sp, globalSettings));
         }
-        if (globalSettings.IdentityServer.StorageConnectionStrings != null &&
-            globalSettings.IdentityServer.StorageConnectionStrings.Length > 0 &&
-            CoreHelpers.SettingHasValue(globalSettings.IdentityServer.StorageConnectionStrings[0]))
-        {
-            services.AddSingleton<IPersistedGrantStore>(sp => BuildTableStorageStore(sp, globalSettings));
-        }
         else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
         {
             services.AddSingleton<IPersistedGrantStore>(sp => BuildRedisStore(sp, globalSettings));
@@ -80,14 +74,6 @@ public static class ServiceCollectionExtensions
         return new PersistedGrantStore(
             new Core.Auth.Repositories.Cosmos.GrantRepository(globalSettings),
             g => new Core.Auth.Models.Data.GrantItem(g),
-            fallbackGrantStore: BuildRedisStore(sp, globalSettings));
-    }
-
-    private static PersistedGrantStore BuildTableStorageStore(IServiceProvider sp, GlobalSettings globalSettings)
-    {
-        return new PersistedGrantStore(
-            new Core.Auth.Repositories.TableStorage.GrantRepository(globalSettings),
-            g => new Core.Auth.Models.Data.GrantTableEntity(g),
             fallbackGrantStore: BuildRedisStore(sp, globalSettings));
     }
 
