@@ -30,6 +30,13 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         return _orgAbilities;
     }
 
+    public async Task<OrganizationAbility> GetOrganizationAbilityAsync(Guid organizationId)
+    {
+        (await GetOrganizationAbilitiesAsync())
+            .TryGetValue(organizationId, out var organizationAbility);
+        return organizationAbility;
+    }
+
     public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
         await InitProviderAbilitiesAsync();

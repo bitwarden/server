@@ -93,9 +93,6 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
             return null;
         }
 
-        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
-            .TryGetValue(organization.Id, out var organizationAbility);
-
-        return organizationAbility;
+        return await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
     }
 }

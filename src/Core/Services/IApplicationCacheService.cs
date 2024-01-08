@@ -8,6 +8,7 @@ namespace Bit.Core.Services;
 public interface IApplicationCacheService
 {
     Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync();
+    Task<OrganizationAbility> GetOrganizationAbilityAsync(Guid orgId);
     Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync();
     Task UpsertOrganizationAbilityAsync(Organization organization);
     Task UpsertProviderAbilityAsync(Provider provider);

@@ -93,9 +93,6 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
             return null;
         }
 
-        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
-            .TryGetValue(organization.Id, out var organizationAbility);
-
-        return organizationAbility;
+        return await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
     }
 }
