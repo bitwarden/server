@@ -18,11 +18,13 @@ public class SubscriptionInfo
             Id = discount.Id;
             Active = discount.Start != null && discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
+            AppliesTo = discount.Coupon?.AppliesTo?.Products ?? new List<string>();
         }
 
         public string Id { get; }
         public bool Active { get; }
         public decimal? PercentOff { get; }
+        public List<string> AppliesTo { get; }
     }
 
     public class BillingSubscription
@@ -60,6 +62,7 @@ public class SubscriptionInfo
             {
                 if (item.Plan != null)
                 {
+                    ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
                     Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                     Interval = item.Plan.Interval;
@@ -73,6 +76,7 @@ public class SubscriptionInfo
 
             public bool AddonSubscriptionItem { get; set; }
 
+            public string ProductId { get; set; }
             public string Name { get; set; }
             public decimal Amount { get; set; }
             public int Quantity { get; set; }

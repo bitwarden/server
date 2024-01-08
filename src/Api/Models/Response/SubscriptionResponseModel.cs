@@ -52,11 +52,13 @@ public class BillingCustomerDiscount
         Id = discount.Id;
         Active = discount.Active;
         PercentOff = discount.PercentOff;
+        AppliesTo = discount.AppliesTo;
     }
 
     public string Id { get; }
     public bool Active { get; }
     public decimal? PercentOff { get; }
+    public List<string> AppliesTo { get; }
 }
 
 public class BillingSubscription
@@ -91,6 +93,7 @@ public class BillingSubscription
     {
         public BillingSubscriptionItem(SubscriptionInfo.BillingSubscription.BillingSubscriptionItem item)
         {
+            ProductId = item.ProductId;
             Name = item.Name;
             Amount = item.Amount;
             Interval = item.Interval;
@@ -99,6 +102,7 @@ public class BillingSubscription
             AddonSubscriptionItem = item.AddonSubscriptionItem;
         }
 
+        public string ProductId { get; set; }
         public string Name { get; set; }
         public decimal Amount { get; set; }
         public int Quantity { get; set; }

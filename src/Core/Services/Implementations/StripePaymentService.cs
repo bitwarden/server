@@ -8,6 +8,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Stripe;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
@@ -20,6 +21,7 @@ public class StripePaymentService : IPaymentService
     private const decimal PremiumPlanAppleIapPrice = 14.99M;
     private const string StoragePlanId = "storage-gb-annually";
     private const string ProviderDiscountId = "msp-discount-35";
+    private const string SecretsManagerStandaloneDiscountId = "sm-standalone";
 
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
@@ -1589,7 +1591,9 @@ public class StripePaymentService : IPaymentService
 
         if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
-            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+            var customerGetOptions = new CustomerGetOptions();
+            customerGetOptions.AddExpand("discount.coupon.applies_to");
+            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
 
             if (customer.Discount != null)
             {
@@ -1602,28 +1606,35 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
+        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
         {
-            var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
-            if (sub != null)
-            {
-                subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
-            }
+            return subscriptionInfo;
+        }
 
-            if (!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+        if (sub != null)
+        {
+            subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
+        }
+
+        if (sub is { CanceledAt: not null } || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        {
+            return subscriptionInfo;
+        }
+
+        try
+        {
+            var upcomingInvoiceOptions = new UpcomingInvoiceOptions { Customer = subscriber.GatewayCustomerId };
+            var upcomingInvoice = await _stripeAdapter.InvoiceUpcomingAsync(upcomingInvoiceOptions);
+
+            if (upcomingInvoice != null)
             {
-                try
-                {
-                    var upcomingInvoice = await _stripeAdapter.InvoiceUpcomingAsync(
-                        new Stripe.UpcomingInvoiceOptions { Customer = subscriber.GatewayCustomerId });
-                    if (upcomingInvoice != null)
-                    {
-                        subscriptionInfo.UpcomingInvoice =
-                            new SubscriptionInfo.BillingUpcomingInvoice(upcomingInvoice);
-                    }
-                }
-                catch (Stripe.StripeException) { }
+                subscriptionInfo.UpcomingInvoice = new SubscriptionInfo.BillingUpcomingInvoice(upcomingInvoice);
             }
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogWarning(ex, "Encountered an unexpected Stripe error");
         }
 
         return subscriptionInfo;
