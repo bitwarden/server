@@ -416,6 +416,9 @@ public class OrganizationService : IOrganizationService
         }
     }
 
+    /// <summary>
+    /// Create a new organization in a cloud environment
+    /// </summary>
     public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
         bool provider = false)
     {
@@ -541,6 +544,9 @@ public class OrganizationService : IOrganizationService
         }
     }
 
+    /// <summary>
+    /// Create a new organization on a self-hosted instance
+    /// </summary>
     public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
@@ -648,6 +654,10 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
+    /// <summary>
+    /// Private helper method to create a new organization.
+    /// This is common code used by both the cloud and self-hosted methods.
+    /// </summary>
     private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
         Guid ownerId, string ownerKey, string collectionName, bool withPayment)
     {
