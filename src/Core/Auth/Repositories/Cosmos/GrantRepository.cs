@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Azure.Cosmos;
