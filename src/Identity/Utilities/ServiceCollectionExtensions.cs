@@ -54,22 +54,22 @@ public static class ServiceCollectionExtensions
 
         if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {
-            services.AddSingleton<IPersistedGrantStore>(sp => BuildCosmosStore(sp, globalSettings));
+            services.AddSingleton<IPersistedGrantStore>(sp => BuildCosmosGrantStore(sp, globalSettings));
         }
         else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
         {
-            services.AddSingleton<IPersistedGrantStore>(sp => BuildRedisStore(sp, globalSettings));
+            services.AddSingleton<IPersistedGrantStore>(sp => BuildRedisGrantStore(sp, globalSettings));
         }
         else
         {
-            services.AddTransient<IPersistedGrantStore>(sp => BuildSqlStore(sp));
+            services.AddTransient<IPersistedGrantStore>(sp => BuildSqlGrantStore(sp));
         }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;
     }
 
-    private static PersistedGrantStore BuildCosmosStore(IServiceProvider sp, GlobalSettings globalSettings)
+    private static PersistedGrantStore BuildCosmosGrantStore(IServiceProvider sp, GlobalSettings globalSettings)
     {
         if (!CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {
@@ -78,10 +78,10 @@ public static class ServiceCollectionExtensions
         return new PersistedGrantStore(
             new Core.Auth.Repositories.Cosmos.GrantRepository(globalSettings),
             g => new Core.Auth.Models.Data.GrantItem(g),
-            fallbackGrantStore: BuildRedisStore(sp, globalSettings, true));
+            fallbackGrantStore: BuildRedisGrantStore(sp, globalSettings, true));
     }
 
-    private static RedisPersistedGrantStore BuildRedisStore(IServiceProvider sp,
+    private static RedisPersistedGrantStore BuildRedisGrantStore(IServiceProvider sp,
         GlobalSettings globalSettings, bool allowNull = false)
     {
         if (!CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
@@ -97,10 +97,10 @@ public static class ServiceCollectionExtensions
             // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
             ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
             sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-            fallbackGrantStore: BuildSqlStore(sp));
+            fallbackGrantStore: BuildSqlGrantStore(sp));
     }
 
-    private static PersistedGrantStore BuildSqlStore(IServiceProvider sp)
+    private static PersistedGrantStore BuildSqlGrantStore(IServiceProvider sp)
     {
         return new PersistedGrantStore(sp.GetRequiredService<IGrantRepository>(),
             g => new Core.Auth.Entities.Grant(g));
