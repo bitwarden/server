@@ -60,7 +60,7 @@ GO
 echo "Return code: $?"
 
 # Create or update the ReadRequiredMigrations sproc every time for simplicity
-/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -i "$HELPERS_DIRECTORY/read_required_migrations.sql"
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -i "$HELPERS_DIRECTORY/ReadRequiredMigrations.sql"
 
 record_migration () {
   echo "recording $1"
@@ -81,11 +81,19 @@ get_migrations_to_run() {
   # this exceeds the max command length, so we save it to a file that MSSQL can use to bulk insert from
   # tr replaces newlines with semicolons
   # sed removes the trailing semicolon
-  echo -n `(cd $MIGRATE_DIRECTORY && ls -1 *.sql) | tr '\n' ';' | sed 's/;$//'` > "$HELPERS_DIRECTORY/all_migrations.txt"
+  local tempfile="$HELPERS_DIRECTORY/tempfile"
+  echo -n `(cd $MIGRATE_DIRECTORY && ls -1 *.sql) | tr '\n' ';' | sed 's/;$//'` > "$tempfile"
 
-  ## this query returns a space delimited list of migrations that need to be run
-  local query="EXEC ReadRequiredMigrations '$HELPERS_DIRECTORY/all_migrations.txt'"
-  echo `/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query" -W -h-1`
+  # this query returns a space delimited list of migrations that need to be run
+  local query="EXEC ReadRequiredMigrations '$tempfile'"
+  local result=`/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query" -W -h-1`
+
+  # clean up tempfile
+  if test -f "$tempfile"; then
+    rm "$tempfile";
+  fi
+
+  echo "$result";
 }
 
 MIGRATIONS_TO_RUN=$(get_migrations_to_run)
