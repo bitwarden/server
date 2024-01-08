@@ -61,28 +61,14 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Restore
-        run: dotnet restore --locked-mode
-        shell: pwsh
-
       - name: Remove SQL proj
         run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
 
-      - name: Build OSS solution
-        run: dotnet build bitwarden-server.sln -p:Configuration=Debug -p:DefineConstants="OSS" --verbosity minimal
-        shell: pwsh
-
-      - name: Build solution
-        run: dotnet build bitwarden-server.sln -p:Configuration=Debug --verbosity minimal
-        shell: pwsh
-
       - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx"
-        shell: pwsh
+        run: dotnet test ./test --configuration Release --logger "trx;LogFileName=oss-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx"
-        shell: pwsh
+        run: dotnet test ./bitwarden_license/test --configuration Release --logger "trx;LogFileName=bw-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
 
       - name: Report test results
         uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226 # v1.6.0
@@ -92,6 +78,11 @@ jobs:
           path: "**/*-test-results.trx"
           reporter: dotnet-trx
           fail-on-error: true
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   build-artifacts:
     name: Build artifacts
@@ -155,14 +146,6 @@ jobs:
           npm --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-
-      - name: Restore/Clean project
-        working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
-        run: |
-          echo "Restore"
-          dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
 
       - name: Build node
         if: ${{ matrix.node }}
@@ -357,9 +340,6 @@ jobs:
       - name: Login to PROD ACR
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
-      - name: Restore
-        run: dotnet tool restore
-
       - name: Make Docker stubs
         if: github.ref == 'refs/heads/main' ||
           github.ref == 'refs/heads/rc' ||
@@ -443,10 +423,8 @@ jobs:
       - name: Build Swagger
         run: |
           cd ./src/Api
-          echo "Restore"
-          dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
+          echo "Restore tools"
+          dotnet tool restore
           echo "Publish"
           dotnet publish -c "Release" -o obj/build-output/publish
 
@@ -495,11 +473,6 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Restore project
-        run: |
-          echo "Restore"
-          dotnet restore
-
       - name: Publish project
         run: |
           dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} -p:PublishSingleFile=true \
@@ -520,7 +493,6 @@ jobs:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
-
 
   self-host-build:
     name: Trigger self-host build

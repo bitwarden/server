@@ -24,8 +24,8 @@ public record Teams2019Plan : Models.StaticStore.Plan
         HasApi = true;
         UsersGetPremium = true;
 
-        UpgradeSortOrder = 2;
-        DisplaySortOrder = 2;
+        UpgradeSortOrder = 3;
+        DisplaySortOrder = 3;
         LegacyYear = 2020;
 
         SecretsManager = new Teams2019SecretsManagerFeatures(isAnnual);
