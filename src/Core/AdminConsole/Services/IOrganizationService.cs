@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.Services;
 
@@ -80,6 +81,6 @@ public interface IOrganizationService
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
-    Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
+    Task ValidateOrganizationUserUpdatePermissions(OrganizationAbility organizationAbility, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions);
 }

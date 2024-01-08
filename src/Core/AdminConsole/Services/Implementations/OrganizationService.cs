@@ -18,6 +18,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -875,7 +876,8 @@ public class OrganizationService : IOrganizationService
         {
             foreach (var (invite, _) in invites)
             {
-                await ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null, invite.Permissions);
+                var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+                await ValidateOrganizationUserUpdatePermissions(organizationAbility, invite.Type.Value, null, invite.Permissions);
                 await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, invite.Type.Value);
             }
         }
@@ -1388,7 +1390,8 @@ public class OrganizationService : IOrganizationService
 
         if (savingUserId.HasValue)
         {
-            await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
+            var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(user.OrganizationId);
+            await ValidateOrganizationUserUpdatePermissions(organizationAbility, user.Type, originalUser.Type, user.GetPermissions());
         }
 
         await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
@@ -2018,9 +2021,9 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task ValidateOrganizationUserUpdatePermissions(Organization organization, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
+    public async Task ValidateOrganizationUserUpdatePermissions(OrganizationAbility organizationAbility, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
     {
-        if (await _currentContext.OrganizationOwner(organization.Id))
+        if (await _currentContext.OrganizationOwner(organizationAbility.Id))
         {
             return;
         }
@@ -2030,12 +2033,12 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Only an Owner can configure another Owner's account.");
         }
 
-        if (await _currentContext.OrganizationAdmin(organization.Id))
+        if (await _currentContext.OrganizationAdmin(organizationAbility.Id))
         {
             return;
         }
 
-        if (!await _currentContext.ManageUsers(organization.Id))
+        if (!await _currentContext.ManageUsers(organizationAbility.Id))
         {
             throw new BadRequestException("Your account does not have permission to manage users.");
         }
@@ -2045,12 +2048,12 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
         }
 
-        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organization.Id, permissions))
+        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organizationAbility.Id, permissions))
         {
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
 
-        if (organization.FlexibleCollections && newType == OrganizationUserType.Manager && oldType is not OrganizationUserType.Manager)
+        if (organizationAbility.FlexibleCollections && newType == OrganizationUserType.Manager && oldType is not OrganizationUserType.Manager)
         {
             throw new BadRequestException("Manager role is deprecated after collection management enhancements");
         }
