@@ -156,6 +156,12 @@ public class StripeController : Controller
                 // org
                 if (organizationId != Guid.Empty)
                 {
+                    if (subCanceled)
+                    {
+                        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+                        organization.GatewaySubscriptionId = null;
+                        await _organizationRepository.UpsertAsync(organization);
+                    }
                     await _organizationService.DisableAsync(organizationId, subscription.CurrentPeriodEnd);
                 }
                 // user
@@ -171,6 +177,12 @@ public class StripeController : Controller
                     if (user.Premium)
                     {
                         await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+                    }
+
+                    if (subCanceled)
+                    {
+                        user.GatewaySubscriptionId = null;
+                        await _userRepository.UpsertAsync(user);
                     }
                 }
             }
