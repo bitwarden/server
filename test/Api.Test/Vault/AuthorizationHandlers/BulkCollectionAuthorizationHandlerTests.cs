@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -9,7 +8,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.Vault.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

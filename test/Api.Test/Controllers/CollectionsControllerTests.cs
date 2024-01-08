@@ -2,8 +2,6 @@
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -12,7 +10,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
