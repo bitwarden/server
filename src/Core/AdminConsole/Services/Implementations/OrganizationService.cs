@@ -558,8 +558,10 @@ public class OrganizationService : IOrganizationService
 
         await ValidateSignUpPoliciesAsync(owner.Id);
 
-        var flexibleCollectionsIsEnabled =
+        var flexibleCollectionsMvpIsEnabled =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        var flexibleCollectionsV1IsEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
 
         var organization = new Organization
         {
@@ -601,7 +603,8 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
-            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled || license.LimitCollectionCreationDeletion
+            LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion,
+            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -1118,7 +1121,7 @@ public class OrganizationService : IOrganizationService
 
         // Determine if org has SSO enabled and if user is required to login with SSO
         // Note: we only want to call the DB after checking if the org can use SSO per plan and if they have any policies enabled.
-        var orgSsoEnabled = organization.UseSso && (await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id)).Enabled;
+        var orgSsoEnabled = organization.UseSso && (await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id))?.Enabled == true;
         // Even though the require SSO policy can be turned on regardless of SSO being enabled, for this logic, we only
         // need to check the policy if the org has SSO enabled.
         var orgSsoLoginRequiredPolicyEnabled = orgSsoEnabled &&
@@ -1890,11 +1893,6 @@ public class OrganizationService : IOrganizationService
 
     public void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException("Invalid Password Manager plan selected.");
-        }
-
         ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
 
         if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
@@ -2409,12 +2407,8 @@ public class OrganizationService : IOrganizationService
     public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException("Invalid plan selected.");
-        }
 
-        if (plan.Disabled)
+        if (plan!.Disabled)
         {
             throw new BadRequestException("Plan not found.");
         }
