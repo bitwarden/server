@@ -74,7 +74,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
 
     public async Task SaveAsync(IGrant obj)
     {
-        if (obj is not Grant gObj)
+        if (obj is not Core.Auth.Entities.Grant gObj)
         {
             throw new ArgumentException(null, nameof(obj));
         }
