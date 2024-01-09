@@ -71,7 +71,7 @@ public class AccessPolicyHelpersTests
                 new GroupProjectAccessPolicy { Read = true, Write = false }
             };
 
-        var exception = Record.Exception(() => AccessPolicyHelpers.CheckAccessPoliciesHasReadPermission(accessPolicies);
+        var exception = Record.Exception(() => AccessPolicyHelpers.CheckAccessPoliciesHasReadPermission(accessPolicies));
         Assert.Null(exception);
     }
 }
