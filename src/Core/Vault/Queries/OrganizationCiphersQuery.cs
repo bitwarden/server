@@ -27,7 +27,7 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     /// <summary>
     /// Returns ciphers belonging to the organization that the user has been assigned to via collections.
     /// </summary>
-    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>> GetOrganizationCiphersForUser(Guid organizationId, Guid userId)
+    public async Task<IEnumerable<CipherDetailsWithCollections>> GetOrganizationCiphersForUser(Guid organizationId, Guid userId)
     {
         if (!FlexibleCollectionsV1Enabled)
         {
@@ -44,7 +44,7 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
             .Where(c => orgCipherIds.Contains(c.CipherId))
             .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
-        return orgCiphers.Select(c => new CipherOrganizationDetailsWithCollections(c, collectionCiphersGroupDict));
+        return orgCiphers.Select(c => new CipherDetailsWithCollections(c, collectionCiphersGroupDict));
     }
 
     /// <summary>

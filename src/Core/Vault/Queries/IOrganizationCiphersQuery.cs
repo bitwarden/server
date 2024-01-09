@@ -13,7 +13,7 @@ public interface IOrganizationCiphersQuery
     /// Returns ciphers belonging to the organization that the user has been assigned to via collections.
     /// </summary>
     /// <exception cref="FeatureUnavailableException"></exception>
-    public Task<IEnumerable<CipherOrganizationDetailsWithCollections>> GetOrganizationCiphersForUser(Guid organizationId, Guid userId);
+    public Task<IEnumerable<CipherDetailsWithCollections>> GetOrganizationCiphersForUser(Guid organizationId, Guid userId);
 
     /// <summary>
     /// Returns all ciphers belonging to the organization.
