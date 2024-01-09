@@ -28,6 +28,7 @@ public class GrantRepository : IGrantRepository
                 WriteIndented = false
             })
         };
+        // TODO: Perhaps we want to evaluate moving this to DI as a keyed service singleton in .NET 8
         _client = new CosmosClient(cosmosConnectionString, options);
         _database = _client.GetDatabase("identity");
         _container = _database.GetContainer("grant");

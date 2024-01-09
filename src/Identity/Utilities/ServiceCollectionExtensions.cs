@@ -76,6 +76,7 @@ public static class ServiceCollectionExtensions
             throw new ArgumentException("No cosmos config string available.");
         }
         return new PersistedGrantStore(
+            // TODO: Perhaps we want to evaluate moving this repo to DI as a keyed service singleton in .NET 8
             new Core.Auth.Repositories.Cosmos.GrantRepository(globalSettings),
             g => new Core.Auth.Models.Data.GrantItem(g),
             fallbackGrantStore: BuildRedisGrantStore(sp, globalSettings, true));
