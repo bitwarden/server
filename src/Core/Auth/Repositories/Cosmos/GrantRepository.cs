@@ -63,7 +63,11 @@ public class GrantRepository : IGrantRepository
         }
         item.SetTtl();
         var id = Base64IdStringConverter.ToId(item.Key);
-        await _container.UpsertItemAsync(item, new PartitionKey(id));
+        await _container.UpsertItemAsync(item, new PartitionKey(id), new ItemRequestOptions
+        {
+            // ref: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/best-practice-dotnet#best-practices-for-write-heavy-workloads
+            EnableContentResponseOnWrite = false
+        });
     }
 
     public async Task DeleteByKeyAsync(string key)
