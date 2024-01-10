@@ -10,7 +10,8 @@ public class AssociationWithPermissionsRequestModel : AssociationWithPermissions
         {
             Id = Id.Value,
             ReadOnly = ReadOnly.Value,
-            HidePasswords = HidePasswords.GetValueOrDefault()
+            HidePasswords = HidePasswords.GetValueOrDefault(),
+            Manage = Manage.GetValueOrDefault()
         };
     }
 }
