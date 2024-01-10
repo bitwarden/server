@@ -84,22 +84,32 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
+        var targetIds = ids.ToList();
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Policies can't have a cascade delete, so we need to delete them manually.
-        var policies = dbContext.AccessPolicies.Where(ap =>
-            ((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId.HasValue && ids.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value) ||
-            ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue && ids.Contains(((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value) ||
-            ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue && ids.Contains(((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value));
-        dbContext.RemoveRange(policies);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        var apiKeys = dbContext.ApiKeys.Where(a => a.ServiceAccountId.HasValue && ids.Contains(a.ServiceAccountId!.Value));
-        dbContext.RemoveRange(apiKeys);
+        await dbContext.AccessPolicies.Where(ap =>
+                (((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId.HasValue &&
+                 targetIds.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value)) ||
+                (((ServiceAccountSecretAccessPolicy)ap).ServiceAccountId.HasValue &&
+                 targetIds.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value)) ||
+                (((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue &&
+                 targetIds.Contains(((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value)) ||
+                (((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue &&
+                 targetIds.Contains(((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value)))
+            .ExecuteDeleteAsync();
 
-        var serviceAccounts = dbContext.ServiceAccount.Where(c => ids.Contains(c.Id));
-        dbContext.RemoveRange(serviceAccounts);
-        await dbContext.SaveChangesAsync();
+        await dbContext.ApiKeys
+            .Where(a => a.ServiceAccountId.HasValue && targetIds.Contains(a.ServiceAccountId!.Value))
+            .ExecuteDeleteAsync();
+
+        await dbContext.ServiceAccount
+            .Where(c => targetIds.Contains(c.Id))
+            .ExecuteDeleteAsync();
+
+        await transaction.CommitAsync();
     }
 
     public async Task<(bool Read, bool Write)> AccessToServiceAccountAsync(Guid id, Guid userId,
