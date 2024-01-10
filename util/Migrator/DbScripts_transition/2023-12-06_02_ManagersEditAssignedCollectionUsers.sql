@@ -1,4 +1,4 @@
--- Update [dbo].[CollectionUser] with [Manage] = 1 for all users with Manager role or 'EditAssignedCollections' permission
+-- Step 1: Update [dbo].[CollectionUser] with [Manage] = 1 for all users with Manager role or 'EditAssignedCollections' permission
 UPDATE cu
 SET cu.[ReadOnly] = 0,
     cu.[HidePasswords] = 0,
@@ -9,7 +9,7 @@ INNER JOIN [dbo].[OrganizationUser] ou
 WHERE (ou.[Type] = 3 OR (ou.[Permissions] IS NOT NULL AND
     ISJSON(ou.[Permissions]) > 0 AND JSON_VALUE(ou.[Permissions], '$.editAssignedCollections') = 'true'))
 
--- Insert rows to [dbo].[CollectionUser] for Managers and users with 'EditAssignedCollections' permission assigned to groups with collection access
+-- Step 2: Insert rows to [dbo].[CollectionUser] for Managers and users with 'EditAssignedCollections' permission assigned to groups with collection access
 INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
 SELECT cg.[CollectionId], ou.[Id], 0, 0, 1
 FROM [dbo].[CollectionGroup] cg
@@ -23,3 +23,11 @@ WHERE (ou.[Type] = 3 OR
     SELECT 1 FROM [dbo].[CollectionUser] cu
     WHERE cu.[CollectionId] = cg.[CollectionId] AND cu.[OrganizationUserId] = ou.[Id]
   )
+
+-- Step 3: Set all Managers to Users
+UPDATE [dbo].[OrganizationUser]
+SET [Type] = 2  -- User
+WHERE [OrganizationId] = @OrganizationId
+  AND [Type] = 3; -- Manager
+
+-- TODO: clear custom permissions JSON? Probably should, but not actually used by any code once we enable FC
