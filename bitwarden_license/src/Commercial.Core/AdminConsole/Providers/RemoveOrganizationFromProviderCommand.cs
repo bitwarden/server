@@ -63,13 +63,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         var organizationOwnerEmails =
             (await _organizationRepository.GetOwnerEmailAddressesById(organization.Id)).ToList();
 
-        var loggedEmails = string.Join(", ", organizationOwnerEmails);
-
-        _logger.LogInformation("AC-1758: Owner Emails -> {LoggedEmails}", loggedEmails);
-
         organization.BillingEmail = organizationOwnerEmails.MinBy(email => email);
-
-        _logger.LogInformation("AC-1758: Billing Email -> {BillingEmail}", organization.BillingEmail);
 
         await _organizationRepository.ReplaceAsync(organization);
 
