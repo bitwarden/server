@@ -5,8 +5,6 @@ using Xunit;
 
 namespace Bit.Api.Test.SecretsManager.Utilities;
 
-
-
 public class AccessPolicyHelpersTests
 {
     [Fact]
