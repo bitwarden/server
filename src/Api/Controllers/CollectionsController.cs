@@ -251,7 +251,17 @@ public class CollectionsController : Controller
         }
 
         await _collectionService.SaveAsync(collection, groups, users);
-        return new CollectionResponseModel(collection);
+
+        if (!_currentContext.UserId.HasValue)
+        {
+            return new CollectionResponseModel(collection);
+        }
+
+        // If we have a user, fetch the collection to get the latest permission details
+        var userCollectionDetails = await _collectionRepository.GetByIdAsync(collection.Id,
+            _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
+
+        return new CollectionDetailsResponseModel(userCollectionDetails);
     }
 
     [HttpPut("{id}")]
@@ -638,7 +648,16 @@ public class CollectionsController : Controller
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
         await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
-        return new CollectionResponseModel(collection);
+
+        if (!_currentContext.UserId.HasValue)
+        {
+            return new CollectionResponseModel(collection);
+        }
+
+        // If we have a user, fetch the collection details to get the latest permission details for the user
+        var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
+
+        return new CollectionDetailsResponseModel(updatedCollectionDetails);
     }
 
     private async Task PutUsers_vNext(Guid id, IEnumerable<SelectionReadOnlyRequestModel> model)
