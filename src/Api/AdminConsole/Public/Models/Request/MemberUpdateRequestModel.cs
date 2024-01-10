@@ -1,4 +1,6 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;
 
@@ -19,6 +21,13 @@ public class MemberUpdateRequestModel : MemberBaseModel
         existingUser.Type = Type.Value;
         existingUser.AccessAll = AccessAll.Value;
         existingUser.ExternalId = ExternalId;
+
+        // Permissions is optional for backwards compatibility with existing usage
+        if (existingUser.Type is OrganizationUserType.Custom && Permissions is not null)
+        {
+            existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
+        }
+
         return existingUser;
     }
 }

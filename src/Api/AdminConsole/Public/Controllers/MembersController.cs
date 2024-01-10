@@ -5,7 +5,6 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +22,7 @@ public class MembersController : Controller
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IOrganizationRepository _organizationRepository;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -30,7 +30,8 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IOrganizationRepository organizationRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -38,6 +39,7 @@ public class MembersController : Controller
         _userService = userService;
         _currentContext = currentContext;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _organizationRepository = organizationRepository;
     }
 
     /// <summary>
@@ -119,17 +121,10 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection());
-        var invite = new OrganizationUserInvite
-        {
-            Emails = new List<string> { model.Email },
-            Type = model.Type.Value,
-            AccessAll = model.AccessAll.Value,
-            Collections = associations
-        };
-        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
-            model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
-        var response = new MemberResponseModel(user, associations);
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        var user = await _organizationService.InviteUserAsync(organization, null,
+            model.ToOrganizationUserInvite(), model.ExternalId);
+        var response = new MemberResponseModel(user, model.Collections.Select(c => c.ToCollectionAccessSelection()));
         return new JsonResult(response);
     }
 

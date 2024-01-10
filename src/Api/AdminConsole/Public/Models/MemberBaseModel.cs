@@ -1,6 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Api.AdminConsole.Public.Models;
@@ -20,6 +23,11 @@ public abstract class MemberBaseModel
         AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
+
+        if (user.Type == OrganizationUserType.Custom)
+        {
+            Permissions = user.GetPermissions();
+        }
     }
 
     public MemberBaseModel(OrganizationUserUserDetails user)
@@ -33,6 +41,11 @@ public abstract class MemberBaseModel
         AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
+
+        if (user.Type == OrganizationUserType.Custom)
+        {
+            Permissions = user.GetPermissions();
+        }
     }
 
     /// <summary>
@@ -57,4 +70,8 @@ public abstract class MemberBaseModel
     /// </summary>
     [Required]
     public bool ResetPasswordEnrolled { get; set; }
+    /// <summary>
+    /// The member's custom permissions if the member has a Custom role.
+    /// </summary>
+    public Permissions? Permissions { get; set; }
 }

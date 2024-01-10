@@ -166,17 +166,17 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPost("invite")]
-    public async Task Invite(string orgId, [FromBody] OrganizationUserInviteRequestModel model)
+    public async Task Invite(Guid orgId, [FromBody] OrganizationUserInviteRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.InviteUsersAsync(orgGuidId, userId.Value,
-            new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        await _organizationService.InviteUserAsync(organization, userId.Value,
+            new OrganizationUserInvite(model.ToData()), null);
     }
 
     [HttpPost("reinvite")]

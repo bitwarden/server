@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -17,15 +18,18 @@ public class PostUserCommand : IPostUserCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
+    private readonly IOrganizationRepository _organizationRepository;
 
     public PostUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
-        IScimContext scimContext)
+        IScimContext scimContext,
+        IOrganizationRepository organizationRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _scimContext = scimContext;
+        _organizationRepository = organizationRepository;
     }
 
     public async Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
@@ -80,8 +84,23 @@ public class PostUserCommand : IPostUserCommand
             throw new ConflictException();
         }
 
-        var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, EventSystemUser.SCIM, email,
-            OrganizationUserType.User, false, externalId, new List<CollectionAccessSelection>(), new List<Guid>());
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var invitedOrgUser = await _organizationService.InviteUserAsync(organization, EventSystemUser.SCIM,
+            new OrganizationUserInvite
+            {
+                Emails = new[] { email },
+                Type = OrganizationUserType.User,
+                AccessAll = false,
+                Collections = Array.Empty<CollectionAccessSelection>(),
+                Groups = Array.Empty<Guid>()
+            },
+            externalId);
+
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 
         return orgUser;

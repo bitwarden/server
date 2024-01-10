@@ -508,21 +508,17 @@ public class ProviderService : IProviderService
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id,
-            new (OrganizationUserInvite, string)[]
+        await _organizationService.InviteUserAsync(organization, user.Id,
+            new OrganizationUserInvite
             {
-                (
-                    new OrganizationUserInvite
-                    {
-                        Emails = new[] { clientOwnerEmail },
-                        AccessAll = true,
-                        Type = OrganizationUserType.Owner,
-                        Permissions = null,
-                        Collections = Array.Empty<CollectionAccessSelection>(),
-                    },
-                    null
-                )
-            });
+                Emails = new[] { clientOwnerEmail },
+                AccessAll = true,
+                Type = OrganizationUserType.Owner,
+                Permissions = null,
+                Collections = Array.Empty<CollectionAccessSelection>(),
+            },
+    null
+        );
 
         return providerOrganization;
     }
