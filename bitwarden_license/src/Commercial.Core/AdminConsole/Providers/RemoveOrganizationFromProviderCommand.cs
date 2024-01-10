@@ -75,7 +75,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         var customerUpdateOptions = new CustomerUpdateOptions
         {
-            Coupon = string.Empty
+            Coupon = string.Empty,
+            Email = organization.BillingEmail
         };
 
         await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);

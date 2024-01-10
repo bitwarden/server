@@ -110,7 +110,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         await stripeAdapter.Received(1).CustomerUpdateAsync(
             organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
-                options => options.Coupon == string.Empty));
+                options => options.Coupon == string.Empty && options.Email == "a@gmail.com"));
 
         await stripeAdapter.Received(1).SubscriptionUpdateAsync(
             organization.GatewaySubscriptionId, Arg.Is<SubscriptionUpdateOptions>(
