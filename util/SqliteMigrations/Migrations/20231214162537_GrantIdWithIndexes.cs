@@ -53,7 +53,7 @@ public partial class GrantIdWithIndexes : Migration
             table: "Grant",
             type: "INTEGER",
             nullable: false,
-            defaultValue: 1)
+            defaultValue: 0)
             .Annotation("Sqlite:Autoincrement", true);
 
         migrationBuilder.AddPrimaryKey(
