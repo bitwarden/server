@@ -14,8 +14,7 @@ public class GrantEntityTypeConfiguration : IEntityTypeConfiguration<Grant>
 
         builder
             .Property(s => s.Id)
-            .UseIdentityColumn()
-            .ValueGeneratedOnAdd();
+            .UseIdentityColumn();
 
         builder
             .HasIndex(s => s.Key)
