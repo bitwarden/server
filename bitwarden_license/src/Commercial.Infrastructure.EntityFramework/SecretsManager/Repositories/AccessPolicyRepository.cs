@@ -196,7 +196,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByServiceAccountIdAsync(Guid id, Guid userId,
-        AccessClientType accessType)
+            AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
