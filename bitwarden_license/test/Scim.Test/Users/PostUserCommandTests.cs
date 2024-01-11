@@ -1,6 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -19,7 +20,9 @@ public class PostUserCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PostUser_Success(SutProvider<PostUserCommand> sutProvider, string externalId, Guid organizationId, List<BaseScimUserModel.EmailModel> emails, ICollection<OrganizationUserUserDetails> organizationUsers, Core.Entities.OrganizationUser newUser)
+    public async Task PostUser_Success(SutProvider<PostUserCommand> sutProvider, string externalId,
+        Organization organization, List<BaseScimUserModel.EmailModel> emails,
+        ICollection<OrganizationUserUserDetails> organizationUsers, Core.Entities.OrganizationUser newUser)
     {
         var scimUserRequestModel = new ScimUserRequestModel
         {
@@ -29,20 +32,28 @@ public class PostUserCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyDetailsByOrganizationAsync(organizationId)
+            .GetManyDetailsByOrganizationAsync(organization.Id)
             .Returns(organizationUsers);
 
+        var expectedInvite = () => Arg.Is<OrganizationUserInvite>(i =>
+            i.Emails.SingleOrDefault(e => e == scimUserRequestModel.PrimaryEmail.ToLowerInvariant()) != null &&
+            i.Type == OrganizationUserType.User &&
+            i.AccessAll == false &&
+            !i.Collections.Any() &&
+            !i.Groups.Any());
+
         sutProvider.GetDependency<IOrganizationService>()
-            .InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
-                OrganizationUserType.User, false, externalId, Arg.Any<List<CollectionAccessSelection>>(),
-                Arg.Any<List<Guid>>())
+            .InviteUserAsync(organization, EventSystemUser.SCIM, expectedInvite(), externalId)
             .Returns(newUser);
 
-        var user = await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel);
+        var user = await sutProvider.Sut.PostUserAsync(organization.Id, scimUserRequestModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
-            OrganizationUserType.User, false, scimUserRequestModel.ExternalId, Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<List<Guid>>());
+        await sutProvider.GetDependency<IOrganizationService>().Received(1)
+            .InviteUserAsync(organization, EventSystemUser.SCIM, expectedInvite(), externalId);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetDetailsByIdAsync(newUser.Id);
     }
 
