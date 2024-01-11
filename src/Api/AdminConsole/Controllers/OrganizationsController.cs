@@ -764,12 +764,6 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (model.Data.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption &&
-            !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
-        {
-            throw new BadRequestException(nameof(model.Data.MemberDecryptionType), "Invalid member decryption type.");
-        }
-
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
         organization.Identifier = model.Identifier;
