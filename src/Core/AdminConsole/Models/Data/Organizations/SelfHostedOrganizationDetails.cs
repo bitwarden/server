@@ -145,11 +145,8 @@ public class SelfHostedOrganizationDetails : Organization
             MaxAutoscaleSeats = MaxAutoscaleSeats,
             OwnersNotifiedOfAutoscaling = OwnersNotifiedOfAutoscaling,
             LimitCollectionCreationDeletion = LimitCollectionCreationDeletion,
-            AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems
-
-            // FlexibleCollections properly expressly excluded
-            // Self-hosted organizations must go through their own data migration locally, it cannot be copied
-            // from the license file
+            AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
+            FlexibleCollections = FlexibleCollections
         };
     }
 }
