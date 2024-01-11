@@ -55,7 +55,7 @@ public class StripePaymentService : IPaymentService
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
         int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
-        int additionalSmSeats = 0, int additionalServiceAccount = 0)
+        int additionalSmSeats = 0, int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -149,7 +149,11 @@ public class StripePaymentService : IPaymentService
                         },
                     },
                 },
-                Coupon = provider ? ProviderDiscountId : null,
+                Coupon = signupIsFromSecretsManagerTrial
+                    ? SecretsManagerStandaloneDiscountId
+                    : provider
+                        ? ProviderDiscountId
+                        : null,
                 Address = new Stripe.AddressOptions
                 {
                     Country = taxInfo.BillingAddressCountry,
