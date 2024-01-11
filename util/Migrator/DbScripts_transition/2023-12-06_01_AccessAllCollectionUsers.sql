@@ -36,27 +36,27 @@ SET [AccessAll] = 0
 FROM [dbo].[OrganizationUser] OU
 INNER JOIN #TempOrgUser T ON OU.[Id] = T.[OrganizationUserId]
 
--- Step 5: Bump the account revision date for each unique OrganizationId in #TempOrgUser
-DECLARE @OrganizationId UNIQUEIDENTIFIER
+-- Step 5: Bump the account revision date for each unique OrganizationUserId in #TempOrgUser
+DECLARE @OrganizationUserId UNIQUEIDENTIFIER
 
-DECLARE OrgIdCursor CURSOR FOR
-SELECT DISTINCT [OrganizationId]
+DECLARE OrgUserIdCursor CURSOR FOR
+SELECT DISTINCT [OrganizationUserId]
 FROM #TempOrgUser
 
-OPEN OrgIdCursor
-FETCH NEXT FROM OrgIdCursor INTO @OrganizationId
+OPEN OrgUserIdCursor
+FETCH NEXT FROM OrgUserIdCursor INTO @OrganizationUserId
 
 WHILE (@@FETCH_STATUS = 0)
 BEGIN
-    -- Execute the stored procedure for the current OrganizationId
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    -- Execute the stored procedure for the current OrganizationUserId
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @OrganizationUserId
 
-    -- Fetch the next OrganizationId
-    FETCH NEXT FROM OrgIdCursor INTO @OrganizationId
+    -- Fetch the next OrganizationUserId
+    FETCH NEXT FROM OrgUserIdCursor INTO @OrganizationUserId
 END
 
-CLOSE OrgIdCursor
-DEALLOCATE OrgIdCursor;
+CLOSE OrgUserIdCursor
+DEALLOCATE OrgUserIdCursor;
 
 -- Step 6: Drop the temporary table
 DROP TABLE #TempOrgUser;
