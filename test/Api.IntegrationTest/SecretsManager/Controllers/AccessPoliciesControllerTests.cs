@@ -1327,7 +1327,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var (project, request) = await SetupProjectServiceAccountRequestAsync(permissionType, organizationUser);
         var newOrg = await _organizationHelper.CreateSmOrganizationAsync();
-        var group = await _groupRepository.CreateAsync(new Group
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = newOrg.Id,
             Name = _mockEncryptedString
@@ -1335,7 +1335,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         request.ProjectServiceAccountsAccessPolicyRequests = new List<AccessPolicyRequest>
         {
-            new() { GranteeId = group.Id, Read = true, Write = true }
+            new() { GranteeId = serviceAccount.Id, Read = true, Write = true }
         };
 
         var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/service-accounts", request);
