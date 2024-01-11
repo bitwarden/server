@@ -288,6 +288,12 @@ public class Startup
                     "Bitwarden Public API");
                 config.OAuthClientId("accountType.id");
                 config.OAuthClientSecret("secretKey");
+
+                // Persist authorization on page refresh - for development use only
+                if (Environment.IsDevelopment())
+                {
+                    config.EnablePersistAuthorization();
+                }
             });
         }
 
