@@ -531,7 +531,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                 info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
                 info.OrganizationName == organization.Name));
     }
-    
+
     [Theory]
     [OrganizationInviteCustomize(
         InviteeUserType = OrganizationUserType.Admin,
