@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Auth.Models.Public;
+namespace Bit.Api.AdminConsole.Public.Models;
 
 public abstract class AssociationWithPermissionsBaseModel
 {
@@ -15,4 +15,9 @@ public abstract class AssociationWithPermissionsBaseModel
     /// </summary>
     [Required]
     public bool? ReadOnly { get; set; }
+    /// <summary>
+    /// When true, the hide passwords permission will not allow the user or group to view passwords.
+    /// This prevents easy copy-and-paste of hidden items, however it may not completely prevent user access.
+    /// </summary>
+    public bool? HidePasswords { get; set; }
 }

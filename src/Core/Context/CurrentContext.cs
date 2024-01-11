@@ -54,7 +54,7 @@ public class CurrentContext : ICurrentContext
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
-        _featureService = featureService;
+        _featureService = featureService; ;
     }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
@@ -283,6 +283,11 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> OrganizationManager(Guid orgId)
     {
+        if (FlexibleCollectionsIsEnabled)
+        {
+            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
+        }
+
         return await OrganizationAdmin(orgId) ||
                (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Manager) ?? false);
     }
@@ -378,15 +383,10 @@ public class CurrentContext : ICurrentContext
             throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
         }
 
-        var canCreateNewCollections = false;
         var org = GetOrganization(orgId);
-        if (org != null)
-        {
-            canCreateNewCollections = !org.LimitCollectionCreationDeletion || org.Permissions.CreateNewCollections;
-        }
         return await EditAssignedCollections(orgId)
                || await DeleteAssignedCollections(orgId)
-               || canCreateNewCollections;
+               || (org != null && org.Permissions.CreateNewCollections);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)

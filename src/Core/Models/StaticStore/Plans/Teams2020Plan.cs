@@ -24,8 +24,8 @@ public record Teams2020Plan : Models.StaticStore.Plan
         HasApi = true;
         UsersGetPremium = true;
 
-        UpgradeSortOrder = 2;
-        DisplaySortOrder = 2;
+        UpgradeSortOrder = 3;
+        DisplaySortOrder = 3;
         LegacyYear = 2023;
 
         PasswordManager = new Teams2020PasswordManagerFeatures(isAnnual);

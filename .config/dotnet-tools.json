@@ -6,14 +6,6 @@
       "version": "6.5.0",
       "commands": ["swagger"]
     },
-    "coverlet.console": {
-      "version": "6.0.0",
-      "commands": ["coverlet"]
-    },
-    "dotnet-reportgenerator-globaltool": {
-      "version": "5.2.0",
-      "commands": ["reportgenerator"]
-    },
     "dotnet-ef": {
       "version": "8.0.0",
       "commands": ["dotnet-ef"]

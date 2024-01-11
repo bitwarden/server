@@ -38,6 +38,10 @@
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
+      "matchManagers": ["github-actions", "dockerfile", "docker-compose"],
+      "commitMessagePrefix": "[deps] DevOps:"
+    },
+    {
       "matchPackageNames": ["DnsClient", "Quartz"],
       "description": "Admin Console owned dependencies",
       "commitMessagePrefix": "[deps] AC:",
@@ -59,8 +63,7 @@
         "Azure.Storage.Blobs",
         "Azure.Storage.Queues",
         "Fido2.AspNet",
-        "IdentityServer4",
-        "IdentityServer4.AccessTokenValidation",
+        "Duende.IdentityServer",
         "Microsoft.Azure.Cosmos",
         "Microsoft.Azure.Cosmos.Table",
         "Microsoft.Extensions.Caching.StackExchangeRedis",
