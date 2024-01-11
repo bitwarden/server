@@ -30,6 +30,11 @@ BEGIN
         -- Execute the stored procedure for the current OrganizationId
         EXEC [dbo].[Organization_EnableCollectionEnhancements] @OrganizationId;
 
+        -- Update the Organization to set FlexibleCollections = 1
+        UPDATE [dbo].[Organization]
+        SET [FlexibleCollections] = 1
+        WHERE [Id] = @OrganizationId;
+
         FETCH NEXT FROM OrgCursor INTO @OrganizationId;
     END;
 
