@@ -3,6 +3,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Xunit;
 
+namespace Bit.Api.Test.SecretsManager.Utilities;
+
 public class AccessPolicyHelpersTests
 {
     [Fact]

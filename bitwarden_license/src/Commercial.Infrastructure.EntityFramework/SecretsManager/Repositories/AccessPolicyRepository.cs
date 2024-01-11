@@ -266,7 +266,6 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
     }
 
-
     public async Task<PeopleGrantees> GetPeopleGranteesAsync(Guid organizationId, Guid currentUserId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
