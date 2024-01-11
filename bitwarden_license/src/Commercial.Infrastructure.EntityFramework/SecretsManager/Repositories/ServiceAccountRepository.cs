@@ -94,7 +94,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
                 (((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId.HasValue &&
                  targetIds.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value)) ||
                 (((ServiceAccountSecretAccessPolicy)ap).ServiceAccountId.HasValue &&
-                 targetIds.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value)) ||
+                 targetIds.Contains(((ServiceAccountSecretAccessPolicy)ap).ServiceAccountId!.Value)) ||
                 (((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue &&
                  targetIds.Contains(((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value)) ||
                 (((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue &&

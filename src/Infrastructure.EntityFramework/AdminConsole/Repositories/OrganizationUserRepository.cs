@@ -100,6 +100,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
             dbContext.UserServiceAccountAccessPolicy.RemoveRange(
                 dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
+            dbContext.UserSecretAccessPolicy.RemoveRange(
+                dbContext.UserSecretAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
 
             var orgSponsorships = await dbContext.OrganizationSponsorships
                 .Where(os => os.SponsoringOrganizationUserId == organizationUserId)
