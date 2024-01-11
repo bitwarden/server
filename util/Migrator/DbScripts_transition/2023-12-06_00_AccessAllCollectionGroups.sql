@@ -29,27 +29,29 @@ SET [AccessAll] = 0
 FROM [dbo].[Group] G
 INNER JOIN #TempGroup TG ON G.[Id] = TG.[GroupId]
 
--- Step 5: Bump the account revision date for each unique OrganizationId in #TempGroup
+-- Step 5: Bump the account revision date for each unique CollectionId and OrganizationId
+DECLARE @CollectionId UNIQUEIDENTIFIER
 DECLARE @OrganizationId UNIQUEIDENTIFIER
 
-DECLARE OrgIdCursor CURSOR FOR
-SELECT DISTINCT [OrganizationId]
-FROM #TempGroup
+DECLARE CollectionIdCursor CURSOR FOR
+SELECT DISTINCT C.[Id], C.[OrganizationId]
+FROM [dbo].[Collection] C
+INNER JOIN #TempGroup TG ON C.[OrganizationId] = TG.[OrganizationId]
 
-OPEN OrgIdCursor
-FETCH NEXT FROM OrgIdCursor INTO @OrganizationId
+OPEN CollectionIdCursor
+FETCH NEXT FROM CollectionIdCursor INTO @CollectionId, @OrganizationId
 
 WHILE (@@FETCH_STATUS = 0)
 BEGIN
-    -- Execute the stored procedure for the current OrganizationId
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    -- Execute the stored procedure for the current CollectionId and OrganizationId
+    EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrganizationId
 
-    -- Fetch the next OrganizationId
-    FETCH NEXT FROM OrgIdCursor INTO @OrganizationId
+    -- Fetch the next CollectionId and OrganizationId
+    FETCH NEXT FROM CollectionIdCursor INTO @CollectionId, @OrganizationId
 END
 
-CLOSE OrgIdCursor
-DEALLOCATE OrgIdCursor;
+CLOSE CollectionIdCursor
+DEALLOCATE CollectionIdCursor;
 
 -- Step 6: Drop the temporary table
 DROP TABLE #TempGroup;
