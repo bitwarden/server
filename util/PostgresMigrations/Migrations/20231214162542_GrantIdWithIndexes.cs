@@ -54,7 +54,7 @@ public partial class GrantIdWithIndexes : Migration
             table: "Grant",
             type: "integer",
             nullable: false,
-            defaultValue: 0)
+            defaultValue: 1)
             .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
         migrationBuilder.AddPrimaryKey(

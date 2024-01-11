@@ -78,7 +78,7 @@ public partial class GrantIdWithIndexes : Migration
             table: "Grant",
             type: "int",
             nullable: false,
-            defaultValue: 0)
+            defaultValue: 1)
             .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn);
 
         migrationBuilder.AddPrimaryKey(
