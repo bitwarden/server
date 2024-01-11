@@ -1,4 +1,5 @@
-﻿using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.Repositories;
+using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
@@ -51,31 +52,58 @@ public static class ServiceCollectionExtensions
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>();
 
-        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
+        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {
-            // If we have redis, prefer it
-
-            // Add the original persisted grant store via it's implementation type
-            // so we can inject it right after.
-            services.AddSingleton<PersistedGrantStore>();
-
-            services.AddSingleton<IPersistedGrantStore>(sp =>
-            {
-                return new RedisPersistedGrantStore(
-                    // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
-                    ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
-                    sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-                    sp.GetRequiredService<PersistedGrantStore>() // Fallback grant store
-                );
-            });
+            services.AddSingleton<IPersistedGrantStore>(sp => BuildCosmosGrantStore(sp, globalSettings));
+        }
+        else if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
+        {
+            services.AddSingleton<IPersistedGrantStore>(sp => BuildRedisGrantStore(sp, globalSettings));
         }
         else
         {
-            // Use the original grant store
-            identityServerBuilder.AddPersistedGrantStore<PersistedGrantStore>();
+            services.AddTransient<IPersistedGrantStore>(sp => BuildSqlGrantStore(sp));
         }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;
+    }
+
+    private static PersistedGrantStore BuildCosmosGrantStore(IServiceProvider sp, GlobalSettings globalSettings)
+    {
+        if (!CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
+        {
+            throw new ArgumentException("No cosmos config string available.");
+        }
+        return new PersistedGrantStore(
+            // TODO: Perhaps we want to evaluate moving this repo to DI as a keyed service singleton in .NET 8
+            new Core.Auth.Repositories.Cosmos.GrantRepository(globalSettings),
+            g => new Core.Auth.Models.Data.GrantItem(g),
+            fallbackGrantStore: BuildRedisGrantStore(sp, globalSettings, true));
+    }
+
+    private static RedisPersistedGrantStore BuildRedisGrantStore(IServiceProvider sp,
+        GlobalSettings globalSettings, bool allowNull = false)
+    {
+        if (!CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
+        {
+            if (allowNull)
+            {
+                return null;
+            }
+            throw new ArgumentException("No redis config string available.");
+        }
+
+        return new RedisPersistedGrantStore(
+            // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
+            ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
+            sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
+            fallbackGrantStore: BuildSqlGrantStore(sp));
+    }
+
+    private static PersistedGrantStore BuildSqlGrantStore(IServiceProvider sp)
+    {
+        return new PersistedGrantStore(sp.GetRequiredService<IGrantRepository>(),
+            g => new Core.Auth.Entities.Grant(g));
     }
 }
