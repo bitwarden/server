@@ -73,7 +73,7 @@ public partial class GrantIdWithIndexes : Migration
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.Sql("ALTER TABLE `Grant` ADD `Id` NOT NULL int AUTO_INCREMENT;");
+        migrationBuilder.Sql("ALTER TABLE `Grant` ADD COLUMN `Id` INT AUTO_INCREMENT UNIQUE;");
 
         migrationBuilder.AddPrimaryKey(
             name: "PK_Grant",
