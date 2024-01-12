@@ -1,22 +1,43 @@
--- Update existing rows in CollectionUsers
-UPDATE "CollectionUsers"
+-- Step 1: Create a temporary table
+CREATE TEMP TABLE IF NOT EXISTS TempOrgUser AS
+SELECT "Id" AS "OrganizationUserId", "OrganizationId"
+FROM "OrganizationUser"
+WHERE "AccessAll" = true;
+
+-- Step 2: Update existing rows in CollectionUsers
+UPDATE "CollectionUsers" cu
 SET
     "ReadOnly" = false,
     "HidePasswords" = false,
     "Manage" = false
-FROM "Collection" AS C
-INNER JOIN "CollectionUsers" AS CU ON CU."CollectionId" = C."Id"
-INNER JOIN "OrganizationUser" AS OU ON CU."CollectionId" = C."Id" AND C."OrganizationId" = OU."OrganizationId"
-WHERE OU."AccessAll" = true;
+FROM "CollectionUsers" cuUpdate
+INNER JOIN "Collection" C ON cuUpdate."CollectionId" = C."Id"
+INNER JOIN TempOrgUser OU ON cuUpdate."OrganizationUserId" = OU."OrganizationUserId"
+WHERE C."OrganizationId" = OU."OrganizationId";
 
--- Insert new rows into CollectionUsers
+-- Step 3: Insert new rows into CollectionUsers
 INSERT INTO "CollectionUsers" ("CollectionId", "OrganizationUserId", "ReadOnly", "HidePasswords", "Manage")
-SELECT C."Id" AS "CollectionId", OU."Id" AS "OrganizationUserId", false, false, false
+SELECT C."Id" AS "CollectionId", OU."OrganizationUserId", false, false, false
 FROM "Collection" AS C
-INNER JOIN "OrganizationUser" AS OU ON C."OrganizationId" = OU."OrganizationId"
-WHERE OU."AccessAll" = true
-  AND NOT EXISTS (
+INNER JOIN TempOrgUser AS OU ON C."OrganizationId" = OU."OrganizationId"
+WHERE NOT EXISTS (
     SELECT 1
     FROM "CollectionUsers" AS CU
-    WHERE CU."CollectionId" = C."Id" AND CU."OrganizationUserId" = OU."Id"
+    WHERE CU."CollectionId" = C."Id" AND CU."OrganizationUserId" = OU."OrganizationUserId"
 );
+
+-- Step 4: Update OrganizationUser to clear AccessAll flag
+UPDATE "OrganizationUser" AS OU
+SET "AccessAll" = false
+FROM TempOrgUser AS T
+WHERE OU."Id" = T."OrganizationUserId";
+
+-- Step 5: Update "User" AccountRevisionDate for each unique OrganizationUserId
+UPDATE "User" AS U
+SET "AccountRevisionDate" = current_timestamp
+FROM "OrganizationUser" AS OU
+JOIN TempOrgUser AS TOU ON OU."Id" = TOU."OrganizationUserId"
+WHERE U."Id" = OU."UserId" AND OU."Status" = 2;
+
+-- Step 6: Drop the temporary table
+DROP TABLE IF EXISTS TempOrgUser;
