@@ -131,8 +131,7 @@ public class MembersController : Controller
             Collections = associations
         };
 
-        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
-        var user = await _organizationService.InviteUserAsync(organization, null,
+        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
             model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
         var response = new MemberResponseModel(user, associations);
         return new JsonResult(response);

@@ -83,8 +83,7 @@ public class PostUserCommand : IPostUserCommand
             throw new ConflictException();
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var invitedOrgUser = await _organizationService.InviteUserAsync(organization, EventSystemUser.SCIM, email,
+        var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, EventSystemUser.SCIM, email,
             OrganizationUserType.User, false, externalId, new List<CollectionAccessSelection>(), new List<Guid>());
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 

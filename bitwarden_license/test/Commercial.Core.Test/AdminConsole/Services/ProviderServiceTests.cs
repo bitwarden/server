@@ -532,7 +532,7 @@ public class ProviderServiceTests
             .Received().LogProviderOrganizationEventAsync(providerOrganization,
                 EventType.ProviderOrganization_Created);
         await sutProvider.GetDependency<IOrganizationService>()
-            .Received().InviteUsersAsync(organization, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+            .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
                 t => t.Count() == 1 &&
                 t.First().Item1.Emails.Count() == 1 &&
                 t.First().Item1.Emails.First() == clientOwnerEmail &&

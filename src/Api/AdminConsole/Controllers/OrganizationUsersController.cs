@@ -172,13 +172,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var organization = await _organizationRepository.GetByIdAsync(orgGuidId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var result = await _organizationService.InviteUsersAsync(organization, userId.Value,
+        var result = await _organizationService.InviteUsersAsync(orgGuidId, userId.Value,
             new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
     }
 

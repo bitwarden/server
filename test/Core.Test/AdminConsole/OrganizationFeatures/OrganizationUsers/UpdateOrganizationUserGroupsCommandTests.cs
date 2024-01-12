@@ -38,6 +38,8 @@ public class UpdateOrganizationUserGroupsCommandTests
 
         await sutProvider.Sut.UpdateUserGroupsAsync(organizationUser, groupIds, savingUserId);
 
+        await sutProvider.GetDependency<IOrganizationService>().Received(1)
+            .ValidateOrganizationUserUpdatePermissions(Arg.Any<Guid>(), organizationUser.Type, null, organizationUser.GetPermissions());
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .UpdateGroupsAsync(organizationUser.Id, groupIds);
         await sutProvider.GetDependency<IEventService>().Received(1)

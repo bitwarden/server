@@ -508,7 +508,7 @@ public class ProviderService : IProviderService
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        await _organizationService.InviteUsersAsync(organization, user.Id,
+        await _organizationService.InviteUsersAsync(organization.Id, user.Id,
             new (OrganizationUserInvite, string)[]
             {
                 (
