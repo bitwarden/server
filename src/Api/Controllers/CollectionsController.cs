@@ -215,7 +215,8 @@ public class CollectionsController : Controller
     {
         var collection = model.ToCollection(orgId);
 
-        var authorized = await FlexibleCollectionsIsEnabledAsync(orgId)
+        var flexibleCollectionsIsEnabled = await FlexibleCollectionsIsEnabledAsync(orgId);
+        var authorized = flexibleCollectionsIsEnabled
             ? (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Create)).Succeeded
             : await CanCreateCollection(orgId, collection.Id) || await CanEditCollectionAsync(orgId, collection.Id);
         if (!authorized)
