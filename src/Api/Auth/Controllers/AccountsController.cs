@@ -684,17 +684,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [HttpPost("iap-check")]
-    public async Task PostIapCheck([FromBody] IapCheckRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-        await _userService.IapCheckAsync(user, model.PaymentMethodType.Value);
-    }
-
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremium(PremiumRequestModel model)
     {
