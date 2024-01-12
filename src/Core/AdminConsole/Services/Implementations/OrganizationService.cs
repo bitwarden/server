@@ -1126,7 +1126,7 @@ public class OrganizationService : IOrganizationService
         // need to check the policy if the org has SSO enabled.
         var orgSsoLoginRequiredPolicyEnabled = orgSsoEnabled &&
                                                organization.UsePolicies &&
-                                               (await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso)).Enabled;
+                                               (await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso))?.Enabled == true;
 
         // Generate the list of org users and expiring tokens
         // create helper function to create expiring tokens
