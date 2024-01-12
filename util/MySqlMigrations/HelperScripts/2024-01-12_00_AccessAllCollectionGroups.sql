@@ -36,30 +36,11 @@ INNER JOIN TempGroup TG ON G.`Id` = TG.`GroupId`
 SET G.`AccessAll` = 0;
 
 -- Step 6: Update User AccountRevisionDate for each unique OrganizationUserId
-DECLARE Step1OrganizationUserId UUID;
-
-DECLARE UniqueOrgUserIdCursor CURSOR FOR
-SELECT `OrganizationUserId`
-FROM TempOrganizationUsers;
-
-OPEN UniqueOrgUserIdCursor;
-FETCH NEXT FROM UniqueOrgUserIdCursor INTO Step1OrganizationUserId;
-
-WHILE (FETCH_STATUS = 0) DO
-    -- Update User AccountRevisionDate for the current OrganizationUserId
-    UPDATE `User` U
-    SET U.`AccountRevisionDate` = UTC_TIMESTAMP()
-    FROM `User` U
-    INNER JOIN `OrganizationUser` OU ON OU.`UserId` = U.`Id`
-    WHERE OU.`Id` = Step1OrganizationUserId
-      AND OU.`Status` = 2;
-
-    -- Fetch the next row
-    FETCH NEXT FROM UniqueOrgUserIdCursor INTO Step1OrganizationUserId;
-END WHILE;
-
-CLOSE UniqueOrgUserIdCursor;
-DEALLOCATE UniqueOrgUserIdCursor;
+UPDATE `User` U
+INNER JOIN `OrganizationUser` OU ON OU.`UserId` = U.`Id`
+INNER JOIN TempOrganizationUsers TOU ON TOU.`OrganizationUserId` = OU.`Id`
+SET U.`AccountRevisionDate` = UTC_TIMESTAMP()
+WHERE OU.`Status` = 2;
 
 -- Step 7: Drop the temporary tables
 DROP TEMPORARY TABLE IF EXISTS TempGroup;
