@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Bit.PostgresMigrations.Migrations;
 
-public partial class FCAccessAllCollectionGroups : Migration
+public partial class FCEnableOrgsFlexibleCollections : Migration
 {
-    private const string _accessAllCollectionGroupsScript = "PostgresMigrations.HelperScripts.2023-12-06_00_AccessAllCollectionGroups.psql";
+    private const string _enableOrgsFlexibleCollectionsScript = "PostgresMigrations.HelperScripts.2024-01-12_03_EnableOrgsFlexibleCollections.psql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_accessAllCollectionGroupsScript));
+        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_enableOrgsFlexibleCollectionsScript));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

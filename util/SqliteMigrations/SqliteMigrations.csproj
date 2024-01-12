@@ -23,9 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="HelperScripts\2023-12-06_00_AccessAllCollectionGroups.sql" />
-    <EmbeddedResource Include="HelperScripts\2023-12-06_01_AccessAllCollectionUsers.sql" />
-    <EmbeddedResource Include="HelperScripts\2023-12-06_02_ManagersEditAssignedCollectionUsers.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-01-12_00_AccessAllCollectionGroups.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-01-12_01_AccessAllCollectionUsers.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-01-12_02_ManagersEditAssignedCollectionUsers.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-01-12_03_EnableOrgsFlexibleCollections.sql" />
   </ItemGroup>
 
 </Project>

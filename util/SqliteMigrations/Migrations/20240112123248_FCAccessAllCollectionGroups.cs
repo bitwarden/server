@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Bit.SqliteMigrations.Migrations;
 
-public partial class FCManagersEditAssignedCollectionUsers : Migration
+public partial class FCAccessAllCollectionGroups : Migration
 {
-    private const string _managersEditAssignedCollectionUsersScript = "SqliteMigrations.HelperScripts.2023-12-06_02_ManagersEditAssignedCollectionUsers.sql";
+    private const string _accessAllCollectionGroupsScript = "SqliteMigrations.HelperScripts.2024-01-12_00_AccessAllCollectionGroups.sql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_managersEditAssignedCollectionUsersScript));
+        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_accessAllCollectionGroupsScript));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

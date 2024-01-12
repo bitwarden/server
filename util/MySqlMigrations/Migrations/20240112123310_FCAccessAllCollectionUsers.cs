@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Bit.MySqlMigrations.Migrations;
 
-public partial class FCManagersEditAssignedCollectionUsers : Migration
+public partial class FCAccessAllCollectionUsers : Migration
 {
-    private const string _managersEditAssignedCollectionUsersScript = "MySqlMigrations.HelperScripts.2023-12-06_02_ManagersEditAssignedCollectionUsers.sql";
+    private const string _accessAllCollectionUsersScript = "MySqlMigrations.HelperScripts.2024-01-12_01_AccessAllCollectionUsers.sql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_managersEditAssignedCollectionUsersScript));
+        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_accessAllCollectionUsersScript));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
