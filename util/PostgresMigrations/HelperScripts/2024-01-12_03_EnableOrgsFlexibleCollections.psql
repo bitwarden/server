@@ -1,0 +1,4 @@
+-- Set "FlexibleCollections" = true for all organizations that have not yet been migrated.
+UPDATE "Organization"
+SET "FlexibleCollections" = true
+WHERE "FlexibleCollections" = false;

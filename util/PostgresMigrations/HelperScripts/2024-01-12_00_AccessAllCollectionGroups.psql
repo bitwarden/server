@@ -4,18 +4,24 @@ SELECT "Id" AS "GroupId", "OrganizationId"
 FROM "Group"
 WHERE "AccessAll" = true;
 
--- Step 2: Update existing rows in "CollectionGroup"
+-- Step 2: Create a temporary table to store distinct OrganizationUserIds
+CREATE TEMP TABLE IF NOT EXISTS TempOrganizationUsers AS
+SELECT DISTINCT GU."OrganizationUserId"
+FROM "GroupUser" GU
+JOIN TempGroup TG ON GU."GroupId" = TG."GroupId";
+
+-- Step 3: Update existing rows in "CollectionGroups"
 UPDATE "CollectionGroups" CG
 SET
     "ReadOnly" = false,
     "HidePasswords" = false,
     "Manage" = false
-    FROM "CollectionGroups" CGUpdate
+FROM "CollectionGroups" CGUpdate
 INNER JOIN "Collection" C ON CGUpdate."CollectionId" = C."Id"
 INNER JOIN TempGroup TG ON CGUpdate."GroupId" = TG."GroupId"
 WHERE C."OrganizationId" = TG."OrganizationId";
 
--- Step 3: Insert new rows into "CollectionGroup"
+-- Step 4: Insert new rows into "CollectionGroups"
 INSERT INTO "CollectionGroups" ("CollectionId", "GroupId", "ReadOnly", "HidePasswords", "Manage")
 SELECT C."Id", TG."GroupId", false, false, false
 FROM "Collection" C
@@ -23,5 +29,19 @@ INNER JOIN TempGroup TG ON C."OrganizationId" = TG."OrganizationId"
 LEFT JOIN "CollectionGroups" CG ON CG."CollectionId" = C."Id" AND CG."GroupId" = TG."GroupId"
 WHERE CG."CollectionId" IS NULL;
 
--- Step 4: Drop the temporary table
+-- Step 5: Update Group to clear AccessAll flag
+UPDATE "Group" G
+SET "AccessAll" = false
+FROM TempGroup TG
+WHERE G."Id" = TG."GroupId";
+
+-- Step 6: Update User AccountRevisionDate for each unique OrganizationUserId
+UPDATE "User" U
+SET "AccountRevisionDate" = current_timestamp
+FROM "OrganizationUser" OU
+JOIN TempOrganizationUsers TOU ON OU."Id" = TOU."OrganizationUserId"
+WHERE U."Id" = OU."UserId" AND OU."Status" = 2;
+
+-- Step 7: Drop the temporary tables
 DROP TABLE IF EXISTS TempGroup;
+DROP TABLE IF EXISTS TempOrganizationUsers;
