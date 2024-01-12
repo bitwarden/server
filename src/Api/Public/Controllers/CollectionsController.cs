@@ -89,7 +89,7 @@ public class CollectionsController : Controller
             return new NotFoundResult();
         }
         var updatedCollection = model.ToCollection(existingCollection);
-        var associations = model.Groups?.Select(c => c.ToSelectionReadOnly());
+        var associations = model.Groups?.Select(c => c.ToCollectionAccessSelection());
         await _collectionService.SaveAsync(updatedCollection, associations);
         var response = new CollectionResponseModel(updatedCollection, associations);
         return new JsonResult(response);

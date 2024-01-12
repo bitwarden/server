@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -18,7 +19,7 @@ public class GrantRepository : BaseRepository, IGrantRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<Grant> GetByKeyAsync(string key)
+    public async Task<IGrant> GetByKeyAsync(string key)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -31,7 +32,7 @@ public class GrantRepository : BaseRepository, IGrantRepository
         }
     }
 
-    public async Task<ICollection<Grant>> GetManyAsync(string subjectId, string sessionId,
+    public async Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId,
         string clientId, string type)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -41,12 +42,17 @@ public class GrantRepository : BaseRepository, IGrantRepository
                 new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
                 commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+            return results.ToList<IGrant>();
         }
     }
 
-    public async Task SaveAsync(Grant obj)
+    public async Task SaveAsync(IGrant obj)
     {
+        if (obj is not Grant gObj)
+        {
+            throw new ArgumentException(null, nameof(obj));
+        }
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
