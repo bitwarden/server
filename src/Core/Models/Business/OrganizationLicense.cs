@@ -53,6 +53,7 @@ public class OrganizationLicense : ILicense
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         LimitCollectionCreationDeletion = org.LimitCollectionCreationDeletion;
+        AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
 
         if (subscriptionInfo?.Subscription == null)
         {
@@ -137,6 +138,7 @@ public class OrganizationLicense : ILicense
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; } = true;
+    public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
@@ -148,10 +150,10 @@ public class OrganizationLicense : ILicense
     /// </summary>
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors</remarks>
-    public const int CurrentLicenseFileVersion = 13;
+    public const int CurrentLicenseFileVersion = 14;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 14;
+        get => Version is >= 1 and <= 15;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -194,6 +196,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 13 || !p.Name.Equals(nameof(SmServiceAccounts))) &&
                     // LimitCollectionCreationDeletion was added in Version 14
                     (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
+                    // AllowAdminAccessToAllCollectionItems was added in Version 15
+                    (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
                     (
                         !forHash ||
                         (
@@ -346,6 +350,10 @@ public class OrganizationLicense : ILicense
             // if (valid && Version >= 14)
             // {
             //     valid = organization.LimitCollectionCreationDeletion == LimitCollectionCreationDeletion;
+            // }
+            // if (valid && Version >= 15)
+            // {
+            //     valid = organization.AllowAdminAccessToAllCollectionItems == AllowAdminAccessToAllCollectionItems;
             // }
 
             return valid;

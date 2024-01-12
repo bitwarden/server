@@ -91,6 +91,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     /// </remarks>
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    /// <summary>
+    /// True if the organization is using the Flexible Collections permission changes, false otherwise.
+    /// For existing organizations, this must only be set to true once data migrations have been run for this organization.
+    /// </summary>
+    public bool FlexibleCollections { get; set; }
 
     public void SetNewId()
     {
@@ -236,7 +241,10 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return providers[provider];
     }
 
-    public void UpdateFromLicense(OrganizationLicense license, bool flexibleCollectionsIsEnabled)
+    public void UpdateFromLicense(
+        OrganizationLicense license,
+        bool flexibleCollectionsMvpIsEnabled,
+        bool flexibleCollectionsV1IsEnabled)
     {
         Name = license.Name;
         BusinessName = license.BusinessName;
@@ -267,6 +275,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-        LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled || license.LimitCollectionCreationDeletion;
+        LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion;
+        AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems;
     }
 }

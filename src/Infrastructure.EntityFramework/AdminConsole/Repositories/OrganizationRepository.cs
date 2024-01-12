@@ -88,7 +88,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseResetPassword = e.UseResetPassword,
                 UseScim = e.UseScim,
                 UseCustomPermissions = e.UseCustomPermissions,
-                UsePolicies = e.UsePolicies
+                UsePolicies = e.UsePolicies,
+                LimitCollectionCreationDeletion = e.LimitCollectionCreationDeletion,
+                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
+                FlexibleCollections = e.FlexibleCollections
             }).ToListAsync();
         }
     }
@@ -157,6 +160,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await deleteCiphersTransaction.CommitAsync();
 
             var organizationDeleteTransaction = await dbContext.Database.BeginTransactionAsync();
+            await dbContext.AuthRequests.Where(ar => ar.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             await dbContext.SsoUsers.Where(su => su.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.SsoConfigs.Where(sc => sc.OrganizationId == organization.Id)
