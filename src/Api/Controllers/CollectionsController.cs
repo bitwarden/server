@@ -2,6 +2,7 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -213,9 +214,8 @@ public class CollectionsController : Controller
     public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CollectionRequestModel model)
     {
         var collection = model.ToCollection(orgId);
-        var flexibleCollectionsIsEnabled = await FlexibleCollectionsIsEnabledAsync(orgId);
 
-        var authorized = flexibleCollectionsIsEnabled
+        var authorized = await FlexibleCollectionsIsEnabledAsync(orgId)
             ? (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Create)).Succeeded
             : await CanCreateCollection(orgId, collection.Id) || await CanEditCollectionAsync(orgId, collection.Id);
         if (!authorized)
@@ -296,6 +296,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("bulk-access")]
+    [RequireFeature(FeatureFlagKeys.BulkCollectionAccess)]
     public async Task PostBulkCollectionAccess([FromBody] BulkCollectionAccessRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
@@ -311,7 +312,7 @@ public class CollectionsController : Controller
             throw new BadRequestException("All collections must belong to the same organization");
         }
 
-        // Authorization logic assumes flexible collections is enabled, so it's tied to this flag
+        // Authorization logic assumes flexible collections is enabled
         if (!await FlexibleCollectionsIsEnabledAsync(orgId))
         {
             throw new NotFoundException();

@@ -17,18 +17,15 @@ public class PostUserCommand : IPostUserCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
-    private readonly IOrganizationRepository _organizationRepository;
 
     public PostUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
-        IScimContext scimContext,
-        IOrganizationRepository organizationRepository)
+        IScimContext scimContext)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _scimContext = scimContext;
-        _organizationRepository = organizationRepository;
     }
 
     public async Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
