@@ -1614,6 +1614,23 @@ public class StripePaymentService : IPaymentService
         return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount), prorationDate);
     }
 
+    public async Task<bool> RisksSubscriptionFailure(Organization organization)
+    {
+        var subscriptionInfo = await GetSubscriptionAsync(organization);
+
+        if (subscriptionInfo.Subscription is not { Status: "active" or "trialing" or "past_due" } ||
+            subscriptionInfo.UpcomingInvoice == null)
+        {
+            return false;
+        }
+
+        var customer = await GetCustomerAsync(organization.GatewayCustomerId);
+
+        var paymentSource = await GetBillingPaymentSourceAsync(customer);
+
+        return paymentSource == null;
+    }
+
     private Stripe.PaymentMethod GetLatestCardPaymentMethod(string customerId)
     {
         var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(
