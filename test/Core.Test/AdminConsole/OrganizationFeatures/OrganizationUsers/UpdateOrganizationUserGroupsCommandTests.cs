@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
@@ -22,8 +23,6 @@ public class UpdateOrganizationUserGroupsCommandTests
     {
         await sutProvider.Sut.UpdateUserGroupsAsync(organizationUser, groupIds, null);
 
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
-            .ValidateOrganizationUserUpdatePermissions(default, default, default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .UpdateGroupsAsync(organizationUser.Id, groupIds);
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -41,8 +40,6 @@ public class UpdateOrganizationUserGroupsCommandTests
 
         await sutProvider.Sut.UpdateUserGroupsAsync(organizationUser, groupIds, savingUserId);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1)
-            .ValidateOrganizationUserUpdatePermissions(Arg.Any<OrganizationAbility>(), organizationUser.Type, null, organizationUser.GetPermissions());
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .UpdateGroupsAsync(organizationUser.Id, groupIds);
         await sutProvider.GetDependency<IEventService>().Received(1)

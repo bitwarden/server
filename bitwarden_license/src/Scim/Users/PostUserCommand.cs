@@ -17,15 +17,18 @@ public class PostUserCommand : IPostUserCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
+    private readonly IOrganizationRepository _organizationRepository;
 
     public PostUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
-        IScimContext scimContext)
+        IScimContext scimContext,
+        IOrganizationRepository organizationRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _scimContext = scimContext;
+        _organizationRepository = organizationRepository;
     }
 
     public async Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
@@ -80,7 +83,8 @@ public class PostUserCommand : IPostUserCommand
             throw new ConflictException();
         }
 
-        var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, EventSystemUser.SCIM, email,
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        var invitedOrgUser = await _organizationService.InviteUserAsync(organization, EventSystemUser.SCIM, email,
             OrganizationUserType.User, false, externalId, new List<CollectionAccessSelection>(), new List<Guid>());
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 

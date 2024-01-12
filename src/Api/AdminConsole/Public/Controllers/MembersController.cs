@@ -23,6 +23,7 @@ public class MembersController : Controller
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IOrganizationRepository _organizationRepository;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -30,7 +31,8 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IOrganizationRepository organizationRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -38,6 +40,7 @@ public class MembersController : Controller
         _userService = userService;
         _currentContext = currentContext;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _organizationRepository = organizationRepository;
     }
 
     /// <summary>
@@ -127,7 +130,9 @@ public class MembersController : Controller
             AccessAll = model.AccessAll.Value,
             Collections = associations
         };
-        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
+
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        var user = await _organizationService.InviteUserAsync(organization, null,
             model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
         var response = new MemberResponseModel(user, associations);
         return new JsonResult(response);

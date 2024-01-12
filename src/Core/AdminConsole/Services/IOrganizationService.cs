@@ -32,13 +32,13 @@ public interface IOrganizationService
     Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
-    Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+    Task<List<OrganizationUser>> InviteUsersAsync(Organization organization, Guid? invitingUserId,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
-    Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
+    Task<List<OrganizationUser>> InviteUsersAsync(Organization organization, EventSystemUser systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
-    Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
+    Task<OrganizationUser> InviteUserAsync(Organization organization, Guid? invitingUserId, string email,
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
-    Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
+    Task<OrganizationUser> InviteUserAsync(Organization organization, EventSystemUser systemUser, string email,
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
@@ -81,6 +81,6 @@ public interface IOrganizationService
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
-    Task ValidateOrganizationUserUpdatePermissions(OrganizationAbility organizationAbility, OrganizationUserType newType,
+    Task ValidateOrganizationUserUpdatePermissions(Organization organization, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions);
 }
