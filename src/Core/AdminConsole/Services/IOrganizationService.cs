@@ -6,7 +6,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.Services;
 
