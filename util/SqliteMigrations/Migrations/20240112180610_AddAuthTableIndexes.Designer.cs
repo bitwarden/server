@@ -5,13 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20231229200644_AddAuthTableIndexes")]
+    [Migration("20240112180610_AddAuthTableIndexes")]
     partial class AddAuthTableIndexes
     {
         /// <inheritdoc />
@@ -65,6 +66,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("FlexibleCollections")
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte?>("Gateway")
                         .HasColumnType("INTEGER");
@@ -201,6 +205,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Id", "Enabled")
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp" });
+
                     b.ToTable("Organization", (string)null);
                 });
 
@@ -229,7 +236,12 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("OrganizationId", "Type")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Policy", (string)null);
                 });
@@ -478,7 +490,8 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("INTEGER")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("ClientId")
                         .IsRequired()
@@ -788,7 +801,15 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("Identifier")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId", "Identifier")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Device", (string)null);
                 });
@@ -860,6 +881,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Date", "OrganizationId", "ActingUserId", "CipherId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Event", (string)null);
                 });
@@ -1061,6 +1085,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("SponsoringOrganizationId");
 
+                    b.HasIndex("SponsoringOrganizationUserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.ToTable("OrganizationSponsorship", (string)null);
                 });
 
@@ -1112,9 +1139,15 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId", "OrganizationId", "Status")
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "AccessAll" })
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("OrganizationUser", (string)null);
                 });
@@ -1169,9 +1202,16 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DeletionDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId", "OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Send", (string)null);
                 });
@@ -1249,7 +1289,11 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId", "OrganizationId", "CreationDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Transaction", (string)null);
                 });
@@ -1398,6 +1442,13 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("User", (string)null);
                 });
