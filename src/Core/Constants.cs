@@ -102,7 +102,7 @@ public static class FeatureFlagKeys
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
-
+    public const string DuoRedirect = " duo-redirect ";
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)

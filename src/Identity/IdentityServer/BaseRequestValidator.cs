@@ -167,7 +167,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 return;
             }
-            // We only want to track TOTPs in the chache to enforce one time use.
+            // We only want to track TOTPs in the cache to enforce one time use.
             if (twoFactorProviderType == TwoFactorProviderType.Authenticator || twoFactorProviderType == TwoFactorProviderType.Email)
             {
                 await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
@@ -428,7 +428,7 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Remember:
                 if (type != TwoFactorProviderType.Remember &&
-                    !(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
+                    !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return false;
                 }
@@ -456,7 +456,7 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Email:
             case TwoFactorProviderType.YubiKey:
-                if (!(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
+                if (!await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return null;
                 }
@@ -465,11 +465,25 @@ public abstract class BaseRequestValidator<T> where T : class
                     CoreHelpers.CustomProviderName(type));
                 if (type == TwoFactorProviderType.Duo)
                 {
-                    return new Dictionary<string, object>
+                    // DUO SDK v4 Update: Duo-Redirect
+                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                     {
-                        ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = token
-                    };
+                        CurrentContext.HttpContext.Request.Headers.TryGetValue("X-Bitwarden-Client-Name", out var bitwardenClientName);
+                        return new Dictionary<string, object>
+                        {
+                            ["Host"] = provider.MetaData["Host"],
+                            ["Duo2faInitiatingClient"] = bitwardenClientName,
+                            ["AuthUrl"] = token
+                        };
+                    }
+                    else
+                    {
+                        return new Dictionary<string, object>
+                        {
+                            ["Host"] = provider.MetaData["Host"],
+                            ["Signature"] = token
+                        };
+                    }
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)
                 {
