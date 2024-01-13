@@ -10,6 +10,7 @@ public class GrantEntityTypeConfiguration : IEntityTypeConfiguration<Grant>
     {
         builder
             .HasKey(s => s.Id)
+            .HasName("PK_Grant")
             .IsClustered();
 
         builder
