@@ -241,10 +241,13 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return providers[provider];
     }
 
-    public void UpdateFromLicense(
-        OrganizationLicense license,
-        bool flexibleCollectionsV1IsEnabled)
+    public void UpdateFromLicense(OrganizationLicense license)
     {
+        // The following properties are intentionally excluded from being updated:
+        // - Id - self-hosted org will have its own unique Guid
+        // - MaxStorageGb - not enforced for self-hosted because we're not providing the storage
+        // - FlexibleCollections - the self-hosted organization must do its own data migration to set this property, it cannot be updated from cloud
+
         Name = license.Name;
         BusinessName = license.BusinessName;
         BillingEmail = license.BillingEmail;
@@ -276,8 +279,5 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         SmServiceAccounts = license.SmServiceAccounts;
         LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
-
-        // Organization.FlexibleCollections is intentionally excluded; the self-hosted organization
-        // must do its own data migration to set this property, it cannot be updated from cloud
     }
 }

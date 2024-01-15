@@ -445,8 +445,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostBulkCollectionAccess_FlexibleCollectionsDisabled_Throws(User actingUser,
-        OrganizationAbility organizationAbility, List<Collection> collections,
+    public async Task PostBulkCollectionAccess_FlexibleCollectionsDisabled_Throws(OrganizationAbility organizationAbility, List<Collection> collections,
         SutProvider<CollectionsController> sutProvider)
     {
         organizationAbility.FlexibleCollections = false;
