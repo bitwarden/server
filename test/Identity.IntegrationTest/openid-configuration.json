@@ -75,7 +75,19 @@
     "HS384",
     "HS512"
   ],
+  "prompt_values_supported": ["none", "login", "consent", "select_account"],
   "authorization_response_iss_parameter_supported": true,
   "backchannel_token_delivery_modes_supported": ["poll"],
-  "backchannel_user_code_parameter_supported": true
+  "backchannel_user_code_parameter_supported": true,
+  "dpop_signing_alg_values_supported": [
+    "RS256",
+    "RS384",
+    "RS512",
+    "PS256",
+    "PS384",
+    "PS512",
+    "ES256",
+    "ES384",
+    "ES512"
+  ]
 }

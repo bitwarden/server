@@ -113,13 +113,11 @@ public static class ServiceCollectionExtensions
         if (globalSettings.SelfHosted)
         {
             services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
-            services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
         }
         else
         {
             services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
             services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
-            services.AddSingleton<IMetaDataRepository, TableStorageRepos.MetaDataRepository>();
         }
 
         return provider;
@@ -136,7 +134,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
-        services.AddSingleton<IAppleIapService, AppleIapService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<ISendService, SendService>();
