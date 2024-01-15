@@ -2027,6 +2027,15 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
+
+        // TODO: pass in the whole organization object when this is refactored into a command/query
+        // See AC-2036
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var flexibleCollectionsEnabled = organizationAbility?.FlexibleCollections ?? false;
+        if (flexibleCollectionsEnabled && newType == OrganizationUserType.Manager && oldType is not OrganizationUserType.Manager)
+        {
+            throw new BadRequestException("Manager role is deprecated after Flexible Collections.");
+        }
     }
 
     private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
