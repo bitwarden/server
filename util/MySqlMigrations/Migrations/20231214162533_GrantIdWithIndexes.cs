@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -73,13 +72,7 @@ public partial class GrantIdWithIndexes : Migration
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AddColumn<int>(
-            name: "Id",
-            table: "Grant",
-            type: "int",
-            nullable: false,
-            defaultValue: 0)
-            .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn);
+        migrationBuilder.Sql("ALTER TABLE `Grant` ADD COLUMN `Id` INT AUTO_INCREMENT UNIQUE;");
 
         migrationBuilder.AddPrimaryKey(
             name: "PK_Grant",

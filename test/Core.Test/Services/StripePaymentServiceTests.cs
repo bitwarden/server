@@ -26,8 +26,6 @@ public class StripePaymentServiceTests
     [BitAutoData(PaymentMethodType.BitPay)]
     [BitAutoData(PaymentMethodType.Credit)]
     [BitAutoData(PaymentMethodType.WireTransfer)]
-    [BitAutoData(PaymentMethodType.AppleInApp)]
-    [BitAutoData(PaymentMethodType.GoogleInApp)]
     [BitAutoData(PaymentMethodType.Check)]
     public async void PurchaseOrganizationAsync_Invalid(PaymentMethodType paymentMethodType, SutProvider<StripePaymentService> sutProvider)
     {

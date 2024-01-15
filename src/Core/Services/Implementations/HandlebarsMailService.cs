@@ -754,6 +754,30 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendProviderUpdatePaymentMethod(
+        Guid organizationId,
+        string organizationName,
+        string providerName,
+        IEnumerable<string> emails)
+    {
+        var message = CreateDefaultMessage("Update your billing information", emails);
+
+        var model = new ProviderUpdatePaymentMethodViewModel
+        {
+            OrganizationId = organizationId.ToString(),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+            ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+            SiteName = _globalSettings.SiteName,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+        };
+
+        await AddMessageContentAsync(message, "Provider.ProviderUpdatePaymentMethod", model);
+
+        message.Category = "ProviderUpdatePaymentMethod";
+
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
     {
         var message = CreateDefaultMessage("Master Password Has Been Changed", email);

@@ -46,7 +46,8 @@ SELECT
     O.[SmSeats],
     O.[SmServiceAccounts],
     O.[LimitCollectionCreationDeletion],
-    O.[AllowAdminAccessToAllCollectionItems]
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[FlexibleCollections]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
