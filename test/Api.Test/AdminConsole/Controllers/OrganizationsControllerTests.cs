@@ -37,7 +37,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IProviderRepository _providerRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoConfigService _ssoConfigService;
     private readonly IUserService _userService;
@@ -46,7 +45,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
-    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly IFeatureService _featureService;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
@@ -64,7 +62,6 @@ public class OrganizationsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _paymentService = Substitute.For<IPaymentService>();
         _policyRepository = Substitute.For<IPolicyRepository>();
-        _providerRepository = Substitute.For<IProviderRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _ssoConfigService = Substitute.For<ISsoConfigService>();
         _getOrganizationApiKeyQuery = Substitute.For<IGetOrganizationApiKeyQuery>();
@@ -73,19 +70,33 @@ public class OrganizationsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
-        _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
 
-        _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-            _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
-            _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
-            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
-            _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService,
-            _updateSecretsManagerSubscriptionCommand, _upgradeOrganizationPlanCommand, _addSecretsManagerSubscriptionCommand);
+        _sut = new OrganizationsController(
+            _organizationRepository,
+            _organizationUserRepository,
+            _policyRepository,
+            _organizationService,
+            _userService,
+            _paymentService,
+            _currentContext,
+            _ssoConfigRepository,
+            _ssoConfigService,
+            _getOrganizationApiKeyQuery,
+            _rotateOrganizationApiKeyCommand,
+            _createOrganizationApiKeyCommand,
+            _organizationApiKeyRepository,
+            _cloudGetOrganizationLicenseQuery,
+            _featureService,
+            _globalSettings,
+            _licensingService,
+            _updateSecretsManagerSubscriptionCommand,
+            _upgradeOrganizationPlanCommand,
+            _addSecretsManagerSubscriptionCommand);
     }
 
     public void Dispose()

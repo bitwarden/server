@@ -49,4 +49,5 @@ public interface IPaymentService
     Task ArchiveTaxRateAsync(TaxRate taxRate);
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
         int additionalServiceAccount, DateTime? prorationDate = null);
+    Task<bool> RisksSubscriptionFailure(Organization organization);
 }
