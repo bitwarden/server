@@ -352,7 +352,7 @@ public class CollectionsControllerTests
         IEnumerable<Collection> ExpectedCollectionAccess() => Arg.Is<IEnumerable<Collection>>(cols => cols.SequenceEqual(collections));
 
         // Act
-        await sutProvider.Sut.PostBulkCollectionAccess(model);
+        await sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model);
 
         // Assert
         await sutProvider.GetDependency<IAuthorizationService>().Received().AuthorizeAsync(
@@ -392,9 +392,80 @@ public class CollectionsControllerTests
             .GetManyByManyIdsAsync(model.CollectionIds)
             .Returns(collections.Skip(1).ToList());
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollectionAccess(model));
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model));
 
         Assert.Equal("One or more collections not found.", exception.Message);
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs().AuthorizeAsync(
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<IEnumerable<Collection>>(),
+            Arg.Any<IEnumerable<IAuthorizationRequirement>>()
+        );
+        await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
+            .AddAccessAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollectionAccess_CollectionsBelongToDifferentOrganizations_Throws(User actingUser,
+        OrganizationAbility organizationAbility, List<Collection> collections,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        ArrangeOrganizationAbility(sutProvider, organizationAbility);
+
+        // First collection has a different orgId
+        collections.Skip(1).ToList().ForEach(c => c.OrganizationId = organizationAbility.Id);
+
+        var userId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var model = new BulkCollectionAccessRequestModel
+        {
+            CollectionIds = collections.Select(c => c.Id),
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, Manage = true } },
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId, ReadOnly = true } },
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(actingUser.Id);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(model.CollectionIds)
+            .Returns(collections);
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model));
+
+        Assert.Equal("One or more collections not found.", exception.Message);
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs().AuthorizeAsync(
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<IEnumerable<Collection>>(),
+            Arg.Any<IEnumerable<IAuthorizationRequirement>>()
+        );
+        await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
+            .AddAccessAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollectionAccess_FlexibleCollectionsDisabled_Throws(User actingUser,
+        OrganizationAbility organizationAbility, List<Collection> collections,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        organizationAbility.FlexibleCollections = false;
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
+
+        var userId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var model = new BulkCollectionAccessRequestModel
+        {
+            CollectionIds = collections.Select(c => c.Id),
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, Manage = true } },
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId, ReadOnly = true } },
+        };
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model));
+
+        Assert.Equal("Feature disabled.", exception.Message);
         await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs().AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(),
             Arg.Any<IEnumerable<Collection>>(),
@@ -436,7 +507,7 @@ public class CollectionsControllerTests
 
         IEnumerable<Collection> ExpectedCollectionAccess() => Arg.Is<IEnumerable<Collection>>(cols => cols.SequenceEqual(collections));
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollectionAccess(model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model));
         await sutProvider.GetDependency<IAuthorizationService>().Received().AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(),
             ExpectedCollectionAccess(),

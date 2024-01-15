@@ -298,25 +298,19 @@ public class CollectionsController : Controller
 
     [HttpPost("bulk-access")]
     [RequireFeature(FeatureFlagKeys.BulkCollectionAccess)]
-    public async Task PostBulkCollectionAccess([FromBody] BulkCollectionAccessRequestModel model)
+    public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
-        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
-
-        if (collections.Count != model.CollectionIds.Count())
-        {
-            throw new NotFoundException("One or more collections not found.");
-        }
-
-        var orgId = collections.First().OrganizationId;
-        if (collections.All(c => c.OrganizationId != orgId))
-        {
-            throw new BadRequestException("All collections must belong to the same organization");
-        }
-
         // Authorization logic assumes flexible collections is enabled
+        // Remove after all organizations have been migrated
         if (!await FlexibleCollectionsIsEnabledAsync(orgId))
         {
-            throw new NotFoundException();
+            throw new NotFoundException("Feature disabled.");
+        }
+
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
+        if (collections.Count(c => c.OrganizationId == orgId) != model.CollectionIds.Count())
+        {
+            throw new NotFoundException("One or more collections not found.");
         }
 
         var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess);
