@@ -272,20 +272,7 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="BillingEmail"></label>
-                    @if (Model.Provider?.Type == ProviderType.Reseller)
-                    {
-                        <input type="email" class="form-control" asp-for="BillingEmail" readonly="readonly">
-                    }
-                    else
-                    {
-                        <input
-                            type="text"
-                            class="form-control"
-                            asp-for="BillingEmail"
-                            readonly='@(!canEditBilling)'
-                            pattern="@(@"[^@\s]+@[^@\s]+\.[^@\s]+")"
-                            title="Email address must be in the format 'address@domain.com'.">
-                    }
+                    <input type="email" class="form-control" asp-for="BillingEmail" readonly="readonly">
                 </div>
             </div>
             <div class="col-sm">
