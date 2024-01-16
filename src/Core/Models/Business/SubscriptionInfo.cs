@@ -7,7 +7,6 @@ public class SubscriptionInfo
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingUpcomingInvoice UpcomingInvoice { get; set; }
-    public bool UsingInAppPurchase { get; set; }
 
     public class BillingCustomerDiscount
     {

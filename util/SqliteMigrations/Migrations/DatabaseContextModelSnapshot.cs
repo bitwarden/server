@@ -486,7 +486,8 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("INTEGER")
+                        .HasAnnotation("Sqlite:Autoincrement", true);
 
                     b.Property<string>("ClientId")
                         .IsRequired()
