@@ -23,7 +23,7 @@ public class GrantRepository : BaseRepository, IGrantRepository
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<IGrant>(
+            var results = await connection.QueryAsync<Grant>(
                 "[dbo].[Grant_ReadByKey]",
                 new { Key = key },
                 commandType: CommandType.StoredProcedure);
@@ -37,12 +37,12 @@ public class GrantRepository : BaseRepository, IGrantRepository
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<IGrant>(
+            var results = await connection.QueryAsync<Grant>(
                 "[dbo].[Grant_Read]",
                 new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
                 commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+            return results.ToList<IGrant>();
         }
     }
 

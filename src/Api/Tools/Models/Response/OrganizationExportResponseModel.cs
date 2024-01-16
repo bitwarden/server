@@ -1,7 +1,8 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿using Bit.Api.Models.Response;
+using Bit.Api.Vault.Models.Response;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.Tools.Models.Response;
 
 public class OrganizationExportResponseModel : ResponseModel
 {
