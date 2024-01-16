@@ -329,7 +329,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 {
                     Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
                     Read = true,
-                    Write = false,
+                    Write = s.Projects.Any(p =>
+                        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)),
                 }),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };

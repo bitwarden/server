@@ -1,14 +1,14 @@
 <script>
-    function resendOwnerInvite(orgId, orgName) {
-        if (confirm('Resend invite to "' + orgName + '"?')) {
+    function resendOwnerInvite(orgId) {
+        if (confirm('Resend invite to organization?')) {
             $.ajax({
                 type: "POST",
                 url: '@Url.Action("ResendOwnerInvite", "Organizations")' + '?id=' + orgId,
                 dataType: 'json',
                 contentType: false,
-                processData: false,               
+                processData: false,
                 success: function (response) {
-                    alert('Invitation has been resent!');                        
+                    alert('Invitation has been resent!');
                 },
                 error: function (response) {
                     alert("Error!");

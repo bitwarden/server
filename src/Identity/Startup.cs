@@ -10,7 +10,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
-using IdentityServer4.Extensions;
+using Duende.IdentityServer.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
@@ -213,7 +213,11 @@ public class Startup
         app.UseRouting();
 
         // Add Cors
-        app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
+        app.UseCors(policy => policy.SetIsOriginAllowed(o =>
+                CoreHelpers.IsCorsOriginAllowed(o, globalSettings) ||
+
+                // If development - allow requests from the Swagger UI so it can authorize
+                (Environment.IsDevelopment() && o == globalSettings.BaseServiceUri.Api))
             .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
         // Add current context
