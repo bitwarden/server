@@ -13,8 +13,11 @@ public class RedisPersistedGrantStoreTests
 {
     const string SQL = nameof(SQL);
     const string Redis = nameof(Redis);
+    const string Cosmos = nameof(Cosmos);
+
     private readonly IPersistedGrantStore _redisGrantStore;
     private readonly IPersistedGrantStore _sqlGrantStore;
+    private readonly IPersistedGrantStore _cosmosGrantStore;
     private readonly PersistedGrant _updateGrant;
 
     private IPersistedGrantStore _grantStore = null!;
@@ -45,12 +48,18 @@ public class RedisPersistedGrantStoreTests
         );
 
         var sqlConnectionString = "YOUR CONNECTION STRING HERE";
-
         _sqlGrantStore = new PersistedGrantStore(
             new GrantRepository(
                 sqlConnectionString,
                 sqlConnectionString
-            )
+            ),
+            g => new Bit.Core.Auth.Entities.Grant(g)
+        );
+
+        var cosmosConnectionString = "YOUR CONNECTION STRING HERE";
+        _cosmosGrantStore = new PersistedGrantStore(
+            new Bit.Core.Auth.Repositories.Cosmos.GrantRepository(cosmosConnectionString),
+            g => new Bit.Core.Auth.Models.Data.GrantItem(g)
         );
 
         var creationTime = new DateTime(638350407400000000, DateTimeKind.Utc);
@@ -69,7 +78,7 @@ public class RedisPersistedGrantStoreTests
         };
     }
 
-    [Params(Redis, SQL)]
+    [Params(Redis, SQL, Cosmos)]
     public string StoreType { get; set; } = null!;
 
     [GlobalSetup]
@@ -82,6 +91,10 @@ public class RedisPersistedGrantStoreTests
         else if (StoreType == SQL)
         {
             _grantStore = _sqlGrantStore;
+        }
+        else if (StoreType == Cosmos)
+        {
+            _grantStore = _cosmosGrantStore;
         }
         else
         {
