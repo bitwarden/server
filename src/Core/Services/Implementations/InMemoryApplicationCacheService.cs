@@ -30,14 +30,14 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         return _orgAbilities;
     }
 
-    #nullable enable
+#nullable enable
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid organizationId)
     {
         (await GetOrganizationAbilitiesAsync())
             .TryGetValue(organizationId, out var organizationAbility);
         return organizationAbility;
     }
-    #nullable disable
+#nullable disable
 
     public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
