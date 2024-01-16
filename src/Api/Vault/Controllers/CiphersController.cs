@@ -316,7 +316,7 @@ public class CiphersController : Controller
     }
 
     /// <summary>
-    /// TODO: Move this to its own authorization handler or equivalent service
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
     /// </summary>
     private async Task<bool> CanAccessAllCiphersAsync(Guid organizationId)
     {
@@ -339,7 +339,7 @@ public class CiphersController : Controller
     }
 
     /// <summary>
-    /// TODO: Move this to its own authorization handler or equivalent service
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
     /// </summary>
     private async Task<bool> CanAccessOrganizationCiphersAsync(Guid organizationId)
     {
@@ -362,7 +362,7 @@ public class CiphersController : Controller
     }
 
     /// <summary>
-    /// TODO: Move this to its own authorization handler or equivalent service
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
     /// </summary>
     private async Task<bool> CanAccessUnassignedCiphersAsync(Guid organizationId)
     {
