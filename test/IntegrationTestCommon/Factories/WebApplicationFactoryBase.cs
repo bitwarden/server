@@ -151,12 +151,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
 
             // TODO: Install and use azurite in CI pipeline
-            var metaDataRepository =
-                services.First(sd => sd.ServiceType == typeof(IMetaDataRepository));
-            services.Remove(metaDataRepository);
-            services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
-
-            // TODO: Install and use azurite in CI pipeline
             var referenceEventService = services.First(sd => sd.ServiceType == typeof(IReferenceEventService));
             services.Remove(referenceEventService);
             services.AddSingleton<IReferenceEventService, NoopReferenceEventService>();

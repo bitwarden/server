@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Tools.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -9,7 +10,7 @@ using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Tools.Controllers;
 
 [Route("organizations/{organizationId}")]
 [Authorize("Application")]

@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [dbo].[Grant]
 (
-    [Id] INT NOT NULL IDENTITY,
+    [Id] INT NOT NULL IDENTITY(1,1),
     [Key] NVARCHAR (200) NOT NULL,
     [Type] NVARCHAR (50) NOT NULL,
     [SubjectId] NVARCHAR (200) NULL,
