@@ -788,7 +788,7 @@ public class CipherService : ICipherService
             {
                 collection.SetNewId();
                 newCollections.Add(collection);
-                if (UseFlexibleCollections)
+                if (org.FlexibleCollections)
                 {
                     newCollectionUsers.Add(new CollectionUser
                     {
