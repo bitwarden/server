@@ -1036,6 +1036,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invite.Type = OrganizationUserType.Manager;
+        organization.FlexibleCollections = true;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
