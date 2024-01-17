@@ -468,7 +468,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     // DUO SDK v4 Update: Duo-Redirect
                     if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                     {
-                        CurrentContext.HttpContext.Request.Headers.TryGetValue("X-Bitwarden-Client-Name", out var bitwardenClientName);
+                        CurrentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
                         return new Dictionary<string, object>
                         {
                             ["Host"] = provider.MetaData["Host"],
@@ -507,11 +507,24 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.OrganizationDuo:
                 if (await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
                 {
-                    return new Dictionary<string, object>
+                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                     {
-                        ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
-                    };
+                        CurrentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
+                        return new Dictionary<string, object>
+                        {
+                            ["Host"] = provider.MetaData["Host"],
+                            ["Duo2faInitiatingClient"] = bitwardenClientName,
+                            ["AuthUrl"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
+                        };
+                    }
+                    else
+                    {
+                        return new Dictionary<string, object>
+                        {
+                            ["Host"] = provider.MetaData["Host"],
+                            ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
+                        };
+                    }
                 }
 
                 return null;

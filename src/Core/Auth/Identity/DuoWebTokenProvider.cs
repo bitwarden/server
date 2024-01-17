@@ -66,6 +66,10 @@ public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
         if (_featureService.IsEnabled(FeatureFlagKeys.DuoRedirect, _currentContext))
         {
             var duoClient = await BuildDuoClient(provider);
+            if (duoClient == null)
+            {
+                return null;
+            }
             var state = Duo.Client.GenerateState(); //? Not sure on this yet. But required for GenerateAuthUrl
             var authUrl = duoClient.GenerateAuthUri(user.Email, state);
 
@@ -98,6 +102,10 @@ public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
         if (_featureService.IsEnabled(FeatureFlagKeys.DuoRedirect, _currentContext))
         {
             var duoClient = await BuildDuoClient(provider);
+            if (duoClient == null)
+            {
+                return false;
+            }
 
             // If the result of the exchange doesn't throw an exception and it's not null, then it's valid
             return duoClient.ExchangeAuthorizationCodeFor2faResult(token, user.Email) != null;
