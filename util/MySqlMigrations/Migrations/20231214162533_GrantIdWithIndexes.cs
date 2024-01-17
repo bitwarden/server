@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -73,13 +72,22 @@ public partial class GrantIdWithIndexes : Migration
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AddColumn<int>(
-            name: "Id",
-            table: "Grant",
-            type: "int",
-            nullable: false,
-            defaultValue: 0)
-            .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn);
+        migrationBuilder.Sql(@"
+            DROP PROCEDURE IF EXISTS GrantSchemaChange;
+            
+            CREATE PROCEDURE GrantSchemaChange()
+            BEGIN
+                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Grant' AND COLUMN_NAME = 'Id') THEN
+                    ALTER TABLE `Grant` DROP COLUMN `Id`;
+                END IF;
+ 
+                ALTER TABLE `Grant` ADD COLUMN `Id` INT AUTO_INCREMENT UNIQUE;
+            END;
+
+            CALL GrantSchemaChange();
+
+            DROP PROCEDURE GrantSchemaChange;"
+        );
 
         migrationBuilder.AddPrimaryKey(
             name: "PK_Grant",
