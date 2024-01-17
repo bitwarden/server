@@ -35,8 +35,6 @@ public class CollectController : Controller
         _featureService = featureService;
     }
 
-    bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] IEnumerable<EventModel> model)
     {
