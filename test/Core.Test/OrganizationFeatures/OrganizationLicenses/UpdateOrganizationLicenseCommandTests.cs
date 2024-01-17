@@ -21,7 +21,7 @@ public class UpdateOrganizationLicenseCommandTests
     private static Lazy<string> OrganizationLicenseDirectory => new(() =>
     {
         // Create a temporary directory to write the license file to
-        var directory = Path.Combine(Path.GetTempPath(), "bitwarden");
+        var directory = Path.Combine(Path.GetTempPath(), "bitwarden/");
         if (!Directory.Exists(directory))
         {
             Directory.CreateDirectory(directory);
@@ -67,7 +67,7 @@ public class UpdateOrganizationLicenseCommandTests
 
             // Assertion: should have saved the license file to disk
             var filePath = Path.Combine(LicenseDirectory, "organization", $"{selfHostedOrg.Id}.json");
-            using var fs = File.OpenRead(filePath);
+            await using var fs = File.OpenRead(filePath);
             var licenseFromFile = await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
 
             AssertHelper.AssertPropertyEqual(license, licenseFromFile, "SignatureBytes");
