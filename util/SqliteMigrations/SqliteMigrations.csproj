@@ -22,4 +22,9 @@
     <Compile Include="..\EfShared\MigrationBuilderExtensions.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="HelperScripts\2023-12-04_00_Up_GrantIndexes.sql" />
+    <EmbeddedResource Include="HelperScripts\2023-12-04_00_Down_GrantIndexes.sql" />
+  </ItemGroup>
+
 </Project>

@@ -19,19 +19,16 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private Guid _targetOrganizationId;
 
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
-        IFeatureService featureService,
         IApplicationCacheService applicationCacheService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
-        _featureService = featureService;
         _applicationCacheService = applicationCacheService;
     }
 
