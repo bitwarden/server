@@ -90,19 +90,16 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
+        // Policies can't have a cascade delete, so we need to delete them manually.
         await dbContext.AccessPolicies.Where(ap =>
-                (((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId.HasValue &&
-                 targetIds.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value)) ||
-                (((ServiceAccountSecretAccessPolicy)ap).ServiceAccountId.HasValue &&
-                 targetIds.Contains(((ServiceAccountSecretAccessPolicy)ap).ServiceAccountId!.Value)) ||
-                (((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue &&
-                 targetIds.Contains(((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value)) ||
-                (((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue &&
-                 targetIds.Contains(((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value)))
+                targetIds.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value) ||
+                targetIds.Contains(((ServiceAccountSecretAccessPolicy)ap).ServiceAccountId!.Value) ||
+                targetIds.Contains(((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value) ||
+                targetIds.Contains(((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value))
             .ExecuteDeleteAsync();
 
         await dbContext.ApiKeys
-            .Where(a => a.ServiceAccountId.HasValue && targetIds.Contains(a.ServiceAccountId!.Value))
+            .Where(a => targetIds.Contains(a.ServiceAccountId!.Value))
             .ExecuteDeleteAsync();
 
         await dbContext.ServiceAccount
