@@ -258,7 +258,7 @@ public class CollectionsController : Controller
 
         // If we have a user, fetch the collection to get the latest permission details
         var userCollectionDetails = await _collectionRepository.GetByIdAsync(collection.Id,
-            _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
+            _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
 
         return new CollectionDetailsResponseModel(userCollectionDetails);
     }
@@ -635,7 +635,7 @@ public class CollectionsController : Controller
         }
 
         // If we have a user, fetch the collection details to get the latest permission details for the user
-        var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, FlexibleCollectionsIsEnabled);
+        var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
 
         return new CollectionDetailsResponseModel(updatedCollectionDetails);
     }
