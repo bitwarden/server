@@ -654,7 +654,7 @@ public class OrganizationService : IOrganizationService
                     AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-                    AccessAll = true,
+                    AccessAll = !FlexibleCollectionsIsEnabled,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
