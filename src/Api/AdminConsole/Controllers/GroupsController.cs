@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -27,10 +26,8 @@ public class GroupsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
-    private readonly IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
-
-    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -41,7 +38,8 @@ public class GroupsController : Controller
         IUpdateGroupCommand updateGroupCommand,
         IDeleteGroupCommand deleteGroupCommand,
         IFeatureService featureService,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IApplicationCacheService applicationCacheService)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
@@ -50,8 +48,8 @@ public class GroupsController : Controller
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
         _deleteGroupCommand = deleteGroupCommand;
-        _featureService = featureService;
         _authorizationService = authorizationService;
+        _applicationCacheService = applicationCacheService;
     }
 
     [HttpGet("{id}")]
@@ -81,7 +79,7 @@ public class GroupsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
-        if (UseFlexibleCollections)
+        if (await FlexibleCollectionsIsEnabledAsync(orgId))
         {
             // New flexible collections logic
             return await Get_vNext(orgId);
@@ -216,5 +214,11 @@ public class GroupsController : Controller
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
+    }
+
+    private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
+    {
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        return organizationAbility?.FlexibleCollections ?? false;
     }
 }
