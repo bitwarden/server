@@ -731,8 +731,6 @@ public static class ServiceCollectionExtensions
     public static void AddOptionality(this IServiceCollection services,
         GlobalSettings globalSettings)
     {
-        // TODO
-
         services.AddSingleton<ILdClient>(_ =>
         {
             return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(globalSettings));
