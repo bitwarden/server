@@ -16,7 +16,7 @@ BEGIN
         SELECT DISTINCT GU.[OrganizationUserId]
         INTO #TempOrganizationUsers
         FROM [dbo].[GroupUser] GU
-            JOIN #TempGroup TG ON GU.[GroupId] = TG.[GroupId];
+        JOIN #TempGroup TG ON GU.[GroupId] = TG.[GroupId];
 
         BEGIN TRY
             BEGIN TRANSACTION;
@@ -150,9 +150,11 @@ BEGIN
         -- Drop the temporary table
         DROP TABLE #TempOrgUser;
 
-    -- Step 3: Update [dbo].[CollectionUser] with [Manage] = 1 for all users with Manager role or 'EditAssignedCollections' permission
-        -- Store the results in a temporary table
-        SELECT ou.[Id] AS [OrganizationUserId]
+    -- Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission update their existing CollectionUser rows and insert new rows with [Manage] = 1
+    -- and finally update all OrganizationUsers with Manager role to User role
+        -- Create a temporary table to store the OrganizationUsers with Manager role or 'EditAssignedCollections' permission
+        SELECT ou.[Id] AS [OrganizationUserId],
+            CASE WHEN ou.[Type] = 3 THEN 1 ELSE 0 END AS [IsManager]
         INTO #TempStep3
         FROM [dbo].[OrganizationUser] ou
         WHERE (ou.[Type] = 3 OR (ou.[Permissions] IS NOT NULL AND
@@ -167,6 +169,24 @@ BEGIN
                     cu.[Manage] = 1
                 FROM [dbo].[CollectionUser] cu
                 INNER JOIN #TempStep3 temp ON cu.[OrganizationUserId] = temp.[OrganizationUserId];
+
+                -- Insert rows to [dbo].[CollectionUser] with [Manage] = 1 using the temporary table
+                INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
+                SELECT cg.[CollectionId], ou.[OrganizationUserId], 0, 0, 1
+                FROM [dbo].[CollectionGroup] cg
+                INNER JOIN [dbo].[GroupUser] gu ON cg.[GroupId] = gu.[GroupId]
+                INNER JOIN #TempStep3 ou ON gu.[OrganizationUserId] = ou.[OrganizationUserId]
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM [dbo].[CollectionUser] cu
+                    WHERE cu.[CollectionId] = cg.[CollectionId] AND cu.[OrganizationUserId] = ou.[OrganizationUserId]
+                );
+
+                -- Update [dbo].[OrganizationUser] to migrate all OrganizationUsers with Manager role to User role
+                UPDATE ou
+                SET ou.[Type] = 2 -- User
+                FROM [dbo].[OrganizationUser] ou
+                INNER JOIN #TempStep3 temp ON ou.[Id] = temp.[OrganizationUserId]
+                WHERE temp.[IsManager] = 1; -- Filter for Managers
 
                 -- Execute User_BumpAccountRevisionDateByOrganizationUserId for each unique OrganizationUserId
                 DECLARE @Step3OrganizationUserId UNIQUEIDENTIFIER
@@ -198,102 +218,5 @@ BEGIN
 
         -- Drop the temporary table
         DROP TABLE #TempStep3;
-
-    -- Step 4: Insert rows to [dbo].[CollectionUser] for Managers and users with 'EditAssignedCollections' permission assigned to groups with collection access
-        -- Store the results in a temporary table
-        SELECT cg.[CollectionId], ou.[Id] AS [OrganizationUserId]
-        INTO #TempStep4
-        FROM [dbo].[CollectionGroup] cg
-            INNER JOIN [dbo].[GroupUser] gu ON cg.GroupId = gu.GroupId
-            INNER JOIN [dbo].[OrganizationUser] ou ON gu.OrganizationUserId = ou.[Id]
-        WHERE (ou.[Type] = 3 OR (ou.[Permissions] IS NOT NULL AND ISJSON(ou.[Permissions]) > 0 AND JSON_VALUE(ou.[Permissions], '$.editAssignedCollections') = 'true'))
-          AND NOT EXISTS (
-            SELECT 1 FROM [dbo].[CollectionUser] cu
-            WHERE cu.[CollectionId] = cg.[CollectionId] AND cu.[OrganizationUserId] = ou.[Id]
-            );
-
-        BEGIN TRY
-            BEGIN TRANSACTION;
-                -- Insert rows into [dbo].[CollectionUser] using the temporary table
-                INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
-                SELECT [CollectionId], [OrganizationUserId], 0, 0, 1
-                FROM #TempStep4;
-
-                -- Execute User_BumpAccountRevisionDateByOrganizationUserId for each unique OrganizationUserId
-                DECLARE @Step4OrganizationUserId UNIQUEIDENTIFIER
-
-                DECLARE UniqueOrgUserIdCursor CURSOR FOR
-                SELECT DISTINCT [OrganizationUserId]
-                FROM #TempStep4
-
-                OPEN UniqueOrgUserIdCursor
-                FETCH NEXT FROM UniqueOrgUserIdCursor INTO @Step4OrganizationUserId
-
-                WHILE (@@FETCH_STATUS = 0)
-                BEGIN
-                    -- Execute the stored procedure for the current OrganizationUserId
-                    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Step4OrganizationUserId
-
-                    -- Fetch the next row
-                    FETCH NEXT FROM UniqueOrgUserIdCursor INTO @Step4OrganizationUserId
-                END
-
-                CLOSE UniqueOrgUserIdCursor
-                DEALLOCATE UniqueOrgUserIdCursor;
-            COMMIT TRANSACTION;
-        END TRY
-        BEGIN CATCH
-            ROLLBACK TRANSACTION;
-            THROW;
-        END CATCH;
-
-        -- Drop the temporary table
-        DROP TABLE #TempStep4;
-
-    -- Step 5: Set all Managers to Users
-        -- Store the results in a temporary table
-        SELECT [Id] AS [OrganizationUserId]
-        INTO #TempStep5
-        FROM [dbo].[OrganizationUser]
-        WHERE [Type] = 3; -- Manager
-
-        BEGIN TRY
-            BEGIN TRANSACTION;
-                -- Update [dbo].[OrganizationUser] based on the temporary table
-                UPDATE ou
-                SET ou.[Type] = 2 -- User
-                FROM [dbo].[OrganizationUser] ou
-                INNER JOIN #TempStep5 temp ON ou.[Id] = temp.[OrganizationUserId];
-
-                -- Execute User_BumpAccountRevisionDateByOrganizationUserId for each unique OrganizationUserId
-                DECLARE @Step5OrganizationUserId UNIQUEIDENTIFIER
-
-                DECLARE UniqueOrgUserIdCursor CURSOR FOR
-                SELECT [OrganizationUserId]
-                FROM #TempStep5
-
-                OPEN UniqueOrgUserIdCursor
-                FETCH NEXT FROM UniqueOrgUserIdCursor INTO @Step5OrganizationUserId
-
-                WHILE (@@FETCH_STATUS = 0)
-                BEGIN
-                    -- Execute the stored procedure for the current OrganizationUserId
-                    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Step5OrganizationUserId
-
-                    -- Fetch the next row
-                    FETCH NEXT FROM UniqueOrgUserIdCursor INTO @Step5OrganizationUserId
-                END
-
-                CLOSE UniqueOrgUserIdCursor
-                DEALLOCATE UniqueOrgUserIdCursor;
-            COMMIT TRANSACTION;
-        END TRY
-        BEGIN CATCH
-            ROLLBACK TRANSACTION;
-            THROW;
-        END CATCH;
-
-        -- Drop the temporary table
-        DROP TABLE #TempStep5;
 END
 GO
