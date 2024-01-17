@@ -157,7 +157,7 @@ BEGIN
             CASE WHEN ou.[Type] = 3 THEN 1 ELSE 0 END AS [IsManager]
         INTO #TempStep3
         FROM [dbo].[OrganizationUser] ou
-        WHERE (ou.[Type] = 3 OR (ou.[Permissions] IS NOT NULL AND
+        WHERE ou.[OrganizationId] = @OrganizationId AND (ou.[Type] = 3 OR (ou.[Permissions] IS NOT NULL AND
             ISJSON(ou.[Permissions]) > 0 AND JSON_VALUE(ou.[Permissions], '$.editAssignedCollections') = 'true'));
 
         BEGIN TRY
