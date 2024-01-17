@@ -70,7 +70,7 @@ public class Startup
             services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
         }
 
-        services.AddOptionality(globalSettings);
+        services.AddOptionality();
 
         // Mvc
         services.AddMvc(config =>

@@ -224,7 +224,7 @@ public static class ServiceCollectionExtensions
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
-        services.AddOptionality(globalSettings);
+        services.AddOptionality();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
@@ -728,14 +728,16 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    public static void AddOptionality(this IServiceCollection services,
-        GlobalSettings globalSettings)
+    public static IServiceCollection AddOptionality(this IServiceCollection services)
     {
-        services.AddSingleton<ILdClient>(_ =>
+        services.AddSingleton<ILdClient>(s =>
         {
-            return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(globalSettings));
+            return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(
+                s.GetRequiredService<GlobalSettings>()));
         });
 
         services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
+
+        return services;
     }
 }
