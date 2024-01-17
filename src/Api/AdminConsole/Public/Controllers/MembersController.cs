@@ -23,6 +23,7 @@ public class MembersController : Controller
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -30,7 +31,8 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IApplicationCacheService applicationCacheService)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -38,6 +40,7 @@ public class MembersController : Controller
         _userService = userService;
         _currentContext = currentContext;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _applicationCacheService = applicationCacheService;
     }
 
     /// <summary>
@@ -119,7 +122,9 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection());
+        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
+            .TryGetValue(_currentContext.OrganizationId.Value, out var organizationAbility);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
         var invite = new OrganizationUserInvite
         {
             Emails = new List<string> { model.Email },
@@ -154,7 +159,9 @@ public class MembersController : Controller
             return new NotFoundResult();
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection());
+        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
+            .TryGetValue(_currentContext.OrganizationId.Value, out var organizationAbility);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
         await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
