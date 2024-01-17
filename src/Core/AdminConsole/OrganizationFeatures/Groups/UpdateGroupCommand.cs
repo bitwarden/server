@@ -111,7 +111,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 
         if (organization.FlexibleCollections && group.AccessAll)
         {
-            throw new BadRequestException("AccessAll has been deprecated.");
+            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
         }
     }
 }

@@ -89,7 +89,7 @@ public class CreateGroupCommandTests
 
         var exception =
             await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateGroupAsync(group, organization));
-        Assert.Contains("AccessAll has been deprecated.", exception.Message);
+        Assert.Contains("AccessAll property has been deprecated", exception.Message);
 
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
