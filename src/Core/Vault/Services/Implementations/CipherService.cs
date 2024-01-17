@@ -41,7 +41,7 @@ public class CipherService : ICipherService
     private readonly IFeatureService _featureService;
 
     private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     public CipherService(
         ICipherRepository cipherRepository,

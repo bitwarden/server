@@ -35,6 +35,8 @@ using Bit.Infrastructure.EntityFramework;
 using DnsClient;
 using Duende.IdentityServer.Configuration;
 using IdentityModel;
+using LaunchDarkly.Sdk.Server;
+using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -222,7 +224,7 @@ public static class ServiceCollectionExtensions
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
-        services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
+        services.AddOptionality(globalSettings);
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
@@ -425,8 +427,6 @@ public static class ServiceCollectionExtensions
 
         return identityBuilder;
     }
-
-
 
     public static void AddIdentityAuthenticationServices(
         this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment,
@@ -726,5 +726,18 @@ public static class ServiceCollectionExtensions
                     Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
             });
         });
+    }
+
+    public static void AddOptionality(this IServiceCollection services,
+        GlobalSettings globalSettings)
+    {
+        // TODO
+
+        services.AddSingleton<ILdClient>(_ =>
+        {
+            return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(globalSettings));
+        });
+
+        services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
     }
 }

@@ -442,10 +442,10 @@ public class OrganizationService : IOrganizationService
         }
 
         var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup, _currentContext);
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
 
         var flexibleCollectionsV1IsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
         var organization = new Organization
         {
@@ -572,7 +572,7 @@ public class OrganizationService : IOrganizationService
         await ValidateSignUpPoliciesAsync(owner.Id);
 
         var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup, _currentContext);
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
 
         var organization = new Organization
         {

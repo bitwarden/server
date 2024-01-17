@@ -803,7 +803,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Organization does not have collection enhancements enabled");
         }
 
-        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
         if (!v1Enabled)
         {

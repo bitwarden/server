@@ -19,7 +19,6 @@ public class CurrentContext : ICurrentContext
 {
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IFeatureService _featureService;
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
@@ -46,12 +45,10 @@ public class CurrentContext : ICurrentContext
 
     public CurrentContext(
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository,
-        IFeatureService featureService)
+        IProviderUserRepository providerUserRepository)
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
-        _featureService = featureService; ;
     }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
