@@ -208,6 +208,7 @@ public class OrganizationServiceTests
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
+        signup.IsFromSecretsManagerTrial = false;
 
         var purchaseOrganizationPlan = StaticStore.GetPlan(signup.Plan);
 
@@ -246,7 +247,8 @@ public class OrganizationServiceTests
             signup.TaxInfo,
             false,
             signup.AdditionalSmSeats.GetValueOrDefault(),
-            signup.AdditionalServiceAccounts.GetValueOrDefault()
+            signup.AdditionalServiceAccounts.GetValueOrDefault(),
+            signup.UseSecretsManager
         );
     }
 
@@ -267,6 +269,7 @@ public class OrganizationServiceTests
         signup.AdditionalServiceAccounts = 20;
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
+        signup.IsFromSecretsManagerTrial = false;
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
 
@@ -303,7 +306,8 @@ public class OrganizationServiceTests
             signup.TaxInfo,
             false,
             signup.AdditionalSmSeats.GetValueOrDefault(),
-            signup.AdditionalServiceAccounts.GetValueOrDefault()
+            signup.AdditionalServiceAccounts.GetValueOrDefault(),
+            signup.IsFromSecretsManagerTrial
         );
     }
 
