@@ -7,7 +7,7 @@ public class AssociationWithPermissionsRequestModel : AssociationWithPermissions
 {
     public CollectionAccessSelection ToCollectionAccessSelection(bool migratedToFlexibleCollections)
     {
-        var collectionAccessSelection =  new CollectionAccessSelection
+        var collectionAccessSelection = new CollectionAccessSelection
         {
             Id = Id.Value,
             ReadOnly = ReadOnly.Value,
