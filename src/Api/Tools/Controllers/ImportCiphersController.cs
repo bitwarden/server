@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -26,6 +25,7 @@ public class ImportCiphersController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAuthorizationService _authorizationService;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationRepository _organizationService;
 
     public ImportCiphersController(
         ICipherService cipherService,
@@ -35,7 +35,8 @@ public class ImportCiphersController : Controller
         GlobalSettings globalSettings,
         ICollectionRepository collectionRepository,
         IAuthorizationService authorizationService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IOrganizationRepository organizationService)
     {
         _cipherService = cipherService;
         _userService = userService;
@@ -45,9 +46,8 @@ public class ImportCiphersController : Controller
         _collectionRepository = collectionRepository;
         _authorizationService = authorizationService;
         _featureService = featureService;
+        _organizationService = organizationService;
     }
-
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     [HttpPost("import")]
     public async Task PostImport([FromBody] ImportCiphersRequestModel model)
@@ -78,10 +78,11 @@ public class ImportCiphersController : Controller
 
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
+        var orgFlexibleCollections = (await _organizationService.GetByIdAsync(orgId)).FlexibleCollections;
 
 
         //An User is allowed to import if CanCreate Collections or has AccessToImportExport
-        var authorized = FlexibleCollectionsIsEnabled
+        var authorized = orgFlexibleCollections
             ? await CheckOrgImportPermission(collections, orgId) || await _currentContext.AccessImportExport(orgId)
             : await _currentContext.AccessImportExport(orgId);
 
