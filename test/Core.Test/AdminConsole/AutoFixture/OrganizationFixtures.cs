@@ -183,7 +183,7 @@ internal class TeamsMonthlyWithAddOnsOrganizationCustomization : ICustomization
     }
 }
 
-internal class OrganizationCustomizeAttribute : BitCustomizeAttribute
+public class OrganizationCustomizeAttribute : BitCustomizeAttribute
 {
     public bool UseGroups { get; set; }
     public bool FlexibleCollections { get; set; }
