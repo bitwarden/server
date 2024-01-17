@@ -673,7 +673,10 @@ public class OrganizationService : IOrganizationService
                     AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-                    AccessAll = true,
+
+                    // If using Flexible Collections, AccessAll is deprecated and set to false.
+                    // If not using Flexible Collections, set AccessAll to true (previous behavior)
+                    AccessAll = !organization.FlexibleCollections,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
@@ -2467,7 +2470,10 @@ public class OrganizationService : IOrganizationService
             Key = null,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Invited,
-            AccessAll = true
+
+            // If using Flexible Collections, AccessAll is deprecated and set to false.
+            // If not using Flexible Collections, set AccessAll to true (previous behavior)
+            AccessAll = !organization.FlexibleCollections,
         };
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 
