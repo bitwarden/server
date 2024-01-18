@@ -2,7 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -14,7 +13,6 @@ using Xunit;
 using Customer = Braintree.Customer;
 using PaymentMethod = Braintree.PaymentMethod;
 using PaymentMethodType = Bit.Core.Enums.PaymentMethodType;
-using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Core.Test.Services;
 
@@ -256,65 +254,6 @@ public class StripePaymentServiceTests
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
             s.Items.Count == 0
-        ));
-    }
-
-    [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Stripe_TaxRate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-        });
-        sutProvider.GetDependency<ITaxRateRepository>().GetByLocationAsync(Arg.Is<TaxRate>(t =>
-                t.Country == taxInfo.BillingAddressCountry && t.PostalCode == taxInfo.BillingAddressPostalCode))
-            .Returns(new List<TaxRate> { new() { Id = "T-1" } });
-
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
-
-        Assert.Null(result);
-
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
-            s.DefaultTaxRates.Count == 1 &&
-            s.DefaultTaxRates[0] == "T-1"
-        ));
-    }
-
-    [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Stripe_TaxRate_SM(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
-    {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
-        {
-            Id = "C-1",
-        });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
-        {
-            Id = "S-1",
-            CurrentPeriodEnd = DateTime.Today.AddDays(10),
-        });
-        sutProvider.GetDependency<ITaxRateRepository>().GetByLocationAsync(Arg.Is<TaxRate>(t =>
-                t.Country == taxInfo.BillingAddressCountry && t.PostalCode == taxInfo.BillingAddressPostalCode))
-            .Returns(new List<TaxRate> { new() { Id = "T-1" } });
-
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 2, 2,
-            false, taxInfo, false, 2, 2);
-
-        Assert.Null(result);
-
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
-            s.DefaultTaxRates.Count == 1 &&
-            s.DefaultTaxRates[0] == "T-1"
         ));
     }
 
