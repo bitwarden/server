@@ -11,7 +11,8 @@ public class AssociationWithPermissionsRequestModel : AssociationWithPermissions
         {
             Id = Id.Value,
             ReadOnly = ReadOnly.Value,
-            HidePasswords = HidePasswords.GetValueOrDefault()
+            HidePasswords = HidePasswords.GetValueOrDefault(),
+            Manage = Manage.GetValueOrDefault()
         };
 
         // Throws if the org has not migrated to use FC but has passed in a Manage value in the request
@@ -21,7 +22,6 @@ public class AssociationWithPermissionsRequestModel : AssociationWithPermissions
                 "Your organization has not migrated to use Flexible Collections and cannot make use of the Manage property.");
         }
 
-        collectionAccessSelection.Manage = Manage.GetValueOrDefault();
         return collectionAccessSelection;
     }
 }
