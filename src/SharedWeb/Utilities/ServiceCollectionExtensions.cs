@@ -375,6 +375,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, GlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
+        services.AddScoped<IDuoUniversalPromptService, DuoUniversalPromptService>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {

@@ -36,6 +36,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
+        IDuoUniversalPromptService duoUniversalPromptService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
@@ -54,7 +55,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
         )
         : base(userManager, deviceRepository, deviceService, userService, eventService,
-            organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+            organizationDuoWebTokenProvider, duoUniversalPromptService, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
             userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, distributedCache, userDecryptionOptionsBuilder)
     {

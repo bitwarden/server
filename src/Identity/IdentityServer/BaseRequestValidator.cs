@@ -38,6 +38,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceService _deviceService;
     private readonly IEventService _eventService;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
+    private readonly IDuoUniversalPromptService _duoUniversalPromptService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -63,6 +64,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
+        IDuoUniversalPromptService duoUniversalPromptService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
@@ -84,6 +86,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _userService = userService;
         _eventService = eventService;
         _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
+        _duoUniversalPromptService = duoUniversalPromptService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _applicationCacheService = applicationCacheService;
@@ -465,25 +468,19 @@ public abstract class BaseRequestValidator<T> where T : class
                     CoreHelpers.CustomProviderName(type));
                 if (type == TwoFactorProviderType.Duo)
                 {
+                    var duoResponse = new Dictionary<string, object>
+                    {
+                        ["Host"] = provider.MetaData["Host"],
+                        ["Signature"] = token
+                    };
+
                     // DUO SDK v4 Update: Duo-Redirect
                     if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                     {
-                        CurrentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-                        return new Dictionary<string, object>
-                        {
-                            ["Host"] = provider.MetaData["Host"],
-                            ["Duo2faInitiatingClient"] = bitwardenClientName,
-                            ["AuthUrl"] = token
-                        };
+                        // Use generate token from new token provider
+                        duoResponse.Add("AuthUrl", await _duoUniversalPromptService.GenerateAsync(provider, user));
                     }
-                    else
-                    {
-                        return new Dictionary<string, object>
-                        {
-                            ["Host"] = provider.MetaData["Host"],
-                            ["Signature"] = token
-                        };
-                    }
+                    return duoResponse;
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)
                 {
@@ -507,26 +504,19 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.OrganizationDuo:
                 if (await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
                 {
+                    var duoResponse = new Dictionary<string, object>
+                    {
+                        ["Host"] = provider.MetaData["Host"],
+                        ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
+                    };
+                    // DUO SDK v4 Update: Duo-Redirect
                     if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                     {
-                        CurrentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-                        return new Dictionary<string, object>
-                        {
-                            ["Host"] = provider.MetaData["Host"],
-                            ["Duo2faInitiatingClient"] = bitwardenClientName,
-                            ["AuthUrl"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
-                        };
+                        // Use generate token from new token provider
+                        duoResponse.Add("AuthUrl", await _duoUniversalPromptService.GenerateAsync(provider, user));
                     }
-                    else
-                    {
-                        return new Dictionary<string, object>
-                        {
-                            ["Host"] = provider.MetaData["Host"],
-                            ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
-                        };
-                    }
+                    return duoResponse;
                 }
-
                 return null;
             default:
                 return null;
