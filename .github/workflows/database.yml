@@ -1,5 +1,5 @@
 ---
-name: Validate database
+name: Database validation
 
 on:
   workflow_dispatch:

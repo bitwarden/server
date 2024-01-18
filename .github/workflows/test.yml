@@ -1,5 +1,5 @@
 ---
-name: Run tests
+name: Testing
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ env:
 
 jobs:
   testing:
-    name: Testing
+    name: Run tests
     runs-on: ubuntu-22.04
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages

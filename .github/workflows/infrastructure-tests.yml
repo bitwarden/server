@@ -1,5 +1,5 @@
 ---
-name: Run database infrastructure tests
+name: Database testing
 on:
   pull_request:
     paths:
@@ -31,7 +31,7 @@ on:
 
 jobs:
   test:
-    name: Run tests
+    name: Test
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
