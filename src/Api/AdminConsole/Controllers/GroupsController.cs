@@ -37,7 +37,6 @@ public class GroupsController : Controller
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand,
         IDeleteGroupCommand deleteGroupCommand,
-        IFeatureService featureService,
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService)
     {
