@@ -24,7 +24,6 @@ public class ImportCiphersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationRepository _organizationService;
 
     public ImportCiphersController(
@@ -35,7 +34,6 @@ public class ImportCiphersController : Controller
         GlobalSettings globalSettings,
         ICollectionRepository collectionRepository,
         IAuthorizationService authorizationService,
-        IFeatureService featureService,
         IOrganizationRepository organizationService)
     {
         _cipherService = cipherService;
@@ -45,7 +43,6 @@ public class ImportCiphersController : Controller
         _globalSettings = globalSettings;
         _collectionRepository = collectionRepository;
         _authorizationService = authorizationService;
-        _featureService = featureService;
         _organizationService = organizationService;
     }
 
