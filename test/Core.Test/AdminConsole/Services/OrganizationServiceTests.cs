@@ -15,6 +15,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.StaticStore;
@@ -482,6 +483,57 @@ public class OrganizationServiceTests
     }
 
     [Theory]
+    [OrganizationInviteCustomize, BitAutoData]
+    public async Task InviteUser_SsoOrgWithNeverEnabledRequireSsoPolicy_Passes(Organization organization, SsoConfig ssoConfig, OrganizationUser invitor,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
+    {
+        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        // Org must be able to use SSO and policies to trigger this test case
+        organization.UseSso = true;
+        organization.UsePolicies = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new[] { owner });
+
+        ssoConfig.Enabled = true;
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
+
+
+        // Return null policy to mimic new org that's never turned on the require sso policy
+        sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(organization.Id).ReturnsNull();
+
+        // Must set guids in order for dictionary of guids to not throw aggregate exceptions
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
+        // Mock tokenable factory to return a token that expires in 5 days
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(
+                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+                {
+                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+                }
+                );
+
+
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
+
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+                info.OrgUserTokenPairs.Count() == invite.Emails.Distinct().Count() &&
+                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
+                info.OrganizationName == organization.Name));
+    }
+
+    [Theory]
     [OrganizationInviteCustomize(
         InviteeUserType = OrganizationUserType.Admin,
         InvitorUserType = OrganizationUserType.Owner
@@ -921,21 +973,23 @@ public class OrganizationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task InviteUser_WithFCEnabled_WhenInvitingManager_Throws(Organization organization, OrganizationUserInvite invite,
-        OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
+    public async Task InviteUser_WithFCEnabled_WhenInvitingManager_Throws(OrganizationAbility organizationAbility,
+        OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invite.Type = OrganizationUserType.Manager;
+        organizationAbility.FlexibleCollections = true;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
-            .Returns(true);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
 
         sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organization.Id)
+            .ManageUsers(organizationAbility.Id)
             .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
+            () => sutProvider.Sut.InviteUsersAsync(organizationAbility.Id, invitor.UserId,
+                new (OrganizationUserInvite, string)[] { (invite, null) }));
 
         Assert.Contains("manager role is deprecated", exception.Message.ToLowerInvariant());
     }
@@ -1222,19 +1276,20 @@ public class OrganizationServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveUser_WithFCEnabled_WhenUpgradingToManager_Throws(
-        Organization organization,
+        OrganizationAbility organizationAbility,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Manager)] OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
-            .Returns(true);
+        organizationAbility.FlexibleCollections = true;
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
 
         sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organization.Id)
+            .ManageUsers(organizationAbility.Id)
             .Returns(true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -1243,7 +1298,7 @@ public class OrganizationServiceTests
 
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.OrganizationId = oldUserData.OrganizationId = organizationAbility.Id;
         newUserData.Permissions = CoreHelpers.ClassToJsonData(new Permissions());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(

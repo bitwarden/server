@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,33 +19,22 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private Guid _targetOrganizationId;
-
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
-        IFeatureService featureService,
         IApplicationCacheService applicationCacheService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
-        _featureService = featureService;
         _applicationCacheService = applicationCacheService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         BulkCollectionOperationRequirement requirement, ICollection<Collection>? resources)
     {
-        if (!FlexibleCollectionsIsEnabled)
-        {
-            // Flexible collections is OFF, should not be using this handler
-            throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
-        }
-
         // Establish pattern of authorization handler null checking passed resources
         if (resources == null || !resources.Any())
         {
@@ -281,9 +269,6 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return null;
         }
 
-        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
-            .TryGetValue(organization.Id, out var organizationAbility);
-
-        return organizationAbility;
+        return await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
     }
 }

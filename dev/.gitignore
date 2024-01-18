@@ -1,6 +1,6 @@
 .data
 secrets.json
-db
+*.db
 
 # Docker container configurations
 .env
