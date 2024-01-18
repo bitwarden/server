@@ -14,7 +14,6 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -54,7 +53,6 @@ public class AccountsControllerTests : IDisposable
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly ICurrentContext _currentContext;
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
@@ -84,7 +82,6 @@ public class AccountsControllerTests : IDisposable
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
-        _currentContext = Substitute.For<ICurrentContext>();
         _cipherValidator =
             Substitute.For<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>();
         _folderValidator =
@@ -113,7 +110,6 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommand,
             _rotateUserKeyCommand,
             _featureService,
-            _currentContext,
             _cipherValidator,
             _folderValidator,
             _sendValidator,

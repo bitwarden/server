@@ -35,9 +35,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.25" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.1.0" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.0.1" />
-    <!-- Azure.Identity is a explicit dependency to Microsoft.Data.SqlClient -->
-    <PackageReference Include="Azure.Identity" Version="1.10.2" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.25" />
@@ -52,7 +50,7 @@
     <PackageReference Include="Serilog.Sinks.AzureCosmosDB" Version="2.0.0" />
     <PackageReference Include="Serilog.Sinks.SyslogMessages" Version="2.0.9" />
     <PackageReference Include="AspNetCoreRateLimit" Version="4.0.2" />
-    <PackageReference Include="Braintree" Version="5.21.0" />
+    <PackageReference Include="Braintree" Version="5.23.0" />
     <PackageReference Include="Stripe.net" Version="40.16.0" />
     <PackageReference Include="Otp.NET" Version="1.2.2" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
