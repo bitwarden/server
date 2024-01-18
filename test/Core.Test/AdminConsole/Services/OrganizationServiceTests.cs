@@ -264,7 +264,7 @@ public class OrganizationServiceTests
         signup.UseSecretsManager = false;
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup, Arg.Any<ICurrentContext>())
+            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
             .Returns(true);
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
@@ -293,7 +293,7 @@ public class OrganizationServiceTests
         signup.UseSecretsManager = false;
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup, Arg.Any<ICurrentContext>())
+            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
             .Returns(false);
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
