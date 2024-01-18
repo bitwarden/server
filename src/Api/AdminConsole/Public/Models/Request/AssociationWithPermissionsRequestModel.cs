@@ -19,7 +19,7 @@ public class AssociationWithPermissionsRequestModel : AssociationWithPermissions
         if (!migratedToFlexibleCollections && Manage.HasValue)
         {
             throw new BadRequestException(
-                "Your organization has not migrated to use Flexible Collections and cannot make use of the Manage property.");
+                "Your organization must be using the latest collection enhancements to use the Manage property.");
         }
 
         return collectionAccessSelection;
