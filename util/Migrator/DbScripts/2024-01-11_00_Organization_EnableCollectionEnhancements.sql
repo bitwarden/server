@@ -7,31 +7,18 @@ BEGIN
     -- Step 1: AccessAll migration for Groups
         -- Create a temporary table to store the groups with AccessAll = 1
         SELECT [Id] AS [GroupId], [OrganizationId]
-        INTO #TempGroup
+        INTO #TempStep1
         FROM [dbo].[Group]
-        WHERE [AccessAll] = 1
-          AND [OrganizationId] = @OrganizationId;
-
-        -- Create a temporary table to store distinct OrganizationUserIds
-        DECLARE @Step1OrgUsersToBump [dbo].[GuidIdArray]
-        INSERT INTO @Step1OrgUsersToBump
-        SELECT DISTINCT GU.[OrganizationUserId] AS Id
-        FROM [dbo].[GroupUser] GU
-        INNER JOIN #TempGroup TG ON GU.[GroupId] = TG.[GroupId];
+        WHERE [OrganizationId] = @OrganizationId
+          AND [AccessAll] = 1;
 
     -- Step 2: AccessAll migration for OrganizationUsers
         -- Create a temporary table to store the OrganizationUsers with AccessAll = 1
         SELECT [Id] AS [OrganizationUserId], [OrganizationId]
-        INTO #TempOrgUser
+        INTO #TempStep2
         FROM [dbo].[OrganizationUser]
-        WHERE [AccessAll] = 1
-          AND [OrganizationId] = @OrganizationId;
-
-        -- Create a temporary table to store distinct OrganizationUserIds
-        DECLARE @Step2OrgUsersToBump [dbo].[GuidIdArray]
-        INSERT INTO @Step2OrgUsersToBump
-        SELECT DISTINCT [OrganizationUserId] AS Id
-        FROM #TempOrgUser;
+        WHERE [OrganizationId] = @OrganizationId
+          AND [AccessAll] = 1;
 
     -- Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission update their existing CollectionUser rows and insert new rows with [Manage] = 1
     -- and finally update all OrganizationUsers with Manager role to User role
@@ -40,14 +27,33 @@ BEGIN
             CASE WHEN ou.[Type] = 3 THEN 1 ELSE 0 END AS [IsManager]
         INTO #TempStep3
         FROM [dbo].[OrganizationUser] ou
-        WHERE ou.[OrganizationId] = @OrganizationId AND (ou.[Type] = 3 OR (ou.[Permissions] IS NOT NULL AND
-            ISJSON(ou.[Permissions]) > 0 AND JSON_VALUE(ou.[Permissions], '$.editAssignedCollections') = 'true'));
+        WHERE ou.[OrganizationId] = @OrganizationId
+            AND (ou.[Type] = 3 OR (ou.[Permissions] IS NOT NULL
+                AND ISJSON(ou.[Permissions]) > 0 AND JSON_VALUE(ou.[Permissions], '$.editAssignedCollections') = 'true'));
 
-        -- Create a temporary table to store distinct OrganizationUserIds
-        DECLARE @Step3OrgUsersToBump [dbo].[GuidIdArray]
-        INSERT INTO @Step3OrgUsersToBump
+    -- Step 4: Bump AccountRevisionDate for all OrganizationUsers updated in the previous steps
+        -- Combine and union the distinct OrganizationUserIds from all steps into a single variable
+        DECLARE @OrgUsersToBump [dbo].[GuidIdArray]
+        INSERT INTO @OrgUsersToBump
         SELECT DISTINCT [OrganizationUserId] AS Id
-        FROM #TempStep3;
+        FROM (
+            -- Step 1
+            SELECT GU.[OrganizationUserId]
+            FROM [dbo].[GroupUser] GU
+            INNER JOIN #TempStep1 TG ON GU.[GroupId] = TG.[GroupId]
+
+            UNION
+
+            -- Step 2
+            SELECT [OrganizationUserId]
+            FROM #TempStep2
+
+            UNION
+
+            -- Step 3
+            SELECT [OrganizationUserId]
+            FROM #TempStep3
+        ) AS CombinedOrgUsers;
 
         BEGIN TRY
             BEGIN TRANSACTION;
@@ -60,14 +66,14 @@ BEGIN
                         CG.[Manage] = 0
                     FROM [dbo].[CollectionGroup] CG
                     INNER JOIN [dbo].[Collection] C ON CG.[CollectionId] = C.[Id]
-                    INNER JOIN #TempGroup TG ON CG.[GroupId] = TG.[GroupId]
+                    INNER JOIN #TempStep1 TG ON CG.[GroupId] = TG.[GroupId]
                     WHERE C.[OrganizationId] = TG.[OrganizationId];
 
                     -- Insert new rows into [dbo].[CollectionGroup]
                     INSERT INTO [dbo].[CollectionGroup] ([CollectionId], [GroupId], [ReadOnly], [HidePasswords], [Manage])
                     SELECT C.[Id], TG.[GroupId], 0, 0, 0
                     FROM [dbo].[Collection] C
-                    INNER JOIN #TempGroup TG ON C.[OrganizationId] = TG.[OrganizationId]
+                    INNER JOIN #TempStep1 TG ON C.[OrganizationId] = TG.[OrganizationId]
                     LEFT JOIN [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = TG.[GroupId]
                     WHERE CG.[CollectionId] IS NULL;
 
@@ -75,10 +81,7 @@ BEGIN
                     UPDATE G
                     SET [AccessAll] = 0
                     FROM [dbo].[Group] G
-                    INNER JOIN #TempGroup TG ON G.[Id] = TG.[GroupId];
-
-                    -- Execute User_BumpAccountRevisionDateByOrganizationUserIds for the distinct OrganizationUserIds
-                    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @Step1OrgUsersToBump;
+                    INNER JOIN #TempStep1 TG ON G.[Id] = TG.[GroupId];
 
                 -- Step 2
                     -- Update existing rows in [dbo].[CollectionUser]
@@ -91,7 +94,7 @@ BEGIN
                         INNER JOIN (
                             SELECT C.[Id] AS [CollectionId], T.[OrganizationUserId]
                             FROM [dbo].[Collection] C
-                            INNER JOIN #TempOrgUser T ON C.[OrganizationId] = T.[OrganizationId]
+                            INNER JOIN #TempStep2 T ON C.[OrganizationId] = T.[OrganizationId]
                         ) AS source
                     ON target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId];
 
@@ -101,7 +104,7 @@ BEGIN
                     FROM (
                              SELECT C.[Id] AS [CollectionId], T.[OrganizationUserId]
                              FROM [dbo].[Collection] C
-                                 INNER JOIN #TempOrgUser T ON C.[OrganizationId] = T.[OrganizationId]
+                                 INNER JOIN #TempStep2 T ON C.[OrganizationId] = T.[OrganizationId]
                          ) AS source
                     LEFT JOIN [dbo].[CollectionUser] AS target
                         ON target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId]
@@ -111,10 +114,7 @@ BEGIN
                     UPDATE OU
                     SET [AccessAll] = 0
                     FROM [dbo].[OrganizationUser] OU
-                    INNER JOIN #TempOrgUser T ON OU.[Id] = T.[OrganizationUserId];
-
-                    -- Execute User_BumpAccountRevisionDateByOrganizationUserIds for the distinct OrganizationUserIds
-                    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @Step2OrgUsersToBump;
+                    INNER JOIN #TempStep2 T ON OU.[Id] = T.[OrganizationUserId];
 
                 -- Step 3
                     -- Update [dbo].[CollectionUser] with [Manage] = 1 using the temporary table
@@ -143,8 +143,9 @@ BEGIN
                     INNER JOIN #TempStep3 temp ON ou.[Id] = temp.[OrganizationUserId]
                     WHERE temp.[IsManager] = 1; -- Filter for Managers
 
+                -- Step 4
                     -- Execute User_BumpAccountRevisionDateByOrganizationUserIds for the distinct OrganizationUserIds
-                    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @Step3OrgUsersToBump;
+                    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @OrgUsersToBump;
             COMMIT TRANSACTION;
         END TRY
         BEGIN CATCH
@@ -153,8 +154,8 @@ BEGIN
         END CATCH;
 
         -- Drop the temporary table
-        DROP TABLE #TempGroup;
-        DROP TABLE #TempOrgUser;
+        DROP TABLE #TempStep1;
+        DROP TABLE #TempStep2;
         DROP TABLE #TempStep3;
 END
 GO
