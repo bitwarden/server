@@ -122,8 +122,7 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
-        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
-            .TryGetValue(_currentContext.OrganizationId.Value, out var organizationAbility);
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(_currentContext.OrganizationId.Value);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
         var invite = new OrganizationUserInvite
         {
@@ -159,8 +158,7 @@ public class MembersController : Controller
             return new NotFoundResult();
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
-        (await _applicationCacheService.GetOrganizationAbilitiesAsync())
-            .TryGetValue(_currentContext.OrganizationId.Value, out var organizationAbility);
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(_currentContext.OrganizationId.Value);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
         await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
