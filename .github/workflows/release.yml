@@ -16,7 +16,7 @@ on:
           - Dry Run
 
 env:
-  _AZ_REGISTRY: 'bitwardenprod.azurecr.io'
+  _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
 jobs:
   setup:
@@ -36,10 +36,10 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
-      - name: Check Release Version
+      - name: Check release version
         id: version
         uses: bitwarden/gh-actions/release-version-check@main
         with:
@@ -87,7 +87,7 @@ jobs:
           task: "deploy"
           description: "Deploy from ${{ needs.setup.outputs.branch-name }} branch"
 
-      - name: Download latest Release ${{ matrix.name }} asset
+      - name: Download latest release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
@@ -96,7 +96,7 @@ jobs:
           branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: ${{ matrix.name }}.zip
 
-      - name: Dry Run - Download latest Release ${{ matrix.name }} asset
+      - name: Dry run - Download latest release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
@@ -105,7 +105,7 @@ jobs:
           branch: main
           artifacts: ${{ matrix.name }}.zip
 
-      - name: Login to Azure - CI subscription
+      - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
@@ -130,12 +130,12 @@ jobs:
           echo "::add-mask::$publish_profile"
           echo "publish-profile=$publish_profile" >> $GITHUB_OUTPUT
 
-      - name: Login to Azure
+      - name: Log in to Azure
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Deploy App
+      - name: Deploy app
         uses: azure/webapps-deploy@4bca689e4c7129e55923ea9c45401b22dc6aa96f # v2.2.11
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
@@ -156,7 +156,7 @@ jobs:
           fi
           az webapp start -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
 
-      - name: Update ${{ matrix.name }} deployment status to Success
+      - name: Update ${{ matrix.name }} deployment status to success
         if: ${{ github.event.inputs.release_type != 'Dry Run' && success() }}
         uses: chrnorm/deployment-status@2afb7d27101260f4a764219439564d954d10b5b0 # v2.0.1
         with:
@@ -164,7 +164,7 @@ jobs:
           state: "success"
           deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
-      - name: Update ${{ matrix.name }} deployment status to Failure
+      - name: Update ${{ matrix.name }} deployment status to failure
         if: ${{ github.event.inputs.release_type != 'Dry Run' && failure() }}
         uses: chrnorm/deployment-status@2afb7d27101260f4a764219439564d954d10b5b0 # v2.0.1
         with:
@@ -210,10 +210,10 @@ jobs:
           echo "GitHub event: $GITHUB_EVENT"
           echo "Github Release Option: $RELEASE_OPTION"
 
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
-      - name: Setup project name
+      - name: Set up project name
         id: setup
         run: |
           PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
@@ -222,12 +222,12 @@ jobs:
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
       ########## ACR PROD ##########
-      - name: Login to Azure - PROD Subscription
+      - name: Log in to Azure - Prod subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to Azure ACR
+      - name: Log in to Azure ACR
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
       - name: Pull latest project image
@@ -266,13 +266,13 @@ jobs:
         run: docker logout
 
   release:
-    name: Create GitHub Release
+    name: Create GitHub release
     runs-on: ubuntu-22.04
     needs:
       - setup
       - deploy
     steps:
-      - name: Download latest Release Docker Stubs
+      - name: Download latest release Docker stubs
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
@@ -285,7 +285,7 @@ jobs:
             docker-stub-EU-sha256.txt,
             swagger.json"
 
-      - name: Dry Run - Download latest Release Docker Stubs
+      - name: Dry Run - Download latest release Docker stubs
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:

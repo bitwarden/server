@@ -1,7 +1,6 @@
 ---
-
 name: _move_finalization_db_scripts
-run-name: Move finalization db scripts
+run-name: Move finalization database scripts
 
 on:
   workflow_call:
@@ -11,7 +10,6 @@ permissions:
   contents: write
 
 jobs:
-
   setup:
     name: Setup
     runs-on: ubuntu-22.04
@@ -19,7 +17,7 @@ jobs:
       migration_filename_prefix: ${{ steps.prefix.outputs.prefix }}
       copy_finalization_scripts: ${{ steps.check-finalization-scripts-existence.outputs.copy_finalization_scripts }}
     steps:
-      - name: Login to Azure
+      - name: Log in to Azure
         uses: Azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.5.1
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
@@ -31,7 +29,7 @@ jobs:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
-      - name: Checkout Branch
+      - name: Check out branch
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           token: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
@@ -40,7 +38,7 @@ jobs:
         id: prefix
         run: echo "prefix=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      - name: Check if any files in db finalization
+      - name: Check if any files in DB finalization directory
         id: check-finalization-scripts-existence
         run: |
           if [ -f util/Migrator/DbScripts_finalization/* ]; then
@@ -50,7 +48,7 @@ jobs:
           fi
 
   move-finalization-db-scripts:
-    name: Move finalization db scripts
+    name: Move finalization DB scripts
     runs-on: ubuntu-22.04
     needs: setup
     if: ${{ needs.setup.outputs.copy_finalization_scripts == 'true' }}
@@ -95,12 +93,12 @@ jobs:
           done
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
 
-      - name: Login to Azure - Prod Subscription
+      - name: Log in to Azure - Prod subscription
         uses: Azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.5.1
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-      - name: Retrieve Secrets
+      - name: Retrieve secrets
         id: retrieve-secrets
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:

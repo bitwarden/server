@@ -1,55 +1,50 @@
 ---
-name: Run Database Infrastructure Tests
+name: Run database infrastructure tests
 on:
   pull_request:
-    branches-ignore:
-      - 'l10n_master'
-      - 'gh-pages'
     paths:
-      - '.github/workflows/infrastructure-tests.yml' # This file
-      - 'src/Sql/**' # SQL Server Database Changes
-      - 'util/Migrator/**' # New SQL Server Migrations
-      - 'util/MySqlMigrations/**' # Changes to MySQL
-      - 'util/PostgresMigrations/**' # Changes to Postgres
-      - 'util/SqliteMigrations/**' # Changes to Sqlite
-      - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
-      - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
-      - 'test/Infrastructure.IntegrationTest/**' # Any changes to the tests
+      - ".github/workflows/infrastructure-tests.yml" # This file
+      - "src/Sql/**" # SQL Server Database Changes
+      - "util/Migrator/**" # New SQL Server Migrations
+      - "util/MySqlMigrations/**" # Changes to MySQL
+      - "util/PostgresMigrations/**" # Changes to Postgres
+      - "util/SqliteMigrations/**" # Changes to Sqlite
+      - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
+      - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
+      - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
   push:
     branches:
-      - 'main'
-      - 'rc'
+      - "main"
+      - "rc"
+      - "hotfix-rc"
     paths:
-      - '.github/workflows/infrastructure-tests.yml' # This file
-      - 'src/Sql/**' # SQL Server Database Changes
-      - 'util/Migrator/**' # New SQL Server Migrations
-      - 'util/MySqlMigrations/**' # Changes to MySQL
-      - 'util/PostgresMigrations/**' # Changes to Postgres
-      - 'util/SqliteMigrations/**' # Changes to Sqlite
-      - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
-      - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
-      - 'test/Infrastructure.IntegrationTest/**' # Any changes to the tests
+      - ".github/workflows/infrastructure-tests.yml" # This file
+      - "src/Sql/**" # SQL Server Database Changes
+      - "util/Migrator/**" # New SQL Server Migrations
+      - "util/MySqlMigrations/**" # Changes to MySQL
+      - "util/PostgresMigrations/**" # Changes to Postgres
+      - "util/SqliteMigrations/**" # Changes to Sqlite
+      - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
+      - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
+      - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
   workflow_dispatch:
-    inputs: {}
 
 jobs:
   test:
-    name: 'Run Infrastructure.IntegrationTest'
+    name: Run tests
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
-      - name: Set up dotnet
+      - name: Set up .NET
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: '6.0.x'
 
-      - name: Restore Tools
+      - name: Restore tools
         run: dotnet tool restore
 
-      - name: Compose Databases
-        working-directory: 'dev'
+      - name: Docker Compose databases
+        working-directory: "dev"
         # We could think about not using profiles and pulling images directly to cover multiple versions
         run: |
           cp .env.example .env
@@ -61,30 +56,30 @@ jobs:
         run: sleep 15s
 
       - name: Migrate SQL Server
-        working-directory: 'dev'
+        working-directory: "dev"
         run: "pwsh ./migrate.ps1"
         shell: pwsh
 
       - name: Migrate MySQL
-        working-directory: 'util/MySqlMigrations'
+        working-directory: "util/MySqlMigrations"
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
 
       - name: Migrate Postgres
-        working-directory: 'util/PostgresMigrations'
+        working-directory: "util/PostgresMigrations"
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:PostgreSql:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
 
-      - name: Migrate Sqlite
-        working-directory: 'util/SqliteMigrations'
+      - name: Migrate SQLite
+        working-directory: "util/SqliteMigrations"
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:Sqlite:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "Data Source=${{ runner.temp }}/test.db"
 
-      - name: Run Tests
-        working-directory: 'test/Infrastructure.IntegrationTest'
+      - name: Run tests
+        working-directory: "test/Infrastructure.IntegrationTest"
         env:
           # Default Postgres:
           BW_TEST_DATABASES__0__TYPE: "Postgres"
@@ -110,7 +105,7 @@ jobs:
           reporter: dotnet-trx
           fail-on-error: true
 
-      - name: Docker compose down
+      - name: Docker Compose down
         if: always()
         working-directory: "dev"
         run: docker compose down
