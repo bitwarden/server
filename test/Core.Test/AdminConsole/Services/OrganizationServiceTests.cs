@@ -15,6 +15,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.StaticStore;
@@ -972,21 +973,23 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData]
-    public async Task InviteUser_WithFCEnabled_WhenInvitingManager_Throws(Organization organization, OrganizationUserInvite invite,
-        OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
+    public async Task InviteUser_WithFCEnabled_WhenInvitingManager_Throws(OrganizationAbility organizationAbility,
+        OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invite.Type = OrganizationUserType.Manager;
+        organizationAbility.FlexibleCollections = true;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
-            .Returns(true);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
 
         sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organization.Id)
+            .ManageUsers(organizationAbility.Id)
             .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
+            () => sutProvider.Sut.InviteUsersAsync(organizationAbility.Id, invitor.UserId,
+                new (OrganizationUserInvite, string)[] { (invite, null) }));
 
         Assert.Contains("manager role is deprecated", exception.Message.ToLowerInvariant());
     }
@@ -1273,19 +1276,20 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory, BitAutoData]
     public async Task SaveUser_WithFCEnabled_WhenUpgradingToManager_Throws(
-        Organization organization,
+        OrganizationAbility organizationAbility,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Manager)] OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
-            .Returns(true);
+        organizationAbility.FlexibleCollections = true;
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
 
         sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organization.Id)
+            .ManageUsers(organizationAbility.Id)
             .Returns(true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -1294,7 +1298,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.OrganizationId = oldUserData.OrganizationId = organizationAbility.Id;
         newUserData.Permissions = CoreHelpers.ClassToJsonData(new Permissions());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
