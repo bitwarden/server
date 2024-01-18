@@ -8,4 +8,5 @@ on:
 
 jobs:
   call-workflow:
+    name: Lint
     uses: bitwarden/gh-actions/.github/workflows/workflow-linter.yml@main
