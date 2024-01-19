@@ -58,7 +58,7 @@ jobs:
 
       - name: Migrate SQL Server
         working-directory: "dev"
-        run: "pwsh ./migrate.ps1"
+        run: "./migrate.ps1"
         shell: pwsh
 
       - name: Migrate MySQL
@@ -148,7 +148,7 @@ jobs:
 
       - name: Migrate
         working-directory: "dev"
-        run: "pwsh ./migrate.ps1"
+        run: "./migrate.ps1"
         shell: pwsh
 
       - name: Diff .sqlproj to migrations

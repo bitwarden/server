@@ -222,7 +222,7 @@ jobs:
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
       ########## ACR PROD ##########
-      - name: Log in to Azure - Prod subscription
+      - name: Log in to Azure - production subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}

@@ -48,7 +48,7 @@ jobs:
           fi
 
   move-finalization-db-scripts:
-    name: Move finalization DB scripts
+    name: Move finalization database scripts
     runs-on: ubuntu-22.04
     needs: setup
     if: ${{ needs.setup.outputs.copy_finalization_scripts == 'true' }}
@@ -93,7 +93,7 @@ jobs:
           done
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
 
-      - name: Log in to Azure - Prod subscription
+      - name: Log in to Azure - production subscription
         uses: Azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.5.1
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
@@ -138,7 +138,7 @@ jobs:
           BRANCH: ${{ steps.branch_name.outputs.branch_name }}
           GH_TOKEN: ${{ github.token }}
           MOVED_FILES: ${{ steps.move-files.outputs.moved_files }}
-          TITLE: "Move finalization db scripts"
+          TITLE: "Move finalization database scripts"
         run: |
           PR_URL=$(gh pr create --title "$TITLE" \
             --base "main" \

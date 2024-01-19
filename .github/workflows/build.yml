@@ -202,7 +202,7 @@ jobs:
           fi
 
       ########## ACRs ##########
-      - name: Log in to Azure - Prod subscription
+      - name: Log in to Azure - production subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
@@ -289,7 +289,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
-      - name: Log in to Azure - Prod subscription
+      - name: Log in to Azure - production subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
