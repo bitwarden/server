@@ -13,8 +13,7 @@ public class OrganizationDuoWebTokenProvider : IOrganizationDuoWebTokenProvider
 {
     private readonly GlobalSettings _globalSettings;
 
-    public OrganizationDuoWebTokenProvider(
-        GlobalSettings globalSettings)
+    public OrganizationDuoWebTokenProvider(GlobalSettings globalSettings)
     {
         _globalSettings = globalSettings;
     }
@@ -32,42 +31,41 @@ public class OrganizationDuoWebTokenProvider : IOrganizationDuoWebTokenProvider
         return Task.FromResult(canGenerate);
     }
 
-    public async Task<string> GenerateAsync(Organization organization, User user)
+    public Task<string> GenerateAsync(Organization organization, User user)
     {
         if (organization == null || !organization.Enabled || !organization.Use2fa)
         {
-            return null;
+            return Task.FromResult<string>(null);
         }
 
         var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
         if (!HasProperMetaData(provider))
         {
-            return null;
+            return Task.FromResult<string>(null);
         }
 
-        var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"],
-            (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, user.Email);
-
-        return signatureRequest;
+        var signatureRequest = DuoWeb.SignRequest(provider.MetaData["IKey"].ToString(),
+            provider.MetaData["SKey"].ToString(), _globalSettings.Duo.AKey, user.Email);
+        return Task.FromResult(signatureRequest);
     }
 
-    public async Task<bool> ValidateAsync(string token, Organization organization, User user)
+    public Task<bool> ValidateAsync(string token, Organization organization, User user)
     {
         if (organization == null || !organization.Enabled || !organization.Use2fa)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
         if (!HasProperMetaData(provider))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
-            _globalSettings.Duo.AKey, token);
+        var response = DuoWeb.VerifyResponse(provider.MetaData["IKey"].ToString(),
+            provider.MetaData["SKey"].ToString(), _globalSettings.Duo.AKey, token);
 
-        return response == user.Email;
+        return Task.FromResult(response == user.Email);
     }
 
     private bool HasProperMetaData(TwoFactorProvider provider)

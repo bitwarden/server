@@ -38,7 +38,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceService _deviceService;
     private readonly IEventService _eventService;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
-    private readonly IDuoUniversalPromptService _duoUniversalPromptService;
+    private readonly ITemporaryDuoUniversalPromptService _duoUniversalPromptService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -64,7 +64,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        IDuoUniversalPromptService duoUniversalPromptService,
+        ITemporaryDuoUniversalPromptService duoUniversalPromptService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
@@ -442,7 +442,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     {
                         if (!token.Contains(':'))
                         {
-                            // We have to send the provider to the DuoUniversalPromptService to get create the DuoClient
+                            // We have to send the provider to the DuoUniversalPromptService to create the DuoClient
                             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
                             return await _duoUniversalPromptService.ValidateAsync(token, provider, user);
                         }
@@ -464,7 +464,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     {
                         if (!token.Contains(':'))
                         {
-                            // We have to send the provider to the DuoUniversalPromptService to get create the DuoClient
+                            // We have to send the provider to the DuoUniversalPromptService to create the DuoClient
                             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
                             return await _duoUniversalPromptService.ValidateAsync(token, provider, user);
                         }
@@ -486,7 +486,7 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Email:
             case TwoFactorProviderType.YubiKey:
-                if (!await _userService.TwoFactorProviderIsEnabledAsync(type, user))
+                if (!(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
                 {
                     return null;
                 }
@@ -504,7 +504,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     // DUO SDK v4 Update: Duo-Redirect
                     if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                     {
-                        // Use generate token from new token provider
+                        // Generate AuthUrl from DUO SDK v4 token provider
                         duoResponse.Add("AuthUrl", await _duoUniversalPromptService.GenerateAsync(provider, user));
                     }
                     return duoResponse;
@@ -536,10 +536,10 @@ public abstract class BaseRequestValidator<T> where T : class
                         ["Host"] = provider.MetaData["Host"],
                         ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
                     };
-                    // DUO SDK v4 Update: Duo-Redirect
+                    // DUO SDK v4 Update: DUO-Redirect
                     if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                     {
-                        // Use generate token from new token provider
+                        // Generate AuthUrl from DUO SDK v4 token provider
                         duoResponse.Add("AuthUrl", await _duoUniversalPromptService.GenerateAsync(provider, user));
                     }
                     return duoResponse;

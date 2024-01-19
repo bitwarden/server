@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Utilities.Duo;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -13,26 +12,20 @@ namespace Bit.Core.Auth.Identity;
 public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly IFeatureService _featureService;
-    private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
 
     public DuoWebTokenProvider(
         IServiceProvider serviceProvider,
-        IFeatureService featureService,
-        ICurrentContext currentContext,
         GlobalSettings globalSettings)
     {
         _serviceProvider = serviceProvider;
-        _featureService = featureService;
-        _currentContext = currentContext;
         _globalSettings = globalSettings;
     }
 
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!await userService.CanAccessPremium(user))
+        if (!(await userService.CanAccessPremium(user)))
         {
             return false;
         }
@@ -49,7 +42,7 @@ public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!await userService.CanAccessPremium(user))
+        if (!(await userService.CanAccessPremium(user)))
         {
             return null;
         }
@@ -62,14 +55,13 @@ public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
 
         var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"],
             (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, user.Email);
-
         return signatureRequest;
     }
 
     public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!await userService.CanAccessPremium(user))
+        if (!(await userService.CanAccessPremium(user)))
         {
             return false;
         }

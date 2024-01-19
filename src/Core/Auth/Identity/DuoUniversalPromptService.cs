@@ -12,13 +12,13 @@ namespace Bit.Core.Auth.Identity;
     This service is to support SDK v4 flows for Duo. At some time in the future we will need
     to combine this service with the DuoWebTokenProvider and OrganizationDuoWebTokenProvider to support SDK v4.
 */
-public interface IDuoUniversalPromptService
+public interface ITemporaryDuoUniversalPromptService
 {
     Task<string> GenerateAsync(TwoFactorProvider provider, User user);
     Task<bool> ValidateAsync(string token, TwoFactorProvider provider, User user);
 }
 
-public class DuoUniversalPromptService : IDuoUniversalPromptService
+public class TemporaryDuoUniversalPromptService : ITemporaryDuoUniversalPromptService
 {
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
@@ -28,7 +28,7 @@ public class DuoUniversalPromptService : IDuoUniversalPromptService
     /// </summary>
     /// <param name="currentContext">used to fetch initiating Client</param>
     /// <param name="globalSettings">used to fetch vault URL for Redirect URL</param>
-    public DuoUniversalPromptService(
+    public TemporaryDuoUniversalPromptService(
         ICurrentContext currentContext,
         GlobalSettings globalSettings)
     {
@@ -44,10 +44,17 @@ public class DuoUniversalPromptService : IDuoUniversalPromptService
     /// <returns>AuthUrl for DUO SDK v4</returns>
     public async Task<string> GenerateAsync(TwoFactorProvider provider, User user)
     {
-        if (!HasProperMetaData(provider)) return null;
+        if (!HasProperMetaData(provider))
+        {
+            return null;
+        }
+
 
         var duoClient = await BuildDuoClientAsync(provider);
-        if (duoClient == null) return null;
+        if (duoClient == null)
+        {
+            return null;
+        }
 
         var state = Duo.Client.GenerateState(); //? Not sure on this yet. But required for GenerateAuthUrl
         var authUrl = duoClient.GenerateAuthUri(user.Email, state);
@@ -64,10 +71,16 @@ public class DuoUniversalPromptService : IDuoUniversalPromptService
     /// <returns>true or false depending on result of verification</returns>
     public async Task<bool> ValidateAsync(string token, TwoFactorProvider provider, User user)
     {
-        if (!HasProperMetaData(provider)) return false;
+        if (!HasProperMetaData(provider))
+        {
+            return false;
+        }
 
         var duoClient = await BuildDuoClientAsync(provider);
-        if (duoClient == null) return false;
+        if (duoClient == null)
+        {
+            return false;
+        }
 
         // If the result of the exchange doesn't throw an exception and it's not null, then it's valid
         return duoClient.ExchangeAuthorizationCodeFor2faResult(token, user.Email) != null;
@@ -83,7 +96,7 @@ public class DuoUniversalPromptService : IDuoUniversalPromptService
     /// Generates a Duo.Client object for use with Duo SDK v4. This combines the health check and the client generation
     /// </summary>
     /// <param name="provider">TwoFactorProvider Duo or OrganizationDuo</param>
-    /// <returns></returns>
+    /// <returns>Duo.Client object or null</returns>
     private async Task<Duo.Client> BuildDuoClientAsync(TwoFactorProvider provider)
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want 

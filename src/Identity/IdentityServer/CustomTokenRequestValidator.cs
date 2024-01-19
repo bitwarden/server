@@ -33,7 +33,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        IDuoUniversalPromptService duoUniversalPromptService,
+        ITemporaryDuoUniversalPromptService duoUniversalPromptService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,

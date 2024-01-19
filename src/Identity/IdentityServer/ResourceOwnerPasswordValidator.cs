@@ -34,7 +34,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        IDuoUniversalPromptService duoUniversalPromptService,
+        ITemporaryDuoUniversalPromptService duoUniversalPromptService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
