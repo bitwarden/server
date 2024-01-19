@@ -436,7 +436,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     return false;
                 }
                 // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
-                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
+                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
                 {
                     if (type == TwoFactorProviderType.Duo)
                     {
@@ -458,7 +458,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
 
                 // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
-                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
+                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
                 {
                     if (type == TwoFactorProviderType.Duo)
                     {
@@ -502,7 +502,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     };
 
                     // DUO SDK v4 Update: Duo-Redirect
-                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
+                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
                     {
                         // Generate AuthUrl from DUO SDK v4 token provider
                         duoResponse.Add("AuthUrl", await _duoUniversalPromptService.GenerateAsync(provider, user));
@@ -537,7 +537,7 @@ public abstract class BaseRequestValidator<T> where T : class
                         ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
                     };
                     // DUO SDK v4 Update: DUO-Redirect
-                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
+                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
                     {
                         // Generate AuthUrl from DUO SDK v4 token provider
                         duoResponse.Add("AuthUrl", await _duoUniversalPromptService.GenerateAsync(provider, user));

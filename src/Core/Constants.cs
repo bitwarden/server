@@ -108,7 +108,7 @@ public static class FeatureFlagKeys
     public const string DuoRedirect = "duo-redirect";
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
     public const string FlexibleCollectionsSignup = "flexible-collections-signup";
-  
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
