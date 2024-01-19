@@ -43,7 +43,7 @@ public class CiphersController : Controller
     private readonly IFeatureService _featureService;
 
     private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     public CiphersController(
         ICipherRepository cipherRepository,

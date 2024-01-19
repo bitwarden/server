@@ -328,6 +328,7 @@ public class GlobalSettings : IGlobalSettings
         public string CertificateThumbprint { get; set; }
         public string CertificatePassword { get; set; }
         public string RedisConnectionString { get; set; }
+        public string CosmosConnectionString { get; set; }
         public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZWtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzAxODIwODAwLCJleHAiOjE3MzM0NDMyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiNDMxOSIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwicHJvZHVjdCI6IkJpdHdhcmRlbiJ9.iLA771PffgIh0ClRS8OWHbg2cAgjhgOkUjRRkLNr9dpQXhYZkVKdpUn-Gw9T7grsGcAx0f4p-TQmtcCpbN9EJCF5jlF0-NfsRTp_gmCgQ5eXyiE4DzJp2OCrz_3STf07N1dILwhD3nk9rzcA6SRQ4_kja8wAMHKnD5LisW98r5DfRDBecRs16KS5HUhg99DRMR5fd9ntfydVMTC_E23eEOHVLsR4YhiSXaEINPjFDG1czyOBClJItDW8g9X8qlClZegr630UjnKKg06A4usoL25VFHHn8Ew3v-_-XdlWoWsIpMMVvacwZT8rwkxjIesFNsXG6yzuROIhaxAvB1297A";
     }
 

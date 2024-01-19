@@ -203,10 +203,5 @@
       "reviewers": ["team:team-vault-dev"]
     }
   ],
-  "force": {
-    "constraints": {
-      "dotnet": "6.0.100"
-    }
-  },
   "ignoreDeps": ["dotnet-sdk"]
 }
