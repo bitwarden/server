@@ -24,7 +24,7 @@ public class ImportCiphersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IOrganizationRepository _organizationService;
+    private readonly IOrganizationRepository _organizationRepository;
 
     public ImportCiphersController(
         ICipherService cipherService,
@@ -34,7 +34,7 @@ public class ImportCiphersController : Controller
         GlobalSettings globalSettings,
         ICollectionRepository collectionRepository,
         IAuthorizationService authorizationService,
-        IOrganizationRepository organizationService)
+        IOrganizationRepository organizationRepository)
     {
         _cipherService = cipherService;
         _userService = userService;
@@ -43,7 +43,7 @@ public class ImportCiphersController : Controller
         _globalSettings = globalSettings;
         _collectionRepository = collectionRepository;
         _authorizationService = authorizationService;
-        _organizationService = organizationService;
+        _organizationRepository = organizationRepository;
     }
 
     [HttpPost("import")]
@@ -75,13 +75,10 @@ public class ImportCiphersController : Controller
 
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
-        var orgFlexibleCollections = (await _organizationService.GetByIdAsync(orgId)).FlexibleCollections;
 
 
         //An User is allowed to import if CanCreate Collections or has AccessToImportExport
-        var authorized = orgFlexibleCollections
-            ? await CheckOrgImportPermission(collections, orgId) || await _currentContext.AccessImportExport(orgId)
-            : await _currentContext.AccessImportExport(orgId);
+        var authorized = await CheckOrgImportPermission(collections, orgId);
 
         if (!authorized)
         {
@@ -95,11 +92,27 @@ public class ImportCiphersController : Controller
 
     private async Task<bool> CheckOrgImportPermission(List<Collection> collections, Guid orgId)
     {
+        //Users are allowed to import if they have the AccessToImportExport permission
+        if (await _currentContext.AccessImportExport(orgId))
+        {
+            return true;
+        }
+
+        //If flexible collections is disabled the user cannot continue with the import
+        var orgFlexibleCollections = (await _organizationRepository.GetByIdAsync(orgId)).FlexibleCollections;
+        if (!orgFlexibleCollections)
+        {
+            return false;
+        }
+
+        //Users allowed to import if they CanCreate Collections
         if (!(await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
         {
             return false;
         }
 
+        //Calling Repository instead of Service as we want to get all the collections, regardless of permission
+        //Permissions check will be done later on AuthorizationService
         var orgCollectionIds =
             (await _collectionRepository.GetManyByOrganizationIdAsync(orgId))
             .Select(c => c.Id)
@@ -109,7 +122,7 @@ public class ImportCiphersController : Controller
         var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));
 
         //When importing into existing collection, we need to verify if the user has permissions
-        if (existingCollections.Count() > 0 && !(await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
+        if (existingCollections.Any() && !(await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
         {
             return false;
         };
