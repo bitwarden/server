@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -36,6 +35,7 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider)
     {
         organization.MaxCollections = null;
+        organization.FlexibleCollections = false;
         importingOrganizationUser.OrganizationId = organization.Id;
 
         foreach (var collection in collections)
@@ -61,10 +61,6 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, importingUserId)
             .Returns(importingOrganizationUser);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(false);
 
         // Set up a collection that already exists in the organization
         sutProvider.GetDependency<ICollectionRepository>()
@@ -95,6 +91,7 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider)
     {
         organization.MaxCollections = null;
+        organization.FlexibleCollections = true;
         importingOrganizationUser.OrganizationId = organization.Id;
 
         foreach (var collection in collections)
@@ -120,10 +117,6 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, importingUserId)
             .Returns(importingOrganizationUser);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(true);
 
         // Set up a collection that already exists in the organization
         sutProvider.GetDependency<ICollectionRepository>()
