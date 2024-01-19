@@ -435,7 +435,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 {
                     return false;
                 }
-                // DUO SDK v4 Update: try to validate the token
+                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
                 if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                 {
                     if (type == TwoFactorProviderType.Duo)
@@ -457,7 +457,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     return false;
                 }
 
-                // DUO SDK v4 Update: try to validate the token
+                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
                 if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
                 {
                     if (type == TwoFactorProviderType.Duo)
