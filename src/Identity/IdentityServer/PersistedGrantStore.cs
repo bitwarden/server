@@ -1,18 +1,24 @@
-﻿using Bit.Core.Auth.Repositories;
+﻿using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using Grant = Bit.Core.Auth.Entities.Grant;
 
 namespace Bit.Identity.IdentityServer;
 
 public class PersistedGrantStore : IPersistedGrantStore
 {
     private readonly IGrantRepository _grantRepository;
+    private readonly Func<PersistedGrant, IGrant> _toGrant;
+    private readonly IPersistedGrantStore _fallbackGrantStore;
 
     public PersistedGrantStore(
-        IGrantRepository grantRepository)
+        IGrantRepository grantRepository,
+        Func<PersistedGrant, IGrant> toGrant,
+        IPersistedGrantStore fallbackGrantStore = null)
     {
         _grantRepository = grantRepository;
+        _toGrant = toGrant;
+        _fallbackGrantStore = fallbackGrantStore;
     }
 
     public async Task<PersistedGrant> GetAsync(string key)
@@ -20,6 +26,11 @@ public class PersistedGrantStore : IPersistedGrantStore
         var grant = await _grantRepository.GetByKeyAsync(key);
         if (grant == null)
         {
+            if (_fallbackGrantStore != null)
+            {
+                // It wasn't found, there is a chance is was instead stored in the fallback store
+                return await _fallbackGrantStore.GetAsync(key);
+            }
             return null;
         }
 
@@ -47,28 +58,11 @@ public class PersistedGrantStore : IPersistedGrantStore
 
     public async Task StoreAsync(PersistedGrant pGrant)
     {
-        var grant = ToGrant(pGrant);
+        var grant = _toGrant(pGrant);
         await _grantRepository.SaveAsync(grant);
     }
 
-    private Grant ToGrant(PersistedGrant pGrant)
-    {
-        return new Grant
-        {
-            Key = pGrant.Key,
-            Type = pGrant.Type,
-            SubjectId = pGrant.SubjectId,
-            SessionId = pGrant.SessionId,
-            ClientId = pGrant.ClientId,
-            Description = pGrant.Description,
-            CreationDate = pGrant.CreationTime,
-            ExpirationDate = pGrant.Expiration,
-            ConsumedDate = pGrant.ConsumedTime,
-            Data = pGrant.Data
-        };
-    }
-
-    private PersistedGrant ToPersistedGrant(Grant grant)
+    private PersistedGrant ToPersistedGrant(IGrant grant)
     {
         return new PersistedGrant
         {
