@@ -435,6 +435,19 @@ public abstract class BaseRequestValidator<T> where T : class
                 {
                     return false;
                 }
+                // DUO SDK v4 Update: try to validate the token
+                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
+                {
+                    if (type == TwoFactorProviderType.Duo)
+                    {
+                        if (!token.Contains(':'))
+                        {
+                            // We have to send the provider to the DuoUniversalPromptService to get create the DuoClient
+                            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+                            return await _duoUniversalPromptService.ValidateAsync(token, provider, user);
+                        }
+                    }
+                }
 
                 return await _userManager.VerifyTwoFactorTokenAsync(user,
                     CoreHelpers.CustomProviderName(type), token);
@@ -442,6 +455,20 @@ public abstract class BaseRequestValidator<T> where T : class
                 if (!organization?.TwoFactorProviderIsEnabled(type) ?? true)
                 {
                     return false;
+                }
+
+                // DUO SDK v4 Update: try to validate the token
+                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect, CurrentContext))
+                {
+                    if (type == TwoFactorProviderType.Duo)
+                    {
+                        if (!token.Contains(':'))
+                        {
+                            // We have to send the provider to the DuoUniversalPromptService to get create the DuoClient
+                            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+                            return await _duoUniversalPromptService.ValidateAsync(token, provider, user);
+                        }
+                    }
                 }
 
                 return await _organizationDuoWebTokenProvider.ValidateAsync(token, organization, user);

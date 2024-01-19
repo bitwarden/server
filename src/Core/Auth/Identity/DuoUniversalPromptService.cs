@@ -38,7 +38,7 @@ public class DuoUniversalPromptService : IDuoUniversalPromptService
     /// <summary>
     /// Provider agnostic (either Duo or OrganizationDuo) method to generate a Duo Auth URL
     /// </summary>
-    /// <param name="provider">Either Duo or OrganizaitonDuo</param>
+    /// <param name="provider">Either Duo or OrganizationDuo</param>
     /// <param name="user">self</param>
     /// <returns>AuthUrl for DUO SDK v4</returns>
     public async Task<string> GenerateAsync(TwoFactorProvider provider, User user)
@@ -64,6 +64,7 @@ public class DuoUniversalPromptService : IDuoUniversalPromptService
     public async Task<bool> ValidateAsync(string token, TwoFactorProvider provider, User user)
     {
         if (!HasProperMetaData(provider)) return false;
+
         var duoClient = await BuildDuoClientAsync(provider);
         if (duoClient == null) return false;
 
@@ -87,17 +88,14 @@ public class DuoUniversalPromptService : IDuoUniversalPromptService
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want 
         // to redirect back to the correct client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-        var clientName = bitwardenClientName.FirstOrDefault();
+        var redirectUri = string.Format("{0}/duo-redirect-connector?client={1}",
+            _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
 
         var client = new Duo.ClientBuilder(
-            // SDK v4 this is ClientId
             (string)provider.MetaData["IKey"],
-            // SDK v4 this is ClientSecret
             (string)provider.MetaData["SKey"],
             (string)provider.MetaData["Host"],
-            // Defaulting to the web client
-            string.Format("{0}/duo-redirect-connector?client={1}", _globalSettings.BaseServiceUri.Vault, clientName ?? "web"))
-            .Build();
+            redirectUri).Build();
 
         if (!await client.DoHealthCheck())
         {
