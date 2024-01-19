@@ -168,11 +168,11 @@ public class Startup
 
         // Services
         services.AddBaseServices(globalSettings);
-        services.AddToolsServices();
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingCommands();
+        services.AddToolsServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
