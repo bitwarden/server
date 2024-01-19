@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
@@ -19,6 +20,7 @@ using Microsoft.Extensions.Options;
 using Stripe;
 using Customer = Stripe.Customer;
 using Event = Stripe.Event;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 using TaxRate = Bit.Core.Entities.TaxRate;
@@ -110,8 +112,15 @@ public class StripeController : Controller
         using (var sr = new StreamReader(HttpContext.Request.Body))
         {
             var json = await sr.ReadToEndAsync();
+            var webhookSecret = PickStripeWebhookSecret(json);
+
+            if (string.IsNullOrEmpty(webhookSecret))
+            {
+                return new OkResult();
+            }
+
             parsedEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
-                _billingSettings.StripeWebhookSecret,
+                webhookSecret,
                 throwOnApiVersionMismatch: false);
         }
 
@@ -900,6 +909,27 @@ public class StripeController : Controller
         foreach (var invoice in invoices)
         {
             await invoiceService.VoidInvoiceAsync(invoice.Id);
+        }
+    }
+
+    private string PickStripeWebhookSecret(string webhookBody)
+    {
+        var versionContainer = JsonSerializer.Deserialize<StripeWebhookVersionContainer>(webhookBody);
+
+        return versionContainer.ApiVersion switch
+        {
+            "2023-10-16" => _billingSettings.StripeWebhookSecret20231016,
+            "2022-08-01" => _billingSettings.StripeWebhookSecret,
+            _ => HandleDefault(versionContainer.ApiVersion)
+        };
+
+        string HandleDefault(string version)
+        {
+            _logger.LogWarning(
+                "Stripe webhook contained an recognized 'api_version': {ApiVersion}",
+                version);
+
+            return null;
         }
     }
 }
