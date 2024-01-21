@@ -842,7 +842,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Organization has already been migrated to the new collection enhancements");
         }
 
-        // TODO: add migration query
+        // TODO: add migration query and update tests
         // await _organizationRepository.EnableCollectionEnhancements(id);
 
         organization.FlexibleCollections = true;
