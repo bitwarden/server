@@ -35,7 +35,7 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
 
         if (Type is OrganizationUserType.Custom && Permissions is not null)
         {
-            invite.Permissions = Permissions;
+            invite.Permissions = Permissions.ToData();
         }
 
         return invite;

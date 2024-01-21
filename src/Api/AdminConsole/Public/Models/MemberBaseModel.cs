@@ -3,7 +3,6 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Api.AdminConsole.Public.Models;
@@ -26,7 +25,7 @@ public abstract class MemberBaseModel
 
         if (user.Type == OrganizationUserType.Custom)
         {
-            Permissions = user.GetPermissions();
+            Permissions = new PermissionsModel(user.GetPermissions());
         }
     }
 
@@ -44,7 +43,7 @@ public abstract class MemberBaseModel
 
         if (user.Type == OrganizationUserType.Custom)
         {
-            Permissions = user.GetPermissions();
+            Permissions = new PermissionsModel(user.GetPermissions());
         }
     }
 
@@ -73,5 +72,5 @@ public abstract class MemberBaseModel
     /// <summary>
     /// The member's custom permissions if the member has a Custom role.
     /// </summary>
-    public Permissions? Permissions { get; set; }
+    public PermissionsModel? Permissions { get; set; }
 }

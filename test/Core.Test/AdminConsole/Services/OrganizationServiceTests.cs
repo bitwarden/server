@@ -524,7 +524,8 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                 );
 
 
-        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
+        await sutProvider.Sut.InviteUsersAsync(organization, invitor.UserId,
+            new (OrganizationUserInvite, string)[] { (invite, null) });
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
@@ -973,14 +974,15 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData]
-    public async Task InviteUser_WithFCEnabled_WhenInvitingManager_Throws(OrganizationAbility organizationAbility,
-        OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
+    public async Task InviteUser_WithFCEnabled_WhenInvitingManager_Throws(Organization organization,
+        OrganizationAbility organizationAbility, OrganizationUserInvite invite, OrganizationUser invitor,
+        SutProvider<OrganizationService> sutProvider)
     {
         invite.Type = OrganizationUserType.Manager;
         organizationAbility.FlexibleCollections = true;
 
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organizationAbility.Id)
+            .GetOrganizationAbilityAsync(organization.Id)
             .Returns(organizationAbility);
 
         sutProvider.GetDependency<ICurrentContext>()
@@ -988,7 +990,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.InviteUsersAsync(organizationAbility.Id, invitor.UserId,
+            () => sutProvider.Sut.InviteUsersAsync(organization, invitor.UserId,
                 new (OrganizationUserInvite, string)[] { (invite, null) }));
 
         Assert.Contains("manager role is deprecated", exception.Message.ToLowerInvariant());
