@@ -4,7 +4,6 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -39,10 +38,8 @@ public class OrganizationUsersController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
-    private readonly IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
-
-    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -57,8 +54,8 @@ public class OrganizationUsersController : Controller
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand,
-        IFeatureService featureService,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IApplicationCacheService applicationCacheService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -72,8 +69,8 @@ public class OrganizationUsersController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
-        _featureService = featureService;
         _authorizationService = authorizationService;
+        _applicationCacheService = applicationCacheService;
     }
 
     [HttpGet("{id}")]
@@ -98,7 +95,7 @@ public class OrganizationUsersController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
-        var authorized = UseFlexibleCollections
+        var authorized = await FlexibleCollectionsIsEnabledAsync(orgId)
             ? (await _authorizationService.AuthorizeAsync(User, OrganizationUserOperations.ReadAll(orgId))).Succeeded
             : await _currentContext.ViewAllCollections(orgId) ||
               await _currentContext.ViewAssignedCollections(orgId) ||
@@ -517,5 +514,11 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
+    {
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        return organizationAbility?.FlexibleCollections ?? false;
     }
 }
