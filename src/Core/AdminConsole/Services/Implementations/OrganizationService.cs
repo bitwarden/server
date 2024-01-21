@@ -65,8 +65,6 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
     public OrganizationService(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -418,6 +416,9 @@ public class OrganizationService : IOrganizationService
         }
     }
 
+    /// <summary>
+    /// Create a new organization in a cloud environment
+    /// </summary>
     public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
         bool provider = false)
     {
@@ -440,10 +441,11 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var flexibleCollectionsIsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        var flexibleCollectionsSignupEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
+
         var flexibleCollectionsV1IsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
         var organization = new Organization
         {
@@ -482,7 +484,15 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
-            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled,
+
+            // This feature flag indicates that new organizations should be automatically onboarded to
+            // Flexible Collections enhancements
+            FlexibleCollections = flexibleCollectionsSignupEnabled,
+
+            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
+            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
+            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
+            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
         };
 
@@ -534,6 +544,9 @@ public class OrganizationService : IOrganizationService
         }
     }
 
+    /// <summary>
+    /// Create a new organization on a self-hosted instance
+    /// </summary>
     public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
@@ -558,10 +571,8 @@ public class OrganizationService : IOrganizationService
 
         await ValidateSignUpPoliciesAsync(owner.Id);
 
-        var flexibleCollectionsMvpIsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-        var flexibleCollectionsV1IsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+        var flexibleCollectionsSignupEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
 
         var organization = new Organization
         {
@@ -603,8 +614,12 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
-            LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion,
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems
+            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion,
+            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems,
+
+            // This feature flag indicates that new organizations should be automatically onboarded to
+            // Flexible Collections enhancements
+            FlexibleCollections = flexibleCollectionsSignupEnabled,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -616,6 +631,10 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
+    /// <summary>
+    /// Private helper method to create a new organization.
+    /// This is common code used by both the cloud and self-hosted methods.
+    /// </summary>
     private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
         Guid ownerId, string ownerKey, string collectionName, bool withPayment)
     {
@@ -654,7 +673,10 @@ public class OrganizationService : IOrganizationService
                     AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-                    AccessAll = true,
+
+                    // If using Flexible Collections, AccessAll is deprecated and set to false.
+                    // If not using Flexible Collections, set AccessAll to true (previous behavior)
+                    AccessAll = !organization.FlexibleCollections,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
@@ -829,6 +851,7 @@ public class OrganizationService : IOrganizationService
     {
         var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
             .Select(i => i.invite.Type.Value));
+
         if (invitingUserId.HasValue && inviteTypes.Count > 0)
         {
             foreach (var (invite, _) in invites)
@@ -864,6 +887,18 @@ public class OrganizationService : IOrganizationService
         {
             throw new NotFoundException();
         }
+
+        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
+        if (organization.FlexibleCollections && invites.Any(i => i.invite.Type is OrganizationUserType.Manager))
+        {
+            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
+        }
+
+        if (organization.FlexibleCollections && invites.Any(i => i.invite.AccessAll))
+        {
+            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
+        }
+        // End Flexible Collections
 
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
@@ -1126,7 +1161,7 @@ public class OrganizationService : IOrganizationService
         // need to check the policy if the org has SSO enabled.
         var orgSsoLoginRequiredPolicyEnabled = orgSsoEnabled &&
                                                organization.UsePolicies &&
-                                               (await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso)).Enabled;
+                                               (await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso))?.Enabled == true;
 
         // Generate the list of org users and expiring tokens
         // create helper function to create expiring tokens
@@ -1356,6 +1391,19 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
+
+        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(user.OrganizationId);
+        if (organizationAbility?.FlexibleCollections == true && user.Type == OrganizationUserType.Manager)
+        {
+            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
+        }
+
+        if (organizationAbility?.FlexibleCollections == true && user.AccessAll)
+        {
+            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
+        }
+        // End Flexible Collections
 
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
         // updating Stripe
@@ -2007,11 +2055,6 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
-
-        if (FlexibleCollectionsIsEnabled && newType == OrganizationUserType.Manager && oldType is not OrganizationUserType.Manager)
-        {
-            throw new BadRequestException("Manager role is deprecated after Flexible Collections.");
-        }
     }
 
     private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
@@ -2427,7 +2470,10 @@ public class OrganizationService : IOrganizationService
             Key = null,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Invited,
-            AccessAll = true
+
+            // If using Flexible Collections, AccessAll is deprecated and set to false.
+            // If not using Flexible Collections, set AccessAll to true (previous behavior)
+            AccessAll = !organization.FlexibleCollections,
         };
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 

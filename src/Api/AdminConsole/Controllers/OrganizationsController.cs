@@ -40,7 +40,6 @@ public class OrganizationsController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IProviderRepository _providerRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IPaymentService _paymentService;
@@ -51,7 +50,6 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
@@ -64,7 +62,6 @@ public class OrganizationsController : Controller
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
-        IProviderRepository providerRepository,
         IOrganizationService organizationService,
         IUserService userService,
         IPaymentService paymentService,
@@ -75,7 +72,6 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IFeatureService featureService,
         GlobalSettings globalSettings,
@@ -87,7 +83,6 @@ public class OrganizationsController : Controller
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
-        _providerRepository = providerRepository;
         _organizationService = organizationService;
         _userService = userService;
         _paymentService = paymentService;
@@ -98,7 +93,6 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _featureService = featureService;
         _globalSettings = globalSettings;
@@ -243,6 +237,21 @@ public class OrganizationsController : Controller
 
         var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
         return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+    }
+
+    [HttpGet("{id}/risks-subscription-failure")]
+    public async Task<OrganizationRisksSubscriptionFailureResponseModel> RisksSubscriptionFailure(Guid id)
+    {
+        if (!await _currentContext.EditPaymentMethods(id))
+        {
+            return new OrganizationRisksSubscriptionFailureResponseModel(id, false);
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(id);
+
+        var risksSubscriptionFailure = await _paymentService.RisksSubscriptionFailure(organization);
+
+        return new OrganizationRisksSubscriptionFailureResponseModel(id, risksSubscriptionFailure);
     }
 
     [HttpPost("")]
@@ -775,7 +784,6 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{id}/collection-management")]
-    [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
@@ -790,7 +798,12 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+        if (!organization.FlexibleCollections)
+        {
+            throw new BadRequestException("Organization does not have collection enhancements enabled");
+        }
+
+        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
         if (!v1Enabled)
         {
