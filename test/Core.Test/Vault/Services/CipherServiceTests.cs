@@ -229,7 +229,7 @@ public class CipherServiceTests
     {
         var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
-        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        cipherRepository.ReplaceAsync(cipher, collectionIds, Arg.Any<bool>()).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
@@ -238,7 +238,7 @@ public class CipherServiceTests
         });
         await sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
             lastKnownRevisionDate);
-        await cipherRepository.Received(1).ReplaceAsync(cipher, collectionIds);
+        await cipherRepository.Received(1).ReplaceAsync(cipher, collectionIds, Arg.Any<bool>());
     }
 
     [Theory]
@@ -248,7 +248,7 @@ public class CipherServiceTests
     {
         var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
-        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(false);
+        cipherRepository.ReplaceAsync(cipher, collectionIds, Arg.Any<bool>()).Returns(false);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
@@ -270,7 +270,7 @@ public class CipherServiceTests
         var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
         var originalCipher = CoreHelpers.CloneObject(cipher);
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
-        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        cipherRepository.ReplaceAsync(cipher, collectionIds, Arg.Any<bool>()).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var pushNotificationService = sutProvider.GetDependency<IPushNotificationService>();
 
@@ -328,7 +328,7 @@ public class CipherServiceTests
                 c.GetAttachments()[v0AttachmentId].Key == "NewAttachmentKey"
                 &&
                 c.GetAttachments()[v0AttachmentId].FileName == "AFileNameRe-EncryptedWithOrgKey")
-            , collectionIds);
+            , collectionIds, Arg.Any<bool>());
 
         await pushNotificationService.Received(1).PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
@@ -341,7 +341,7 @@ public class CipherServiceTests
         var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
         var originalCipher = CoreHelpers.CloneObject(cipher);
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
-        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        cipherRepository.ReplaceAsync(cipher, collectionIds, Arg.Any<bool>()).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
 
@@ -421,7 +421,7 @@ public class CipherServiceTests
         var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
         var originalCipher = CoreHelpers.CloneObject(cipher);
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
-        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        cipherRepository.ReplaceAsync(cipher, collectionIds, Arg.Any<bool>()).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
@@ -524,7 +524,7 @@ public class CipherServiceTests
         var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
         var originalCipher = CoreHelpers.CloneObject(cipher);
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
-        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        cipherRepository.ReplaceAsync(cipher, collectionIds, Arg.Any<bool>()).Returns(true);
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
@@ -690,7 +690,7 @@ public class CipherServiceTests
     [BitAutoData]
     public async Task RestoreAsync_UpdatesUserCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
     {
-        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
+        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id, Arg.Any<bool>()).Returns(true);
 
         var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
         cipher.DeletedDate = initialRevisionDate;
@@ -707,7 +707,7 @@ public class CipherServiceTests
     [BitAutoData]
     public async Task RestoreAsync_UpdatesOrganizationCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
     {
-        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
+        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id, Arg.Any<bool>()).Returns(true);
 
         var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
         cipher.DeletedDate = initialRevisionDate;

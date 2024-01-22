@@ -131,31 +131,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
-    {
-        var organizationUser = await base.GetByIdAsync(id);
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = await (
-                from ou in dbContext.OrganizationUsers
-                join cu in dbContext.CollectionUsers
-                    on ou.Id equals cu.OrganizationUserId
-                where !ou.AccessAll &&
-                    ou.Id == id
-                select cu).ToListAsync();
-            var collections = query.Select(cu => new CollectionAccessSelection
-            {
-                Id = cu.CollectionId,
-                ReadOnly = cu.ReadOnly,
-                HidePasswords = cu.HidePasswords,
-                Manage = cu.Manage,
-            });
-            return new Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>(
-                organizationUser, collections.ToList());
-        }
-    }
-
     public async Task<Core.Entities.OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -229,16 +204,30 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>> GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>>
+        GetDetailsByIdWithCollectionsAsync(Guid id, bool flexibleCollectionsIsEnabled)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from ou in dbContext.OrganizationUsers
+
+            IQueryable<CollectionUser> query;
+            if (flexibleCollectionsIsEnabled)
+            {
+                query = from ou in dbContext.OrganizationUsers
+                        join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
+                        where ou.Id == id
+                        select cu;
+            }
+            else
+            {
+                query = from ou in dbContext.OrganizationUsers
                         join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
                         where !ou.AccessAll && ou.Id == id
                         select cu;
+            }
+
             var collections = await query.Select(cu => new CollectionAccessSelection
             {
                 Id = cu.CollectionId,
@@ -246,6 +235,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 HidePasswords = cu.HidePasswords,
                 Manage = cu.Manage
             }).ToListAsync();
+
             return new Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>(organizationUserUserDetails, collections);
         }
     }
@@ -315,8 +305,25 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId)
     {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new OrganizationUserUserDetailsViewQuery();
+            var users = await (from ou in view.Run(dbContext)
+                               where ou.OrganizationId == organizationId
+                               select ou).ToListAsync();
+            return users;
+        }
+    }
+
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId,
+        bool includeGroups, bool includeCollections, bool flexibleCollectionsIsEnabled)
+    {
+        // Note: Dapper implementation used AccessAll logic so it needed the feature flag
+        // EF does not use AccessAll logic, so the parameter is unused here but still added to fit the interface
+
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);

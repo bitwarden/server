@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
@@ -23,6 +24,9 @@ public class MembersController : Controller
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IFeatureService _featureService;
+
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -30,7 +34,8 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -38,6 +43,7 @@ public class MembersController : Controller
         _userService = userService;
         _currentContext = currentContext;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _featureService = featureService;
     }
 
     /// <summary>
@@ -53,7 +59,8 @@ public class MembersController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(Guid id)
     {
-        var userDetails = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
+        var userDetails =
+            await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id, FlexibleCollectionsIsEnabled);
         var orgUser = userDetails?.Item1;
         if (orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
         {

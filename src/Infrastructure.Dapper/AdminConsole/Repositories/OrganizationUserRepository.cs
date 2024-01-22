@@ -172,21 +172,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryMultipleAsync(
-                "[dbo].[OrganizationUser_ReadWithCollectionsById]",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure);
-
-            var user = (await results.ReadAsync<OrganizationUser>()).SingleOrDefault();
-            var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
-            return new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(user, collections);
-        }
-    }
-
     public async Task<OrganizationUserUserDetails> GetDetailsByIdAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -199,13 +184,18 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.SingleOrDefault();
         }
     }
+
     public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>>
-        GetDetailsByIdWithCollectionsAsync(Guid id)
+        GetDetailsByIdWithCollectionsAsync(Guid id, bool flexibleCollectionsIsEnabled)
     {
+        var sprocName = flexibleCollectionsIsEnabled
+            ? "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById_V2]"
+            : "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]",
+                sprocName,
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
@@ -215,7 +205,20 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId,
+        bool includeGroups, bool includeCollections, bool flexibleCollectionsIsEnabled)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -246,8 +249,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             if (includeCollections)
             {
+                var userCollectionsSprocName = flexibleCollectionsIsEnabled
+                    ? "[dbo].[CollectionUser_ReadByOrganizationUserIds_V2]"
+                    : "[dbo].[CollectionUser_ReadByOrganizationUserIds]";
+
                 userCollections = (await connection.QueryAsync<CollectionUser>(
-                    "[dbo].[CollectionUser_ReadByOrganizationUserIds]",
+                    userCollectionsSprocName,
                     new { OrganizationUserIds = orgUserIds },
                     commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
             }

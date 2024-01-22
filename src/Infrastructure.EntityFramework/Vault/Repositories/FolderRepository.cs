@@ -39,6 +39,13 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
         }
     }
 
+    // The SQL repository has logic to remove references to the deleted folder. That logic depends on AccessAll access
+    // logic, which is being deprecated, so it calls different queries based on the FlexibleCollections feature flag.
+    // However, EF doesn't update folder references, so it can just delete the object without reference to the feature flag.
+    // This is just here to maintain the same interface.
+    public async Task DeleteAsync(Core.Vault.Entities.Folder folder, bool useFlexibleCollections) =>
+        await base.DeleteAsync(folder);
+
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Core.Vault.Entities.Folder> folders)
