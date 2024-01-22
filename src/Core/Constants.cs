@@ -94,7 +94,6 @@ public static class FeatureFlagKeys
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
     public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string VaultOnboarding = "vault-onboarding";
-    public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
     /// <summary>
     /// Deprecated - never used, do not use. Will always default to false. Will be deleted as part of Flexible Collections cleanup
@@ -102,7 +101,6 @@ public static class FeatureFlagKeys
     public const string FlexibleCollections = "flexible-collections-disabled-do-not-use";
     public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
     public const string BulkCollectionAccess = "bulk-collection-access";
-    public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
