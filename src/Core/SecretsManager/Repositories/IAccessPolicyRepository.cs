@@ -22,4 +22,7 @@ public interface IAccessPolicyRepository
     Task<IEnumerable<BaseAccessPolicy>> ReplaceServiceAccountPeopleAsync(ServiceAccountPeopleAccessPolicies peopleAccessPolicies, Guid userId);
     Task<IEnumerable<BaseAccessPolicy>> GetServiceAccountPoliciesByGrantedProjectIdAsync(Guid projectId);
     Task<IEnumerable<BaseAccessPolicy>> ReplaceProjectServiceAccountsAsync(ProjectServiceAccountsAccessPolicies serviceAccountsAccessPolicies);
+    Task<IEnumerable<BaseAccessPolicy>> ReplaceServiceAccountProjectsAsync(ProjectServiceAccountsAccessPolicies serviceAccountsAccessPolicies);
+    Task<IEnumerable<BaseAccessPolicy>> GetProjectPoliciesByGrantedServiceAccountIdAsync(Guid serviceAccountId);
+
 }

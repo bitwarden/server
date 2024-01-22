@@ -9,14 +9,16 @@ public class SameOrganizationQuery : ISameOrganizationQuery
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IProjectRepository _projectRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public SameOrganizationQuery(IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository, IServiceAccountRepository serviceAccountRepository)
+        IGroupRepository groupRepository, IServiceAccountRepository serviceAccountRepository, IProjectRepository projectRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
         _serviceAccountRepository = serviceAccountRepository;
+        _projectRepository = projectRepository;
     }
 
     public async Task<bool> OrgUsersInTheSameOrgAsync(List<Guid> organizationUserIds, Guid organizationId)
@@ -38,5 +40,10 @@ public class SameOrganizationQuery : ISameOrganizationQuery
         var serviceAccounts = (await _serviceAccountRepository.GetManyByIds(serviceAccountIds)).ToList();
         return serviceAccounts.All(serviceAccount => serviceAccount.OrganizationId == organizationId) &&
                serviceAccounts.Count == serviceAccountIds.Count;
+    }
+
+    public async Task<bool> ProjectsInTheSameOrgAsync(List<Guid> projectIds, Guid organizationId)
+    {
+        return await _projectRepository.ProjectsAreInOrganization(projectIds, organizationId);
     }
 }

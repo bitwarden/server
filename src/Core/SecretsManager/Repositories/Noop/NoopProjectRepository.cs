@@ -62,4 +62,6 @@ public class NoopProjectRepository : IProjectRepository
     {
         return Task.FromResult(0);
     }
+
+    public Task<(bool Read, bool Write)> AccessToProjectsAsync(List<Guid> projectIds, Guid userId, AccessClientType accessType) => throw new NotImplementedException();
 }

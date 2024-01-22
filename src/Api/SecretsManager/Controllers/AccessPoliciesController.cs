@@ -338,6 +338,42 @@ public class AccessPoliciesController : Controller
         return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
     }
 
+    [HttpGet("/service-accounts/{id}/access-policies/projects")]
+    public async Task<ProjectServiceAccountsAccessPoliciesResponseModel> GetServiceAccountProjectsAccessPoliciesAsync(
+     [FromRoute] Guid id)
+    {
+        var serviceAccount
+            = await _serviceAccountRepository.GetByIdAsync(id);
+        await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
+
+        var results = await _accessPolicyRepository.GetProjectPoliciesByGrantedServiceAccountIdAsync(id);
+        return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
+    }
+
+    [HttpPut("/service-accounts/{id}/access-policies/projects")]
+    public async Task<ProjectServiceAccountsAccessPoliciesResponseModel> PutServiceAccountProjectsAccessPoliciesAsync(
+        [FromRoute] Guid id,
+        [FromBody] ServiceAccountsAccessPoliciesRequestModel request)
+    {
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var serviceAccountProjectsAccessPolicies = request.ToServiceAccountProjectsAccessPolicies(id, serviceAccount.OrganizationId);
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, serviceAccountProjectsAccessPolicies,
+            ServiceAccountProjectsAccessPoliciesOperations.Replace);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var results = await _accessPolicyRepository.ReplaceServiceAccountProjectsAsync(serviceAccountProjectsAccessPolicies);
+        return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
+    }
+
     private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)
     {
         if (project == null)

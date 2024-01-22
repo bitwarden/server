@@ -130,7 +130,7 @@ public class AccessPolicyRequest
             Write = Write
         };
 
-    public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(Guid projectId, Guid organizationId) =>
+    public ServiceAccountProjectAccessPolicy ToProjectServiceAccountAccessPolicy(Guid projectId, Guid organizationId) =>
         new()
         {
             ServiceAccountId = GranteeId,
@@ -159,4 +159,14 @@ public class AccessPolicyRequest
             Read = Read,
             Write = Write
         };
+
+    public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(Guid serviceAccountId, Guid organizationId) =>
+         new()
+         {
+             ServiceAccountId = serviceAccountId,
+             GrantedProjectId = GranteeId,
+             GrantedProject = new Project { OrganizationId = organizationId, Id = GranteeId },
+             Read = Read,
+             Write = Write
+         };
 }

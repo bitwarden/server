@@ -15,6 +15,7 @@ public interface IProjectRepository
     Task DeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task<IEnumerable<Project>> ImportAsync(IEnumerable<Project> projects);
     Task<(bool Read, bool Write)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType);
+    Task<(bool Read, bool Write)> AccessToProjectsAsync(List<Guid> projectIds, Guid userId, AccessClientType accessType);
     Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId);
     Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId);
 }

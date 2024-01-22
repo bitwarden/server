@@ -250,6 +250,38 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         return await GetServiceAccountPoliciesByGrantedProjectIdAsync(newProjectServiceAccountsAccessPolicies.Id);
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> ReplaceServiceAccountProjectsAsync(
+        ProjectServiceAccountsAccessPolicies newServiceAccountProjectsAccessPolicies)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var currentServiceAccountProjectsPolicyEntities = await dbContext.AccessPolicies.Where(ap =>
+            ap.Discriminator == AccessPolicyDiscriminator.ServiceAccountProject &&
+            ((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId == newServiceAccountProjectsAccessPolicies.Id).ToListAsync();
+
+        if (newServiceAccountProjectsAccessPolicies.ServiceAccountProjectsAccessPolicies == null || !newServiceAccountProjectsAccessPolicies.ServiceAccountProjectsAccessPolicies.Any())
+        {
+            dbContext.RemoveRange(currentServiceAccountProjectsPolicyEntities);
+        }
+        else
+        {
+            foreach (var ServiceAccountProjectsPolicyEntity in currentServiceAccountProjectsPolicyEntities.Where(entity =>
+                         newServiceAccountProjectsAccessPolicies.ServiceAccountProjectsAccessPolicies.All(ap =>
+                             ((Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy)ap).GrantedProjectId !=
+                             ((ServiceAccountProjectAccessPolicy)entity).GrantedProjectId)))
+            {
+                dbContext.Remove(ServiceAccountProjectsPolicyEntity);
+            }
+        }
+
+        await UpsertServiceAccountProjectsPoliciesAsync(dbContext,
+            newServiceAccountProjectsAccessPolicies.ToBaseAccessPolicies().Select(MapToEntity).ToList(), currentServiceAccountProjectsPolicyEntities);
+
+        await dbContext.SaveChangesAsync();
+        return await GetServiceAccountPoliciesByGrantedProjectIdAsync(newServiceAccountProjectsAccessPolicies.Id);
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
      GetServiceAccountPoliciesByGrantedProjectIdAsync(Guid projectId)
     {
@@ -453,6 +485,22 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         return await GetPeoplePoliciesByGrantedServiceAccountIdAsync(peopleAccessPolicies.Id, userId);
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
+     GetProjectPoliciesByGrantedServiceAccountIdAsync(Guid serviceAccountId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var entities = await dbContext.AccessPolicies.Where(ap =>
+                ap.Discriminator == AccessPolicyDiscriminator.ServiceAccountProject &&
+                (((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId == serviceAccountId))
+            .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).GrantedProject)
+            .ToListAsync();
+
+        return entities.Select(MapToCore);
+
+    }
+
     private static async Task UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
         List<BaseAccessPolicy> policies, IReadOnlyCollection<AccessPolicy> userPolicyEntities,
         IReadOnlyCollection<AccessPolicy> groupPolicyEntities)
@@ -553,6 +601,34 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             {
                 ServiceAccountProjectAccessPolicy ap => currentProjectServiceAccountAccessPolicies.FirstOrDefault(e =>
                     ((ServiceAccountProjectAccessPolicy)e).ServiceAccountId == ap.ServiceAccountId),
+                _ => null
+            };
+
+            if (currentEntity != null)
+            {
+                dbContext.AccessPolicies.Attach(currentEntity);
+                currentEntity.Read = updatedEntity.Read;
+                currentEntity.Write = updatedEntity.Write;
+                currentEntity.RevisionDate = currentDate;
+            }
+            else
+            {
+                updatedEntity.SetNewId();
+                await dbContext.AddAsync(updatedEntity);
+            }
+        }
+    }
+
+    private static async Task UpsertServiceAccountProjectsPoliciesAsync(DatabaseContext dbContext,
+List<BaseAccessPolicy> newPolicies, IReadOnlyCollection<AccessPolicy> currentProjectServiceAccountAccessPolicies)
+    {
+        var currentDate = DateTime.UtcNow;
+        foreach (var updatedEntity in newPolicies)
+        {
+            var currentEntity = updatedEntity switch
+            {
+                ServiceAccountProjectAccessPolicy ap => currentProjectServiceAccountAccessPolicies.FirstOrDefault(e =>
+                    ((ServiceAccountProjectAccessPolicy)e).GrantedProjectId == ap.GrantedProjectId),
                 _ => null
             };
 

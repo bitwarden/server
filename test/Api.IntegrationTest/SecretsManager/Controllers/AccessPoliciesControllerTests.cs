@@ -1373,6 +1373,69 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         Assert.Equal(result.ServiceAccountsAccessPolicies.First().Id, createdAccessPolicy.Id);
     }
 
+
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task GetServiceAccountProjectsAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await LoginAsync(_email);
+
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-policies/project"); //TODO check endpoint name
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetServiceAccountProjectAccessPolicies_ReturnsEmpty()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await LoginAsync(_email);
+
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-policies/projects"); //TODO check endpoint name
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.Empty(result!.UserAccessPolicies);
+        Assert.Empty(result.GroupAccessPolicies);
+    }
+
+    [Fact]
+    public async Task GetServiceAccountProjectsAccessPolicies_NoPermission_NotFound()
+    {
+        await _organizationHelper.Initialize(true, true, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = orgUser.OrganizationId,
+            Name = _mockEncryptedString
+        });
+
+        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-policies/projects");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
     private async Task<RequestSetupData> SetupAccessPolicyRequest(Guid organizationId)
     {
         var project = await _projectRepository.CreateAsync(new Project

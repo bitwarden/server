@@ -11,7 +11,7 @@ public class ServiceAccountsAccessPoliciesRequestModel
     public ProjectServiceAccountsAccessPolicies ToProjectServiceAccountsAccessPolicies(Guid grantedProjectId, Guid organizationId)
     {
         var projectServiceAccountsAccessPolicies = ProjectServiceAccountsAccessPolicyRequests?
-            .Select(x => x.ToServiceAccountProjectAccessPolicy(grantedProjectId, organizationId)).ToList();
+            .Select(x => x.ToProjectServiceAccountAccessPolicy(grantedProjectId, organizationId)).ToList();
         var policies = new List<BaseAccessPolicy>();
 
         if (projectServiceAccountsAccessPolicies != null)
@@ -25,6 +25,27 @@ public class ServiceAccountsAccessPoliciesRequestModel
         return new ProjectServiceAccountsAccessPolicies
         {
             Id = grantedProjectId,
+            OrganizationId = organizationId,
+            ServiceAccountProjectsAccessPolicies = projectServiceAccountsAccessPolicies,
+        };
+    }
+
+    public ProjectServiceAccountsAccessPolicies ToServiceAccountProjectsAccessPolicies(Guid serviceAccountId, Guid organizationId)
+    {
+        var projectServiceAccountsAccessPolicies = ProjectServiceAccountsAccessPolicyRequests?
+            .Select(x => x.ToServiceAccountProjectAccessPolicy(serviceAccountId, organizationId)).ToList();
+        var policies = new List<BaseAccessPolicy>();
+
+        if (projectServiceAccountsAccessPolicies != null)
+        {
+            policies.AddRange(projectServiceAccountsAccessPolicies);
+        }
+
+        AccessPolicyHelpers.CheckForDistinctAccessPolicies(policies);
+
+        return new ProjectServiceAccountsAccessPolicies
+        {
+            Id = serviceAccountId,
             OrganizationId = organizationId,
             ServiceAccountProjectsAccessPolicies = projectServiceAccountsAccessPolicies,
         };
