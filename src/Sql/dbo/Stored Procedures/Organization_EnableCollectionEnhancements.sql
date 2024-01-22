@@ -126,6 +126,8 @@ BEGIN
                     INNER JOIN #TempStep3 temp ON cu.[OrganizationUserId] = temp.[OrganizationUserId];
 
                     -- Insert rows to [dbo].[CollectionUser] with [Manage] = 1 using the temporary table
+                    -- This is for orgUsers who are Managers / EditAssignedCollections but have access via a group
+                    -- We cannot give the whole group Manage permissions so we have to give them a direct assignment
                     INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
                     SELECT cg.[CollectionId], ou.[OrganizationUserId], 0, 0, 1
                     FROM [dbo].[CollectionGroup] cg
