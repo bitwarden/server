@@ -2,23 +2,23 @@
 name: Build
 
 on:
-  push:
-    branches-ignore:
-      - "l10n_master"
-      - "gh-pages"
-    paths-ignore:
-      - ".github/workflows/**"
   workflow_dispatch:
+  push:
+    branches:
+      - "main"
+      - "rc"
+      - "hotfix-rc"
+  pull_request:
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
 jobs:
   cloc:
-    name: CLOC
+    name: Count lines of code
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
       - name: Install cloc
@@ -33,71 +33,19 @@ jobs:
     name: Lint
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
-      - name: Set up dotnet
+      - name: Set up .NET
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
-      - name: Verify Format
+      - name: Verify format
         run: dotnet format --verify-no-changes
-
-  testing:
-    name: Testing
-    runs-on: ubuntu-22.04
-    env:
-      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
-
-      - name: Set up dotnet
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-
-      - name: Print environment
-        run: |
-          dotnet --info
-          nuget help | grep Version
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub event: $GITHUB_EVENT"
-
-      - name: Restore
-        run: dotnet restore --locked-mode
-        shell: pwsh
-
-      - name: Remove SQL proj
-        run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
-
-      - name: Build OSS solution
-        run: dotnet build bitwarden-server.sln -p:Configuration=Debug -p:DefineConstants="OSS" --verbosity minimal
-        shell: pwsh
-
-      - name: Build solution
-        run: dotnet build bitwarden-server.sln -p:Configuration=Debug --verbosity minimal
-        shell: pwsh
-
-      - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx"
-        shell: pwsh
-
-      - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx"
-        shell: pwsh
-
-      - name: Report test results
-        uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226 # v1.6.0
-        if: always()
-        with:
-          name: Test Results
-          path: "**/*-test-results.trx"
-          reporter: dotnet-trx
-          fail-on-error: true
 
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-22.04
     needs:
-      - testing
       - lint
     strategy:
       fail-fast: false
@@ -134,10 +82,10 @@ jobs:
             base_path: ./bitwarden_license/src
             node: true
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
-      - name: Set up dotnet
+      - name: Set up .NET
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
       - name: Set up Node
@@ -155,14 +103,6 @@ jobs:
           npm --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-
-      - name: Restore/Clean project
-        working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
-        run: |
-          echo "Restore"
-          dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
 
       - name: Build node
         if: ${{ matrix.node }}
@@ -245,7 +185,7 @@ jobs:
             base_path: ./bitwarden_license/src
             dotnet: true
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
       - name: Check Branch to Publish
@@ -262,7 +202,7 @@ jobs:
           fi
 
       ########## ACRs ##########
-      - name: Login to Azure - PROD Subscription
+      - name: Log in to Azure - production subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
@@ -270,7 +210,7 @@ jobs:
       - name: Login to PROD ACR
         run: az acr login -n bitwardenprod
 
-      - name: Login to Azure - CI Subscription
+      - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
@@ -292,7 +232,7 @@ jobs:
           fi
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Setup project name
+      - name: Set up project name
         id: setup
         run: |
           PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
@@ -320,7 +260,7 @@ jobs:
         with:
           name: ${{ matrix.project_name }}.zip
 
-      - name: Setup build artifact
+      - name: Set up build artifact
         if: ${{ matrix.dotnet }}
         run: |
           mkdir -p ${{ matrix.base_path}}/${{ matrix.project_name }}/obj/build-output/publish
@@ -343,22 +283,19 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
-      - name: Set up dotnet
+      - name: Set up .NET
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
-      - name: Login to Azure - PROD Subscription
+      - name: Log in to Azure - production subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to PROD ACR
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
-
-      - name: Restore
-        run: dotnet tool restore
 
       - name: Make Docker stubs
         if: github.ref == 'refs/heads/main' ||
@@ -443,10 +380,8 @@ jobs:
       - name: Build Swagger
         run: |
           cd ./src/Api
-          echo "Restore"
-          dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
+          echo "Restore tools"
+          dotnet tool restore
           echo "Publish"
           dotnet publish -c "Release" -o obj/build-output/publish
 
@@ -467,7 +402,7 @@ jobs:
           if-no-files-found: error
 
   build-mssqlmigratorutility:
-    name: Build MsSqlMigratorUtility
+    name: Build MSSQL migrator utility
     runs-on: ubuntu-22.04
     needs: lint
     defaults:
@@ -482,10 +417,10 @@ jobs:
           - linux-x64
           - win-x64
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
-      - name: Set up dotnet
+      - name: Set up .NET
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
       - name: Print environment
@@ -495,17 +430,12 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Restore project
-        run: |
-          echo "Restore"
-          dotnet restore
-
       - name: Publish project
         run: |
           dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} -p:PublishSingleFile=true \
           -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
 
-      - name: Upload project artifact Windows
+      - name: Upload project artifact for Windows
         if: ${{ contains(matrix.target, 'win') == true }}
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
@@ -521,13 +451,12 @@ jobs:
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
 
-
   self-host-build:
     name: Trigger self-host build
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
-      - name: Login to Azure - CI Subscription
+      - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
@@ -560,7 +489,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
-      - name: Login to Azure - CI Subscription
+      - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
@@ -595,7 +524,6 @@ jobs:
     needs:
       - cloc
       - lint
-      - testing
       - build-artifacts
       - build-docker
       - upload
@@ -639,7 +567,7 @@ jobs:
               exit 1
           fi
 
-      - name: Login to Azure - CI subscription
+      - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         if: failure()
         with:

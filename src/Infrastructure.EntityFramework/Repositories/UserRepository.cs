@@ -210,6 +210,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             var transaction = await dbContext.Database.BeginTransactionAsync();
 
+            dbContext.WebAuthnCredentials.RemoveRange(dbContext.WebAuthnCredentials.Where(w => w.UserId == user.Id));
             dbContext.Ciphers.RemoveRange(dbContext.Ciphers.Where(c => c.UserId == user.Id));
             dbContext.Folders.RemoveRange(dbContext.Folders.Where(f => f.UserId == user.Id));
             dbContext.AuthRequests.RemoveRange(dbContext.AuthRequests.Where(s => s.UserId == user.Id));

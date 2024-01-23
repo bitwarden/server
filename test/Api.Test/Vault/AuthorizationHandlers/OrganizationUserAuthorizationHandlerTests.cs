@@ -1,10 +1,10 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Test.AutoFixture;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +14,6 @@ using Xunit;
 namespace Bit.Api.Test.Vault.AuthorizationHandlers;
 
 [SutProviderCustomize]
-[FeatureServiceCustomize(FeatureFlagKeys.FlexibleCollections)]
 public class OrganizationUserAuthorizationHandlerTests
 {
     [Theory]
@@ -26,8 +25,9 @@ public class OrganizationUserAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility(sutProvider, organization, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserOperations.ReadAll(organization.Id) },
@@ -48,8 +48,9 @@ public class OrganizationUserAuthorizationHandlerTests
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
         organization.Type = OrganizationUserType.User;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility(sutProvider, organization, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserOperations.ReadAll(organization.Id) },
@@ -83,7 +84,6 @@ public class OrganizationUserAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = editAnyCollection,
@@ -91,6 +91,8 @@ public class OrganizationUserAuthorizationHandlerTests
             ManageGroups = manageGroups,
             ManageUsers = manageUsers
         };
+
+        ArrangeOrganizationAbility(sutProvider, organization, limitCollectionCreationDeletion);
 
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserOperations.ReadAll(organization.Id) },
@@ -116,7 +118,6 @@ public class OrganizationUserAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
@@ -125,6 +126,8 @@ public class OrganizationUserAuthorizationHandlerTests
             ManageUsers = false
         };
 
+        ArrangeOrganizationAbility(sutProvider, organization, true);
+
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
@@ -132,6 +135,7 @@ public class OrganizationUserAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -141,17 +145,20 @@ public class OrganizationUserAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task HandleRequirementAsync_WhenMissingOrgAccess_NoSuccess(
         Guid userId,
-        Guid organizationId,
+        CurrentContextOrganization organization,
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
     {
+        ArrangeOrganizationAbility(sutProvider, organization, true);
+
         var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserOperations.ReadAll(organizationId) },
+            new[] { OrganizationUserOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
             null
         );
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.False(context.HasSucceeded);
@@ -190,5 +197,18 @@ public class OrganizationUserAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.True(context.HasFailed);
+    }
+
+    private static void ArrangeOrganizationAbility(
+        SutProvider<OrganizationUserAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization, bool limitCollectionCreationDeletion)
+    {
+        var organizationAbility = new OrganizationAbility();
+        organizationAbility.Id = organization.Id;
+        organizationAbility.FlexibleCollections = true;
+        organizationAbility.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
+
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
     }
 }
