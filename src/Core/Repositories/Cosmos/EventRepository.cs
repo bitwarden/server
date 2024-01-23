@@ -99,6 +99,8 @@ public class EventRepository : IEventRepository
         {
             item = new EventItem(e);
         }
+        // TODO: How should we handle the partition yet? Perhaps something like table storage did with
+        // orgId, userId, providerId
         await _container.CreateItemAsync(item, new PartitionKey(item.Id), new ItemRequestOptions
         {
             // ref: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/best-practice-dotnet#best-practices-for-write-heavy-workloads
