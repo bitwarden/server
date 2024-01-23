@@ -460,12 +460,12 @@ public abstract class BaseRequestValidator<T> where T : class
                 // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
                 if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
                 {
-                    if (type == TwoFactorProviderType.Duo)
+                    if (type == TwoFactorProviderType.OrganizationDuo)
                     {
                         if (!token.Contains(':'))
                         {
                             // We have to send the provider to the DuoUniversalPromptService to create the DuoClient
-                            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+                            var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
                             return await _duoUniversalPromptService.ValidateAsync(token, provider, user);
                         }
                     }

@@ -83,7 +83,8 @@ public class TemporaryDuoUniversalPromptService : ITemporaryDuoUniversalPromptSe
         }
 
         // If the result of the exchange doesn't throw an exception and it's not null, then it's valid
-        return duoClient.ExchangeAuthorizationCodeFor2faResult(token, user.Email) != null;
+        var res = await duoClient.ExchangeAuthorizationCodeFor2faResult(token, user.Email);
+        return res.AuthResult.Result == "allow";
     }
 
     private bool HasProperMetaData(TwoFactorProvider provider)
@@ -102,7 +103,7 @@ public class TemporaryDuoUniversalPromptService : ITemporaryDuoUniversalPromptSe
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want 
         // to redirect back to the correct client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-        var redirectUri = string.Format("{0}/duo-redirect-connector?client={1}",
+        var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
             _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
 
         var client = new Duo.ClientBuilder(
