@@ -105,7 +105,7 @@ BEGIN
 
                     -- Update OrganizationUser to clear AccessAll flag
                     UPDATE OU
-                    SET [AccessAll] = 0
+                    SET [AccessAll] = 0, [RevisionDate] = GETUTCDATE()
                     FROM [dbo].[OrganizationUser] OU
                     INNER JOIN #TempUsersAccessAll TU ON OU.[Id] = TU.[OrganizationUserId];
 
