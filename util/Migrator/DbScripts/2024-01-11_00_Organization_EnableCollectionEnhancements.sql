@@ -77,9 +77,9 @@ BEGIN
                     LEFT JOIN [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = TG.[GroupId]
                     WHERE CG.[CollectionId] IS NULL;
 
-                    -- Update Group to clear AccessAll flag
+                    -- Update Group to clear AccessAll flag and update RevisionDate
                     UPDATE G
-                    SET [AccessAll] = 0
+                    SET [AccessAll] = 0, [RevisionDate] = GETUTCDATE()
                     FROM [dbo].[Group] G
                     INNER JOIN #TempGroupsAccessAll TG ON G.[Id] = TG.[GroupId];
 
