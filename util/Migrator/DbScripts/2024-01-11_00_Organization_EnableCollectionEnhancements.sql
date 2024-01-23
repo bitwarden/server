@@ -90,24 +90,17 @@ BEGIN
                         target.[ReadOnly] = 0,
                         target.[HidePasswords] = 0,
                         target.[Manage] = 0
-                        FROM [dbo].[CollectionUser] AS target
-                        INNER JOIN (
-                            SELECT C.[Id] AS [CollectionId], TU.[OrganizationUserId]
-                            FROM [dbo].[Collection] C
-                            INNER JOIN #TempUsersAccessAll TU ON C.[OrganizationId] = TU.[OrganizationId]
-                        ) AS source
-                    ON target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId];
+                    FROM [dbo].[CollectionUser] AS target
+                    INNER JOIN [dbo].[Collection] AS C ON target.[CollectionId] = C.[Id]
+                    INNER JOIN #TempUsersAccessAll AS TU ON C.[OrganizationId] = TU.[OrganizationId] AND target.[OrganizationUserId] = TU.[OrganizationUserId];
 
                     -- Insert new rows into [dbo].[CollectionUser]
                     INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
-                    SELECT source.[CollectionId], source.[OrganizationUserId], 0, 0, 0
-                    FROM (
-                             SELECT C.[Id] AS [CollectionId], TU.[OrganizationUserId]
-                             FROM [dbo].[Collection] C
-                             INNER JOIN #TempUsersAccessAll TU ON C.[OrganizationId] = TU.[OrganizationId]
-                         ) AS source
-                    LEFT JOIN [dbo].[CollectionUser] AS target
-                        ON target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId]
+                    SELECT C.[Id] AS [CollectionId], TU.[OrganizationUserId], 0, 0, 0
+                    FROM [dbo].[Collection] C
+                    INNER JOIN #TempUsersAccessAll TU ON C.[OrganizationId] = TU.[OrganizationId]
+                    LEFT JOIN [dbo].[CollectionUser] target
+                        ON target.[CollectionId] = C.[Id] AND target.[OrganizationUserId] = TU.[OrganizationUserId]
                     WHERE target.[CollectionId] IS NULL;
 
                     -- Update OrganizationUser to clear AccessAll flag
