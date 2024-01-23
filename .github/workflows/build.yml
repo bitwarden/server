@@ -226,11 +226,18 @@ jobs:
       - name: Generate Docker image tag
         id: tag
         run: |
-          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ $(grep "pull" <<< "${GITHUB_REF}") ]]; then
+            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s#/#-#g")
+          else
+            IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
+          fi
+
           if [[ "$IMAGE_TAG" == "main" ]]; then
             IMAGE_TAG=dev
           fi
+
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "### :mega: Docker Image Tag: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
 
       - name: Set up project name
         id: setup
