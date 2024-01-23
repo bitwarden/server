@@ -99,8 +99,8 @@ public class ImportCiphersController : Controller
         }
 
         //If flexible collections is disabled the user cannot continue with the import
-        var orgFlexibleCollections = (await _organizationRepository.GetByIdAsync(orgId)).FlexibleCollections;
-        if (!orgFlexibleCollections)
+        var orgFlexibleCollections = await _organizationRepository.GetByIdAsync(orgId);
+        if (!orgFlexibleCollections?.FlexibleCollections ?? false)
         {
             return false;
         }
