@@ -442,7 +442,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     {
                         if (!token.Contains(':'))
                         {
-                            // We have to send the provider to the DuoUniversalPromptService to create the DuoClient
+                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
                             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
                             return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
                         }
@@ -464,7 +464,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     {
                         if (!token.Contains(':'))
                         {
-                            // We have to send the provider to the DuoUniversalPromptService to create the DuoClient
+                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
                             var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
                             return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
                         }
