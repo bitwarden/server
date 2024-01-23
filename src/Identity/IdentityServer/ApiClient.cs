@@ -15,7 +15,7 @@ public class ApiClient : Client
         ClientId = id;
         AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode, WebAuthnGrantValidator.GrantType };
         RefreshTokenExpiration = TokenExpiration.Sliding;
-        RefreshTokenUsage = TokenUsage.ReUse;
+        RefreshTokenUsage = TokenUsage.OneTimeOnly;
         SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
         AbsoluteRefreshTokenLifetime = 0; // forever
         UpdateAccessTokenClaimsOnRefresh = true;
