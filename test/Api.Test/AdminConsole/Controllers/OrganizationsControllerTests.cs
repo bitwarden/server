@@ -363,8 +363,7 @@ public class OrganizationsControllerTests : IDisposable
 
         await _sut.EnableCollectionEnhancements(organization.Id);
 
-        // TODO: assert migration method on repository was called
-
+        await _organizationRepository.Received(1).EnableCollectionEnhancements(organization.Id);
         await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
             Arg.Is<Organization>(o =>
                 o.Id == organization.Id &&
@@ -380,8 +379,7 @@ public class OrganizationsControllerTests : IDisposable
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
 
-        // TODO: assert migration method on repository was NOT called
-
+        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
         await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 
@@ -395,8 +393,7 @@ public class OrganizationsControllerTests : IDisposable
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
         Assert.Contains("has already been migrated", exception.Message);
 
-        // TODO: assert migration method on repository was NOT called
-
+        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
         await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 }

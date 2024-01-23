@@ -169,4 +169,16 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             new { OrganizationId = organizationId },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task EnableCollectionEnhancements(Guid id)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[Organization_EnableCollectionEnhancements]",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
 }
