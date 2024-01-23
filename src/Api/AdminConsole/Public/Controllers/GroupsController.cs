@@ -111,7 +111,7 @@ public class GroupsController : Controller
     {
         var group = model.ToGroup(_currentContext.OrganizationId.Value);
         var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organization.FlexibleCollections));
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organization.FlexibleCollections)).ToList();
         await _createGroupCommand.CreateGroupAsync(group, organization, associations);
         var response = new GroupResponseModel(group, associations);
         return new JsonResult(response);

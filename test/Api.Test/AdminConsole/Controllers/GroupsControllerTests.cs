@@ -32,7 +32,7 @@ public class GroupsControllerTests
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
                 g.AccessAll == groupRequestModel.AccessAll),
             organization,
-            Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+            Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
