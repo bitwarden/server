@@ -38,7 +38,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceService _deviceService;
     private readonly IEventService _eventService;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
-    private readonly ITemporaryDuoUniversalPromptService _duoUniversalPromptService;
+    private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -64,7 +64,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        ITemporaryDuoUniversalPromptService duoUniversalPromptService,
+        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
@@ -86,7 +86,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _userService = userService;
         _eventService = eventService;
         _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
-        _duoUniversalPromptService = duoUniversalPromptService;
+        _duoWebV4SDKService = duoWebV4SDKService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _applicationCacheService = applicationCacheService;
@@ -444,7 +444,7 @@ public abstract class BaseRequestValidator<T> where T : class
                         {
                             // We have to send the provider to the DuoUniversalPromptService to create the DuoClient
                             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-                            return await _duoUniversalPromptService.ValidateAsync(token, provider, user);
+                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
                         }
                     }
                 }
@@ -466,7 +466,7 @@ public abstract class BaseRequestValidator<T> where T : class
                         {
                             // We have to send the provider to the DuoUniversalPromptService to create the DuoClient
                             var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-                            return await _duoUniversalPromptService.ValidateAsync(token, provider, user);
+                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
                         }
                     }
                 }
@@ -505,7 +505,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
                     {
                         // Generate AuthUrl from DUO SDK v4 token provider
-                        duoResponse.Add("AuthUrl", await _duoUniversalPromptService.GenerateAsync(provider, user));
+                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
                     }
                     return duoResponse;
                 }
@@ -540,7 +540,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
                     {
                         // Generate AuthUrl from DUO SDK v4 token provider
-                        duoResponse.Add("AuthUrl", await _duoUniversalPromptService.GenerateAsync(provider, user));
+                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
                     }
                     return duoResponse;
                 }

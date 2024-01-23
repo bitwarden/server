@@ -12,13 +12,13 @@ namespace Bit.Core.Auth.Identity;
     This service is to support SDK v4 flows for Duo. At some time in the future we will need
     to combine this service with the DuoWebTokenProvider and OrganizationDuoWebTokenProvider to support SDK v4.
 */
-public interface ITemporaryDuoUniversalPromptService
+public interface ITemporaryDuoWebV4SDKService
 {
     Task<string> GenerateAsync(TwoFactorProvider provider, User user);
     Task<bool> ValidateAsync(string token, TwoFactorProvider provider, User user);
 }
 
-public class TemporaryDuoUniversalPromptService : ITemporaryDuoUniversalPromptService
+public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
 {
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
@@ -28,7 +28,7 @@ public class TemporaryDuoUniversalPromptService : ITemporaryDuoUniversalPromptSe
     /// </summary>
     /// <param name="currentContext">used to fetch initiating Client</param>
     /// <param name="globalSettings">used to fetch vault URL for Redirect URL</param>
-    public TemporaryDuoUniversalPromptService(
+    public TemporaryDuoWebV4SDKService(
         ICurrentContext currentContext,
         GlobalSettings globalSettings)
     {
