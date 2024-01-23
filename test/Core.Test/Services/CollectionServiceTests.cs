@@ -112,6 +112,7 @@ public class CollectionServiceTest
         [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
+        organization.FlexibleCollections = true;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, Arg.Any<bool>())
