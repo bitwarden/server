@@ -20,4 +20,9 @@ public abstract class AssociationWithPermissionsBaseModel
     /// This prevents easy copy-and-paste of hidden items, however it may not completely prevent user access.
     /// </summary>
     public bool? HidePasswords { get; set; }
+    /// <summary>
+    /// When true, the manage permission allows a user to both edit the ciphers within a collection and edit the users/groups that are assigned to the collection.
+    /// This field will not affect behavior until the Flexible Collections functionality is released in Q1, 2024.
+    /// </summary>
+    public bool? Manage { get; set; }
 }
