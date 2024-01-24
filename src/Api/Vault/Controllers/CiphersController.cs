@@ -49,7 +49,7 @@ public class CiphersController : Controller
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     private bool UseFlexibleCollectionsV1 =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
     public CiphersController(
         ICipherRepository cipherRepository,

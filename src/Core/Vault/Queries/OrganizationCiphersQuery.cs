@@ -11,16 +11,14 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
 {
     private readonly ICipherRepository _cipherRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
-    private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
-    private bool FlexibleCollectionsV1Enabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+    private bool FlexibleCollectionsV1Enabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
-    public OrganizationCiphersQuery(ICipherRepository cipherRepository, ICollectionCipherRepository collectionCipherRepository, ICurrentContext currentContext, IFeatureService featureService)
+    public OrganizationCiphersQuery(ICipherRepository cipherRepository, ICollectionCipherRepository collectionCipherRepository, IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
-        _currentContext = currentContext;
         _featureService = featureService;
     }
 
