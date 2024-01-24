@@ -143,7 +143,7 @@ public class GroupsController : Controller
         var orgIdGuid = new Guid(orgId);
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
 
-        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
+        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), model.Users);
         return new GroupResponseModel(group);
     }
 
