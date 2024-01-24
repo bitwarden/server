@@ -1,31 +1,31 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Controllers;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Mvc;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
 
-public class ChargeRefundedHandler : StripeWebhookHandler
+public class ChargeRefundedHandler : IWebhookEventHandler
 {
     private readonly IStripeEventService _stripeEventService;
     private readonly ITransactionRepository _transactionRepository;
-    private readonly ILogger<ChargeSucceededHandler> _logger;
+    private readonly ILogger<StripeController> _logger;
     public ChargeRefundedHandler(IStripeEventService stripeEventService,
         ITransactionRepository transactionRepository,
-        ILogger<ChargeSucceededHandler> logger)
+        ILogger<StripeController> logger)
     {
         _stripeEventService = stripeEventService;
         _transactionRepository = transactionRepository;
         _logger = logger;
     }
-    protected override bool CanHandle(Event parsedEvent)
+    public bool CanHandle(Event parsedEvent)
     {
         return parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded);
     }
 
-    protected override async Task<IActionResult> ProcessEvent(Event parsedEvent)
+    public async Task HandleAsync(Event parsedEvent)
     {
         var charge = await _stripeEventService.GetCharge(parsedEvent);
         var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -74,7 +74,5 @@ public class ChargeRefundedHandler : StripeWebhookHandler
         {
             _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
         }
-
-        return new OkResult(); ;
     }
 }

@@ -1,12 +1,14 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Mvc;
 using Stripe;
 
 namespace Bit.Billing.Services.Implementations;
 
-public class SubscriptionDeletedHandler : StripeWebhookHandler
+public class SubscriptionDeletedHandler : IWebhookEventHandler
 {
+    private const string _premiumPlanId = "premium-annually";
+    private const string _premiumPlanIdAppStore = "premium-annually-app";
+
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IStripeEventService _stripeEventService;
@@ -23,12 +25,12 @@ public class SubscriptionDeletedHandler : StripeWebhookHandler
         _webhookUtility = webhookUtility;
     }
 
-    protected override bool CanHandle(Event parsedEvent)
+    public bool CanHandle(Event parsedEvent)
     {
         return parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
     }
 
-    protected override async Task<IActionResult> ProcessEvent(Event parsedEvent)
+    public async Task HandleAsync(Event parsedEvent)
     {
         if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted))
         {
@@ -48,7 +50,7 @@ public class SubscriptionDeletedHandler : StripeWebhookHandler
                 }
                 else if (userId != Guid.Empty)
                 {
-                    if (subUnpaid && subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
+                    if (subUnpaid && subscription.Items.Any(i => i.Price.Id is _premiumPlanId or _premiumPlanIdAppStore))
                     {
                         await CancelSubscriptionAsync(subscription.Id);
                         await VoidOpenInvoicesAsync(subscription.Id);
@@ -62,7 +64,6 @@ public class SubscriptionDeletedHandler : StripeWebhookHandler
                 }
             }
         }
-        return new OkResult();
     }
 
     private static async Task CancelSubscriptionAsync(string subscriptionId)

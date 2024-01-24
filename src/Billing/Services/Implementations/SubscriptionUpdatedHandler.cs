@@ -1,12 +1,11 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Mvc;
 using Stripe;
 
 namespace Bit.Billing.Services.Implementations;
 
-public class SubscriptionUpdatedHandler : StripeWebhookHandler
+public class SubscriptionUpdatedHandler : IWebhookEventHandler
 {
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
@@ -26,12 +25,12 @@ public class SubscriptionUpdatedHandler : StripeWebhookHandler
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _webhookUtility = webhookUtility;
     }
-    protected override bool CanHandle(Event parsedEvent)
+    public bool CanHandle(Event parsedEvent)
     {
         return parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
     }
 
-    protected override async Task<IActionResult> ProcessEvent(Event parsedEvent)
+    public async Task HandleAsync(Event parsedEvent)
     {
         if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated))
         {
@@ -74,7 +73,5 @@ public class SubscriptionUpdatedHandler : StripeWebhookHandler
                 await _userService.UpdatePremiumExpirationAsync(userId, subscription.CurrentPeriodEnd);
             }
         }
-
-        return new OkResult();
     }
 }

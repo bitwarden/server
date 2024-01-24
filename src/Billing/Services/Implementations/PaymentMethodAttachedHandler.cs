@@ -1,34 +1,33 @@
 ﻿using Bit.Billing.Constants;
-using Microsoft.AspNetCore.Mvc;
+using Bit.Billing.Controllers;
 using Stripe;
 
 namespace Bit.Billing.Services.Implementations;
 
-public class PaymentMethodAttachedHandler : StripeWebhookHandler
+public class PaymentMethodAttachedHandler : IWebhookEventHandler
 {
     private readonly IStripeEventService _stripeEventService;
     private readonly IWebhookUtility _webhookUtility;
-    private readonly ILogger<PaymentMethodAttachedHandler> _logger;
+    private readonly ILogger<StripeController> _logger;
 
     public PaymentMethodAttachedHandler(IStripeEventService stripeEventService,
         IWebhookUtility webhookUtility,
-        ILogger<PaymentMethodAttachedHandler> logger)
+        ILogger<StripeController> logger)
     {
         _stripeEventService = stripeEventService;
         _webhookUtility = webhookUtility;
         _logger = logger;
     }
 
-    protected override bool CanHandle(Event parsedEvent)
+    public bool CanHandle(Event parsedEvent)
     {
         return parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated);
     }
 
-    protected override async Task<IActionResult> ProcessEvent(Event parsedEvent)
+    public async Task HandleAsync(Event parsedEvent)
     {
         var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
         await HandlePaymentMethodAttachedAsync(paymentMethod);
-        return new OkResult();
     }
 
     private async Task HandlePaymentMethodAttachedAsync(PaymentMethod paymentMethod)

@@ -3,14 +3,13 @@ using Bit.Billing.Controllers;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Stripe;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
 
-public class ChargeSucceededHandler : StripeWebhookHandler
+public class ChargeSucceededHandler : IWebhookEventHandler
 {
     private readonly ITransactionRepository _transactionRepository;
     private readonly ILogger<StripeController> _logger;
@@ -30,12 +29,12 @@ public class ChargeSucceededHandler : StripeWebhookHandler
         _webhookUtility = webhookUtility;
     }
 
-    protected override bool CanHandle(Event parsedEvent)
+    public bool CanHandle(Event parsedEvent)
     {
         return parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded);
     }
 
-    protected override async Task<IActionResult> ProcessEvent(Event parsedEvent)
+    public async Task HandleAsync(Event parsedEvent)
     {
         // Handle ChargeSucceeded event
         var charge = await _stripeEventService.GetCharge(parsedEvent);
@@ -43,7 +42,7 @@ public class ChargeSucceededHandler : StripeWebhookHandler
         if (chargeTransaction != null)
         {
             _logger.LogWarning("Charge success already processed. " + charge.Id);
-            return new OkResult();
+            return;
         }
 
         Tuple<Guid?, Guid?> ids = null;
@@ -84,7 +83,8 @@ public class ChargeSucceededHandler : StripeWebhookHandler
         if (!ids.Item1.HasValue && !ids.Item2.HasValue)
         {
             _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
-            return new BadRequestResult();
+            //return new BadRequestResult();
+            return;
         }
 
         var tx = new Transaction
@@ -152,7 +152,7 @@ public class ChargeSucceededHandler : StripeWebhookHandler
         if (!tx.PaymentMethodType.HasValue)
         {
             _logger.LogWarning("Charge success from unsupported source/method. " + charge.Id);
-            return new OkResult();
+            return;
         }
 
         try
@@ -162,6 +162,5 @@ public class ChargeSucceededHandler : StripeWebhookHandler
         // Catch foreign key violations because user/org could have been deleted.
         catch (SqlException e) when (e.Number == 547) { }
 
-        return new OkResult(); ;
     }
 }

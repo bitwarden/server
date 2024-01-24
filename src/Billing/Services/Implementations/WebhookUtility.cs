@@ -14,7 +14,7 @@ namespace Bit.Billing.Services.Implementations;
 
 public class WebhookUtility : IWebhookUtility
 {
-    private const decimal PremiumPlanAppleIapPrice = 14.99M;
+    private const decimal _premiumPlanAppleIapPrice = 14.99M;
 
     private readonly ILogger<WebhookUtility> _logger;
     private readonly IAppleIapService _appleIapService;
@@ -171,7 +171,7 @@ public class WebhookUtility : IWebhookUtility
         }
 
         var appleTransaction = appleReceiptStatus.BuildTransactionFromLastTransaction(
-            PremiumPlanAppleIapPrice, ids.Item2.Value);
+            _premiumPlanAppleIapPrice, ids.Item2.Value);
         appleTransaction.Type = TransactionType.Charge;
 
         var invoiceService = new InvoiceService();

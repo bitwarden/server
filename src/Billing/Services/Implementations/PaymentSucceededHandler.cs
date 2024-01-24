@@ -6,14 +6,15 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Mvc;
 using Stripe;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
 
-public class PaymentSucceededHandler : StripeWebhookHandler
+public class PaymentSucceededHandler : IWebhookEventHandler
 {
+    private const string _premiumPlanId = "premium-annually";
+
     private readonly IStripeEventService _stripeEventService;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
@@ -41,12 +42,12 @@ public class PaymentSucceededHandler : StripeWebhookHandler
         _userRepository = userRepository;
         _webhookUtility = webhookUtility;
     }
-    protected override bool CanHandle(Event parsedEvent)
+    public bool CanHandle(Event parsedEvent)
     {
         return parsedEvent.Type.Equals(HandledStripeWebhook.PaymentSucceeded);
     }
 
-    protected override async Task<IActionResult> ProcessEvent(Event parsedEvent)
+    public async Task HandleAsync(Event parsedEvent)
     {
         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
         if (invoice.Paid && invoice.BillingReason == "subscription_create")
@@ -83,7 +84,7 @@ public class PaymentSucceededHandler : StripeWebhookHandler
                 // user
                 else if (ids.Item2.HasValue)
                 {
-                    if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
+                    if (subscription.Items.Any(i => i.Plan.Id == _premiumPlanId))
                     {
                         await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
 
@@ -91,14 +92,12 @@ public class PaymentSucceededHandler : StripeWebhookHandler
                         await _referenceEventService.RaiseEventAsync(
                             new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
                             {
-                                PlanName = PremiumPlanId,
+                                PlanName = _premiumPlanId,
                                 Storage = user?.MaxStorageGb,
                             });
                     }
                 }
             }
         }
-
-        return new OkResult();
     }
 }

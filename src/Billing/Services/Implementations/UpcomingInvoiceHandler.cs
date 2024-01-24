@@ -5,7 +5,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Mvc;
 using Stripe;
 using Event = Stripe.Event;
 using Subscription = Stripe.Subscription;
@@ -14,7 +13,7 @@ using TaxRate = Bit.Core.Entities.TaxRate;
 namespace Bit.Billing.Services.Implementations;
 
 
-public class UpcomingInvoiceHandler : StripeWebhookHandler
+public class UpcomingInvoiceHandler : IWebhookEventHandler
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserService _userService;
@@ -48,12 +47,12 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
         _webhookUtility = webhookUtility;
     }
 
-    protected override bool CanHandle(Event parsedEvent)
+    public bool CanHandle(Event parsedEvent)
     {
         return parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice);
     }
 
-    protected override async Task<IActionResult> ProcessEvent(Event parsedEvent)
+    public async Task HandleAsync(Event parsedEvent)
     {
         // Handle UpcomingInvoice event
         var invoice = await _stripeEventService.GetInvoice(parsedEvent);
@@ -61,7 +60,7 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
         if (string.IsNullOrEmpty(invoice.SubscriptionId))
         {
             _logger.LogWarning("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
-            return new OkResult();
+            return;
         }
 
         var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
@@ -104,7 +103,7 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
 
             if (organization == null || !OrgPlanForInvoiceNotifications(organization))
             {
-                return new OkResult();
+                return;
             }
 
             await SendEmails(new List<string> { organization.BillingEmail });
@@ -129,7 +128,6 @@ public class UpcomingInvoiceHandler : StripeWebhookHandler
                 await SendEmails(new List<string> { user.Email });
             }
         }
-        return new OkResult();
     }
 
     private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
