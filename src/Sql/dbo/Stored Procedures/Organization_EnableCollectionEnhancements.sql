@@ -120,7 +120,7 @@ BEGIN
                     -- This is for orgUsers who are Managers / EditAssignedCollections but have access via a group
                     -- We cannot give the whole group Manage permissions so we have to give them a direct assignment
                     INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
-                    SELECT CG.[CollectionId], TUM.[OrganizationUserId], 0, 0, 1
+                    SELECT DISTINCT CG.[CollectionId], TUM.[OrganizationUserId], 0, 0, 1
                     FROM [dbo].[CollectionGroup] CG
                     INNER JOIN [dbo].[GroupUser] GU ON CG.[GroupId] = GU.[GroupId]
                     INNER JOIN #TempUserManagers TUM ON GU.[OrganizationUserId] = TUM.[OrganizationUserId]
