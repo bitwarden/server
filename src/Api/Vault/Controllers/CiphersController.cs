@@ -46,7 +46,7 @@ public class CiphersController : Controller
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
 
     private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     private bool UseFlexibleCollectionsV1 =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);

@@ -1,5 +1,5 @@
 ---
-name: Clean After PR
+name: Container registry cleanup
 
 on:
   pull_request:
@@ -7,31 +7,31 @@ on:
 
 jobs:
   build-docker:
-    name: Remove feature branch docker images
-    runs-on: ubuntu-20.04
+    name: Remove branch-specific Docker images
+    runs-on: ubuntu-22.04
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
       ########## ACR ##########
-      - name: Login to Azure - QA Subscription
+      - name: Log in to Azure - QA Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
-      - name: Login to Azure ACR
+      - name: Log in to Azure ACR
         run: az acr login -n bitwardenqa
 
-      - name: Login to Azure - PROD Subscription
+      - name: Log in to Azure - production subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to Azure ACR
+      - name: Log in to Azure ACR
         run: az acr login -n bitwardenprod
 
       ########## Remove Docker images ##########
-      - name: Remove the docker image from ACR
+      - name: Remove the Docker image from ACR
         env:
           REGISTRIES: |
             registries:

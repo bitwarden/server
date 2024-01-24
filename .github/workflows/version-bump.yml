@@ -1,6 +1,6 @@
 ---
-name: Version Bump
-run-name: Version Bump - v${{ inputs.version_number }}
+name: Bump version
+run-name: Bump version to ${{ inputs.version_number }}
 
 on:
   workflow_dispatch:
@@ -16,10 +16,10 @@ on:
 
 jobs:
   bump_version:
-    name: "Bump Version to v${{ inputs.version_number }}"
+    name: Bump
     runs-on: ubuntu-22.04
     steps:
-      - name: Login to Azure - CI Subscription
+      - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
@@ -33,7 +33,7 @@ jobs:
             github-gpg-private-key-passphrase,
             github-pat-bitwarden-devops-bot-repo-scope"
 
-      - name: Checkout Branch
+      - name: Check out branch
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           ref: main
@@ -47,7 +47,7 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      - name: Create Version Branch
+      - name: Create version branch
         id: create-branch
         run: |
           NAME=version_bump_${{ github.ref_name }}_${{ inputs.version_number }}
@@ -78,13 +78,13 @@ jobs:
             exit 1
           fi
 
-      - name: Bump Version - Props
+      - name: Bump version props
         uses: bitwarden/gh-actions/version-bump@main
         with:
           version: ${{ inputs.version_number }}
           file_path: "Directory.Build.props"
 
-      - name: Setup git
+      - name: Set up Git
         run: |
           git config --local user.email "106330231+bitwarden-devops-bot@users.noreply.github.com"
           git config --local user.name "bitwarden-devops-bot"
@@ -109,7 +109,7 @@ jobs:
           PR_BRANCH: ${{ steps.create-branch.outputs.name }}
         run: git push -u origin $PR_BRANCH
 
-      - name: Create Version PR
+      - name: Create version PR
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         id: create-pr
         env:
@@ -152,7 +152,7 @@ jobs:
     if: ${{ inputs.cut_rc_branch == true }}
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout Branch
+      - name: Check out branch
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: main
@@ -171,9 +171,8 @@ jobs:
           git switch --quiet --create rc
           git push --quiet --set-upstream origin rc
 
-
   move-future-db-scripts:
-    name: Move future DB scripts
+    name: Move finalization database scripts
     needs: cut_rc
     uses: ./.github/workflows/_move_finalization_db_scripts.yml
     secrets: inherit
