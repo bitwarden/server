@@ -19,11 +19,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from g in dbContext.Grants
-                        where g.Key == key
-                        select g;
-            dbContext.Remove(query);
-            await dbContext.SaveChangesAsync();
+            await dbContext.Grants.Where(g => g.Key == key).ExecuteDeleteAsync();
         }
     }
 
@@ -32,14 +28,11 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from g in dbContext.Grants
-                        where g.SubjectId == subjectId &&
-                            g.ClientId == clientId &&
-                            g.SessionId == sessionId &&
-                            g.Type == type
-                        select g;
-            dbContext.Remove(query);
-            await dbContext.SaveChangesAsync();
+            await dbContext.Grants.Where(g =>
+                g.SubjectId == subjectId &&
+                g.ClientId == clientId &&
+                g.SessionId == sessionId &&
+                g.Type == type).ExecuteDeleteAsync();
         }
     }
 
