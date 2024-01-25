@@ -70,7 +70,7 @@ public class Startup
             services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
         }
 
-        services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
+        services.AddOptionality();
 
         // Mvc
         services.AddMvc(config =>
