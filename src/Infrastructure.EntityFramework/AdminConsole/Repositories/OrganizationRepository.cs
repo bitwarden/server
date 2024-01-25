@@ -268,7 +268,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         return await query.ToListAsync();
     }
 
-    public Task EnableCollectionEnhancements(Guid id)
+    public Task EnableCollectionEnhancements(Guid organizationId)
     {
         throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
     }
