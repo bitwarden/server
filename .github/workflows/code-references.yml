@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Collect
+        id: collect
         uses: launchdarkly/find-code-references-in-pull-request@2e9333c88539377cfbe818c265ba8b9ebced3c91 # v1.1.0
         with:
           project-key: default
