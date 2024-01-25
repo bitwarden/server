@@ -133,7 +133,7 @@ BEGIN
 
                     -- Update [dbo].[OrganizationUser] to migrate all OrganizationUsers with Manager role to User role
                     UPDATE OU
-                    SET OU.[Type] = 2 -- User
+                    SET OU.[Type] = 2, OU.[RevisionDate] = GETUTCDATE() -- User
                     FROM [dbo].[OrganizationUser] OU
                     INNER JOIN #TempUserManagers TUM ON ou.[Id] = TUM.[OrganizationUserId]
                     WHERE TUM.[IsManager] = 1; -- Filter for Managers

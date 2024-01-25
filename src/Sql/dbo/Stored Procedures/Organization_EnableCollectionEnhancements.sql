@@ -112,7 +112,9 @@ BEGIN
                 -- Step 3
                     -- Update [dbo].[CollectionUser] with [Manage] = 1 using the temporary table
                     UPDATE CU
-                    SET CU.[Manage] = 1
+                    SET CU.[ReadOnly] = 0,
+                        CU.[HidePasswords] = 0,
+                        CU.[Manage] = 1
                     FROM [dbo].[CollectionUser] CU
                     INNER JOIN #TempUserManagers TUM ON CU.[OrganizationUserId] = TUM.[OrganizationUserId];
 
@@ -131,7 +133,7 @@ BEGIN
 
                     -- Update [dbo].[OrganizationUser] to migrate all OrganizationUsers with Manager role to User role
                     UPDATE OU
-                    SET OU.[Type] = 2 -- User
+                    SET OU.[Type] = 2, OU.[RevisionDate] = GETUTCDATE() -- User
                     FROM [dbo].[OrganizationUser] OU
                     INNER JOIN #TempUserManagers TUM ON ou.[Id] = TUM.[OrganizationUserId]
                     WHERE TUM.[IsManager] = 1; -- Filter for Managers
