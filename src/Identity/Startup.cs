@@ -89,7 +89,7 @@ public class Startup
 
         // Authentication
         services
-            .AddDistributedIdentityServices(globalSettings)
+            .AddDistributedIdentityServices()
             .AddAuthentication()
             .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
             .AddOpenIdConnect("sso", "Single Sign On", options =>
