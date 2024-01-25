@@ -23,3 +23,10 @@ jobs:
           environment-key: dev
           access-token: ${{ secrets.LD_ACCESS_TOKEN }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add label
+        if: steps.find-flags.outputs.any-changed == 'true'
+        run: gh pr edit $PR_NUMBER --add-label feature-flag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
