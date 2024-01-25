@@ -24,12 +24,14 @@ public class OrganizationCustomization : ICustomization
     {
         var organizationId = Guid.NewGuid();
         var maxCollections = (short)new Random().Next(10, short.MaxValue);
+        var seats = (short)new Random().Next(100, short.MaxValue);
 
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.MaxCollections, maxCollections)
             .With(o => o.UseGroups, UseGroups)
-            .With(o => o.FlexibleCollections, FlexibleCollections));
+            .With(o => o.FlexibleCollections, FlexibleCollections)
+            .With(o => o.Seats, seats));
 
         fixture.Customize<Collection>(composer =>
             composer
