@@ -1,5 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Queries.ServiceAccounts;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;

@@ -2,6 +2,10 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
+using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
@@ -9,7 +13,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
@@ -35,6 +38,8 @@ public class OrganizationUsersController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -48,7 +53,9 @@ public class OrganizationUsersController : Controller
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
-        IAcceptOrgUserCommand acceptOrgUserCommand)
+        IAcceptOrgUserCommand acceptOrgUserCommand,
+        IAuthorizationService authorizationService,
+        IApplicationCacheService applicationCacheService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -62,6 +69,8 @@ public class OrganizationUsersController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
+        _authorizationService = authorizationService;
+        _applicationCacheService = applicationCacheService;
     }
 
     [HttpGet("{id}")]
@@ -84,18 +93,20 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId, bool includeGroups = false, bool includeCollections = false)
+    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ViewAllCollections(orgGuidId) &&
-            !await _currentContext.ViewAssignedCollections(orgGuidId) &&
-            !await _currentContext.ManageGroups(orgGuidId) &&
-            !await _currentContext.ManageUsers(orgGuidId))
+        var authorized = await FlexibleCollectionsIsEnabledAsync(orgId)
+            ? (await _authorizationService.AuthorizeAsync(User, OrganizationUserOperations.ReadAll(orgId))).Succeeded
+            : await _currentContext.ViewAllCollections(orgId) ||
+              await _currentContext.ViewAssignedCollections(orgId) ||
+              await _currentContext.ManageGroups(orgId) ||
+              await _currentContext.ManageUsers(orgId);
+        if (!authorized)
         {
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId, includeGroups, includeCollections);
+        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
         var responseTasks = organizationUsers.Select(async o => new OrganizationUserUserDetailsResponseModel(o,
             await _userService.TwoFactorIsEnabledAsync(o)));
         var responses = await Task.WhenAll(responseTasks);
@@ -503,5 +514,11 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
+    {
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        return organizationAbility?.FlexibleCollections ?? false;
     }
 }

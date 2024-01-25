@@ -3,9 +3,10 @@ using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
@@ -21,7 +22,6 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Stripe;
 
 namespace Bit.Admin.Controllers;
 
@@ -50,7 +50,9 @@ public class OrganizationsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private readonly IStripeSyncService _stripeSyncService;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
+    private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -75,7 +77,9 @@ public class OrganizationsController : Controller
         ISecretRepository secretRepository,
         IProjectRepository projectRepository,
         IServiceAccountRepository serviceAccountRepository,
-        IStripeSyncService stripeSyncService)
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
+        IRemovePaymentMethodCommand removePaymentMethodCommand)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -99,7 +103,9 @@ public class OrganizationsController : Controller
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
-        _stripeSyncService = stripeSyncService;
+        _providerOrganizationRepository = providerOrganizationRepository;
+        _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
+        _removePaymentMethodCommand = removePaymentMethodCommand;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -213,19 +219,6 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Plan does not support Secrets Manager");
         }
 
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && !string.IsNullOrWhiteSpace(organization.BillingEmail))
-            {
-                await _stripeSyncService.UpdateCustomerEmailAddress(organization.GatewayCustomerId, organization.BillingEmail);
-            }
-        }
-        catch (StripeException stripeException)
-        {
-            _logger.LogError(stripeException, "Failed to update billing email address in Stripe for Organization with ID '{organizationId}'", organization.Id);
-            throw;
-        }
-
         await _organizationRepository.ReplaceAsync(organization);
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
@@ -301,6 +294,38 @@ public class OrganizationsController : Controller
         {
             await _organizationService.ResendInviteAsync(id, null, organizationUser.Id, true);
         }
+
+        return Json(null);
+    }
+
+    [HttpPost]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> UnlinkOrganizationFromProviderAsync(Guid id)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization is null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        var provider = await _providerRepository.GetByOrganizationIdAsync(id);
+        if (provider is null)
+        {
+            return RedirectToAction("Edit", new { id });
+        }
+
+        var providerOrganization = await _providerOrganizationRepository.GetByOrganizationId(id);
+        if (providerOrganization is null)
+        {
+            return RedirectToAction("Edit", new { id });
+        }
+
+        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(
+            provider,
+            providerOrganization,
+            organization);
+
+        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
 
         return Json(null);
     }

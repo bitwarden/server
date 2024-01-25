@@ -3,6 +3,7 @@ using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
@@ -20,10 +21,10 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -36,7 +37,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IProviderRepository _providerRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoConfigService _ssoConfigService;
     private readonly IUserService _userService;
@@ -45,7 +45,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
-    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly IFeatureService _featureService;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
@@ -63,7 +62,6 @@ public class OrganizationsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _paymentService = Substitute.For<IPaymentService>();
         _policyRepository = Substitute.For<IPolicyRepository>();
-        _providerRepository = Substitute.For<IProviderRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _ssoConfigService = Substitute.For<ISsoConfigService>();
         _getOrganizationApiKeyQuery = Substitute.For<IGetOrganizationApiKeyQuery>();
@@ -72,19 +70,33 @@ public class OrganizationsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
-        _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
 
-        _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-            _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
-            _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
-            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
-            _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService,
-            _updateSecretsManagerSubscriptionCommand, _upgradeOrganizationPlanCommand, _addSecretsManagerSubscriptionCommand);
+        _sut = new OrganizationsController(
+            _organizationRepository,
+            _organizationUserRepository,
+            _policyRepository,
+            _organizationService,
+            _userService,
+            _paymentService,
+            _currentContext,
+            _ssoConfigRepository,
+            _ssoConfigService,
+            _getOrganizationApiKeyQuery,
+            _rotateOrganizationApiKeyCommand,
+            _createOrganizationApiKeyCommand,
+            _organizationApiKeyRepository,
+            _cloudGetOrganizationLicenseQuery,
+            _featureService,
+            _globalSettings,
+            _licensingService,
+            _updateSecretsManagerSubscriptionCommand,
+            _upgradeOrganizationPlanCommand,
+            _addSecretsManagerSubscriptionCommand);
     }
 
     public void Dispose()
@@ -340,5 +352,48 @@ public class OrganizationsControllerTests : IDisposable
         await _addSecretsManagerSubscriptionCommand.Received(1)
             .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_Success(Organization organization)
+    {
+        organization.FlexibleCollections = false;
+        _currentContext.OrganizationOwner(organization.Id).Returns(true);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        await _sut.EnableCollectionEnhancements(organization.Id);
+
+        await _organizationRepository.Received(1).EnableCollectionEnhancements(organization.Id);
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
+            Arg.Is<Organization>(o =>
+                o.Id == organization.Id &&
+                o.FlexibleCollections));
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_WhenNotOwner_Throws(Organization organization)
+    {
+        organization.FlexibleCollections = false;
+        _currentContext.OrganizationOwner(organization.Id).Returns(false);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
+
+        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
+        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_WhenAlreadyMigrated_Throws(Organization organization)
+    {
+        organization.FlexibleCollections = true;
+        _currentContext.OrganizationOwner(organization.Id).Returns(true);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
+        Assert.Contains("has already been migrated", exception.Message);
+
+        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
+        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 }

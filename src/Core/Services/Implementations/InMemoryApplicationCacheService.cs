@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 
@@ -29,6 +29,15 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         await InitOrganizationAbilitiesAsync();
         return _orgAbilities;
     }
+
+#nullable enable
+    public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid organizationId)
+    {
+        (await GetOrganizationAbilitiesAsync())
+            .TryGetValue(organizationId, out var organizationAbility);
+        return organizationAbility;
+    }
+#nullable disable
 
     public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {

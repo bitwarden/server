@@ -355,15 +355,11 @@ public class CurrentContext : ICurrentContext
          * Owner, Admin, Manager, and Provider checks are handled via the EditAssigned/DeleteAssigned context calls.
          * This entire method will be moved to the CollectionAuthorizationHandler in the future
          */
-        var canCreateNewCollections = false;
+
         var org = GetOrganization(orgId);
-        if (org != null)
-        {
-            canCreateNewCollections = !org.LimitCollectionCreationDeletion || org.Permissions.CreateNewCollections;
-        }
         return await EditAssignedCollections(orgId)
                || await DeleteAssignedCollections(orgId)
-               || canCreateNewCollections;
+               || (org != null && org.Permissions.CreateNewCollections);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)

@@ -1,5 +1,6 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
@@ -11,12 +12,14 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
+using Stripe;
 using Xunit;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 using ProviderUser = Bit.Core.AdminConsole.Entities.Provider.ProviderUser;
@@ -511,7 +514,7 @@ public class ProviderServiceTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);
     }
 
-    [Theory, BitAutoData]
+    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
     public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
         Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
     {
@@ -539,62 +542,126 @@ public class ProviderServiceTests
                 t.First().Item2 == null));
     }
 
-    [Theory, BitAutoData]
-    public async Task RemoveOrganization_ProviderOrganizationIsInvalid_Throws(Provider provider,
-        ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
+    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
+    public async Task CreateOrganizationAsync_WithFlexibleCollections_SetsAccessAllToFalse
+        (Provider provider, OrganizationSignup organizationSignup, Organization organization, string clientOwnerEmail,
+            User user, SutProvider<ProviderService> sutProvider)
     {
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
-            .ReturnsNull();
+        organizationSignup.Plan = PlanType.EnterpriseAnnually;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RemoveOrganizationAsync(provider.Id, providerOrganization.Id, user.Id));
-        Assert.Equal("Invalid organization.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RemoveOrganization_ProviderOrganizationBelongsToWrongProvider_Throws(Provider provider,
-        ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
-    {
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
-            .Returns(providerOrganization);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RemoveOrganizationAsync(provider.Id, providerOrganization.Id, user.Id));
-        Assert.Equal("Invalid organization.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RemoveOrganization_HasNoOwners_Throws(Provider provider,
-        ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
-    {
-        providerOrganization.ProviderId = provider.Id;
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
-            .Returns(providerOrganization);
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default, default)
-            .ReturnsForAnyArgs(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RemoveOrganizationAsync(provider.Id, providerOrganization.Id, user.Id));
-        Assert.Equal("Organization needs to have at least one confirmed owner.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RemoveOrganization_Success(Provider provider,
-        ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
-    {
-        providerOrganization.ProviderId = provider.Id;
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        providerOrganizationRepository.GetByIdAsync(providerOrganization.Id).Returns(providerOrganization);
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default, default)
-            .ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
+            .Returns(Tuple.Create(organization, null as OrganizationUser));
 
-        await sutProvider.Sut.RemoveOrganizationAsync(provider.Id, providerOrganization.Id, user.Id);
-        await providerOrganizationRepository.Received().DeleteAsync(providerOrganization);
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
+        var providerOrganization =
+            await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
+
+        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IEventService>()
+            .Received().LogProviderOrganizationEventAsync(providerOrganization,
+                EventType.ProviderOrganization_Created);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+                t => t.Count() == 1 &&
+                t.First().Item1.Emails.Count() == 1 &&
+                t.First().Item1.Emails.First() == clientOwnerEmail &&
+                t.First().Item1.Type == OrganizationUserType.Owner &&
+                t.First().Item1.AccessAll == false &&
+                t.First().Item2 == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganization_CreateAfterNov162023_PlanTypeDoesNotUpdated(Provider provider, Organization organization, string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var expectedPlanType = PlanType.EnterpriseAnnually;
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
+
+        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IEventService>()
+            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+                EventType.ProviderOrganization_Added);
+        Assert.Equal(organization.PlanType, expectedPlanType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganization_CreateBeforeNov162023_PlanTypeUpdated(Provider provider, Organization organization, string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        var newCreationDate = DateTime.UtcNow.AddMonths(-3);
+        BackdateProviderCreationDate(provider, newCreationDate);
+        provider.Type = ProviderType.Msp;
+
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.Plan = "Enterprise (Annually)";
+
+        var expectedPlanType = PlanType.EnterpriseAnnually2020;
+
+        var expectedPlanId = "2020-enterprise-org-seat-annually";
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        var subscriptionItem = GetSubscription(organization.GatewaySubscriptionId);
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .Returns(GetSubscription(organization.GatewaySubscriptionId));
+        await sutProvider.GetDependency<IStripeAdapter>().SubscriptionUpdateAsync(
+            organization.GatewaySubscriptionId, SubscriptionUpdateRequest(expectedPlanId, subscriptionItem));
+
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
+
+        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IEventService>()
+            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+                EventType.ProviderOrganization_Added);
+
+        Assert.Equal(organization.PlanType, expectedPlanType);
+    }
+
+    private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
+        new()
+        {
+            Items = new List<Stripe.SubscriptionItemOptions>
+            {
+                new() { Id = subscriptionItem.Id, Price = expectedPlanId },
+            }
+        };
+
+    private static Subscription GetSubscription(string subscriptionId) =>
+        new()
+        {
+            Id = subscriptionId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = "sub_item_123",
+                        Price = new Price()
+                        {
+                            Id = "2023-enterprise-org-seat-annually"
+                        }
+                    }
+                }
+            }
+        };
+
+    private static void BackdateProviderCreationDate(Provider provider, DateTime newCreationDate)
+    {
+        // Set the CreationDate to the desired value
+        provider.GetType().GetProperty("CreationDate")?.SetValue(provider, newCreationDate, null);
     }
 }

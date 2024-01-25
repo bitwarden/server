@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -30,7 +29,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         IEnumerable<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> userIds = null)
     {
-        Validate(organization);
+        Validate(organization, group);
         await GroupRepositoryUpdateGroupAsync(group, collections);
 
         if (userIds != null)
@@ -45,7 +44,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         IEnumerable<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> userIds = null)
     {
-        Validate(organization);
+        Validate(organization, group);
         await GroupRepositoryUpdateGroupAsync(group, collections);
 
         if (userIds != null)
@@ -98,7 +97,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         }
     }
 
-    private static void Validate(Organization organization)
+    private static void Validate(Organization organization, Group group)
     {
         if (organization == null)
         {
@@ -108,6 +107,11 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         if (!organization.UseGroups)
         {
             throw new BadRequestException("This organization cannot use groups.");
+        }
+
+        if (organization.FlexibleCollections && group.AccessAll)
+        {
+            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
         }
     }
 }
