@@ -105,7 +105,7 @@ public static class FeatureFlagKeys
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
-    public const string DuoRedirect = "duo-redirect";
+    public const string DuoRedirect = "duo-redirectffff";
     /// <summary>
     /// Enables flexible collections improvements for new organizations on creation
     /// </summary>
