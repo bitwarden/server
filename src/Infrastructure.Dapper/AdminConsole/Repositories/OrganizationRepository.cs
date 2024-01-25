@@ -176,7 +176,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         {
             await connection.ExecuteAsync(
                 "[dbo].[Organization_EnableCollectionEnhancements]",
-                new { Id = id },
+                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 180);
         }
