@@ -112,7 +112,9 @@ BEGIN
                 -- Step 3
                     -- Update [dbo].[CollectionUser] with [Manage] = 1 using the temporary table
                     UPDATE CU
-                    SET CU.[Manage] = 1
+                    SET CU.[ReadOnly] = 0,
+                        CU.[HidePasswords] = 0,
+                        CU.[Manage] = 1
                     FROM [dbo].[CollectionUser] CU
                     INNER JOIN #TempUserManagers TUM ON CU.[OrganizationUserId] = TUM.[OrganizationUserId];
 
