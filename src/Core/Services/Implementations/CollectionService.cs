@@ -56,7 +56,7 @@ public class CollectionService : ICollectionService
         var usersList = users?.ToList();
 
         // If using Flexible Collections - a collection should always have someone with Can Manage permissions
-        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        if (org.FlexibleCollections && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
         {
             var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
             var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;

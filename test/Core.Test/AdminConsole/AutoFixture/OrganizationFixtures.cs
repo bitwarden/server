@@ -18,6 +18,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
 public class OrganizationCustomization : ICustomization
 {
     public bool UseGroups { get; set; }
+    public bool FlexibleCollections { get; set; }
 
     public void Customize(IFixture fixture)
     {
@@ -27,7 +28,8 @@ public class OrganizationCustomization : ICustomization
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.MaxCollections, maxCollections)
-            .With(o => o.UseGroups, UseGroups));
+            .With(o => o.UseGroups, UseGroups)
+            .With(o => o.FlexibleCollections, FlexibleCollections));
 
         fixture.Customize<Collection>(composer =>
             composer
@@ -180,10 +182,15 @@ internal class TeamsMonthlyWithAddOnsOrganizationCustomization : ICustomization
     }
 }
 
-internal class OrganizationCustomizeAttribute : BitCustomizeAttribute
+public class OrganizationCustomizeAttribute : BitCustomizeAttribute
 {
     public bool UseGroups { get; set; }
-    public override ICustomization GetCustomization() => new OrganizationCustomization() { UseGroups = UseGroups };
+    public bool FlexibleCollections { get; set; }
+    public override ICustomization GetCustomization() => new OrganizationCustomization()
+    {
+        UseGroups = UseGroups,
+        FlexibleCollections = FlexibleCollections
+    };
 }
 
 internal class PaidOrganizationCustomizeAttribute : BitCustomizeAttribute
