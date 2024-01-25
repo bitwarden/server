@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Collect
-        uses: launchdarkly/find-code-references-in-pull-request@45fb85b5cf1a4d1186e21cac544e39eb65d502cc # v1.0.1
+        uses: launchdarkly/find-code-references-in-pull-request@2e9333c88539377cfbe818c265ba8b9ebced3c91 # v1.1.0
         with:
           project-key: default
           environment-key: dev
