@@ -45,6 +45,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
@@ -53,7 +54,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
-using StackExchange.Redis;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -703,28 +703,51 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         GlobalSettings globalSettings)
     {
-        if (globalSettings.SelfHosted || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+        if (!string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+        {
+            services.AddSingleton<IDistributedCache>(s =>
+                new RedisCache(new RedisCacheOptions
+                {
+                    // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
+                    InstanceName = $"{globalSettings.ProjectName}:",
+                    Configuration = globalSettings.Redis.ConnectionString
+                }));
+        }
+        else
         {
             services.AddDistributedMemoryCache();
-            return;
         }
 
-        // Register the IConnectionMultiplexer explicitly so it can be accessed via DI
-        // (e.g. for the IP rate limiting store)
-        services.AddSingleton<IConnectionMultiplexer>(
-            _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
-
-        // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer
-        // to reduce the number of redundant connections to the Redis instance
-        services.AddSingleton<IDistributedCache>(s =>
+        if (!string.IsNullOrEmpty(globalSettings.RedisRateLimiter.ConnectionString))
         {
-            return new RedisCache(new RedisCacheOptions
-            {
-                // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
-                InstanceName = $"{globalSettings.ProjectName}:",
-                ConnectionMultiplexerFactory = () =>
-                    Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
-            });
-        });
+            services.AddKeyedSingleton<IDistributedCache>("rate-limiter", (provider, _) =>
+                new RedisCache(new RedisCacheOptions
+                {
+                    InstanceName = $"{globalSettings.ProjectName}:rate-limiter:",
+                    // TODO: should this be a different redis instance than the default distributed cache?
+                    Configuration = globalSettings.RedisRateLimiter.ConnectionString
+                }));
+        }
+        else
+        {
+            services.AddKeyedSingleton<IDistributedCache, MemoryDistributedCache>("rate-limiter");
+        }
+
+        if (!string.IsNullOrEmpty(globalSettings.DocumentDb.Uri))
+        {
+            services.AddKeyedSingleton<IDistributedCache>("persistent", (provider, _) =>
+                new CosmosCache(new CosmosCacheOptions
+                {
+                    DatabaseName = "cache",
+                    ContainerName = "default",
+                    CreateIfNotExists = false,
+                    CosmosClient = null // TODO
+                }));
+            // Note: register more keyed services with different containers if there is a need
+        }
+        else
+        {
+            services.AddKeyedSingleton<IDistributedCache, MemoryDistributedCache>("persistent");
+        }
     }
 }

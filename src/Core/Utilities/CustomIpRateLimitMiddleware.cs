@@ -3,6 +3,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -16,6 +17,7 @@ public class CustomIpRateLimitMiddleware : IpRateLimitMiddleware
     private readonly IpRateLimitOptions _options;
 
     public CustomIpRateLimitMiddleware(
+        [FromKeyedServices("rate-limiter")]
         IDistributedCache distributedCache,
         IBlockIpService blockIpService,
         RequestDelegate next,
