@@ -106,8 +106,15 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
-    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
+    /// <summary>
+    /// Enables flexible collections improvements for new organizations on creation
+    /// </summary>
     public const string FlexibleCollectionsSignup = "flexible-collections-signup";
+    /// <summary>
+    /// Exposes a migration button in the web vault which allows users to migrate an existing organization to
+    /// flexible collections
+    /// </summary>
+    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
 
     public static List<string> GetAllKeys()
     {
