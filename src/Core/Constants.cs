@@ -103,7 +103,6 @@ public static class FeatureFlagKeys
     public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
     public const string BulkCollectionAccess = "bulk-collection-access";
     public const string AutofillOverlay = "autofill-overlay";
-    public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
     /// <summary>
