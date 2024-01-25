@@ -23,7 +23,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
-    public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
+    public const string CipherKeyEncryptionMinimumVersion = "2023.12.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
@@ -105,8 +105,16 @@ public static class FeatureFlagKeys
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
-    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
+    public const string DuoRedirect = "duo-redirect";
+    /// <summary>
+    /// Enables flexible collections improvements for new organizations on creation
+    /// </summary>
     public const string FlexibleCollectionsSignup = "flexible-collections-signup";
+    /// <summary>
+    /// Exposes a migration button in the web vault which allows users to migrate an existing organization to
+    /// flexible collections
+    /// </summary>
+    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
 
     public static List<string> GetAllKeys()
     {
