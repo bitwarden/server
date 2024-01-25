@@ -26,14 +26,14 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Add label
-        if: steps.collect.outputs.any-modified == true
+        if: steps.collect.outputs.any-changed == 'true'
         run: gh pr edit $PR_NUMBER --add-label feature-flag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Remove label
-        if: steps.collect.outputs.any-modified == false
+        if: steps.collect.outputs.any-changed == 'false'
         run: gh pr edit $PR_NUMBER --remove-label feature-flag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
