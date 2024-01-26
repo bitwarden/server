@@ -21,7 +21,7 @@ internal class GetWebAuthnLoginCredentialCreateOptionsCommand : IGetWebAuthnLogi
     {
         var fidoUser = new Fido2User
         {
-            DisplayName = user.Name,
+            DisplayName = user.Name ?? "",
             Name = user.Email,
             Id = user.Id.ToByteArray(),
         };
