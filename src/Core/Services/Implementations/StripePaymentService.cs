@@ -637,7 +637,6 @@ public class StripePaymentService : IPaymentService
         }
 
         prorationDate ??= DateTime.UtcNow;
-        prorationDate = DateTime.Now.AddDays(32);
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
