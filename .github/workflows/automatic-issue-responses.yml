@@ -6,8 +6,8 @@ on:
       - labeled
 jobs:
   close-issue:
-    name: 'Close issue with automatic response'
-    runs-on: ubuntu-20.04
+    name: Close issue with automatic response
+    runs-on: ubuntu-22.04
     permissions:
       issues: write
     steps:
@@ -24,7 +24,7 @@ jobs:
             This issue will now be closed. Thanks!
       # Intended behavior
       - if: github.event.label.name == 'intended-behavior'
-        name: Intended behaviour
+        name: Intended behavior
         uses: peter-evans/close-issue@1373cadf1f0c96c1420bc000cfba2273ea307fd1 # v2.2.0
         with:
           comment: |
