@@ -3,8 +3,9 @@ name: Collect code references
 
 on:
   pull_request:
-    branches-ignore:    
-        - "renovate/**"
+    branches-ignore:
+      - "renovate/**"
+
 permissions:
   contents: read
   pull-requests: write
