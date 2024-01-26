@@ -230,6 +230,26 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Could not find customer payment profile.");
         }
 
+        if (customer.Address is null &&
+            !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressCountry) &&
+            !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressPostalCode))
+        {
+            var addressOptions = new Stripe.AddressOptions
+            {
+                Country = upgrade.TaxInfo.BillingAddressCountry,
+                PostalCode = upgrade.TaxInfo.BillingAddressPostalCode,
+                // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name instead.
+                Line1 = upgrade.TaxInfo.BillingAddressLine1 ?? string.Empty,
+                Line2 = upgrade.TaxInfo.BillingAddressLine2,
+                City = upgrade.TaxInfo.BillingAddressCity,
+                State = upgrade.TaxInfo.BillingAddressState,
+            };
+            var customerUpdateOptions = new Stripe.CustomerUpdateOptions { Address = addressOptions };
+            customerUpdateOptions.AddExpand("default_source");
+            customerUpdateOptions.AddExpand("invoice_settings.default_payment_method");
+            customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId, customerUpdateOptions);
+        }
+
         var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade)
         {
             DefaultTaxRates = new List<string>(),
