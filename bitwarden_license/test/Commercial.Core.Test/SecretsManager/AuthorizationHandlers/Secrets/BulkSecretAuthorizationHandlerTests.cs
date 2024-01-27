@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
 using Bit.Core.Context;
 using Bit.Core.Enums;

@@ -1,4 +1,4 @@
-using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
+﻿using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
