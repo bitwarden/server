@@ -85,7 +85,6 @@ public class AccountsController : Controller
     }
 
     [HttpGet("webauthn/assertion-options")]
-    [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
     public WebAuthnLoginAssertionOptionsResponseModel GetWebAuthnLoginAssertionOptions()
     {
         var options = _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptions();
