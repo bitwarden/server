@@ -252,22 +252,18 @@ public class SecretsController : Controller
     [HttpPost("organizations/{organizationId}/secrets/move")]
     public async Task BulkMoveToProjectAsync(Guid organizationId, [FromBody] BulkMoveToProjectsRequestModel request)
     {
-        var secrets = (await _secretRepository.GetManyByIds(request.Secrets)).ToList();
-        if (!secrets.Any() || secrets.Count != request.Secrets.Count)
-        {
-            throw new NotFoundException();
-        }
-
-        if (secrets.Any(secret => secret.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
+        // Get and validate the target project first since it will get a single item and fail if wrong
+        // vs getting n number of secrets first and having that fail.
         var project = await _projectRepository.GetByIdAsync(request.Project);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, project, ProjectOperations.Update);
 
         if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var secrets = (await _secretRepository.GetManyByIds(request.Secrets)).ToList();
+        if (!secrets.Any() || secrets.Count != request.Secrets.Count)
         {
             throw new NotFoundException();
         }
