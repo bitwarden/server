@@ -148,8 +148,6 @@ public class DatabaseContext : DbContext
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
         aWebAuthnCredential.ToTable(nameof(WebAuthnCredential));
 
-        builder.Entity<ProjectSecret>(b => b.ToTable(nameof(ProjectSecret)));
-
         ConfigureDateTimeUtcQueries(builder);
     }
 

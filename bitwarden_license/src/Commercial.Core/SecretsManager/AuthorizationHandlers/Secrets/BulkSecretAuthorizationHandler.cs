@@ -52,9 +52,9 @@ public class BulkSecretAuthorizationHandler : AuthorizationHandler<BulkSecretOpe
             {
                 return;
             }
-        }
 
-        context.Succeed(requirement);
+            context.Succeed(requirement);
+        }
     }
 
     private async Task<bool> CanBulkUpdateSecretsAsync(

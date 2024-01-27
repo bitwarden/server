@@ -865,6 +865,30 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task BulkMoveToProjectAsync_SmAccessDenied_Fails(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await LoginAsync(_email);
+        var (_, secretIds) = await CreateSecretsAsync(org.Id);
+        var (newProject, _) = await CreateSecretsAsync(org.Id);
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets/move", new BulkMoveToProjectsRequestModel
+        {
+            Secrets = secretIds,
+            Project = newProject.Id,
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private async Task<(Project Project, List<Guid> secretIds)> CreateSecretsAsync(Guid orgId, int numberToCreate = 3)
     {
         var project = await _projectRepository.CreateAsync(new Project
