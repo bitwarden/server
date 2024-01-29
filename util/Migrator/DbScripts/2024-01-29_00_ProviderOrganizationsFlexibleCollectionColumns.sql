@@ -1,4 +1,5 @@
-﻿CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+-- Add columns LimitCollectionCreationDeletion, AllowAdminAccessToAllCollectionItems, FlexibleCollections to view
+CREATE OR ALTER VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -43,3 +44,11 @@ INNER JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
 INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
+
+--Manually refresh ProviderOrganizationOrganizationDetailsView
+IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]';
+END
+GO
