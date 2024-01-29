@@ -140,7 +140,7 @@ public class OrganizationService : IOrganizationService
 
         await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
         var updated = await _paymentService.UpdatePaymentMethodAsync(organization,
-            paymentMethodType, paymentToken);
+            paymentMethodType, paymentToken, taxInfo);
         if (updated)
         {
             await ReplaceAndUpdateCacheAsync(organization);
