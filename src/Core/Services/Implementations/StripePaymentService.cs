@@ -98,23 +98,6 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Payment method is not supported at this time.");
         }
 
-        if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
-        {
-            var taxRateSearch = new TaxRate
-            {
-                Country = taxInfo.BillingAddressCountry,
-                PostalCode = taxInfo.BillingAddressPostalCode
-            };
-            var taxRates = await _taxRateRepository.GetByLocationAsync(taxRateSearch);
-
-            // should only be one tax rate per country/zip combo
-            var taxRate = taxRates.FirstOrDefault();
-            if (taxRate != null)
-            {
-                taxInfo.StripeTaxRateId = taxRate.Id;
-            }
-        }
-
         var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
         , additionalSmSeats, additionalServiceAccount);
 
@@ -163,6 +146,9 @@ public class StripePaymentService : IPaymentService
             });
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
             subCreateOptions.Customer = customer.Id;
+
+            subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
+
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {
@@ -244,25 +230,31 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Could not find customer payment profile.");
         }
 
-        var taxInfo = upgrade.TaxInfo;
-        if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
+        if (customer.Address is null &&
+            !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressCountry) &&
+            !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressPostalCode))
         {
-            var taxRateSearch = new TaxRate
+            var addressOptions = new Stripe.AddressOptions
             {
-                Country = taxInfo.BillingAddressCountry,
-                PostalCode = taxInfo.BillingAddressPostalCode
+                Country = upgrade.TaxInfo.BillingAddressCountry,
+                PostalCode = upgrade.TaxInfo.BillingAddressPostalCode,
+                // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name instead.
+                Line1 = upgrade.TaxInfo.BillingAddressLine1 ?? string.Empty,
+                Line2 = upgrade.TaxInfo.BillingAddressLine2,
+                City = upgrade.TaxInfo.BillingAddressCity,
+                State = upgrade.TaxInfo.BillingAddressState,
             };
-            var taxRates = await _taxRateRepository.GetByLocationAsync(taxRateSearch);
-
-            // should only be one tax rate per country/zip combo
-            var taxRate = taxRates.FirstOrDefault();
-            if (taxRate != null)
-            {
-                taxInfo.StripeTaxRateId = taxRate.Id;
-            }
+            var customerUpdateOptions = new Stripe.CustomerUpdateOptions { Address = addressOptions };
+            customerUpdateOptions.AddExpand("default_source");
+            customerUpdateOptions.AddExpand("invoice_settings.default_payment_method");
+            customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId, customerUpdateOptions);
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade)
+        {
+            DefaultTaxRates = new List<string>(),
+            AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true }
+        };
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
         var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
@@ -459,26 +451,6 @@ public class StripePaymentService : IPaymentService
             Quantity = 1
         });
 
-        if (!string.IsNullOrWhiteSpace(taxInfo?.BillingAddressCountry)
-                && !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode))
-        {
-            var taxRates = await _taxRateRepository.GetByLocationAsync(
-                new TaxRate()
-                {
-                    Country = taxInfo.BillingAddressCountry,
-                    PostalCode = taxInfo.BillingAddressPostalCode
-                }
-            );
-            var taxRate = taxRates.FirstOrDefault();
-            if (taxRate != null)
-            {
-                subCreateOptions.DefaultTaxRates = new List<string>(1)
-                {
-                    taxRate.Id
-                };
-            }
-        }
-
         if (additionalStorageGb > 0)
         {
             subCreateOptions.Items.Add(new Stripe.SubscriptionItemOptions
@@ -487,6 +459,8 @@ public class StripePaymentService : IPaymentService
                 Quantity = additionalStorageGb
             });
         }
+
+        subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
 
         var subscription = await ChargeForNewSubscriptionAsync(user, customer, createdStripeCustomer,
             stripePaymentMethod, paymentMethodType, subCreateOptions, braintreeCustomer);
@@ -525,7 +499,8 @@ public class StripePaymentService : IPaymentService
                 {
                     Customer = customer.Id,
                     SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
-                    SubscriptionDefaultTaxRates = subCreateOptions.DefaultTaxRates,
+                    AutomaticTax =
+                        new Stripe.InvoiceAutomaticTaxOptions { Enabled = subCreateOptions.AutomaticTax.Enabled }
                 });
 
                 if (previewInvoice.AmountDue > 0)
@@ -583,7 +558,8 @@ public class StripePaymentService : IPaymentService
                 {
                     Customer = customer.Id,
                     SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
-                    SubscriptionDefaultTaxRates = subCreateOptions.DefaultTaxRates,
+                    AutomaticTax =
+                        new Stripe.InvoiceAutomaticTaxOptions { Enabled = subCreateOptions.AutomaticTax.Enabled }
                 });
                 if (previewInvoice.AmountDue > 0)
                 {
@@ -593,6 +569,7 @@ public class StripePaymentService : IPaymentService
 
             subCreateOptions.OffSession = true;
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
+            subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {
@@ -692,34 +669,14 @@ public class StripePaymentService : IPaymentService
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice",
             ProrationDate = prorationDate,
+            DefaultTaxRates = new List<string>(),
+            AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true }
         };
 
         if (!subscriptionUpdate.UpdateNeeded(sub))
         {
             // No need to update subscription, quantity matches
             return null;
-        }
-
-        var customer = await _stripeAdapter.CustomerGetAsync(sub.CustomerId);
-
-        if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
-                && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
-        {
-            var taxRates = await _taxRateRepository.GetByLocationAsync(
-                new TaxRate()
-                {
-                    Country = customer.Address.Country,
-                    PostalCode = customer.Address.PostalCode
-                }
-            );
-            var taxRate = taxRates.FirstOrDefault();
-            if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
-            {
-                subUpdateOptions.DefaultTaxRates = new List<string>(1)
-                {
-                    taxRate.Id
-                };
-            }
         }
 
         string paymentIntentClientSecret = null;
