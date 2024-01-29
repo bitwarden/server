@@ -1,6 +1,8 @@
 ﻿using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -20,20 +22,28 @@ public class ImportCiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<ImportCiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
+    private readonly ICollectionRepository _collectionRepository;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IOrganizationRepository _organizationRepository;
 
     public ImportCiphersController(
-        ICollectionCipherRepository collectionCipherRepository,
         ICipherService cipherService,
         IUserService userService,
         ICurrentContext currentContext,
         ILogger<ImportCiphersController> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        ICollectionRepository collectionRepository,
+        IAuthorizationService authorizationService,
+        IOrganizationRepository organizationRepository)
     {
         _cipherService = cipherService;
         _userService = userService;
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
+        _collectionRepository = collectionRepository;
+        _authorizationService = authorizationService;
+        _organizationRepository = organizationRepository;
     }
 
     [HttpPost("import")]
@@ -64,14 +74,59 @@ public class ImportCiphersController : Controller
         }
 
         var orgId = new Guid(organizationId);
-        if (!await _currentContext.AccessImportExport(orgId))
+        var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
+
+
+        //An User is allowed to import if CanCreate Collections or has AccessToImportExport
+        var authorized = await CheckOrgImportPermission(collections, orgId);
+
+        if (!authorized)
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
         await _cipherService.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
+    }
+
+    private async Task<bool> CheckOrgImportPermission(List<Collection> collections, Guid orgId)
+    {
+        //Users are allowed to import if they have the AccessToImportExport permission
+        if (await _currentContext.AccessImportExport(orgId))
+        {
+            return true;
+        }
+
+        //If flexible collections is disabled the user cannot continue with the import
+        var orgFlexibleCollections = await _organizationRepository.GetByIdAsync(orgId);
+        if (!orgFlexibleCollections?.FlexibleCollections ?? false)
+        {
+            return false;
+        }
+
+        //Users allowed to import if they CanCreate Collections
+        if (!(await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
+        {
+            return false;
+        }
+
+        //Calling Repository instead of Service as we want to get all the collections, regardless of permission
+        //Permissions check will be done later on AuthorizationService
+        var orgCollectionIds =
+            (await _collectionRepository.GetManyByOrganizationIdAsync(orgId))
+            .Select(c => c.Id)
+            .ToHashSet();
+
+        //We need to verify if the user is trying to import into existing collections
+        var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));
+
+        //When importing into existing collection, we need to verify if the user has permissions
+        if (existingCollections.Any() && !(await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
+        {
+            return false;
+        };
+
+        return true;
     }
 }
