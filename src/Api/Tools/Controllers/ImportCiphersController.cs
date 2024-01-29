@@ -50,8 +50,8 @@ public class ImportCiphersController : Controller
     public async Task PostImport([FromBody] ImportCiphersRequestModel model)
     {
         if (!_globalSettings.SelfHosted &&
-            (model.Ciphers.Count() > 6000 || model.FolderRelationships.Count() > 6000 ||
-                model.Folders.Count() > 1000))
+            (model.Ciphers.Count() > 7000 || model.FolderRelationships.Count() > 7000 ||
+                model.Folders.Count() > 2000))
         {
             throw new BadRequestException("You cannot import this much data at once.");
         }
@@ -67,8 +67,8 @@ public class ImportCiphersController : Controller
         [FromBody] ImportOrganizationCiphersRequestModel model)
     {
         if (!_globalSettings.SelfHosted &&
-            (model.Ciphers.Count() > 6000 || model.CollectionRelationships.Count() > 12000 ||
-                model.Collections.Count() > 1000))
+            (model.Ciphers.Count() > 7000 || model.CollectionRelationships.Count() > 14000 ||
+                model.Collections.Count() > 2000))
         {
             throw new BadRequestException("You cannot import this much data at once.");
         }
