@@ -617,6 +617,14 @@ public class StripePaymentServiceTests
                 { "btCustomerId", "B-123" },
             }
         });
+        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        {
+            Id = "C-1",
+            Metadata = new Dictionary<string, string>
+            {
+                { "btCustomerId", "B-123" },
+            }
+        });
         stripeAdapter.InvoiceUpcomingAsync(default).ReturnsForAnyArgs(new Stripe.Invoice
         {
             PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
@@ -654,6 +662,14 @@ public class StripePaymentServiceTests
                 { "btCustomerId", "B-123" },
             }
         });
+        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        {
+            Id = "C-1",
+            Metadata = new Dictionary<string, string>
+            {
+                { "btCustomerId", "B-123" },
+            }
+        });
         stripeAdapter.InvoiceUpcomingAsync(default).ReturnsForAnyArgs(new Stripe.Invoice
         {
             PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
@@ -675,5 +691,59 @@ public class StripePaymentServiceTests
         var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, upgrade);
 
         Assert.Null(result);
+    }
+
+    [Theory, BitAutoData]
+    public async void UpgradeFreeOrganizationAsync_WhenCustomerHasNoAddress_UpdatesCustomerAddressWithTaxInfo(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization organization,
+        TaxInfo taxInfo)
+    {
+        organization.GatewaySubscriptionId = null;
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.CustomerGetAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        {
+            Id = "C-1",
+            Metadata = new Dictionary<string, string>
+            {
+                { "btCustomerId", "B-123" },
+            }
+        });
+        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        {
+            Id = "C-1",
+            Metadata = new Dictionary<string, string>
+            {
+                { "btCustomerId", "B-123" },
+            }
+        });
+        stripeAdapter.InvoiceUpcomingAsync(default).ReturnsForAnyArgs(new Stripe.Invoice
+        {
+            PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
+            AmountDue = 0
+        });
+        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
+
+        var upgrade = new OrganizationUpgrade()
+        {
+            AdditionalStorageGb = 1,
+            AdditionalSeats = 10,
+            PremiumAccessAddon = false,
+            TaxInfo = taxInfo,
+            AdditionalSmSeats = 5,
+            AdditionalServiceAccounts = 50
+        };
+
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        _ = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, upgrade);
+
+        await stripeAdapter.Received()
+            .CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<Stripe.CustomerUpdateOptions>(c =>
+                c.Address.Country == taxInfo.BillingAddressCountry &&
+                c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
+                c.Address.Line1 == taxInfo.BillingAddressLine1 &&
+                c.Address.Line2 == taxInfo.BillingAddressLine2 &&
+                c.Address.City == taxInfo.BillingAddressCity &&
+                c.Address.State == taxInfo.BillingAddressState));
     }
 }
