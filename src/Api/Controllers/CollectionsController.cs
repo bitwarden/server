@@ -624,7 +624,7 @@ public class CollectionsController : Controller
 
         await _collectionService.SaveAsync(collection, groups, users);
 
-        if (!_currentContext.UserId.HasValue)
+        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(orgId))
         {
             return new CollectionResponseModel(collection);
         }
@@ -633,7 +633,9 @@ public class CollectionsController : Controller
         var userCollectionDetails = await _collectionRepository.GetByIdAsync(collection.Id,
             _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
 
-        return new CollectionDetailsResponseModel(userCollectionDetails);
+        return userCollectionDetails == null
+            ? new CollectionResponseModel(collection)
+            : new CollectionDetailsResponseModel(userCollectionDetails);
     }
 
     private async Task<CollectionResponseModel> Put_vNext(Guid id, CollectionRequestModel model)
@@ -649,7 +651,7 @@ public class CollectionsController : Controller
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
         await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
 
-        if (!_currentContext.UserId.HasValue)
+        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId))
         {
             return new CollectionResponseModel(collection);
         }
@@ -657,7 +659,9 @@ public class CollectionsController : Controller
         // If we have a user, fetch the collection details to get the latest permission details for the user
         var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
 
-        return new CollectionDetailsResponseModel(updatedCollectionDetails);
+        return updatedCollectionDetails == null
+            ? new CollectionResponseModel(collection)
+            : new CollectionDetailsResponseModel(updatedCollectionDetails);
     }
 
     private async Task PutUsers_vNext(Guid id, IEnumerable<SelectionReadOnlyRequestModel> model)
