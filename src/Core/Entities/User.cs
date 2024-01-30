@@ -55,7 +55,7 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     [MaxLength(30)]
     public string ApiKey { get; set; }
     public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
-    public int KdfIterations { get; set; } = 5000;
+    public int KdfIterations { get; set; } = AuthConstants.PBKDF2_ITERATIONS.Default;
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
@@ -135,6 +135,13 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
                 _twoFactorProviders =
                     JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
                         TwoFactorProviders);
+            }
+
+            // U2F is no longer supported, and all users keys should have been migrated to WebAuthn.
+            // To prevent issues with accounts being prompted for unsupported U2F we remove them
+            if (_twoFactorProviders.ContainsKey(TwoFactorProviderType.U2f))
+            {
+                _twoFactorProviders.Remove(TwoFactorProviderType.U2f);
             }
 
             return _twoFactorProviders;

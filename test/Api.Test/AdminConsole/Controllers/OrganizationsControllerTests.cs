@@ -21,10 +21,10 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -352,5 +352,48 @@ public class OrganizationsControllerTests : IDisposable
         await _addSecretsManagerSubscriptionCommand.Received(1)
             .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_Success(Organization organization)
+    {
+        organization.FlexibleCollections = false;
+        _currentContext.OrganizationOwner(organization.Id).Returns(true);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        await _sut.EnableCollectionEnhancements(organization.Id);
+
+        await _organizationRepository.Received(1).EnableCollectionEnhancements(organization.Id);
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
+            Arg.Is<Organization>(o =>
+                o.Id == organization.Id &&
+                o.FlexibleCollections));
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_WhenNotOwner_Throws(Organization organization)
+    {
+        organization.FlexibleCollections = false;
+        _currentContext.OrganizationOwner(organization.Id).Returns(false);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
+
+        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
+        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_WhenAlreadyMigrated_Throws(Organization organization)
+    {
+        organization.FlexibleCollections = true;
+        _currentContext.OrganizationOwner(organization.Id).Returns(true);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
+        Assert.Contains("has already been migrated", exception.Message);
+
+        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
+        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 }
