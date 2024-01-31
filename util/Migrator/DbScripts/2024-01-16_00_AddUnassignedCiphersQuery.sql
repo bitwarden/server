@@ -14,18 +14,14 @@ BEGIN
         [dbo].[CipherView] C
     LEFT JOIN
         [dbo].[OrganizationView] O ON O.[Id] = C.[OrganizationId]
+    LEFT JOIN
+        [dbo].[CollectionCipher] CC ON C.[Id] = CC.[CipherId]
+    LEFT JOIN
+        [dbo].[Collection] S ON S.[Id] = CC.[CollectionId]
+        AND S.[OrganizationId] = C.[OrganizationId]
     WHERE
         C.[UserId] IS NULL
         AND C.[OrganizationId] = @OrganizationId
-        AND C.[Id] NOT IN (
-            SELECT
-                CC.[CipherId]
-            FROM
-                [dbo].[CollectionCipher] CC
-            INNER JOIN
-                [dbo].[Collection] S ON S.[Id] = CC.[CollectionId]
-            WHERE
-                S.[OrganizationId] = @OrganizationId
-        )
+        AND CC.[CipherId] IS NULL
 END
 GO
