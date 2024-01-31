@@ -33,4 +33,10 @@ public interface IStripeFacade
         SubscriptionGetOptions subscriptionGetOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
+
+    Task<Subscription> UpdateSubscription(
+        string subscriptionId,
+        SubscriptionUpdateOptions subscriptionGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
 }

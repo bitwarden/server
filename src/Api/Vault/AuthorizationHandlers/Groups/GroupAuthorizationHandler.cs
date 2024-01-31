@@ -1,8 +1,5 @@
 ﻿#nullable enable
 using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.Vault.AuthorizationHandlers.Groups;
@@ -14,17 +11,10 @@ namespace Bit.Api.Vault.AuthorizationHandlers.Groups;
 public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement>
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
 
-    public GroupAuthorizationHandler(
-        ICurrentContext currentContext,
-        IFeatureService featureService,
-        IApplicationCacheService applicationCacheService)
+    public GroupAuthorizationHandler(ICurrentContext currentContext)
     {
         _currentContext = currentContext;
-        _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -56,22 +46,8 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
     private async Task CanReadAllAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement,
         CurrentContextOrganization? org)
     {
-        // Owners, Admins, and users with any of ManageGroups, ManageUsers, EditAnyCollection, DeleteAnyCollection, CreateNewCollections permissions can always read all groups
-        if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.ManageGroups: true } or
-        { Permissions.ManageUsers: true } or
-        { Permissions.EditAnyCollection: true } or
-        { Permissions.DeleteAnyCollection: true } or
-        { Permissions.CreateNewCollections: true })
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
-        // Check for non-null org here: the user must be apart of the organization for this setting to take affect
-        // If the limit collection management setting is disabled, allow any user to read all groups
-        if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
+        // All users of an organization can read all groups belonging to the organization for collection access management
+        if (org is not null)
         {
             context.Succeed(requirement);
             return;
@@ -82,17 +58,5 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
         {
             context.Succeed(requirement);
         }
-    }
-
-    private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(CurrentContextOrganization? organization)
-    {
-        // If the CurrentContextOrganization is null, then the user isn't a member of the org so the setting is
-        // irrelevant
-        if (organization == null)
-        {
-            return null;
-        }
-
-        return await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
     }
 }

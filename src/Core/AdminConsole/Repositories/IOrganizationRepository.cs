@@ -15,4 +15,5 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id);
     Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take);
     Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId);
+    Task EnableCollectionEnhancements(Guid organizationId);
 }
