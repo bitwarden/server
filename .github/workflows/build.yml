@@ -285,6 +285,19 @@ jobs:
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
+      - name: Scan Docker image
+        id: container-scan
+        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
+        with:
+          image: ${{ steps.image-names.outputs.names }}
+          fail-build: false
+          output-format: sarif
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+        with:
+          sarif_file: ${{ steps.container-scan.outputs.sarif }}
+
   upload:
     name: Upload
     runs-on: ubuntu-22.04
