@@ -44,4 +44,11 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _subscriptionService.GetAsync(subscriptionId, subscriptionGetOptions, requestOptions, cancellationToken);
+
+    public async Task<Subscription> UpdateSubscription(
+        string subscriptionId,
+        SubscriptionUpdateOptions subscriptionUpdateOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _subscriptionService.UpdateAsync(subscriptionId, subscriptionUpdateOptions, requestOptions, cancellationToken);
 }
