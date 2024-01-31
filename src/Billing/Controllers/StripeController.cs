@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
@@ -19,9 +20,9 @@ using Microsoft.Extensions.Options;
 using Stripe;
 using Customer = Stripe.Customer;
 using Event = Stripe.Event;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
-using TaxRate = Bit.Core.Entities.TaxRate;
 using Transaction = Bit.Core.Entities.Transaction;
 using TransactionType = Bit.Core.Enums.TransactionType;
 
@@ -110,9 +111,27 @@ public class StripeController : Controller
         using (var sr = new StreamReader(HttpContext.Request.Body))
         {
             var json = await sr.ReadToEndAsync();
+            var webhookSecret = PickStripeWebhookSecret(json);
+
+            if (string.IsNullOrEmpty(webhookSecret))
+            {
+                return new OkResult();
+            }
+
             parsedEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
-                _billingSettings.StripeWebhookSecret,
-                throwOnApiVersionMismatch: _billingSettings.StripeEventParseThrowMismatch);
+                webhookSecret,
+                throwOnApiVersionMismatch: false);
+        }
+
+        if (StripeConfiguration.ApiVersion != parsedEvent.ApiVersion)
+        {
+            _logger.LogWarning(
+                "Stripe {WebhookType} webhook's API version ({WebhookAPIVersion}) does not match SDK API Version ({SDKAPIVersion})",
+                parsedEvent.Type,
+                parsedEvent.ApiVersion,
+                StripeConfiguration.ApiVersion);
+
+            return new OkResult();
         }
 
         if (string.IsNullOrWhiteSpace(parsedEvent?.Id))
@@ -223,9 +242,17 @@ public class StripeController : Controller
                     $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
             }
 
-            var updatedSubscription = await VerifyCorrectTaxRateForCharge(invoice, subscription);
+            if (!subscription.AutomaticTax.Enabled)
+            {
+                subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
+                    new SubscriptionUpdateOptions
+                    {
+                        DefaultTaxRates = new List<string>(),
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
 
-            var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
+            var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
 
             var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
 
@@ -246,7 +273,7 @@ public class StripeController : Controller
 
             if (organizationId.HasValue)
             {
-                if (IsSponsoredSubscription(updatedSubscription))
+                if (IsSponsoredSubscription(subscription))
                 {
                     await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
                 }
@@ -828,32 +855,6 @@ public class StripeController : Controller
             invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
     }
 
-    private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
-    {
-        if (!string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) && !string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
-        {
-            var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
-                new TaxRate()
-                {
-                    Country = invoice.CustomerAddress.Country,
-                    PostalCode = invoice.CustomerAddress.PostalCode
-                }
-            );
-
-            if (localBitwardenTaxRates.Any())
-            {
-                var stripeTaxRate = await new TaxRateService().GetAsync(localBitwardenTaxRates.First().Id);
-                if (stripeTaxRate != null && !subscription.DefaultTaxRates.Any(x => x == stripeTaxRate))
-                {
-                    subscription.DefaultTaxRates = new List<Stripe.TaxRate> { stripeTaxRate };
-                    var subscriptionOptions = new SubscriptionUpdateOptions() { DefaultTaxRates = new List<string>() { stripeTaxRate.Id } };
-                    subscription = await new SubscriptionService().UpdateAsync(subscription.Id, subscriptionOptions);
-                }
-            }
-        }
-        return subscription;
-    }
-
     private static bool IsSponsoredSubscription(Subscription subscription) =>
         StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
 
@@ -889,6 +890,27 @@ public class StripeController : Controller
         foreach (var invoice in invoices)
         {
             await invoiceService.VoidInvoiceAsync(invoice.Id);
+        }
+    }
+
+    private string PickStripeWebhookSecret(string webhookBody)
+    {
+        var versionContainer = JsonSerializer.Deserialize<StripeWebhookVersionContainer>(webhookBody);
+
+        return versionContainer.ApiVersion switch
+        {
+            "2023-10-16" => _billingSettings.StripeWebhookSecret20231016,
+            "2022-08-01" => _billingSettings.StripeWebhookSecret,
+            _ => HandleDefault(versionContainer.ApiVersion)
+        };
+
+        string HandleDefault(string version)
+        {
+            _logger.LogWarning(
+                "Stripe webhook contained an recognized 'api_version': {ApiVersion}",
+                version);
+
+            return null;
         }
     }
 }

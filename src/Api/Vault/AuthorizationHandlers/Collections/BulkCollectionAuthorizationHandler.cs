@@ -76,6 +76,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
             case not null when requirement == BulkCollectionOperations.Update:
             case not null when requirement == BulkCollectionOperations.ModifyAccess:
+            case not null when requirement == BulkCollectionOperations.ImportCiphers:
                 await CanUpdateCollectionAsync(context, requirement, resources, org);
                 break;
 
