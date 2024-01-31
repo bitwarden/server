@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Organization_EnableCollectionEnhancements]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_EnableCollectionEnhancements]
     @OrganizationId UNIQUEIDENTIFIER
 WITH RECOMPILE
 AS
@@ -182,3 +182,4 @@ BEGIN
         DROP TABLE #TempUsersAccessAll;
         DROP TABLE #TempUserManagers;
 END
+GO
