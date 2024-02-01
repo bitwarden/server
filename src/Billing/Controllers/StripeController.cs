@@ -1,6 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Models;
 using Bit.Billing.Services;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -23,6 +24,7 @@ using Event = Stripe.Event;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
+using TaxRate = Bit.Core.Entities.TaxRate;
 using Transaction = Bit.Core.Entities.Transaction;
 using TransactionType = Bit.Core.Enums.TransactionType;
 
@@ -52,6 +54,7 @@ public class StripeController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeFacade _stripeFacade;
+    private readonly IFeatureService _featureService;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -70,7 +73,8 @@ public class StripeController : Controller
         IUserRepository userRepository,
         ICurrentContext currentContext,
         IStripeEventService stripeEventService,
-        IStripeFacade stripeFacade)
+        IStripeFacade stripeFacade,
+        IFeatureService featureService)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -97,6 +101,7 @@ public class StripeController : Controller
         _globalSettings = globalSettings;
         _stripeEventService = stripeEventService;
         _stripeFacade = stripeFacade;
+        _featureService = featureService;
     }
 
     [HttpPost("webhook")]
@@ -235,6 +240,7 @@ public class StripeController : Controller
             }
 
             var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+            var customer = await _stripeFacade.GetCustomer(subscription.CustomerId);
 
             if (subscription == null)
             {
@@ -242,7 +248,10 @@ public class StripeController : Controller
                     $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
             }
 
-            if (!subscription.AutomaticTax.Enabled)
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax) &&
+                !subscription.AutomaticTax.Enabled &&
+                !string.IsNullOrEmpty(customer.Address?.PostalCode) &&
+                !string.IsNullOrEmpty(customer.Address?.Country))
             {
                 subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
                     new SubscriptionUpdateOptions
@@ -252,7 +261,11 @@ public class StripeController : Controller
                     });
             }
 
-            var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+            var updatedSubscription = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
+                ? await VerifyCorrectTaxRateForCharge(invoice, subscription)
+                : subscription;
+
+            var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
 
             var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
 
@@ -273,7 +286,7 @@ public class StripeController : Controller
 
             if (organizationId.HasValue)
             {
-                if (IsSponsoredSubscription(subscription))
+                if (IsSponsoredSubscription(updatedSubscription))
                 {
                     await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
                 }
@@ -853,6 +866,41 @@ public class StripeController : Controller
     {
         return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
             invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
+    }
+
+    private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
+    {
+        if (string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) ||
+            string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
+        {
+            return subscription;
+        }
+
+        var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
+            new TaxRate()
+            {
+                Country = invoice.CustomerAddress.Country,
+                PostalCode = invoice.CustomerAddress.PostalCode
+            }
+        );
+
+        if (!localBitwardenTaxRates.Any())
+        {
+            return subscription;
+        }
+
+        var stripeTaxRate = await new TaxRateService().GetAsync(localBitwardenTaxRates.First().Id);
+        if (stripeTaxRate == null || subscription.DefaultTaxRates.Any(x => x == stripeTaxRate))
+        {
+            return subscription;
+        }
+
+        subscription.DefaultTaxRates = new List<Stripe.TaxRate> { stripeTaxRate };
+
+        var subscriptionOptions = new SubscriptionUpdateOptions { DefaultTaxRates = new List<string> { stripeTaxRate.Id } };
+        subscription = await new SubscriptionService().UpdateAsync(subscription.Id, subscriptionOptions);
+
+        return subscription;
     }
 
     private static bool IsSponsoredSubscription(Subscription subscription) =>
