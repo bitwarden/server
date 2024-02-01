@@ -338,22 +338,20 @@ public class StripeController : Controller
 
             Tuple<Guid?, Guid?> ids = null;
             Subscription subscription = null;
-            var subscriptionService = new SubscriptionService();
 
             if (charge.InvoiceId != null)
             {
-                var invoiceService = new InvoiceService();
-                var invoice = await invoiceService.GetAsync(charge.InvoiceId);
+                var invoice = await _stripeFacade.GetInvoice(charge.InvoiceId);
                 if (invoice?.SubscriptionId != null)
                 {
-                    subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+                    subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
                     ids = GetIdsFromMetaData(subscription?.Metadata);
                 }
             }
 
             if (subscription == null || ids == null || (ids.Item1.HasValue && ids.Item2.HasValue))
             {
-                var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
+                var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
                 {
                     Customer = charge.CustomerId
                 });
@@ -507,8 +505,7 @@ public class StripeController : Controller
             var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
             if (invoice.Paid && invoice.BillingReason == "subscription_create")
             {
-                var subscriptionService = new SubscriptionService();
-                var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+                var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
                 if (subscription?.Status == StripeSubscriptionStatus.Active)
                 {
                     if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
@@ -613,7 +610,6 @@ public class StripeController : Controller
             return;
         }
 
-        var subscriptionService = new SubscriptionService();
         var subscriptionListOptions = new SubscriptionListOptions
         {
             Customer = paymentMethod.CustomerId,
@@ -624,7 +620,7 @@ public class StripeController : Controller
         StripeList<Subscription> unpaidSubscriptions;
         try
         {
-            unpaidSubscriptions = await subscriptionService.ListAsync(subscriptionListOptions);
+            unpaidSubscriptions = await _stripeFacade.ListSubscriptions(subscriptionListOptions);
         }
         catch (Exception e)
         {
@@ -719,8 +715,7 @@ public class StripeController : Controller
 
     private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false)
     {
-        var customerService = new CustomerService();
-        var customer = await customerService.GetAsync(invoice.CustomerId);
+        var customer = await _stripeFacade.GetCustomer(invoice.CustomerId);
 
         if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
         {
@@ -745,8 +740,7 @@ public class StripeController : Controller
             return false;
         }
 
-        var subscriptionService = new SubscriptionService();
-        var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
         var ids = GetIdsFromMetaData(subscription?.Metadata);
         if (!ids.Item1.HasValue && !ids.Item2.HasValue)
         {
@@ -814,10 +808,9 @@ public class StripeController : Controller
             return false;
         }
 
-        var invoiceService = new InvoiceService();
         try
         {
-            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+            await _stripeFacade.UpdateInvoice(invoice.Id, new InvoiceUpdateOptions
             {
                 Metadata = new Dictionary<string, string>
                 {
@@ -826,14 +819,14 @@ public class StripeController : Controller
                         transactionResult.Target.PayPalDetails?.AuthorizationId
                 }
             });
-            await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
+            await _stripeFacade.PayInvoice(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
         }
         catch (Exception e)
         {
             await _btGateway.Transaction.RefundAsync(transactionResult.Target.Id);
             if (e.Message.Contains("Invoice is already paid"))
             {
-                await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                await _stripeFacade.UpdateInvoice(invoice.Id, new InvoiceUpdateOptions
                 {
                     Metadata = invoice.Metadata
                 });
@@ -851,8 +844,7 @@ public class StripeController : Controller
     {
         try
         {
-            var invoiceService = new InvoiceService();
-            await invoiceService.PayAsync(invoice.Id);
+            await _stripeFacade.PayInvoice(invoice.Id);
             return true;
         }
         catch (Exception e)
@@ -893,7 +885,7 @@ public class StripeController : Controller
             return subscription;
         }
 
-        var stripeTaxRate = await new TaxRateService().GetAsync(localBitwardenTaxRates.First().Id);
+        var stripeTaxRate = await _stripeFacade.GetTaxRate(localBitwardenTaxRates.First().Id);
         if (stripeTaxRate == null || subscription.DefaultTaxRates.Any(x => x == stripeTaxRate))
         {
             return subscription;
@@ -902,7 +894,7 @@ public class StripeController : Controller
         subscription.DefaultTaxRates = new List<Stripe.TaxRate> { stripeTaxRate };
 
         var subscriptionOptions = new SubscriptionUpdateOptions { DefaultTaxRates = new List<string> { stripeTaxRate.Id } };
-        subscription = await new SubscriptionService().UpdateAsync(subscription.Id, subscriptionOptions);
+        subscription = await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionOptions);
 
         return subscription;
     }
@@ -914,8 +906,7 @@ public class StripeController : Controller
     {
         if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
         {
-            var subscriptionService = new SubscriptionService();
-            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+            var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
             // attempt count 4 = 11 days after initial failure
             if (invoice.AttemptCount <= 3 ||
                 !subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
@@ -925,23 +916,20 @@ public class StripeController : Controller
         }
     }
 
-    private async Task CancelSubscription(string subscriptionId)
-    {
-        await new SubscriptionService().CancelAsync(subscriptionId, new SubscriptionCancelOptions());
-    }
+    private async Task CancelSubscription(string subscriptionId) =>
+        await _stripeFacade.CancelSubscription(subscriptionId, new SubscriptionCancelOptions());
 
     private async Task VoidOpenInvoices(string subscriptionId)
     {
-        var invoiceService = new InvoiceService();
         var options = new InvoiceListOptions
         {
             Status = StripeInvoiceStatus.Open,
             Subscription = subscriptionId
         };
-        var invoices = invoiceService.List(options);
+        var invoices = await _stripeFacade.ListInvoices(options);
         foreach (var invoice in invoices)
         {
-            await invoiceService.VoidInvoiceAsync(invoice.Id);
+            await _stripeFacade.VoidInvoice(invoice.Id);
         }
     }
 
