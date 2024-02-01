@@ -240,7 +240,6 @@ public class StripeController : Controller
             }
 
             var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-            var customer = await _stripeFacade.GetCustomer(subscription.CustomerId);
 
             if (subscription == null)
             {
@@ -248,22 +247,27 @@ public class StripeController : Controller
                     $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
             }
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax) &&
-                !subscription.AutomaticTax.Enabled &&
-                !string.IsNullOrEmpty(customer.Address?.PostalCode) &&
-                !string.IsNullOrEmpty(customer.Address?.Country))
+            var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+            if (pm5766AutomaticTaxIsEnabled)
             {
-                subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        DefaultTaxRates = new List<string>(),
-                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                    });
+                var customer = await _stripeFacade.GetCustomer(subscription.CustomerId);
+                if (!subscription.AutomaticTax.Enabled &&
+                    !string.IsNullOrEmpty(customer.Address?.PostalCode) &&
+                    !string.IsNullOrEmpty(customer.Address?.Country))
+                {
+                    subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
+                        new SubscriptionUpdateOptions
+                        {
+                            DefaultTaxRates = new List<string>(),
+                            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                        });
+                }
             }
 
-            var updatedSubscription = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
-                ? await VerifyCorrectTaxRateForCharge(invoice, subscription)
-                : subscription;
+
+            var updatedSubscription = pm5766AutomaticTaxIsEnabled
+                ? subscription
+                : await VerifyCorrectTaxRateForCharge(invoice, subscription);
 
             var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
 
