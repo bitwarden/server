@@ -54,11 +54,10 @@ public interface IUserService
     Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
         PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
         TaxInfo taxInfo);
-    Task IapCheckAsync(User user, PaymentMethodType paymentMethodType);
     Task UpdateLicenseAsync(User user, UserLicense license);
     Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
     Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType, TaxInfo taxInfo);
-    Task CancelPremiumAsync(User user, bool? endOfPeriod = null, bool accountDelete = false);
+    Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
     Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task EnablePremiumAsync(User user, DateTime? expirationDate);

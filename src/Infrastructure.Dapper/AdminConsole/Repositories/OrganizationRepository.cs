@@ -7,14 +7,21 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationRepository : Repository<Organization, Guid>, IOrganizationRepository
 {
-    public OrganizationRepository(GlobalSettings globalSettings)
+    private readonly ILogger<OrganizationRepository> _logger;
+
+    public OrganizationRepository(
+        GlobalSettings globalSettings,
+        ILogger<OrganizationRepository> logger)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    {
+        _logger = logger;
+    }
 
     public OrganizationRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
@@ -153,11 +160,25 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
     public async Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId)
     {
+        _logger.LogInformation("AC-1758: Executing GetOwnerEmailAddressesById (Dapper)");
+
         await using var connection = new SqlConnection(ConnectionString);
 
         return await connection.QueryAsync<string>(
             $"[{Schema}].[{Table}_ReadOwnerEmailAddressesById]",
             new { OrganizationId = organizationId },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task EnableCollectionEnhancements(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[Organization_EnableCollectionEnhancements]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
     }
 }

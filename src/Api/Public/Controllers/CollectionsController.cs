@@ -16,15 +16,18 @@ public class CollectionsController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionService _collectionService;
     private readonly ICurrentContext _currentContext;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
         ICollectionService collectionService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IApplicationCacheService applicationCacheService)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
         _currentContext = currentContext;
+        _applicationCacheService = applicationCacheService;
     }
 
     /// <summary>
@@ -89,7 +92,8 @@ public class CollectionsController : Controller
             return new NotFoundResult();
         }
         var updatedCollection = model.ToCollection(existingCollection);
-        var associations = model.Groups?.Select(c => c.ToSelectionReadOnly());
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(_currentContext.OrganizationId.Value);
+        var associations = model.Groups?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
         await _collectionService.SaveAsync(updatedCollection, associations);
         var response = new CollectionResponseModel(updatedCollection, associations);
         return new JsonResult(response);
