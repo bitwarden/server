@@ -18,6 +18,8 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Models;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -57,6 +59,7 @@ public class OrganizationsController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -78,7 +81,8 @@ public class OrganizationsController : Controller
         ILicensingService licensingService,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
-        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand)
+        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
+        ICancelSubscriptionCommand cancelSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -100,6 +104,7 @@ public class OrganizationsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
+        _cancelSubscriptionCommand = cancelSubscriptionCommand;
     }
 
     [HttpGet("{id}")]
@@ -444,15 +449,28 @@ public class OrganizationsController : Controller
 
     [HttpPost("{id}/cancel")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel(string id)
+    public async Task PostCancel(string id, [FromBody] SubscriptionCancellationRequestModel request)
     {
         var orgIdGuid = new Guid(id);
+
         if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
 
-        await _organizationService.CancelSubscriptionAsync(orgIdGuid);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey))
+        {
+            await _organizationService.CancelSubscription(orgIdGuid, new OffboardingSurveyResponse
+            {
+                UserId = _currentContext.UserId!.Value,
+                Reason = request.Reason,
+                Feedback = request.Feedback
+            });
+        }
+        else
+        {
+            await _organizationService.CancelSubscriptionAsync(orgIdGuid);
+        }
     }
 
     [HttpPost("{id}/reinstate")]

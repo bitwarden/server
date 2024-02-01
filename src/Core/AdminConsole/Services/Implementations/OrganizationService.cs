@@ -12,6 +12,8 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -64,6 +66,7 @@ public class OrganizationService : IOrganizationService
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -95,7 +98,8 @@ public class OrganizationService : IOrganizationService
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IProviderRepository providerRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ICancelSubscriptionCommand cancelSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -127,6 +131,7 @@ public class OrganizationService : IOrganizationService
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
+        _cancelSubscriptionCommand = cancelSubscriptionCommand;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -155,6 +160,7 @@ public class OrganizationService : IOrganizationService
     public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
     {
         var organization = await GetOrgById(organizationId);
+
         if (organization == null)
         {
             throw new NotFoundException();
@@ -173,6 +179,28 @@ public class OrganizationService : IOrganizationService
             {
                 EndOfPeriod = endOfPeriod,
             });
+    }
+
+    public async Task CancelSubscription(
+        Guid organizationId,
+        OffboardingSurveyResponse offboardingSurveyResponse)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _cancelSubscriptionCommand.CancelSubscription(organization, offboardingSurveyResponse);
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+            ReferenceEventType.CancelSubscription,
+            organization,
+            _currentContext)
+        {
+            EndOfPeriod = organization.IsExpired()
+        });
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)

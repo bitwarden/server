@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -139,6 +140,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
+        services.AddBillingCommands();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880

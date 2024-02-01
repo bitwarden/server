@@ -11,6 +11,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -50,6 +51,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -75,6 +77,7 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
+        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -96,7 +99,8 @@ public class OrganizationsControllerTests : IDisposable
             _licensingService,
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
-            _addSecretsManagerSubscriptionCommand);
+            _addSecretsManagerSubscriptionCommand,
+            _cancelSubscriptionCommand);
     }
 
     public void Dispose()

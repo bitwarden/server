@@ -6,6 +6,8 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -62,6 +64,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
 
     public UserService(
         IUserRepository userRepository,
@@ -93,7 +96,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        ICancelSubscriptionCommand cancelSubscriptionCommand)
         : base(
               store,
               optionsAccessor,
@@ -131,6 +135,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _cancelSubscriptionCommand = cancelSubscriptionCommand;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1121,6 +1126,19 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             {
                 EndOfPeriod = eop
             });
+    }
+
+    public async Task CancelPremium(User user, OffboardingSurveyResponse offboardingSurveyResponse)
+    {
+        await _cancelSubscriptionCommand.CancelSubscription(user, offboardingSurveyResponse);
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+            ReferenceEventType.CancelSubscription,
+            user,
+            _currentContext)
+        {
+            EndOfPeriod = user.IsExpired()
+        });
     }
 
     public async Task ReinstatePremiumAsync(User user)

@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
 {
     public static void AddBillingCommands(this IServiceCollection services)
     {
+        services.AddSingleton<ICancelSubscriptionCommand, CancelSubscriptionCommand>();
         services.AddSingleton<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
     }
 }
