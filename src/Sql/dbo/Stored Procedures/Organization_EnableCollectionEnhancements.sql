@@ -1,6 +1,5 @@
 CREATE PROCEDURE [dbo].[Organization_EnableCollectionEnhancements]
     @OrganizationId UNIQUEIDENTIFIER
-WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -21,17 +20,18 @@ BEGIN
         WHERE [OrganizationId] = @OrganizationId
           AND [AccessAll] = 1;
 
-    -- Step 3: For all OrganizationUsers with Manager role or 'DeleteAssignedCollections' permission update their existing CollectionUser rows and insert new rows with [Manage] = 1
-    -- users with 'EditAssignedCollections' permission should be granted Can Edit access to collections
-    -- and finally update all OrganizationUsers with Manager role to User role
-        -- Create a temporary table to store the OrganizationUsers with Manager role, 'DeleteAssignedCollections' or 'EditAssignedCollections' permission
+    -- Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission update their existing CollectionUser rows and insert new rows with [Manage] = 1
+    -- and finally update all OrganizationUsers with Manager role or Custom users with only 'EditAssignedCollections' or 'DeleteAssignedCollections' to User role
+        -- Create a temporary table to store the OrganizationUsers with Manager role or with 'EditAssignedCollections' or 'DeleteAssignedCollections' permissions
         SELECT ou.[Id] AS [OrganizationUserId],
-               CASE WHEN ou.[Type] = 3 THEN 1 ELSE 0 END AS [IsManager],
-               CASE WHEN ou.[Permissions] IS NOT NULL AND
+            CASE WHEN ou.[Type] = 3 THEN 1 ELSE 0 END AS [IsManager],
+            CASE WHEN ou.[Type] = 4 AND
+                         ou.[Permissions] IS NOT NULL AND
                          ISJSON(ou.[Permissions]) > 0 AND
-                         JSON_VALUE(ou.[Permissions], '$.deleteAssignedCollections') = 'true'
-                    THEN 1 ELSE 0 END AS [DeleteAssignedCollections],
-               CASE WHEN ou.[Permissions] IS NOT NULL AND
+                         JSON_VALUE(ou.[Permissions], '$.editAssignedCollections') = 'true'
+                    THEN 1 ELSE 0 END AS [EditAssignedCollections],
+            CASE WHEN ou.[Type] = 4 AND
+                         ou.[Permissions] IS NOT NULL AND
                          ISJSON(ou.[Permissions]) > 0 AND
                          (
                             SELECT COUNT(*)
@@ -43,7 +43,8 @@ BEGIN
         FROM [dbo].[OrganizationUser] ou
         WHERE ou.[OrganizationId] = @OrganizationId
               AND (ou.[Type] = 3 OR
-                   (ou.[Permissions] IS NOT NULL AND
+                   (ou.[Type] = 4 AND
+                    ou.[Permissions] IS NOT NULL AND
                     ISJSON(ou.[Permissions]) > 0 AND
                     (JSON_VALUE(ou.[Permissions], '$.editAssignedCollections') = 'true' OR
                      JSON_VALUE(ou.[Permissions], '$.deleteAssignedCollections') = 'true')
@@ -128,33 +129,24 @@ BEGIN
                     INNER JOIN #TempUsersAccessAll TU ON OU.[Id] = TU.[OrganizationUserId];
 
                 -- Step 3
-                    -- Update [dbo].[CollectionUser] using the temporary table
-                    -- Managers and users with 'DeleteAssignedCollections' permission will have [Manage] = 1
-                    -- Users with 'EditAssignedCollections' permission will have [Manage] = 0
+                    -- Update [dbo].[CollectionUser] with [Manage] = 1 using the temporary table
                     UPDATE CU
-                    SET
-                        CU.[ReadOnly] = 0,
+                    SET CU.[ReadOnly] = 0,
                         CU.[HidePasswords] = 0,
-                        CU.[Manage] = CASE WHEN TUM.[IsManager] = 1 OR TUM.[DeleteAssignedCollections] = 1 THEN 1 ELSE 0 END
+                        CU.[Manage] = 1
                     FROM [dbo].[CollectionUser] CU
-                    INNER JOIN #TempUserManagers TUM ON CU.[OrganizationUserId] = TUM.[OrganizationUserId];
+                    INNER JOIN #TempUserManagers TUM ON CU.[OrganizationUserId] = TUM.[OrganizationUserId]
+                    WHERE TUM.[IsManager] = 1 OR TUM.[EditAssignedCollections] = 1;
 
-                    -- Insert rows to [dbo].[CollectionUser] using the temporary table
-                    -- This is for OrgUsers who are Managers / DeleteAssignedCollections but have access via a group
+                    -- Insert rows to [dbo].[CollectionUser] with [Manage] = 1 using the temporary table
+                    -- This is for orgUsers who are Managers / EditAssignedCollections but have access via a group
                     -- We cannot give the whole group Manage permissions so we have to give them a direct assignment
-                    -- Managers and users with 'DeleteAssignedCollections' permission will have [Manage] = 1
-                    -- Users with 'EditAssignedCollections' permission will have [Manage] = 0
                     INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
-                    SELECT DISTINCT
-                        CG.[CollectionId],
-                        TUM.[OrganizationUserId],
-                        0,
-                        0,
-                        CASE WHEN TUM.[IsManager] = 1 OR TUM.[DeleteAssignedCollections] = 1 THEN 1 ELSE 0 END
+                    SELECT DISTINCT CG.[CollectionId], TUM.[OrganizationUserId], 0, 0, 1
                     FROM [dbo].[CollectionGroup] CG
                     INNER JOIN [dbo].[GroupUser] GU ON CG.[GroupId] = GU.[GroupId]
                     INNER JOIN #TempUserManagers TUM ON GU.[OrganizationUserId] = TUM.[OrganizationUserId]
-                    WHERE NOT EXISTS (
+                    WHERE (TUM.[IsManager] = 1 OR TUM.[EditAssignedCollections] = 1) AND NOT EXISTS (
                         SELECT 1 FROM [dbo].[CollectionUser] CU
                         WHERE CU.[CollectionId] = CG.[CollectionId] AND CU.[OrganizationUserId] = TUM.[OrganizationUserId]
                     );
