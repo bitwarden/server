@@ -114,6 +114,8 @@ public static class FeatureFlagKeys
     /// </summary>
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
 
+    public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
