@@ -286,16 +286,7 @@ jobs:
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
       - name: Scan Docker image
-        id: container-scan-pr
-        if: github.event_name == 'pull_request'
-        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
-        with:
-          image: ${{ steps.image-names.outputs.names }}
-          severity-cutoff: critical
-          output-format: table
-
-      - name: Scan Docker image
-        id: container-scan-push
+        id: container-scan
         if: github.ref == 'refs/heads/main'
         uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
         with:
@@ -307,7 +298,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
         with:
-          sarif_file: ${{ steps.container-scan-push.outputs.sarif }}
+          sarif_file: ${{ steps.container-scan.outputs.sarif }}
 
   upload:
     name: Upload
