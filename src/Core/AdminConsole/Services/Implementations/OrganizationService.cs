@@ -139,8 +139,13 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
-        var updated = await _paymentService.UpdatePaymentMethodAsync(organization,
-            paymentMethodType, paymentToken);
+        var updated = await _paymentService.UpdatePaymentMethodAsync(
+            organization,
+            paymentMethodType,
+            paymentToken,
+            _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
+                ? taxInfo
+                : null);
         if (updated)
         {
             await ReplaceAndUpdateCacheAsync(organization);
@@ -517,7 +522,7 @@ public class OrganizationService : IOrganizationService
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                 signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                 signup.PremiumAccessAddon, signup.TaxInfo, provider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                signup.AdditionalServiceAccounts.GetValueOrDefault());
+                signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
         }
 
         var ownerId = provider ? default : signup.Owner.Id;
@@ -673,7 +678,10 @@ public class OrganizationService : IOrganizationService
                     AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-                    AccessAll = true,
+
+                    // If using Flexible Collections, AccessAll is deprecated and set to false.
+                    // If not using Flexible Collections, set AccessAll to true (previous behavior)
+                    AccessAll = !organization.FlexibleCollections,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
@@ -884,6 +892,18 @@ public class OrganizationService : IOrganizationService
         {
             throw new NotFoundException();
         }
+
+        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
+        if (organization.FlexibleCollections && invites.Any(i => i.invite.Type is OrganizationUserType.Manager))
+        {
+            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
+        }
+
+        if (organization.FlexibleCollections && invites.Any(i => i.invite.AccessAll))
+        {
+            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
+        }
+        // End Flexible Collections
 
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
@@ -1376,6 +1396,19 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
+
+        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(user.OrganizationId);
+        if (organizationAbility?.FlexibleCollections == true && user.Type == OrganizationUserType.Manager)
+        {
+            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
+        }
+
+        if (organizationAbility?.FlexibleCollections == true && user.AccessAll)
+        {
+            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
+        }
+        // End Flexible Collections
 
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
         // updating Stripe
@@ -2027,15 +2060,6 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
-
-        // TODO: pass in the whole organization object when this is refactored into a command/query
-        // See AC-2036
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        var flexibleCollectionsEnabled = organizationAbility?.FlexibleCollections ?? false;
-        if (flexibleCollectionsEnabled && newType == OrganizationUserType.Manager && oldType is not OrganizationUserType.Manager)
-        {
-            throw new BadRequestException("Manager role is deprecated after Flexible Collections.");
-        }
     }
 
     private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
@@ -2451,7 +2475,10 @@ public class OrganizationService : IOrganizationService
             Key = null,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Invited,
-            AccessAll = true
+
+            // If using Flexible Collections, AccessAll is deprecated and set to false.
+            // If not using Flexible Collections, set AccessAll to true (previous behavior)
+            AccessAll = !organization.FlexibleCollections,
         };
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 

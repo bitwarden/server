@@ -515,7 +515,10 @@ public class ProviderService : IProviderService
                     new OrganizationUserInvite
                     {
                         Emails = new[] { clientOwnerEmail },
-                        AccessAll = true,
+
+                        // If using Flexible Collections, AccessAll is deprecated and set to false.
+                        // If not using Flexible Collections, set AccessAll to true (previous behavior)
+                        AccessAll = !organization.FlexibleCollections,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
                         Collections = Array.Empty<CollectionAccessSelection>(),
