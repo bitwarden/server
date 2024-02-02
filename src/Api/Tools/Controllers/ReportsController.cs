@@ -1,7 +1,9 @@
 ﻿using Bit.Api.Tools.Models.Response;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Tools.Queries.Interfaces;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +25,7 @@ public class ReportsController : Controller
     }
 
     [HttpGet("inactive-two-factor")]
+    [RequireFeature(FeatureFlagKeys.MigrateTwoFactorDirectory)]
     public async Task<InactiveTwoFactorResponseModel> GetInactiveTwoFactorAsync()
     {
         // Premium guarded
