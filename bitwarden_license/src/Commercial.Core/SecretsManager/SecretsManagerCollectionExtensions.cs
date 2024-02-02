@@ -39,6 +39,7 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IAuthorizationHandler, AccessPolicyAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ProjectPeopleAccessPoliciesAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountPeopleAccessPoliciesAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, ServiceAccountGrantedPoliciesAuthorizationHandler>();
         services.AddScoped<IAccessClientQuery, AccessClientQuery>();
         services.AddScoped<IMaxProjectsQuery, MaxProjectsQuery>();
         services.AddScoped<ISameOrganizationQuery, SameOrganizationQuery>();
