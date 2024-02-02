@@ -20,4 +20,8 @@ public interface IAccessPolicyRepository
     Task<PeopleGrantees> GetPeopleGranteesAsync(Guid organizationId, Guid currentUserId);
     Task<IEnumerable<BaseAccessPolicy>> GetPeoplePoliciesByGrantedServiceAccountIdAsync(Guid id, Guid userId);
     Task<IEnumerable<BaseAccessPolicy>> ReplaceServiceAccountPeopleAsync(ServiceAccountPeopleAccessPolicies peopleAccessPolicies, Guid userId);
+    Task<ServiceAccountGrantedPolicies?> GetServiceAccountGrantedPoliciesAsync(Guid serviceAccountId);
+    Task<ServiceAccountGrantedPoliciesPermissionDetails?> GetServiceAccountGrantedPoliciesPermissionDetailsAsync(
+        Guid serviceAccountId, Guid userId, AccessClientType accessClientType);
+    Task ReplaceServiceAccountGrantedPoliciesAsync(ServiceAccountGrantedPolicies serviceAccountGrantedPolicies);
 }
