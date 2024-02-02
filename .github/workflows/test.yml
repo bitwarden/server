@@ -16,6 +16,7 @@ env:
 jobs:
   testing:
     name: Run tests
+    if: ${{ startsWith(github.head_ref, 'version_bump_') == false }}
     runs-on: ubuntu-22.04
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
