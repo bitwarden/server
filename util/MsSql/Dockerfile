@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server:2019-CU24-ubuntu-20.04
+FROM mcr.microsoft.com/mssql/server:2022-CU11-ubuntu-22.04
 
 LABEL com.bitwarden.product="bitwarden"
 
@@ -17,7 +17,6 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh
 
-# Does not work unfortunately (https://github.com/bitwarden/server/issues/286)
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
 
 HEALTHCHECK --start-period=120s --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \
