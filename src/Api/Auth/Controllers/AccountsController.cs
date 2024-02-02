@@ -21,7 +21,6 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -63,10 +62,9 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly ICurrentContext _currentContext;
 
     private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
@@ -95,7 +93,6 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
-        ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
         IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
         IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
@@ -121,7 +118,6 @@ public class AccountsController : Controller
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
-        _currentContext = currentContext;
         _cipherValidator = cipherValidator;
         _folderValidator = folderValidator;
         _sendValidator = sendValidator;
@@ -425,7 +421,7 @@ public class AccountsController : Controller
         }
 
         IdentityResult result;
-        if (_featureService.IsEnabled(FeatureFlagKeys.KeyRotationImprovements, _currentContext))
+        if (_featureService.IsEnabled(FeatureFlagKeys.KeyRotationImprovements))
         {
             var dataModel = new RotateUserKeyData
             {
@@ -682,17 +678,6 @@ public class AccountsController : Controller
 
         await Task.Delay(2000);
         throw new BadRequestException(ModelState);
-    }
-
-    [HttpPost("iap-check")]
-    public async Task PostIapCheck([FromBody] IapCheckRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-        await _userService.IapCheckAsync(user, model.PaymentMethodType.Value);
     }
 
     [HttpPost("premium")]

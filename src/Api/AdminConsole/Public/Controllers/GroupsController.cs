@@ -110,8 +110,8 @@ public class GroupsController : Controller
     public async Task<IActionResult> Post([FromBody] GroupCreateUpdateRequestModel model)
     {
         var group = model.ToGroup(_currentContext.OrganizationId.Value);
-        var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
         var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organization.FlexibleCollections));
         await _createGroupCommand.CreateGroupAsync(group, organization, associations);
         var response = new GroupResponseModel(group, associations);
         return new JsonResult(response);
@@ -139,8 +139,8 @@ public class GroupsController : Controller
         }
 
         var updatedGroup = model.ToGroup(existingGroup);
-        var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
         var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organization.FlexibleCollections));
         await _updateGroupCommand.UpdateGroupAsync(updatedGroup, organization, associations);
         var response = new GroupResponseModel(updatedGroup, associations);
         return new JsonResult(response);

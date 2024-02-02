@@ -35,6 +35,8 @@ using Bit.Infrastructure.EntityFramework;
 using DnsClient;
 using Duende.IdentityServer.Configuration;
 using IdentityModel;
+using LaunchDarkly.Sdk.Server;
+using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -113,13 +115,11 @@ public static class ServiceCollectionExtensions
         if (globalSettings.SelfHosted)
         {
             services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
-            services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
         }
         else
         {
             services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
             services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
-            services.AddSingleton<IMetaDataRepository, TableStorageRepos.MetaDataRepository>();
         }
 
         return provider;
@@ -136,7 +136,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
-        services.AddSingleton<IAppleIapService, AppleIapService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<ISendService, SendService>();
@@ -215,7 +214,7 @@ public static class ServiceCollectionExtensions
                 PrivateKey = globalSettings.Braintree.PrivateKey
             };
         });
-        services.AddSingleton<IPaymentService, StripePaymentService>();
+        services.AddScoped<IPaymentService, StripePaymentService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
@@ -225,7 +224,7 @@ public static class ServiceCollectionExtensions
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
-        services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
+        services.AddOptionality();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
@@ -377,7 +376,8 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
-        services.AddSingleton<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
+        services.AddScoped<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
+        services.AddScoped<ITemporaryDuoWebV4SDKService, TemporaryDuoWebV4SDKService>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
@@ -428,8 +428,6 @@ public static class ServiceCollectionExtensions
 
         return identityBuilder;
     }
-
-
 
     public static void AddIdentityAuthenticationServices(
         this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment,
@@ -729,5 +727,18 @@ public static class ServiceCollectionExtensions
                     Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
             });
         });
+    }
+
+    public static IServiceCollection AddOptionality(this IServiceCollection services)
+    {
+        services.AddSingleton<ILdClient>(s =>
+        {
+            return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(
+                s.GetRequiredService<GlobalSettings>()));
+        });
+
+        services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
+
+        return services;
     }
 }
