@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server:2019-CU17-ubuntu-20.04
+FROM mcr.microsoft.com/mssql/server:2019-CU24-ubuntu-20.04
 
 LABEL com.bitwarden.product="bitwarden"
 
@@ -6,8 +6,8 @@ USER root:root
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        gosu \
-        tzdata \
+    gosu \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backup-db.sql /
