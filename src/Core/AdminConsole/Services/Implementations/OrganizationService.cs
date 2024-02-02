@@ -139,8 +139,13 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
-        var updated = await _paymentService.UpdatePaymentMethodAsync(organization,
-            paymentMethodType, paymentToken);
+        var updated = await _paymentService.UpdatePaymentMethodAsync(
+            organization,
+            paymentMethodType,
+            paymentToken,
+            _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
+                ? taxInfo
+                : null);
         if (updated)
         {
             await ReplaceAndUpdateCacheAsync(organization);
@@ -517,7 +522,7 @@ public class OrganizationService : IOrganizationService
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                 signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                 signup.PremiumAccessAddon, signup.TaxInfo, provider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                signup.AdditionalServiceAccounts.GetValueOrDefault());
+                signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
         }
 
         var ownerId = provider ? default : signup.Owner.Id;
