@@ -132,7 +132,12 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" }
+            { Fido2VaultCredentials, "true" },
+            { AutofillV2, "true" },
+            { AutofillOverlay, "true" },
+            { PasswordlessLogin, "true" },
+            { KeyRotationImprovements, "true" },
+            { DisplayLowKdfIterationWarning, "true" }
         };
     }
 }
