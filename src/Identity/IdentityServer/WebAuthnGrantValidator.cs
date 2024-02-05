@@ -36,6 +36,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
+        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
@@ -54,7 +55,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
         )
         : base(userManager, deviceRepository, deviceService, userService, eventService,
-            organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+            organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
             userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, distributedCache, userDecryptionOptionsBuilder)
     {
@@ -66,7 +67,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
-        if (!FeatureService.IsEnabled(FeatureFlagKeys.PasswordlessLogin, CurrentContext))
+        if (!FeatureService.IsEnabled(FeatureFlagKeys.PasswordlessLogin))
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
             return;

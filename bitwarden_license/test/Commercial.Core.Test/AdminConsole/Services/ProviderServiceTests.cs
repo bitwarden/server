@@ -12,6 +12,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -513,7 +514,7 @@ public class ProviderServiceTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);
     }
 
-    [Theory, BitAutoData]
+    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
     public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
         Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
     {
@@ -538,6 +539,35 @@ public class ProviderServiceTests
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
                 t.First().Item1.Type == OrganizationUserType.Owner &&
                 t.First().Item1.AccessAll &&
+                t.First().Item2 == null));
+    }
+
+    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
+    public async Task CreateOrganizationAsync_WithFlexibleCollections_SetsAccessAllToFalse
+        (Provider provider, OrganizationSignup organizationSignup, Organization organization, string clientOwnerEmail,
+            User user, SutProvider<ProviderService> sutProvider)
+    {
+        organizationSignup.Plan = PlanType.EnterpriseAnnually;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
+            .Returns(Tuple.Create(organization, null as OrganizationUser));
+
+        var providerOrganization =
+            await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
+
+        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IEventService>()
+            .Received().LogProviderOrganizationEventAsync(providerOrganization,
+                EventType.ProviderOrganization_Created);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+                t => t.Count() == 1 &&
+                t.First().Item1.Emails.Count() == 1 &&
+                t.First().Item1.Emails.First() == clientOwnerEmail &&
+                t.First().Item1.Type == OrganizationUserType.Owner &&
+                t.First().Item1.AccessAll == false &&
                 t.First().Item2 == null));
     }
 

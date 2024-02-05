@@ -43,11 +43,11 @@ public class Startup
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 
-        // PayPal Client
-        services.AddSingleton<Utilities.PayPalIpnClient>();
-
         // BitPay Client
         services.AddSingleton<BitPayClient>();
+
+        // PayPal IPN Client
+        services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
