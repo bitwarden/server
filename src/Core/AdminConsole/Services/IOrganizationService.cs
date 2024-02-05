@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -15,7 +14,6 @@ public interface IOrganizationService
     Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken, PaymentMethodType paymentMethodType,
         TaxInfo taxInfo);
     Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null);
-    Task CancelSubscription(Guid organizationId, OffboardingSurveyResponse offboardingSurveyResponse);
     Task ReinstateSubscriptionAsync(Guid organizationId);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
     Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);

@@ -13,7 +13,6 @@ using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -179,28 +178,6 @@ public class OrganizationService : IOrganizationService
             {
                 EndOfPeriod = endOfPeriod,
             });
-    }
-
-    public async Task CancelSubscription(
-        Guid organizationId,
-        OffboardingSurveyResponse offboardingSurveyResponse)
-    {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _cancelSubscriptionCommand.CancelSubscription(organization, offboardingSurveyResponse);
-
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
-            ReferenceEventType.CancelSubscription,
-            organization,
-            _currentContext)
-        {
-            EndOfPeriod = organization.IsExpired()
-        });
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)

@@ -22,6 +22,7 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Services;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -52,6 +53,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly IReferenceEventService _referenceEventService;
 
     private readonly OrganizationsController _sut;
 
@@ -78,6 +80,7 @@ public class OrganizationsControllerTests : IDisposable
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
+        _referenceEventService = Substitute.For<IReferenceEventService>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -100,7 +103,8 @@ public class OrganizationsControllerTests : IDisposable
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
-            _cancelSubscriptionCommand);
+            _cancelSubscriptionCommand,
+            _referenceEventService);
     }
 
     public void Dispose()

@@ -29,6 +29,9 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -60,6 +63,7 @@ public class OrganizationsController : Controller
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly IReferenceEventService _referenceEventService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -82,7 +86,8 @@ public class OrganizationsController : Controller
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
-        ICancelSubscriptionCommand cancelSubscriptionCommand)
+        ICancelSubscriptionCommand cancelSubscriptionCommand,
+        IReferenceEventService referenceEventService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -105,6 +110,7 @@ public class OrganizationsController : Controller
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
+        _referenceEventService = referenceEventService;
     }
 
     [HttpGet("{id}")]
@@ -460,11 +466,27 @@ public class OrganizationsController : Controller
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey))
         {
-            await _organizationService.CancelSubscription(orgIdGuid, new OffboardingSurveyResponse
+            var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+
+            if (organization == null)
             {
-                UserId = _currentContext.UserId!.Value,
-                Reason = request.Reason,
-                Feedback = request.Feedback
+                throw new NotFoundException();
+            }
+
+            await _cancelSubscriptionCommand.CancelSubscription(organization,
+                new OffboardingSurveyResponse
+                {
+                    UserId = _currentContext.UserId!.Value,
+                    Reason = request.Reason,
+                    Feedback = request.Feedback
+                });
+
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+                ReferenceEventType.CancelSubscription,
+                organization,
+                _currentContext)
+            {
+                EndOfPeriod = organization.IsExpired()
             });
         }
         else
