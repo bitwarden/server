@@ -1716,7 +1716,7 @@ public class StripePaymentService : IPaymentService
             return false;
         }
 
-        var customer = await GetCustomerAsync(organization.GatewayCustomerId);
+        var customer = await GetCustomerAsync(organization.GatewayCustomerId, GetCustomerPaymentOptions());
 
         var paymentSource = await GetBillingPaymentSourceAsync(customer);
 
