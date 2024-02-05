@@ -46,7 +46,7 @@ if [[ $globalSettings__selfHosted == "true" ]]; then
     && update-ca-certificates
 fi
 
-if [ -f "/etc/bitwarden/kerberos/bitwarden.keytab" && -f "/etc/bitwarden/kerberos/krb5.conf"]; then
+if [[ -f "/etc/bitwarden/kerberos/bitwarden.keytab" && -f "/etc/bitwarden/kerberos/krb5.conf"]]; then
   mkdir -p /etc/bitwarden/kerberos
   chown -R $USERNAME:$GROUPNAME /etc/bitwarden/kerberos
   cp -f /etc/bitwarden/kerberos/krb5.conf /etc/krb5.conf
