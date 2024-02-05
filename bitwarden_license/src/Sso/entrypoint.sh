@@ -50,7 +50,7 @@ if [[ -f "/etc/bitwarden/kerberos/bitwarden.keytab" && -f "/etc/bitwarden/kerber
   mkdir -p /etc/bitwarden/kerberos
   chown -R $USERNAME:$GROUPNAME /etc/bitwarden/kerberos
   cp -f /etc/bitwarden/kerberos/krb5.conf /etc/krb5.conf
-  gosu $USERNAME:$GROUPNAME kinit bitwarden -k -t /etc/bitwarden/kerberos/bitwarden.keytab
+  gosu $USERNAME:$GROUPNAME kinit $globalSettings__kerberosUser -k -t /etc/bitwarden/kerberos/bitwarden.keytab
 fi
 
 
