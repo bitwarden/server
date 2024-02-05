@@ -900,7 +900,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets/move", new BulkMoveToProjectsRequestModel
         {
-            Secrets = new [] { Guid.NewGuid() },
+            Secrets = new[] { Guid.NewGuid() },
             Project = newProject.Id,
         });
 
@@ -918,7 +918,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets/move", new BulkMoveToProjectsRequestModel
         {
-            Secrets = new [] { secrets[0], Guid.NewGuid() },
+            Secrets = new[] { secrets[0], Guid.NewGuid() },
             Project = newProject.Id,
         });
 
