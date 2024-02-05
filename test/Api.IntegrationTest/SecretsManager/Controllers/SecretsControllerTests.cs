@@ -889,6 +889,42 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task BulkMoveToProjectAsync_UnknownSecret_Fails()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+
+        await LoginAsync(_email);
+        var (_, _) = await CreateSecretsAsync(org.Id);
+        var (newProject, _) = await CreateSecretsAsync(org.Id);
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets/move", new BulkMoveToProjectsRequestModel
+        {
+            Secrets = new [] { Guid.NewGuid() },
+            Project = newProject.Id,
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task BulkMoveToProjectAsync_SomeMissingSecrets_Fails()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+
+        await LoginAsync(_email);
+        var (_, secrets) = await CreateSecretsAsync(org.Id);
+        var (newProject, _) = await CreateSecretsAsync(org.Id);
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets/move", new BulkMoveToProjectsRequestModel
+        {
+            Secrets = new [] { secrets[0], Guid.NewGuid() },
+            Project = newProject.Id,
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private async Task<(Project Project, List<Guid> secretIds)> CreateSecretsAsync(Guid orgId, int numberToCreate = 3)
     {
         var project = await _projectRepository.CreateAsync(new Project
