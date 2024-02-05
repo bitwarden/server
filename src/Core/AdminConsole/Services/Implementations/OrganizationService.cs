@@ -139,8 +139,13 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
-        var updated = await _paymentService.UpdatePaymentMethodAsync(organization,
-            paymentMethodType, paymentToken, taxInfo);
+        var updated = await _paymentService.UpdatePaymentMethodAsync(
+            organization,
+            paymentMethodType,
+            paymentToken,
+            _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
+                ? taxInfo
+                : null);
         if (updated)
         {
             await ReplaceAndUpdateCacheAsync(organization);
