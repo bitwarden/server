@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -67,7 +68,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
-        Assert.Equal(5000, kdfIterations);
+        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
         AssertUserDecryptionOptions(root);
     }
 
@@ -105,7 +106,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHash = "master_password_hash",
         });
 
-        var context = await PostLoginAsync(_factory.Server, username, deviceId, context => context.Request.Headers.Add("Auth-Email", "bad_value"));
+        var context = await PostLoginAsync(_factory.Server, username, deviceId, context => context.Request.Headers.Append("Auth-Email", "bad_value"));
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 

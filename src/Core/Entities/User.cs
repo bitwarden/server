@@ -55,7 +55,7 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     [MaxLength(30)]
     public string ApiKey { get; set; }
     public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
-    public int KdfIterations { get; set; } = 5000;
+    public int KdfIterations { get; set; } = AuthConstants.PBKDF2_ITERATIONS.Default;
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;

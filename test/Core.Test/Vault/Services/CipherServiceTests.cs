@@ -15,7 +15,6 @@ using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Castle.Core.Internal;
 using NSubstitute;
 using Xunit;
 
@@ -75,7 +74,7 @@ public class CipherServiceTests
                         !cols.Any(c => c.Id == collections[0].Id) && // Check that the collection that already existed in the organization was not added
                         cols.All(c => collections.Any(x => c.Name == x.Name))),
             Arg.Is<IEnumerable<CollectionCipher>>(c => c.Count() == ciphers.Count),
-            Arg.Is<IEnumerable<CollectionUser>>(i => i.IsNullOrEmpty()));
+            Arg.Is<IEnumerable<CollectionUser>>(i => !i.Any()));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
         await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
             Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.VaultImported));
@@ -683,7 +682,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organization.Id, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
     [Theory]
@@ -839,7 +838,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
     private async Task AssertNoActionsAsync(SutProvider<CipherService> sutProvider)
