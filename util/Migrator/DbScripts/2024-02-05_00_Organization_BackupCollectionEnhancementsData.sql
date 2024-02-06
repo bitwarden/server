@@ -1,26 +1,38 @@
 -- Script to create backup pre-collection enhancements Organization data
     -- Table to store the groups with AccessAll = 1
-    CREATE TABLE [dbo].[FCBackupAccessAllGroups] (
-        [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
-        [GroupId]           UNIQUEIDENTIFIER    NOT NULL
-        PRIMARY KEY CLUSTERED ([OrganizationId], [GroupId])
-    );
+    IF OBJECT_ID('[dbo].[FCBackupAccessAllGroups]') IS NULL
+    BEGIN
+        CREATE TABLE [dbo].[FCBackupAccessAllGroups] (
+            [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
+            [GroupId]           UNIQUEIDENTIFIER    NOT NULL
+            PRIMARY KEY CLUSTERED ([OrganizationId], [GroupId])
+        );
+    END
+    GO
 
     -- Table to store the OrganizationUsers with AccessAll = 1
-    CREATE TABLE [dbo].[FCBackupAccessAllOrganizationUsers] (
-        [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
-        [OrganizationUserId]    UNIQUEIDENTIFIER    NOT NULL,
-        PRIMARY KEY CLUSTERED ([OrganizationId], [OrganizationUserId])
-    );
+    IF OBJECT_ID('[dbo].[FCBackupAccessAllOrganizationUsers]') IS NULL
+    BEGIN
+        CREATE TABLE [dbo].[FCBackupAccessAllOrganizationUsers] (
+            [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
+            [OrganizationUserId]    UNIQUEIDENTIFIER    NOT NULL,
+            PRIMARY KEY CLUSTERED ([OrganizationId], [OrganizationUserId])
+        );
+    END
+    GO
 
     -- Table to store the OrganizationUsers that were previously Manager
     -- or had Edit/Delete AssignedCollections permissions
-    CREATE TABLE [dbo].[FCBackupOrganizationUserManagers] (
-        [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
-        [OrganizationUserId]    UNIQUEIDENTIFIER    NOT NULL,
-        [Type]                  INT                 NOT NULL,
-        PRIMARY KEY CLUSTERED ([OrganizationId], [OrganizationUserId])
-    );
+    IF OBJECT_ID('[dbo].[FCBackupOrganizationUserManagers]') IS NULL
+    BEGIN
+        CREATE TABLE [dbo].[FCBackupOrganizationUserManagers] (
+            [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
+            [OrganizationUserId]    UNIQUEIDENTIFIER    NOT NULL,
+            [Type]                  INT                 NOT NULL,
+            PRIMARY KEY CLUSTERED ([OrganizationId], [OrganizationUserId])
+        );
+    END
+    GO
 
 -- Stored procedure to backup pre-collection enhancements Organization data
 CREATE OR ALTER PROCEDURE [dbo].[Organization_BackupPreCollectionEnhancementsData]
@@ -48,17 +60,13 @@ BEGIN
     SELECT @OrganizationId, [Id] AS [OrganizationUserId], [Type]
     FROM [dbo].[OrganizationUser]
     WHERE [OrganizationId] = @OrganizationId
-        AND [Id] IN (
-            SELECT [OrganizationUserId]
-            FROM [dbo].[OrganizationUser]
-            WHERE [OrganizationId] = @OrganizationId
-                AND ([Type] = 3 OR
-                    ([Type] = 4 AND
-                    [Permissions] IS NOT NULL AND
-                    ISJSON([Permissions]) > 0 AND
-                    (JSON_VALUE([Permissions], '$.editAssignedCollections') = 'true' OR
-                        JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true'))
-                )
+        AND ([Type] = 3
+            OR ([Type] = 4
+                AND [Permissions] IS NOT NULL
+                AND ISJSON([Permissions]) > 0
+                AND (JSON_VALUE([Permissions], '$.editAssignedCollections') = 'true'
+                    OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true')
+            )
         );
 END
 GO

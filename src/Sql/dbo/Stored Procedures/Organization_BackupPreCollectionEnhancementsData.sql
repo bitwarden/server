@@ -23,16 +23,12 @@ BEGIN
     SELECT @OrganizationId, [Id] AS [OrganizationUserId], [Type]
     FROM [dbo].[OrganizationUser]
     WHERE [OrganizationId] = @OrganizationId
-        AND [Id] IN (
-            SELECT [OrganizationUserId]
-            FROM [dbo].[OrganizationUser]
-            WHERE [OrganizationId] = @OrganizationId
-                AND ([Type] = 3 OR
-                    ([Type] = 4 AND
-                    [Permissions] IS NOT NULL AND
-                    ISJSON([Permissions]) > 0 AND
-                    (JSON_VALUE([Permissions], '$.editAssignedCollections') = 'true' OR
-                        JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true'))
-                )
+        AND ([Type] = 3
+            OR ([Type] = 4
+                AND [Permissions] IS NOT NULL
+                AND ISJSON([Permissions]) > 0
+                AND (JSON_VALUE([Permissions], '$.editAssignedCollections') = 'true'
+                    OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true')
+            )
         );
 END
