@@ -4,23 +4,23 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Backup Group Ids with AccessAll = 1
-    SELECT [Id] AS [GroupId]
-    INTO [dbo].[FCBackupAccessAllGroups]
+    -- Backup Group Ids with `AccessAll = 1` for the specified OrganizationId
+    INSERT INTO [dbo].[FCBackupAccessAllGroups] ([OrganizationId], [GroupId])
+    SELECT @OrganizationId, [Id] AS [GroupId]
     FROM [dbo].[Group]
     WHERE [OrganizationId] = @OrganizationId
       AND [AccessAll] = 1;
 
-    -- Backup OrganizationUser Ids with AccessAll = 1
-    SELECT [Id] AS [OrganizationUserId], [Type]
-    INTO [dbo].[FCBackupAccessAllOrganizationUsers]
+    -- Backup OrganizationUser Ids with `AccessAll = 1` for the specified OrganizationId
+    INSERT INTO [dbo].[FCBackupAccessAllOrganizationUsers] ([OrganizationId], [OrganizationUserId])
+    SELECT @OrganizationId, [Id] AS [OrganizationUserId]
     FROM [dbo].[OrganizationUser]
     WHERE [OrganizationId] = @OrganizationId
       AND [AccessAll] = 1;
 
-    -- Backup OrganizationUser Ids and Types before being migrated to User type
-    SELECT [Id] AS [OrganizationUserId], [Type]
-    INTO [dbo].[FCBackupOrgUserManagers]
+    -- Backup OrganizationUser Ids and Types before being migrated to User type for the specified OrganizationId
+    INSERT INTO [dbo].[FCBackupOrganizationUserManagers] ([OrganizationId], [OrganizationUserId], [Type])
+    SELECT @OrganizationId, [Id] AS [OrganizationUserId], [Type]
     FROM [dbo].[OrganizationUser]
     WHERE [OrganizationId] = @OrganizationId
         AND [Id] IN (

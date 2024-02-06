@@ -1,20 +1,25 @@
 -- Script to create backup pre-collection enhancements Organization data
     -- Table to store the groups with AccessAll = 1
     CREATE TABLE [dbo].[FCBackupAccessAllGroups] (
-        [GroupId] UNIQUEIDENTIFIER PRIMARY KEY CLUSTERED
+        [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
+        [GroupId]           UNIQUEIDENTIFIER    NOT NULL
+        PRIMARY KEY CLUSTERED ([OrganizationId], [GroupId])
     );
 
     -- Table to store the OrganizationUsers with AccessAll = 1
     CREATE TABLE [dbo].[FCBackupAccessAllOrganizationUsers] (
-        [OrganizationUserId] UNIQUEIDENTIFIER PRIMARY KEY CLUSTERED,
-        [Type] INT
+        [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
+        [OrganizationUserId]    UNIQUEIDENTIFIER    NOT NULL,
+        PRIMARY KEY CLUSTERED ([OrganizationId], [OrganizationUserId])
     );
 
     -- Table to store the OrganizationUsers that were previously Manager
     -- or had Edit/Delete AssignedCollections permissions
-    CREATE TABLE [dbo].[FCBackupOrgUserManagers] (
-        [OrganizationUserId] UNIQUEIDENTIFIER PRIMARY KEY CLUSTERED,
-        [Type] INT
+    CREATE TABLE [dbo].[FCBackupOrganizationUserManagers] (
+        [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
+        [OrganizationUserId]    UNIQUEIDENTIFIER    NOT NULL,
+        [Type]                  INT                 NOT NULL,
+        PRIMARY KEY CLUSTERED ([OrganizationId], [OrganizationUserId])
     );
 
 -- Stored procedure to backup pre-collection enhancements Organization data
@@ -24,23 +29,23 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Backup Group Ids with AccessAll = 1
-    SELECT [Id] AS [GroupId]
-    INTO [dbo].[FCBackupAccessAllGroups]
+    -- Backup Group Ids with `AccessAll = 1` for the specified OrganizationId
+    INSERT INTO [dbo].[FCBackupAccessAllGroups] ([OrganizationId], [GroupId])
+    SELECT @OrganizationId, [Id] AS [GroupId]
     FROM [dbo].[Group]
     WHERE [OrganizationId] = @OrganizationId
       AND [AccessAll] = 1;
 
-    -- Backup OrganizationUser Ids with AccessAll = 1
-    SELECT [Id] AS [OrganizationUserId], [Type]
-    INTO [dbo].[FCBackupAccessAllOrganizationUsers]
+    -- Backup OrganizationUser Ids with `AccessAll = 1` for the specified OrganizationId
+    INSERT INTO [dbo].[FCBackupAccessAllOrganizationUsers] ([OrganizationId], [OrganizationUserId])
+    SELECT @OrganizationId, [Id] AS [OrganizationUserId]
     FROM [dbo].[OrganizationUser]
     WHERE [OrganizationId] = @OrganizationId
       AND [AccessAll] = 1;
 
-    -- Backup OrganizationUser Ids and Types before being migrated to User type
-    SELECT [Id] AS [OrganizationUserId], [Type]
-    INTO [dbo].[FCBackupOrgUserManagers]
+    -- Backup OrganizationUser Ids and Types before being migrated to User type for the specified OrganizationId
+    INSERT INTO [dbo].[FCBackupOrganizationUserManagers] ([OrganizationId], [OrganizationUserId], [Type])
+    SELECT @OrganizationId, [Id] AS [OrganizationUserId], [Type]
     FROM [dbo].[OrganizationUser]
     WHERE [OrganizationId] = @OrganizationId
         AND [Id] IN (
@@ -65,26 +70,35 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Restore Group data with AccessAll = 1
+    -- Restore Group data with `AccessAll = 1`
     UPDATE G
-    SET G.[AccessAll] = 1
+    SET G.[AccessAll] = 1, G.[RevisionDate] = GETUTCDATE()
     FROM [dbo].[Group] G
     INNER JOIN [dbo].[FCBackupAccessAllGroups] BG ON G.[Id] = BG.[GroupId]
     WHERE G.[OrganizationId] = @OrganizationId;
 
-    -- Restore OrganizationUser data with AccessAll = 1
+    -- Restore OrganizationUser data with `AccessAll = 1`
     UPDATE OU
-    SET OU.[AccessAll] = 1,
-        OU.[Type] = BOU.[Type]
+    SET OU.[AccessAll] = 1, OU.[RevisionDate] = GETUTCDATE()
     FROM [dbo].[OrganizationUser] OU
     INNER JOIN [dbo].[FCBackupAccessAllOrganizationUsers] BOU ON OU.[Id] = BOU.[OrganizationUserId]
     WHERE OU.[OrganizationId] = @OrganizationId;
 
     -- Restore OrganizationUser Types that were Manager/Custom with Edit/Delete Assigned Collections permissions
     UPDATE OU
-    SET OU.[Type] = BOU.[Type]
+    SET OU.[Type] = BOU.[Type], OU.[RevisionDate] = GETUTCDATE()
     FROM [dbo].[OrganizationUser] OU
-    INNER JOIN [dbo].[FCBackupOrgUserManagers] BOU ON OU.[Id] = BOU.[OrganizationUserId]
+    INNER JOIN [dbo].[FCBackupOrganizationUserManagers] BOU ON OU.[Id] = BOU.[OrganizationUserId]
     WHERE OU.[OrganizationId] = @OrganizationId;
+
+    -- Disable FlexibleCollections for the Organization
+    UPDATE [dbo].[Organization]
+    SET [FlexibleCollections] = 0, [RevisionDate] = GETUTCDATE()
+    WHERE [Id] = @OrganizationId;
+
+    -- Delete backup data for the specified OrganizationId
+    DELETE FROM [dbo].[FCBackupAccessAllGroups] WHERE [OrganizationId] = @OrganizationId;
+    DELETE FROM [dbo].[FCBackupAccessAllOrganizationUsers] WHERE [OrganizationId] = @OrganizationId;
+    DELETE FROM [dbo].[FCBackupOrganizationUserManagers] WHERE [OrganizationId] = @OrganizationId;
 END
 GO

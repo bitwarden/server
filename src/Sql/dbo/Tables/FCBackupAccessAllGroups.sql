@@ -1,3 +1,5 @@
 ﻿CREATE TABLE [dbo].[FCBackupAccessAllGroups] (
-    [GroupId] UNIQUEIDENTIFIER PRIMARY KEY CLUSTERED
+    [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
+    [GroupId]           UNIQUEIDENTIFIER    NOT NULL
+    PRIMARY KEY CLUSTERED ([OrganizationId], [GroupId])
 );
