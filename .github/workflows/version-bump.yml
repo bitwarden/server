@@ -37,7 +37,16 @@ jobs:
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           ref: main
-          repository: bitwarden/server
+
+      - name: Check if RC branch exists
+        if: ${{ inputs.cut_rc_branch == true }}
+        run: |
+          remote_rc_branch_check=$(git ls-remote --heads origin rc | wc -l)
+          if [[ "${remote_rc_branch_check}" -gt 0 ]]; then
+            echo "Remote RC branch exists."
+            echo "Please delete current RC branch before running again."
+            exit 1
+          fi
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # v6.0.0
@@ -157,14 +166,19 @@ jobs:
         with:
           ref: main
 
-      - name: Check if RC branch exists
+      - name: Verify version has been updated
+        env:
+          NEW_VERSION: ${{ inputs.version_number }}
         run: |
-          remote_rc_branch_check=$(git ls-remote --heads origin rc | wc -l)
-          if [[ "${remote_rc_branch_check}" -gt 0 ]]; then
-            echo "Remote RC branch exists."
-            echo "Please delete current RC branch before running again."
-            exit 1
-          fi
+          CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+          # Wait for version to change.
+          while [[ "$NEW_VERSION" != "$CURRENT_VERSION" ]]
+          do
+            echo "Waiting for version to be updated..."
+            sleep 10
+            git pull --force
+          done
 
       - name: Cut RC branch
         run: |

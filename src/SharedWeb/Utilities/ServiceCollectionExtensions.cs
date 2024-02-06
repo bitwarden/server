@@ -213,7 +213,7 @@ public static class ServiceCollectionExtensions
                 PrivateKey = globalSettings.Braintree.PrivateKey
             };
         });
-        services.AddSingleton<IPaymentService, StripePaymentService>();
+        services.AddScoped<IPaymentService, StripePaymentService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
