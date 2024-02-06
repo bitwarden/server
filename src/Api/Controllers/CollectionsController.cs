@@ -547,7 +547,7 @@ public class CollectionsController : Controller
     {
         // We always need to know which collections the current user is assigned to
         var assignedOrgCollections = await _collectionRepository
-            .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId, false);
+            .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId, true);
 
         var readAllAuthorized =
             (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAllWithAccess(orgId))).Succeeded;

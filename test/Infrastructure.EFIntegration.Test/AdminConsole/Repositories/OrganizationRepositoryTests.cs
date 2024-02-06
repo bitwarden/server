@@ -183,7 +183,7 @@ public class OrganizationRepositoryTests
 
         Assert.Equal(efOrgRepos.Count, efList.Count);
         Assert.True(efList.All(o => o.Name == org.Name));
-        Assert.Equal(1, sqlResult.Count);
+        Assert.Single(sqlResult);
         Assert.True(sqlResult.All(o => o.Name == org.Name));
     }
 }
