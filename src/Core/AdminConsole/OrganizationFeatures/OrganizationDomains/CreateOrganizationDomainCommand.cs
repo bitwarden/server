@@ -59,7 +59,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
         }
         catch (Exception e)
         {
-            _logger.LogError("Error verifying Organization domain.", e);
+            _logger.LogError(e, "Error verifying Organization domain.");
         }
 
         organizationDomain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
