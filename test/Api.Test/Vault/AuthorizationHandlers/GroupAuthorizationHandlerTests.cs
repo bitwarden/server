@@ -3,8 +3,6 @@ using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -19,15 +17,15 @@ public class GroupAuthorizationHandlerTests
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanReadAllAsync_WhenAdminOrOwner_Success(
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanReadAllAsync_WhenMemberOfOrg_Success(
         OrganizationUserType userType,
         Guid userId, SutProvider<GroupAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
         organization.Permissions = new Permissions();
-
-        ArrangeOrganizationAbility(sutProvider, organization, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organization.Id) },
@@ -50,8 +48,6 @@ public class GroupAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, true);
-
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
@@ -69,87 +65,12 @@ public class GroupAuthorizationHandlerTests
         Assert.True(context.HasSucceeded);
     }
 
-    [Theory]
-    [BitAutoData(true, false, false, false, true)]
-    [BitAutoData(false, true, false, false, true)]
-    [BitAutoData(false, false, true, false, true)]
-    [BitAutoData(false, false, false, true, true)]
-    [BitAutoData(false, false, false, false, false)]
-    public async Task CanReadAllAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool editAnyCollection, bool deleteAnyCollection, bool manageGroups,
-        bool manageUsers, bool limitCollectionCreationDeletion,
-        SutProvider<GroupAuthorizationHandler> sutProvider,
-        CurrentContextOrganization organization)
-    {
-        var actingUserId = Guid.NewGuid();
-
-        organization.Type = OrganizationUserType.Custom;
-        organization.Permissions = new Permissions
-        {
-            EditAnyCollection = editAnyCollection,
-            DeleteAnyCollection = deleteAnyCollection,
-            ManageGroups = manageGroups,
-            ManageUsers = manageUsers
-        };
-
-        ArrangeOrganizationAbility(sutProvider, organization, limitCollectionCreationDeletion);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { GroupOperations.ReadAll(organization.Id) },
-            new ClaimsPrincipal(),
-            null);
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Custom)]
-    public async Task CanReadAllAsync_WhenMissingPermissions_NoSuccess(
-        OrganizationUserType userType,
-        SutProvider<GroupAuthorizationHandler> sutProvider,
-        CurrentContextOrganization organization)
-    {
-        var actingUserId = Guid.NewGuid();
-
-        organization.Type = userType;
-        organization.Permissions = new Permissions
-        {
-            EditAnyCollection = false,
-            DeleteAnyCollection = false,
-            ManageGroups = false,
-            ManageUsers = false,
-            AccessImportExport = false
-        };
-
-        ArrangeOrganizationAbility(sutProvider, organization, true);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { GroupOperations.ReadAll(organization.Id) },
-            new ClaimsPrincipal(),
-            null);
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.False(context.HasSucceeded);
-    }
-
     [Theory, BitAutoData]
     public async Task CanReadAllAsync_WhenMissingOrgAccess_NoSuccess(
         Guid userId,
         CurrentContextOrganization organization,
         SutProvider<GroupAuthorizationHandler> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organization, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organization.Id) },
@@ -200,18 +121,5 @@ public class GroupAuthorizationHandlerTests
 
         Assert.False(context.HasSucceeded);
         Assert.True(context.HasFailed);
-    }
-
-    private static void ArrangeOrganizationAbility(
-        SutProvider<GroupAuthorizationHandler> sutProvider,
-        CurrentContextOrganization organization, bool limitCollectionCreationDeletion)
-    {
-        var organizationAbility = new OrganizationAbility();
-        organizationAbility.Id = organization.Id;
-        organizationAbility.FlexibleCollections = true;
-        organizationAbility.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
-
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
     }
 }

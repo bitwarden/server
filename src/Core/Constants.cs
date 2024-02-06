@@ -23,7 +23,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
-    public const string CipherKeyEncryptionMinimumVersion = "2024.1.3";
+    public const string CipherKeyEncryptionMinimumVersion = "2024.2.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
@@ -115,6 +115,8 @@ public static class FeatureFlagKeys
     /// flexible collections
     /// </summary>
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
+
+    public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
 
     public static List<string> GetAllKeys()
     {
