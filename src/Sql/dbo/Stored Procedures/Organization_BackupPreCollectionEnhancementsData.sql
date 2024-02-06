@@ -31,4 +31,10 @@ BEGIN
                     OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true')
             )
         );
+
+    INSERT INTO [dbo].[FCBackupCollectionUserColumns] ([OrganizationId], [CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords])
+    SELECT @OrganizationId, CU.[CollectionId], CU.[OrganizationUserId], CU.[ReadOnly], CU.[HidePasswords]
+    FROM [dbo].[CollectionUser] CU
+    INNER JOIN [dbo].[Collection] C ON CU.[CollectionId] = C.[Id]
+    WHERE C.[OrganizationId] = @OrganizationId;
 END

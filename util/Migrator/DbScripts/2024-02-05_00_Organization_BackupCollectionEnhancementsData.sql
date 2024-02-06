@@ -34,6 +34,20 @@
     END
     GO
 
+    -- Table to store the CollectionUser values for [ReadOnly] and [HidePasswords]
+    IF OBJECT_ID('[dbo].[FCBackupCollectionUserColumns]') IS NULL
+    BEGIN
+        CREATE TABLE [dbo].[FCBackupCollectionUserColumns] (
+            [OrganizationId]       UNIQUEIDENTIFIER    NOT NULL,
+            [CollectionId]         UNIQUEIDENTIFIER    NOT NULL,
+            [OrganizationUserId]   UNIQUEIDENTIFIER    NOT NULL,
+            [ReadOnly]             BIT                 NOT NULL,
+            [HidePasswords]        BIT                 NOT NULL,
+            PRIMARY KEY CLUSTERED ([OrganizationId], [CollectionId], [OrganizationUserId])
+        );
+    END
+    GO
+
 -- Stored procedure to backup pre-collection enhancements Organization data
 CREATE OR ALTER PROCEDURE [dbo].[Organization_BackupPreCollectionEnhancementsData]
     @OrganizationId UNIQUEIDENTIFIER
@@ -68,6 +82,12 @@ BEGIN
                     OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true')
             )
         );
+
+    INSERT INTO [dbo].[FCBackupCollectionUserColumns] ([OrganizationId], [CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords])
+    SELECT @OrganizationId, CU.[CollectionId], CU.[OrganizationUserId], CU.[ReadOnly], CU.[HidePasswords]
+    FROM [dbo].[CollectionUser] CU
+    INNER JOIN [dbo].[Collection] C ON CU.[CollectionId] = C.[Id]
+    WHERE C.[OrganizationId] = @OrganizationId;
 END
 GO
 
@@ -101,6 +121,15 @@ BEGIN
             INNER JOIN [dbo].[FCBackupOrganizationUserManagers] BOU ON OU.[Id] = BOU.[OrganizationUserId]
             WHERE OU.[OrganizationId] = @OrganizationId;
 
+            -- Restore [dbo].[CollectionUser] columns [ReadOnly] and [HidePasswords]
+            UPDATE CU
+            SET CU.[ReadOnly] = BCU.[ReadOnly], CU.[HidePasswords] = BCU.[HidePasswords], CU.[Manage] = 0
+            FROM [dbo].[CollectionUser] CU
+            INNER JOIN [dbo].[FCBackupCollectionUserColumns] BCU
+                ON CU.[CollectionId] = BCU.[CollectionId] AND CU.[OrganizationUserId] = BCU.[OrganizationUserId]
+            INNER JOIN [dbo].[Collection] C ON CU.[CollectionId] = C.[Id]
+            WHERE C.[OrganizationId] = @OrganizationId;
+
             -- Disable FlexibleCollections for the Organization
             UPDATE [dbo].[Organization]
             SET [FlexibleCollections] = 0, [RevisionDate] = GETUTCDATE()
@@ -110,6 +139,7 @@ BEGIN
             DELETE FROM [dbo].[FCBackupAccessAllGroups] WHERE [OrganizationId] = @OrganizationId;
             DELETE FROM [dbo].[FCBackupAccessAllOrganizationUsers] WHERE [OrganizationId] = @OrganizationId;
             DELETE FROM [dbo].[FCBackupOrganizationUserManagers] WHERE [OrganizationId] = @OrganizationId;
+            DELETE FROM [dbo].[FCBackupCollectionUserColumns] WHERE [OrganizationId] = @OrganizationId;
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
