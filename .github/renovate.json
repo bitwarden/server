@@ -1,18 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base",
-    "github>bitwarden/renovate-config:pin-actions",
-    ":combinePatchMinorReleases",
-    ":dependencyDashboard",
-    ":maintainLockFilesWeekly",
-    ":pinAllExceptPeerDependencies",
-    ":prConcurrentLimit10",
-    ":rebaseStalePrs",
-    ":separateMajorReleases",
-    "group:monorepos",
-    "schedule:weekends"
-  ],
+  "extends": ["github>bitwarden/renovate-config"],
   "enabledManagers": [
     "dockerfile",
     "docker-compose",
@@ -20,8 +8,6 @@
     "npm",
     "nuget"
   ],
-  "commitMessagePrefix": "[deps]:",
-  "commitMessageTopic": "{{depName}}",
   "packageRules": [
     {
       "groupName": "dockerfile minor",
