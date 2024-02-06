@@ -691,7 +691,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IClientPolicyStore, MemoryCacheClientPolicyStore>();
 
             // Use a custom Redis processing strategy that skips Ip limiting if Redis is down
-            // Requires a registered IConnectionMultiplexer
+            services.AddKeyedSingleton<IConnectionMultiplexer>("rate-limiter", (_, provider) =>
+                ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
             services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>();
         }
     }
@@ -710,22 +711,9 @@ public static class ServiceCollectionExtensions
             return;
         }
 
-        // Register the IConnectionMultiplexer explicitly so it can be accessed via DI
-        // (e.g. for the IP rate limiting store)
-        services.AddSingleton<IConnectionMultiplexer>(
-            _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
-
-        // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer
-        // to reduce the number of redundant connections to the Redis instance
-        services.AddSingleton<IDistributedCache>(s =>
+        services.AddStackExchangeRedisCache(options =>
         {
-            return new RedisCache(new RedisCacheOptions
-            {
-                // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
-                InstanceName = $"{globalSettings.ProjectName}:",
-                ConnectionMultiplexerFactory = () =>
-                    Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
-            });
+            options.Configuration = globalSettings.Redis.ConnectionString;
         });
     }
 
