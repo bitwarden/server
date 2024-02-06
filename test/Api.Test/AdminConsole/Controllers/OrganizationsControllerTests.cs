@@ -12,6 +12,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -53,6 +54,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
     private readonly IReferenceEventService _referenceEventService;
 
     private readonly OrganizationsController _sut;
@@ -80,6 +82,7 @@ public class OrganizationsControllerTests : IDisposable
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
+        _getSubscriptionQuery = Substitute.For<IGetSubscriptionQuery>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
 
         _sut = new OrganizationsController(
@@ -104,6 +107,7 @@ public class OrganizationsControllerTests : IDisposable
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
             _cancelSubscriptionCommand,
+            _getSubscriptionQuery,
             _referenceEventService);
     }
 

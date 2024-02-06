@@ -1,19 +1,19 @@
 ﻿using Bit.Core.Billing.Models;
-using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
+using static Bit.Core.Billing.Utilities;
+
 namespace Bit.Core.Billing.Commands.Implementations;
 
-public class CancelSubscriptionCommand : ICancelSubscriptionCommand
+public class CancelSubscriptionCommand(
+    ILogger<CancelSubscriptionCommand> logger,
+    IStripeAdapter stripeAdapter)
+    : ICancelSubscriptionCommand
 {
-    private readonly ILogger<CancelSubscriptionCommand> _logger;
-    private readonly IStripeAdapter _stripeAdapter;
-
-    private static readonly List<string> _validReasons = new()
-    {
+    private static readonly List<string> _validReasons =
+    [
         "customer_service",
         "low_quality",
         "missing_features",
@@ -22,26 +22,17 @@ public class CancelSubscriptionCommand : ICancelSubscriptionCommand
         "too_complex",
         "too_expensive",
         "unused"
-    };
-
-    public CancelSubscriptionCommand(
-        ILogger<CancelSubscriptionCommand> logger,
-        IStripeAdapter stripeAdapter)
-    {
-        _logger = logger;
-        _stripeAdapter = stripeAdapter;
-    }
+    ];
 
     public async Task CancelSubscription(
-        ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse)
+        Subscription subscription,
+        OffboardingSurveyResponse offboardingSurveyResponse,
+        bool cancelImmediately)
     {
-        var subscription = await GetSubscriptionAsync(subscriber);
-
         if (IsInactive(subscription))
         {
-            _logger.LogWarning("Cannot cancel subscription ({ID}) that's already inactive.", subscription.Id);
-            return;
+            logger.LogWarning("Cannot cancel subscription ({ID}) that's already inactive.", subscription.Id);
+            throw ContactSupport();
         }
 
         var metadata = new Dictionary<string, string>
@@ -49,11 +40,11 @@ public class CancelSubscriptionCommand : ICancelSubscriptionCommand
             { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
         };
 
-        if (subscriber.IsExpired())
+        if (cancelImmediately)
         {
-            if (subscriber.IsOrganization())
+            if (BelongsToOrganization(subscription))
             {
-                await _stripeAdapter.SubscriptionUpdateAsync(subscription.Id, new SubscriptionUpdateOptions
+                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
                     Metadata = metadata
                 });
@@ -66,6 +57,9 @@ public class CancelSubscriptionCommand : ICancelSubscriptionCommand
             await CancelSubscriptionAtEndOfPeriodAsync(subscription.Id, offboardingSurveyResponse, metadata);
         }
     }
+
+    private static bool BelongsToOrganization(IHasMetadata subscription)
+        => subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId");
 
     private async Task CancelSubscriptionImmediatelyAsync(
         string subscriptionId,
@@ -84,32 +78,7 @@ public class CancelSubscriptionCommand : ICancelSubscriptionCommand
             options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
         }
 
-        await _stripeAdapter.SubscriptionCancelAsync(subscriptionId, options);
-    }
-
-    private static GatewayException ContactSupport() => new("Something went wrong when trying to cancel your subscription. Please contact support.");
-
-    private async Task<Subscription> GetSubscriptionAsync(ISubscriber subscriber)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
-        {
-            _logger.LogError("Cannot cancel subscription for subscriber ({ID}) with no GatewaySubscriptionId.", subscriber.Id);
-
-            throw ContactSupport();
-        }
-
-        var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
-
-        if (subscription != null)
-        {
-            return subscription;
-        }
-
-        _logger.LogError("Could not find Stripe subscription ({ID}) to cancel.", subscriber.GatewaySubscriptionId);
-
-        throw ContactSupport();
+        await stripeAdapter.SubscriptionCancelAsync(subscriptionId, options);
     }
 
     private static bool IsInactive(Subscription subscription) =>
@@ -144,6 +113,6 @@ public class CancelSubscriptionCommand : ICancelSubscriptionCommand
             options.Metadata = metadata;
         }
 
-        await _stripeAdapter.SubscriptionUpdateAsync(subscriptionId, options);
+        await stripeAdapter.SubscriptionUpdateAsync(subscriptionId, options);
     }
 }

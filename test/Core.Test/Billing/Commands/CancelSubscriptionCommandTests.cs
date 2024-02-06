@@ -2,15 +2,14 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands.Implementations;
 using Bit.Core.Billing.Models;
-using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
+
+using static Bit.Core.Test.Billing.Utilities;
 
 namespace Bit.Core.Test.Billing.Commands;
 
@@ -21,37 +20,7 @@ public class CancelSubscriptionCommandTests
     private const string _cancellingUserIdKey = "cancellingUserId";
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_Organization_NullOrganization_ThrowsArgumentNullException(
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await sutProvider.Sut.CancelSubscription((Organization)null, new OffboardingSurveyResponse()));
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_Organization_NoGatewaySubscriptionId_ThrowsGatewayException(
-        Organization organization,
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-    {
-        organization.GatewaySubscriptionId = null;
-
-        await ThrowsContactSupportAsync(async () =>
-            await sutProvider.Sut.CancelSubscription(organization, new OffboardingSurveyResponse()));
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_Organization_NoSubscription_ThrowsGatewayException(
-        Organization organization,
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .ReturnsNull();
-
-        await ThrowsContactSupportAsync(async () =>
-            await sutProvider.Sut.CancelSubscription(organization, new OffboardingSurveyResponse()));
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_Organization_SubscriptionInactive_NoOp(
-        Organization organization,
+    public async Task CancelSubscription_SubscriptionInactive_ThrowsGatewayException(
         SutProvider<CancelSubscriptionCommand> sutProvider)
     {
         var subscription = new Subscription
@@ -59,12 +28,8 @@ public class CancelSubscriptionCommandTests
             Status = "canceled"
         };
 
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .Returns(subscription);
-
-        await sutProvider.Sut.CancelSubscription(organization, new OffboardingSurveyResponse());
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.CancelSubscription(subscription, new OffboardingSurveyResponse(), false));
 
         await DidNotUpdateSubscription(sutProvider);
 
@@ -72,24 +37,20 @@ public class CancelSubscriptionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_Organization_Expired_CancelSubscriptionImmediately(
-        Organization organization,
+    public async Task CancelSubscription_CancelImmediately_BelongsToOrganization_UpdatesSubscription_CancelSubscriptionImmediately(
         SutProvider<CancelSubscriptionCommand> sutProvider)
     {
         var userId = Guid.NewGuid();
 
-        organization.ExpirationDate = DateTime.UtcNow.AddDays(-5);
-
         var subscription = new Subscription
         {
             Id = _subscriptionId,
-            Status = "active"
+            Status = "active",
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", "organization_id" }
+            }
         };
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .Returns(subscription);
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
@@ -98,7 +59,7 @@ public class CancelSubscriptionCommandTests
             Feedback = "Lorem ipsum"
         };
 
-        await sutProvider.Sut.CancelSubscription(organization, offboardingSurveyResponse);
+        await sutProvider.Sut.CancelSubscription(subscription, offboardingSurveyResponse, true);
 
         await UpdatedSubscriptionWith(sutProvider, options => options.Metadata[_cancellingUserIdKey] == userId.ToString());
 
@@ -108,7 +69,39 @@ public class CancelSubscriptionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_Organization_Active_UpdateSubscriptionToCancelAtEndOfPeriod(
+    public async Task CancelSubscription_CancelImmediately_BelongsToUser_CancelSubscriptionImmediately(
+        SutProvider<CancelSubscriptionCommand> sutProvider)
+    {
+        var userId = Guid.NewGuid();
+
+        var subscription = new Subscription
+        {
+            Id = _subscriptionId,
+            Status = "active",
+            Metadata = new Dictionary<string, string>
+            {
+                { "userId", "user_id" }
+            }
+        };
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = userId,
+            Reason = "missing_features",
+            Feedback = "Lorem ipsum"
+        };
+
+        await sutProvider.Sut.CancelSubscription(subscription, offboardingSurveyResponse, true);
+
+        await DidNotUpdateSubscription(sutProvider);
+
+        await CancelledSubscriptionWith(sutProvider, options =>
+            options.CancellationDetails.Comment == offboardingSurveyResponse.Feedback &&
+            options.CancellationDetails.Feedback == offboardingSurveyResponse.Reason);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_DoNotCancelImmediately_UpdateSubscriptionToCancelAtEndOfPeriod(
         Organization organization,
         SutProvider<CancelSubscriptionCommand> sutProvider)
     {
@@ -122,11 +115,6 @@ public class CancelSubscriptionCommandTests
             Status = "active"
         };
 
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .Returns(subscription);
-
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
             UserId = userId,
@@ -134,7 +122,7 @@ public class CancelSubscriptionCommandTests
             Feedback = "Lorem ipsum"
         };
 
-        await sutProvider.Sut.CancelSubscription(organization, offboardingSurveyResponse);
+        await sutProvider.Sut.CancelSubscription(subscription, offboardingSurveyResponse, false);
 
         await UpdatedSubscriptionWith(sutProvider, options =>
             options.CancelAtPeriodEnd == true &&
@@ -145,143 +133,19 @@ public class CancelSubscriptionCommandTests
         await DidNotCancelSubscription(sutProvider);
     }
 
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_User_NullUser_ThrowsArgumentNullException(
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await sutProvider.Sut.CancelSubscription((User)null, new OffboardingSurveyResponse()));
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_User_NoGatewaySubscriptionId_ThrowsGatewayException(
-        User user,
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-    {
-        user.GatewaySubscriptionId = null;
-
-        await ThrowsContactSupportAsync(async () =>
-            await sutProvider.Sut.CancelSubscription(user, new OffboardingSurveyResponse()));
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_User_NoSubscription_ThrowsGatewayException(
-        User user,
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(user.GatewaySubscriptionId)
-            .ReturnsNull();
-
-        await ThrowsContactSupportAsync(async () =>
-            await sutProvider.Sut.CancelSubscription(user, new OffboardingSurveyResponse()));
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_User_SubscriptionInactive_NoOp(
-        User user,
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-    {
-        var subscription = new Subscription
-        {
-            Status = "canceled"
-        };
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.SubscriptionGetAsync(user.GatewaySubscriptionId)
-            .Returns(subscription);
-
-        await sutProvider.Sut.CancelSubscription(user, new OffboardingSurveyResponse());
-
-        await DidNotUpdateSubscription(sutProvider);
-
-        await DidNotCancelSubscription(sutProvider);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_User_Expired_CancelSubscriptionImmediately(
-        User user,
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-    {
-        var userId = Guid.NewGuid();
-
-        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(-5);
-
-        var subscription = new Subscription
-        {
-            Id = _subscriptionId,
-            Status = "active"
-        };
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.SubscriptionGetAsync(user.GatewaySubscriptionId)
-            .Returns(subscription);
-
-        var offboardingSurveyResponse = new OffboardingSurveyResponse
-        {
-            UserId = userId,
-            Reason = "missing_features",
-            Feedback = "Lorem ipsum"
-        };
-
-        await sutProvider.Sut.CancelSubscription(user, offboardingSurveyResponse);
-
-        await CancelledSubscriptionWith(sutProvider, options =>
-            options.CancellationDetails.Comment == offboardingSurveyResponse.Feedback &&
-            options.CancellationDetails.Feedback == offboardingSurveyResponse.Reason);
-
-        await DidNotUpdateSubscription(sutProvider);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CancelSubscription_User_Active_UpdateSubscriptionToCancelAtEndOfPeriod(
-        User user,
-        SutProvider<CancelSubscriptionCommand> sutProvider)
-    {
-        var userId = Guid.NewGuid();
-
-        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(5);
-
-        var subscription = new Subscription
-        {
-            Id = _subscriptionId,
-            Status = "active"
-        };
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.SubscriptionGetAsync(user.GatewaySubscriptionId)
-            .Returns(subscription);
-
-        var offboardingSurveyResponse = new OffboardingSurveyResponse
-        {
-            UserId = userId,
-            Reason = "missing_features",
-            Feedback = "Lorem ipsum"
-        };
-
-        await sutProvider.Sut.CancelSubscription(user, offboardingSurveyResponse);
-
-        await UpdatedSubscriptionWith(sutProvider, options =>
-            options.CancelAtPeriodEnd == true &&
-            options.CancellationDetails.Comment == offboardingSurveyResponse.Feedback &&
-            options.CancellationDetails.Feedback == offboardingSurveyResponse.Reason);
-
-        await DidNotCancelSubscription(sutProvider);
-    }
-
-    private static Task DidNotCancelSubscription(SutProvider<CancelSubscriptionCommand> sutProvider)
+    private static Task<Subscription> DidNotCancelSubscription(SutProvider<CancelSubscriptionCommand> sutProvider)
         => sutProvider
             .GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
             .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
 
-    private static Task DidNotUpdateSubscription(SutProvider<CancelSubscriptionCommand> sutProvider)
+    private static Task<Subscription> DidNotUpdateSubscription(SutProvider<CancelSubscriptionCommand> sutProvider)
         => sutProvider
             .GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
             .SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
 
-    private static Task CancelledSubscriptionWith(
+    private static Task<Subscription> CancelledSubscriptionWith(
         SutProvider<CancelSubscriptionCommand> sutProvider,
         Expression<Predicate<SubscriptionCancelOptions>> predicate)
         => sutProvider
@@ -289,20 +153,11 @@ public class CancelSubscriptionCommandTests
             .Received(1)
             .SubscriptionCancelAsync(_subscriptionId, Arg.Is(predicate));
 
-    private static Task UpdatedSubscriptionWith(
+    private static Task<Subscription> UpdatedSubscriptionWith(
         SutProvider<CancelSubscriptionCommand> sutProvider,
         Expression<Predicate<SubscriptionUpdateOptions>> predicate)
         => sutProvider
             .GetDependency<IStripeAdapter>()
             .Received(1)
             .SubscriptionUpdateAsync(_subscriptionId, Arg.Is(predicate));
-
-    private static async Task ThrowsContactSupportAsync(Func<Task> function)
-    {
-        const string message = "Something went wrong when trying to cancel your subscription. Please contact support.";
-
-        var exception = await Assert.ThrowsAsync<GatewayException>(function);
-
-        Assert.Equal(message, exception.Message);
-    }
 }

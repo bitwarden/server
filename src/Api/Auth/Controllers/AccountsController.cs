@@ -23,6 +23,7 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -68,6 +69,7 @@ public class AccountsController : Controller
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -102,6 +104,7 @@ public class AccountsController : Controller
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
+        IGetSubscriptionQuery getSubscriptionQuery,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
@@ -130,6 +133,7 @@ public class AccountsController : Controller
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
+        _getSubscriptionQuery = getSubscriptionQuery;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _cipherValidator = cipherValidator;
@@ -828,14 +832,21 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey))
+        var presentUserWithOffboardingSurvey =
+            _featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey);
+
+        if (presentUserWithOffboardingSurvey)
         {
-            await _cancelSubscriptionCommand.CancelSubscription(user, new OffboardingSurveyResponse
-            {
-                UserId = user.Id,
-                Reason = request.Reason,
-                Feedback = request.Feedback
-            });
+            var subscription = await _getSubscriptionQuery.GetSubscription(user);
+
+            await _cancelSubscriptionCommand.CancelSubscription(subscription,
+                new OffboardingSurveyResponse
+                {
+                    UserId = user.Id,
+                    Reason = request.Reason,
+                    Feedback = request.Feedback
+                },
+                user.IsExpired());
 
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
                 ReferenceEventType.CancelSubscription,

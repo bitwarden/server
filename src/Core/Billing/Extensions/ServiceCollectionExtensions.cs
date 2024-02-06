@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Commands.Implementations;
+using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Queries.Implementations;
 
 namespace Bit.Core.Billing.Extensions;
 
@@ -11,5 +13,10 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<ICancelSubscriptionCommand, CancelSubscriptionCommand>();
         services.AddSingleton<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
+    }
+
+    public static void AddBillingQueries(this IServiceCollection services)
+    {
+        services.AddSingleton<IGetSubscriptionQuery, GetSubscriptionQuery>();
     }
 }
