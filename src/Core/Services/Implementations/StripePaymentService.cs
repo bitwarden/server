@@ -230,7 +230,7 @@ public class StripePaymentService : IPaymentService
             null;
         var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
 
-        await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, DateTime.UtcNow);
+        await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, DateTime.UtcNow, true);
 
         var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
         org.ExpirationDate = sub.CurrentPeriodEnd;
@@ -750,7 +750,7 @@ public class StripePaymentService : IPaymentService
     }
 
     private async Task<string> FinalizeSubscriptionChangeAsync(IStorableSubscriber storableSubscriber,
-        SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate)
+        SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate, bool invoiceNow = false)
     {
         // remember, when in doubt, throw
         var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId);
@@ -764,30 +764,43 @@ public class StripePaymentService : IPaymentService
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
-        var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
-        {
-            Customer = storableSubscriber.GatewayCustomerId,
-            Subscription = storableSubscriber.GatewaySubscriptionId,
-            SubscriptionItems = ToInvoiceSubscriptionItemOptions(updatedItemOptions),
-            SubscriptionProrationBehavior = "create_prorations",
-            SubscriptionProrationDate = prorationDate,
-            SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
-        });
-
-        // also check to see if any of the plan IDs are for an annual plan, or if the update is for a plan upgrade
-        var immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 5000;
+        var isPm5864DollarThresholdEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5864DollarThreshold);
 
         var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
-            ProrationBehavior = "create_prorations",
+            ProrationBehavior = isPm5864DollarThresholdEnabled && invoiceNow
+            ? Constants.AlwaysInvoice
+            : Constants.CreateProrations,
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice",
             ProrationDate = prorationDate,
-            BillingCycleAnchor = immediatelyInvoice
-                ? SubscriptionBillingCycleAnchor.Now
-                : SubscriptionBillingCycleAnchor.Unchanged
         };
+
+        if (!invoiceNow && isPm5864DollarThresholdEnabled)
+        {
+            var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
+            {
+                Customer = storableSubscriber.GatewayCustomerId,
+                Subscription = storableSubscriber.GatewaySubscriptionId,
+                SubscriptionItems = ToInvoiceSubscriptionItemOptions(updatedItemOptions),
+                SubscriptionProrationBehavior = Constants.CreateProrations,
+                SubscriptionProrationDate = prorationDate,
+                SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
+            });
+
+            // also check to see if any of the plan IDs are for an annual plan, or if the update is for a plan upgrade
+            var immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 5000;
+
+            subUpdateOptions.BillingCycleAnchor = immediatelyInvoice
+                ? SubscriptionBillingCycleAnchor.Now
+                : SubscriptionBillingCycleAnchor.Unchanged;
+        }
+
+        if (invoiceNow && isPm5864DollarThresholdEnabled)
+        {
+            subUpdateOptions.BillingCycleAnchor = SubscriptionBillingCycleAnchor.Now;
+        }
 
         var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
         if (pm5766AutomaticTaxIsEnabled)
@@ -913,7 +926,7 @@ public class StripePaymentService : IPaymentService
                     PurchasedAdditionalSecretsManagerServiceAccounts = newlyPurchasedAdditionalSecretsManagerServiceAccounts,
                     PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage
                 }),
-            prorationDate);
+            prorationDate, true);
 
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
     {
@@ -1720,7 +1733,9 @@ public class StripePaymentService : IPaymentService
     public async Task<string> AddSecretsManagerToSubscription(Organization org, StaticStore.Plan plan, int additionalSmSeats,
         int additionalServiceAccount, DateTime? prorationDate = null)
     {
-        return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount), prorationDate);
+        return await FinalizeSubscriptionChangeAsync(org,
+            new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount), prorationDate,
+            true);
     }
 
     public async Task<bool> RisksSubscriptionFailure(Organization organization)
