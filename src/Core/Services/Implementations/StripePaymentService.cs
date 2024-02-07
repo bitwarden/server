@@ -770,13 +770,10 @@ public class StripePaymentService : IPaymentService
             Subscription = storableSubscriber.GatewaySubscriptionId,
             SubscriptionItems = ToInvoiceSubscriptionItemOptions(updatedItemOptions),
             SubscriptionProrationBehavior = "create_prorations",
-            SubscriptionProrationDate = prorationDate
+            SubscriptionProrationDate = prorationDate,
+            SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
         };
         var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(opt);
-        var upcomingInvoiceWithoutChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
-        {
-            Customer = storableSubscriber.GatewayCustomerId
-        });
 
         var immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 5000;
 
