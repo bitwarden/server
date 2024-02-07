@@ -1,17 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base",
-    ":combinePatchMinorReleases",
-    ":dependencyDashboard",
-    ":maintainLockFilesWeekly",
-    ":pinAllExceptPeerDependencies",
-    ":prConcurrentLimit10",
-    ":rebaseStalePrs",
-    ":separateMajorReleases",
-    "group:monorepos",
-    "schedule:weekends"
-  ],
+  "extends": ["github>bitwarden/renovate-config"],
   "enabledManagers": [
     "dockerfile",
     "docker-compose",
@@ -19,8 +8,6 @@
     "npm",
     "nuget"
   ],
-  "commitMessagePrefix": "[deps]:",
-  "commitMessageTopic": "{{depName}}",
   "packageRules": [
     {
       "groupName": "dockerfile minor",
@@ -113,26 +100,12 @@
       "description": "Group Microsoft.Extensions.Logging to exclude them from the dotnet monorepo preset"
     },
     {
-      "matchPackageNames": ["CommandDotNet", "dbup-sqlserver", "YamlDotNet"],
-      "description": "DevOps owned dependencies",
-      "commitMessagePrefix": "[deps] DevOps:",
-      "reviewers": ["team:team-devops"]
-    },
-    {
-      "matchPackageNames": [
-        "Microsoft.AspNetCore.Authentication.JwtBearer",
-        "Microsoft.AspNetCore.Http",
-        "Microsoft.Data.SqlClient"
-      ],
-      "description": "Platform owned dependencies",
-      "commitMessagePrefix": "[deps] Platform:",
-      "reviewers": ["team:team-platform-dev"]
-    },
-    {
       "matchPackageNames": [
         "Dapper",
+        "dbup-sqlserver",
         "dotnet-ef",
         "linq2db.EntityFrameworkCore",
+        "Microsoft.Data.SqlClient",
         "Microsoft.EntityFrameworkCore.Design",
         "Microsoft.EntityFrameworkCore.InMemory",
         "Microsoft.EntityFrameworkCore.Relational",
@@ -141,9 +114,24 @@
         "Npgsql.EntityFrameworkCore.PostgreSQL",
         "Pomelo.EntityFrameworkCore.MySql"
       ],
-      "description": "Secrets Manager owned dependencies",
-      "commitMessagePrefix": "[deps] SM:",
-      "reviewers": ["team:team-secrets-manager-dev"]
+      "description": "DbOps owned dependencies",
+      "commitMessagePrefix": "[deps] DbOps:",
+      "reviewers": ["team:dept-dbops"]
+    },
+    {
+      "matchPackageNames": ["CommandDotNet", "YamlDotNet"],
+      "description": "DevOps owned dependencies",
+      "commitMessagePrefix": "[deps] DevOps:",
+      "reviewers": ["team:dept-devops"]
+    },
+    {
+      "matchPackageNames": [
+        "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "Microsoft.AspNetCore.Http"
+      ],
+      "description": "Platform owned dependencies",
+      "commitMessagePrefix": "[deps] Platform:",
+      "reviewers": ["team:team-platform-dev"]
     },
     {
       "matchPackagePatterns": ["EntityFrameworkCore", "^dotnet-ef"],

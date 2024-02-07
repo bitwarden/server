@@ -174,10 +174,6 @@
                     <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager" disabled='@(canEditPlan ? null : "disabled")'>
                     <label class="form-check-label" asp-for="UseSecretsManager"></label>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="SecretsManagerBeta" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="SecretsManagerBeta"></label>
-                </div>
             </div>
         </div>
     }
@@ -217,7 +213,7 @@
 
     @if (canViewPlan)
     {
-        <div id="organization-secrets-configuration" hidden="@(!Model.UseSecretsManager || Model.SecretsManagerBeta)">
+        <div id="organization-secrets-configuration" hidden="@(!Model.UseSecretsManager)">
             <h2>Secrets Manager Configuration</h2>
             <div class="row">
                 <div class="col-sm">
