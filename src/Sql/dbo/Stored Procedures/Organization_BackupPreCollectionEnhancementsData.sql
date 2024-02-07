@@ -29,6 +29,12 @@ BEGIN
                 AND ISJSON([Permissions]) > 0
                 AND (JSON_VALUE([Permissions], '$.editAssignedCollections') = 'true'
                     OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true')
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM OPENJSON([Permissions])
+                    WHERE [key] NOT IN ('editAssignedCollections', 'deleteAssignedCollections')
+                        AND [value] = 'true'
+                )
             )
         );
 
