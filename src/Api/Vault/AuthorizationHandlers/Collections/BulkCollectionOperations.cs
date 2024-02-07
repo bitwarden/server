@@ -18,4 +18,5 @@ public static class BulkCollectionOperations
     /// </summary>
     public static readonly BulkCollectionOperationRequirement ModifyAccess = new() { Name = nameof(ModifyAccess) };
     public static readonly BulkCollectionOperationRequirement Delete = new() { Name = nameof(Delete) };
+    public static readonly BulkCollectionOperationRequirement ImportCiphers = new() { Name = nameof(ImportCiphers) };
 }
