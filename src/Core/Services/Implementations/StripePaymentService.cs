@@ -764,7 +764,7 @@ public class StripePaymentService : IPaymentService
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
-        var opt = new UpcomingInvoiceOptions
+        var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
         {
             Customer = storableSubscriber.GatewayCustomerId,
             Subscription = storableSubscriber.GatewaySubscriptionId,
@@ -772,9 +772,9 @@ public class StripePaymentService : IPaymentService
             SubscriptionProrationBehavior = "create_prorations",
             SubscriptionProrationDate = prorationDate,
             SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
-        };
-        var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(opt);
+        });
 
+        // also check to see if any of the plan IDs are for an annual plan, or if the update is for a plan upgrade
         var immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 5000;
 
         var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
