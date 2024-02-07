@@ -11,6 +11,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
@@ -120,6 +121,7 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
             services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
+            services.AddKeyedSingleton<IGrantRepository, Core.Auth.Repositories.Cosmos.GrantRepository>("cosmos");
         }
 
         return provider;
@@ -272,19 +274,6 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         }
 
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
-        {
-            services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
-        }
-        else if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
-        {
-            services.AddSingleton<IBlockIpService, AmazonSqsBlockIpService>();
-        }
-        else
-        {
-            services.AddSingleton<IBlockIpService, NoopBlockIpService>();
-        }
-
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
         {
             services.AddSingleton<IMailEnqueuingService, AzureQueueMailService>();
@@ -366,7 +355,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMailService, NoopMailService>();
         services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
-        services.AddSingleton<IBlockIpService, NoopBlockIpService>();
         services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
         services.AddSingleton<ILicensingService, NoopLicensingService>();
