@@ -6,6 +6,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDataMigration;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDataMigration.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -50,6 +52,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
+        services.AddOrganizationDataMigrationCommands();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -142,6 +145,11 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddBaseOrganizationSubscriptionCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
+    }
+
+    private static void AddOrganizationDataMigrationCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationPreDataMigrationLogCommand, OrganizationPreDataMigrationLogCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)
