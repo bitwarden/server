@@ -49,7 +49,6 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -667,7 +666,8 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<IpRateLimitSeedStartupService>();
         services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-        if (!globalSettings.DistributedIpRateLimiting.Enabled || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+        if (!globalSettings.DistributedIpRateLimiting.Enabled ||
+            string.IsNullOrEmpty(globalSettings.DistributedIpRateLimiting.RedisConnectionString))
         {
             services.AddInMemoryRateLimiting();
         }
@@ -680,7 +680,7 @@ public static class ServiceCollectionExtensions
 
             // Use a custom Redis processing strategy that skips Ip limiting if Redis is down
             services.AddKeyedSingleton<IConnectionMultiplexer>("rate-limiter", (_, provider) =>
-                ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
+                ConnectionMultiplexer.Connect(globalSettings.DistributedIpRateLimiting.RedisConnectionString));
             services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>();
         }
     }
