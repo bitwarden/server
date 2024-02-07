@@ -57,6 +57,7 @@ public class OrganizationsController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -78,7 +79,8 @@ public class OrganizationsController : Controller
         ILicensingService licensingService,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
-        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand)
+        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
+        IPushNotificationService pushNotificationService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -100,6 +102,7 @@ public class OrganizationsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
+        _pushNotificationService = pushNotificationService;
     }
 
     [HttpGet("{id}")]
@@ -846,6 +849,13 @@ public class OrganizationsController : Controller
 
         organization.FlexibleCollections = true;
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+
+        // Force a vault sync for all owners and admins of the organization so that changes show immediately
+        // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
+        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(id, OrganizationUserType.Admin);
+        await Task.WhenAll(admins
+            .Where(a => a.UserId.HasValue)
+            .Select(a => _pushNotificationService.PushSyncVaultAsync(a.UserId.Value)));
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
