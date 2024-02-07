@@ -209,6 +209,8 @@ public class AccountController : Controller
             returnUrl = "~/";
         }
 
+        // Clean the returnUrl
+        returnUrl = CoreHelpers.ReplaceWhiteSpace(returnUrl, string.Empty);
         if (!Url.IsLocalUrl(returnUrl) && !_interaction.IsValidReturnUrl(returnUrl))
         {
             throw new Exception(_i18nService.T("InvalidReturnUrl"));
