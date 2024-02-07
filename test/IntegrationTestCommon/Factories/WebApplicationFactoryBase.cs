@@ -139,11 +139,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.Remove(captchaValidationService);
             services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
 
-            // Disable blocking
-            var blockingService = services.First(sd => sd.ServiceType == typeof(IBlockIpService));
-            services.Remove(blockingService);
-            services.AddSingleton<IBlockIpService, NoopBlockIpService>();
-
             // TODO: Install and use azurite in CI pipeline
             var installationDeviceRepository =
                 services.First(sd => sd.ServiceType == typeof(IInstallationDeviceRepository));
