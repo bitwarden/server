@@ -23,7 +23,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
-    public const string CipherKeyEncryptionMinimumVersion = "2024.1.0";
+    public const string CipherKeyEncryptionMinimumVersion = "2024.2.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
@@ -96,12 +96,27 @@ public static class FeatureFlagKeys
     public const string VaultOnboarding = "vault-onboarding";
     public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
-    public const string FlexibleCollections = "flexible-collections";
+    /// <summary>
+    /// Deprecated - never used, do not use. Will always default to false. Will be deleted as part of Flexible Collections cleanup
+    /// </summary>
+    public const string FlexibleCollections = "flexible-collections-disabled-do-not-use";
     public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
     public const string BulkCollectionAccess = "bulk-collection-access";
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
+    public const string DuoRedirect = "duo-redirect";
+    /// <summary>
+    /// Enables flexible collections improvements for new organizations on creation
+    /// </summary>
+    public const string FlexibleCollectionsSignup = "flexible-collections-signup";
+    /// <summary>
+    /// Exposes a migration button in the web vault which allows users to migrate an existing organization to
+    /// flexible collections
+    /// </summary>
+    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
+
+    public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
 
     public static List<string> GetAllKeys()
     {

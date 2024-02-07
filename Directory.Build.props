@@ -1,8 +1,10 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Version>2023.12.1</Version>
+    <TargetFramework>net8.0</TargetFramework>
+
+    <Version>2024.2.0</Version>
+
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -17,31 +19,31 @@
     <!--
       NuGet: https://www.nuget.org/packages/Microsoft.NET.Test.Sdk
     -->
-    <MicrosoftNetTestSdkVersion>17.1.0</MicrosoftNetTestSdkVersion>
+    <MicrosoftNetTestSdkVersion>17.8.0</MicrosoftNetTestSdkVersion>
     <!--
       NuGet: https://www.nuget.org/packages/xunit
     -->
-    <XUnitVersion>2.4.1</XUnitVersion>
+    <XUnitVersion>2.6.6</XUnitVersion>
     <!--
-      NuGet: https://www.nuget.org/packages/xunit
+      NuGet: https://www.nuget.org/packages/xunit.runner.visualstudio
     -->
-    <XUnitRunnerVisualStudioVersion>2.4.3</XUnitRunnerVisualStudioVersion>
+    <XUnitRunnerVisualStudioVersion>2.5.6</XUnitRunnerVisualStudioVersion>
     <!--
-      NuGet: https://www.nuget.org/packages/coverlet.collector/
+      NuGet: https://www.nuget.org/packages/coverlet.collector
     -->
-    <CoverletCollectorVersion>3.1.2</CoverletCollectorVersion>
+    <CoverletCollectorVersion>6.0.0</CoverletCollectorVersion>
     <!--
-      NuGet: https://www.nuget.org/packages/NSubstitute/
+      NuGet: https://www.nuget.org/packages/NSubstitute
     -->
-    <NSubstituteVersion>4.3.0</NSubstituteVersion>
+    <NSubstituteVersion>5.1.0</NSubstituteVersion>
     <!--
-      NuGet: https://www.nuget.org/packages/AutoFixture.Xunit2/
+      NuGet: https://www.nuget.org/packages/AutoFixture.Xunit2
     -->
-    <AutoFixtureXUnit2Version>4.17.0</AutoFixtureXUnit2Version>
+    <AutoFixtureXUnit2Version>4.18.1</AutoFixtureXUnit2Version>
     <!--
-      NuGet: https://www.nuget.org/packages/AutoFixture.AutoNSubstitute/
+      NuGet: https://www.nuget.org/packages/AutoFixture.AutoNSubstitute
     -->
-    <AutoFixtureAutoNSubstituteVersion>4.17.0</AutoFixtureAutoNSubstituteVersion>
+    <AutoFixtureAutoNSubstituteVersion>4.18.1</AutoFixtureAutoNSubstituteVersion>
   </PropertyGroup>
 
   <!--
