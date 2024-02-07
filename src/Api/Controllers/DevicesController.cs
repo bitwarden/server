@@ -1,4 +1,5 @@
-﻿using Bit.Api.Auth.Models.Request;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
@@ -12,7 +13,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Api.Controllers;
 
