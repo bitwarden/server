@@ -823,7 +823,7 @@ public class AccountsController : Controller
 
     [HttpPost("cancel-premium")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel(SubscriptionCancellationRequestModel request)
+    public async Task PostCancel([FromBody] SubscriptionCancellationRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
