@@ -5,7 +5,7 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDataMigration.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -51,7 +51,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
-    private readonly IOrganizationPreDataMigrationLogCommand _organizationPreDataMigrationLogCommand;
+    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -77,7 +77,7 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
-        _organizationPreDataMigrationLogCommand = Substitute.For<IOrganizationPreDataMigrationLogCommand>();
+        _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -100,7 +100,7 @@ public class OrganizationsControllerTests : IDisposable
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
-            _organizationPreDataMigrationLogCommand);
+            _organizationEnableCollectionEnhancementsCommand);
     }
 
     public void Dispose()
@@ -367,11 +367,7 @@ public class OrganizationsControllerTests : IDisposable
 
         await _sut.EnableCollectionEnhancements(organization.Id);
 
-        await _organizationRepository.Received(1).EnableCollectionEnhancements(organization.Id);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
-            Arg.Is<Organization>(o =>
-                o.Id == organization.Id &&
-                o.FlexibleCollections));
+        await _organizationEnableCollectionEnhancementsCommand.Received(1).EnableCollectionEnhancements(organization);
     }
 
     [Theory, AutoData]
@@ -383,8 +379,7 @@ public class OrganizationsControllerTests : IDisposable
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
 
-        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
-        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
     }
 
     [Theory, AutoData]
@@ -397,7 +392,6 @@ public class OrganizationsControllerTests : IDisposable
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
         Assert.Contains("has already been migrated", exception.Message);
 
-        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
-        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
     }
 }

@@ -1,26 +1,48 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDataMigration.Interfaces;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDataMigration;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements;
 
-public class OrganizationPreDataMigrationLogCommand(
+public class OrganizationEnableCollectionEnhancementsCommand(
     ICollectionRepository collectionRepository,
     IGroupRepository groupRepository,
+    IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
-    ILogger<OrganizationPreDataMigrationLogCommand> logger)
-    : IOrganizationPreDataMigrationLogCommand
+    IOrganizationService organizationService,
+    ILogger<OrganizationEnableCollectionEnhancementsCommand> logger)
+    : IOrganizationEnableCollectionEnhancementsCommand
 {
-    public async Task LogAsync(Guid organizationId)
+    public async Task EnableCollectionEnhancements(Organization organization)
+    {
+        // Log the Organization data that will change when the migration is complete
+        await LogPreMigrationDataAsync(organization.Id);
+
+        // Run the data migration script
+        await organizationRepository.EnableCollectionEnhancements(organization.Id);
+
+        organization.FlexibleCollections = true;
+        await organizationService.ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    private async Task LogPreMigrationDataAsync(Guid organizationId)
     {
         var groups = await groupRepository.GetManyByOrganizationIdAsync(organizationId);
-        var groupIdsWithAccessAllEnabled = groups.Where(g => g.AccessAll).Select(g => new { GroupId = g.Id }).ToList();
+        var groupIdsWithAccessAllEnabled = groups
+            .Where(g => g.AccessAll)
+            .Select(g => new { GroupId = g.Id })
+            .ToList();
 
         var organizationUsers = await organizationUserRepository.GetManyByOrganizationAsync(organizationId, type: null);
-        var organizationUserIdsWithAccessAllEnabled = organizationUsers.Where(ou => ou.AccessAll).Select(ou => new { OrganizationUserId = ou.Id }).ToList();
+        var organizationUserIdsWithAccessAllEnabled = organizationUsers
+            .Where(ou => ou.AccessAll)
+            .Select(ou => new { OrganizationUserId = ou.Id })
+            .ToList();
         var organizationUserIdsWithMigratedTypes = organizationUsers
             .Where(ou =>
                 ou.Type == OrganizationUserType.Manager ||
@@ -32,7 +54,8 @@ public class OrganizationPreDataMigrationLogCommand(
                          (permission.Name is "editAssignedCollections" or "deleteAssignedCollections" && (bool)permission.Value == true) ||
                          (bool)permission.Value == false))
             )
-            .Select(ou => new { OrganizationUserId = ou.Id, Type = (int)ou.Type }).ToList();
+            .Select(ou => new { OrganizationUserId = ou.Id, Type = (int)ou.Type })
+            .ToList();
 
         var collectionUsers = await collectionRepository.GetManyByOrganizationIdWithAccessAsync(organizationId);
         var collectionUsersData = collectionUsers.SelectMany(tuple =>

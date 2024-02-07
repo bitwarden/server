@@ -14,7 +14,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDataMigration.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -58,7 +58,7 @@ public class OrganizationsController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
-    private readonly IOrganizationPreDataMigrationLogCommand _organizationPreDataMigrationLogCommand;
+    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -81,7 +81,7 @@ public class OrganizationsController : Controller
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
-        IOrganizationPreDataMigrationLogCommand organizationPreDataMigrationLogCommand)
+        IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -103,7 +103,7 @@ public class OrganizationsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
-        _organizationPreDataMigrationLogCommand = organizationPreDataMigrationLogCommand;
+        _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
     }
 
     [HttpGet("{id}")]
@@ -846,12 +846,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Organization has already been migrated to the new collection enhancements");
         }
 
-        await _organizationPreDataMigrationLogCommand.LogAsync(id);
-
-        await _organizationRepository.EnableCollectionEnhancements(id);
-
-        organization.FlexibleCollections = true;
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await _organizationEnableCollectionEnhancementsCommand.EnableCollectionEnhancements(organization);
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
