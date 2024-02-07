@@ -572,7 +572,7 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AddOrganization_CreateAfterNov162023_PlanTypeDoesNotUpdated(Provider provider, Organization organization, string key,
+    public async Task AddOrganization_CreateAfterNov62023_PlanTypeDoesNotUpdated(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {
         provider.Type = ProviderType.Msp;
@@ -594,10 +594,10 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AddOrganization_CreateBeforeNov162023_PlanTypeUpdated(Provider provider, Organization organization, string key,
+    public async Task AddOrganization_CreateBeforeNov62023_PlanTypeUpdated(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {
-        var newCreationDate = DateTime.UtcNow.AddMonths(-3);
+        var newCreationDate = new DateTime(2023, 11, 5);
         BackdateProviderCreationDate(provider, newCreationDate);
         provider.Type = ProviderType.Msp;
 
