@@ -2,6 +2,7 @@
 using AspNetCoreRateLimit.Redis;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
@@ -26,6 +27,7 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
     private const string _redisTimeoutCacheKey = "IpRateLimitRedisTimeout";
 
     public CustomRedisProcessingStrategy(
+        [FromKeyedServices("rate-limiter")]
         IConnectionMultiplexer connectionMultiplexer,
         IRateLimitConfiguration config,
         ILogger<CustomRedisProcessingStrategy> logger,
