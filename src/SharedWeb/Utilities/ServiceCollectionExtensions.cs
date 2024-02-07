@@ -272,19 +272,6 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         }
 
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
-        {
-            services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
-        }
-        else if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
-        {
-            services.AddSingleton<IBlockIpService, AmazonSqsBlockIpService>();
-        }
-        else
-        {
-            services.AddSingleton<IBlockIpService, NoopBlockIpService>();
-        }
-
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
         {
             services.AddSingleton<IMailEnqueuingService, AzureQueueMailService>();
@@ -366,7 +353,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMailService, NoopMailService>();
         services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
-        services.AddSingleton<IBlockIpService, NoopBlockIpService>();
         services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
         services.AddSingleton<ILicensingService, NoopLicensingService>();
