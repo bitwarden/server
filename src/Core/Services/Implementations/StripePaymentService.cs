@@ -743,7 +743,9 @@ public class StripePaymentService : IPaymentService
         return subItemOptions.Select(si => new Stripe.InvoiceSubscriptionItemOptions
         {
             Plan = si.Plan,
-            Quantity = si.Quantity
+            Price = si.Price,
+            Quantity = si.Quantity,
+            Id = si.Id
         }).ToList();
     }
 
@@ -762,14 +764,32 @@ public class StripePaymentService : IPaymentService
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
+        var opt = new UpcomingInvoiceOptions
+        {
+            Customer = storableSubscriber.GatewayCustomerId,
+            Subscription = storableSubscriber.GatewaySubscriptionId,
+            SubscriptionItems = ToInvoiceSubscriptionItemOptions(updatedItemOptions),
+            SubscriptionProrationBehavior = "create_prorations",
+            SubscriptionProrationDate = prorationDate
+        };
+        var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(opt);
+        var upcomingInvoiceWithoutChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
+        {
+            Customer = storableSubscriber.GatewayCustomerId
+        });
+
+        var immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 5000;
 
         var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
-            ProrationBehavior = "always_invoice",
+            ProrationBehavior = "create_prorations",
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice",
             ProrationDate = prorationDate,
+            BillingCycleAnchor = immediatelyInvoice
+                ? SubscriptionBillingCycleAnchor.Now
+                : SubscriptionBillingCycleAnchor.Unchanged
         };
 
         var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
