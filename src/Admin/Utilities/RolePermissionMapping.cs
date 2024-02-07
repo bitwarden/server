@@ -88,6 +88,7 @@ public static class RolePermissionMapping
                 Permission.Provider_List_View,
                 Permission.Provider_Create,
                 Permission.Provider_View,
+                Permission.Provider_Edit,
                 Permission.Provider_ResendEmailInvite,
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_PromoteAdmin,
