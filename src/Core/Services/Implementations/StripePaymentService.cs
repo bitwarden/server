@@ -769,7 +769,7 @@ public class StripePaymentService : IPaymentService
         var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
-            ProrationBehavior = isPm5864DollarThresholdEnabled && invoiceNow
+            ProrationBehavior = !isPm5864DollarThresholdEnabled || invoiceNow
             ? Constants.AlwaysInvoice
             : Constants.CreateProrations,
             DaysUntilDue = daysUntilDue ?? 1,
@@ -789,17 +789,11 @@ public class StripePaymentService : IPaymentService
                 SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
             });
 
-            // also check to see if any of the plan IDs are for an annual plan, or if the update is for a plan upgrade
-            var immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 5000;
+            var immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 50000;
 
             subUpdateOptions.BillingCycleAnchor = immediatelyInvoice
                 ? SubscriptionBillingCycleAnchor.Now
                 : SubscriptionBillingCycleAnchor.Unchanged;
-        }
-
-        if (invoiceNow && isPm5864DollarThresholdEnabled)
-        {
-            subUpdateOptions.BillingCycleAnchor = SubscriptionBillingCycleAnchor.Now;
         }
 
         var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
