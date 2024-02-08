@@ -28,6 +28,7 @@ using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.Tools;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
@@ -171,6 +172,7 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingCommands();
+        services.AddToolsServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();

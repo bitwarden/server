@@ -81,6 +81,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
+    public virtual ITwoFactorDirectorySettings TwoFactorDirectory { get; set; } = new TwoFactorDirectorySettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -556,5 +557,11 @@ public class GlobalSettings : IGlobalSettings
         public string SdkKey { get; set; }
         public string FlagDataFilePath { get; set; } = "flags.json";
         public Dictionary<string, string> FlagValues { get; set; } = new Dictionary<string, string>();
+    }
+
+    public class TwoFactorDirectorySettings : ITwoFactorDirectorySettings
+    {
+        public Uri Uri { get; set; } = new("https://api.2fa.directory/v3/totp.json");
+        public int CacheExpirationHours { get; set; } = 24;
     }
 }

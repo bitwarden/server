@@ -115,6 +115,7 @@ public static class FeatureFlagKeys
     /// flexible collections
     /// </summary>
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
+    public const string MigrateTwoFactorDirectory = "migrate-two-factor-directory";
 
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
 
