@@ -9,6 +9,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -17,6 +18,7 @@ using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -41,9 +43,13 @@ public class CiphersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
 
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
+
+    private bool UseFlexibleCollectionsV1 =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -55,7 +61,8 @@ public class CiphersController : Controller
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IOrganizationCiphersQuery organizationCiphersQuery)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -67,6 +74,7 @@ public class CiphersController : Controller
         _logger = logger;
         _globalSettings = globalSettings;
         _featureService = featureService;
+        _organizationCiphersQuery = organizationCiphersQuery;
     }
 
     [HttpGet("{id}")]
@@ -230,24 +238,150 @@ public class CiphersController : Controller
     }
 
     [HttpGet("organization-details")]
-    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCollections(
-        string organizationId)
+    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgIdGuid = new Guid(organizationId);
+        // Flexible Collections Logic
+        if (UseFlexibleCollectionsV1)
+        {
+            return await GetAllOrganizationCiphersAsync(organizationId);
+        }
 
-        (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, orgIdGuid);
+        // Pre-Flexible Collections Logic
+        var userId = _userService.GetProperUserId(User).Value;
+
+        (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
         var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
             collectionCiphersGroupDict, c.OrganizationUseTotp));
 
-        var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
+        var providerId = await _currentContext.ProviderIdForOrg(organizationId);
         if (providerId.HasValue)
         {
-            await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
+            await _providerService.LogProviderAccessToOrganizationAsync(organizationId);
         }
 
         return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
+    }
+
+    [HttpGet("organization-details/assigned")]
+    public async Task<ListResponseModel<CipherDetailsResponseModel>> GetAssignedOrganizationCiphers(Guid organizationId)
+    {
+        if (!UseFlexibleCollectionsV1)
+        {
+            throw new FeatureUnavailableException();
+        }
+
+        if (!await CanAccessOrganizationCiphersAsync(organizationId) || !_currentContext.UserId.HasValue)
+        {
+            throw new NotFoundException();
+        }
+
+        var ciphers = await _organizationCiphersQuery.GetOrganizationCiphersForUser(organizationId, _currentContext.UserId.Value);
+
+        if (await CanAccessUnassignedCiphersAsync(organizationId))
+        {
+            var unassignedCiphers = await _organizationCiphersQuery.GetUnassignedOrganizationCiphers(organizationId);
+            ciphers = ciphers.Concat(unassignedCiphers.Select(c => new CipherDetailsWithCollections(c, null)
+            {
+                // Users that can access unassigned ciphers can also edit them
+                Edit = true,
+                ViewPassword = true,
+            }));
+        }
+
+        var responses = ciphers.Select(c => new CipherDetailsResponseModel(c, _globalSettings));
+
+        return new ListResponseModel<CipherDetailsResponseModel>(responses);
+    }
+
+    /// <summary>
+    /// Returns all ciphers belonging to the organization if the user has access to All ciphers.
+    /// </summary>
+    /// <exception cref="NotFoundException"></exception>
+    private async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetAllOrganizationCiphersAsync(Guid organizationId)
+    {
+        if (!await CanAccessAllCiphersAsync(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
+
+        var allOrganizationCipherResponses =
+            allOrganizationCiphers.Select(c =>
+                new CipherMiniDetailsResponseModel(c, _globalSettings, c.OrganizationUseTotp)
+            );
+
+        return new ListResponseModel<CipherMiniDetailsResponseModel>(allOrganizationCipherResponses);
+    }
+
+    /// <summary>
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
+    /// </summary>
+    private async Task<bool> CanAccessAllCiphersAsync(Guid organizationId)
+    {
+        var org = _currentContext.GetOrganization(organizationId);
+
+        if (org is
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.AccessImportExport: true })
+        {
+            return true;
+        }
+
+        // Provider users can access all ciphers in V1 (to change later)
+        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
+    /// </summary>
+    private async Task<bool> CanAccessOrganizationCiphersAsync(Guid organizationId)
+    {
+        var org = _currentContext.GetOrganization(organizationId);
+
+        // The user has a relationship with the organization;
+        // they can access its ciphers in collections they've been assigned
+        if (org is not null)
+        {
+            return true;
+        }
+
+        // Provider users can still access organization ciphers in V1 (to change later)
+        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
+    /// </summary>
+    private async Task<bool> CanAccessUnassignedCiphersAsync(Guid organizationId)
+    {
+        var org = _currentContext.GetOrganization(organizationId);
+
+        if (org is
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.EditAnyCollection: true })
+        {
+            return true;
+        }
+
+        // Provider users can access all ciphers in V1 (to change later)
+        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     [HttpPut("{id}/partial")]
