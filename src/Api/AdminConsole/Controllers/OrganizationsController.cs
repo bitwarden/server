@@ -203,7 +203,12 @@ public class OrganizationsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
-        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o));
+        var responses = organizations.Select(o =>
+        {
+            var response = new ProfileOrganizationResponseModel(o);
+
+            return response;
+        });
         return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
     }
 
@@ -398,7 +403,8 @@ public class OrganizationsController : Controller
         var organizationDetails = await _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
             OrganizationUserStatusType.Confirmed);
 
-        return new ProfileOrganizationResponseModel(organizationDetails);
+        var response = new ProfileOrganizationResponseModel(organizationDetails);
+        return response;
     }
 
     [HttpPost("{id}/seat")]
