@@ -9,16 +9,13 @@ public class PersistedGrantStore : IPersistedGrantStore
 {
     private readonly IGrantRepository _grantRepository;
     private readonly Func<PersistedGrant, IGrant> _toGrant;
-    private readonly IPersistedGrantStore _fallbackGrantStore;
 
     public PersistedGrantStore(
         IGrantRepository grantRepository,
-        Func<PersistedGrant, IGrant> toGrant,
-        IPersistedGrantStore fallbackGrantStore = null)
+        Func<PersistedGrant, IGrant> toGrant)
     {
         _grantRepository = grantRepository;
         _toGrant = toGrant;
-        _fallbackGrantStore = fallbackGrantStore;
     }
 
     public async Task<PersistedGrant> GetAsync(string key)
@@ -26,11 +23,6 @@ public class PersistedGrantStore : IPersistedGrantStore
         var grant = await _grantRepository.GetByKeyAsync(key);
         if (grant == null)
         {
-            if (_fallbackGrantStore != null)
-            {
-                // It wasn't found, there is a chance is was instead stored in the fallback store
-                return await _fallbackGrantStore.GetAsync(key);
-            }
             return null;
         }
 

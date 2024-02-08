@@ -13,9 +13,9 @@ public abstract class GroupBaseModel
     public string Name { get; set; }
     /// <summary>
     /// Determines if this group can access all collections within the organization, or only the associated
-    /// collections. If set to <c>true</c>, this option overrides any collection assignments.
+    /// collections. If set to <c>true</c>, this option overrides any collection assignments. If your organization is using
+    /// the latest collection enhancements, you will not be allowed to set this property to <c>true</c>.
     /// </summary>
-    [Required]
     public bool? AccessAll { get; set; }
     /// <summary>
     /// External identifier for reference or linking this group to another system, such as a user directory.

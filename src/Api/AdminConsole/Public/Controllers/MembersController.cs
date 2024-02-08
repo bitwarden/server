@@ -5,7 +5,6 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -123,14 +122,7 @@ public class MembersController : Controller
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(_currentContext.OrganizationId.Value);
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
-        var invite = new OrganizationUserInvite
-        {
-            Emails = new List<string> { model.Email },
-            Type = model.Type.Value,
-            AccessAll = model.AccessAll.Value,
-            Collections = associations
-        };
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false)).ToList();
         var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
             model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
         var response = new MemberResponseModel(user, associations);
@@ -159,7 +151,7 @@ public class MembersController : Controller
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(_currentContext.OrganizationId.Value);
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false)).ToList();
         await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
