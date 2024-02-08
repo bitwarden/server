@@ -9,6 +9,7 @@ using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
+using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -64,6 +65,7 @@ public class Startup
 
         services.AddSwaggerGen(c =>
         {
+            c.SchemaFilter<EnumSchemaFilter>();
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
         });
 

@@ -1,11 +1,11 @@
-﻿using Bit.Api.Utilities.Swagger;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
+﻿using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Health;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 

@@ -2,7 +2,7 @@
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Bit.Api.Utilities.Swagger;
+namespace Bit.SharedWeb.Swagger;
 
 /// <summary>
 /// Adds x-enum-varnames containing the name of enums. Useful for code generation.
