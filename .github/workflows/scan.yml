@@ -1,0 +1,42 @@
+name: Scan
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+      - "rc"
+      - "hotfix-rc"
+  pull_request:
+
+permissions: read-all
+
+jobs:
+  scan:
+    name: Scan
+    runs-on: ubuntu-22.04
+    permissions:
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["csharp"]
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+      - name: Initialize code scanning
+        uses: github/codeql-action/init@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
