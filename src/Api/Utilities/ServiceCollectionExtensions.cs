@@ -1,4 +1,5 @@
-﻿using Bit.Api.Vault.AuthorizationHandlers.Collections;
+﻿using Bit.Api.Utilities.Swagger;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core.IdentityServer;
@@ -68,6 +69,8 @@ public static class ServiceCollectionExtensions
 
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
+
+            config.SchemaFilter<EnumSchemaFilter>();
 
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);
