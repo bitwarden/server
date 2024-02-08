@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,11 @@ public class OrganizationEnableCollectionEnhancementsCommand(
 {
     public async Task EnableCollectionEnhancements(Organization organization)
     {
+        if (organization.FlexibleCollections)
+        {
+            throw new BadRequestException("Organization has already been migrated to the new collection enhancements");
+        }
+
         // Log the Organization data that will change when the migration is complete
         await LogPreMigrationDataAsync(organization.Id);
 

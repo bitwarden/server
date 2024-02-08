@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -25,5 +26,19 @@ public class OrganizationEnableCollectionEnhancementsCommandTests
             Arg.Is<Organization>(o =>
                 o.Id == organization.Id &&
                 o.FlexibleCollections));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task EnableCollectionEnhancements_WhenAlreadyMigrated_Throws(
+        SutProvider<OrganizationEnableCollectionEnhancementsCommand> sutProvider,
+        Organization organization)
+    {
+        organization.FlexibleCollections = true;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.EnableCollectionEnhancements(organization));
+        Assert.Contains("has already been migrated", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
     }
 }

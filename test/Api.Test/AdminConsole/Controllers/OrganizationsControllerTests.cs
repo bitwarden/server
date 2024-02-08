@@ -381,17 +381,4 @@ public class OrganizationsControllerTests : IDisposable
 
         await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
     }
-
-    [Theory, AutoData]
-    public async Task EnableCollectionEnhancements_WhenAlreadyMigrated_Throws(Organization organization)
-    {
-        organization.FlexibleCollections = true;
-        _currentContext.OrganizationOwner(organization.Id).Returns(true);
-        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
-        Assert.Contains("has already been migrated", exception.Message);
-
-        await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
-    }
 }
