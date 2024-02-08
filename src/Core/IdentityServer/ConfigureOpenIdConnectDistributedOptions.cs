@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Core.IdentityServer;
@@ -13,6 +14,7 @@ public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<Co
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     public ConfigureOpenIdConnectDistributedOptions(
+        [FromKeyedServices("persistent")]
         IDistributedCache distributedCache,
         IDataProtectionProvider dataProtectionProvider,
         IdentityServerOptions idsrv)
