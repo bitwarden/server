@@ -41,15 +41,16 @@ public class OrganizationEnableCollectionEnhancementsCommand(
         var groups = await groupRepository.GetManyByOrganizationIdAsync(organizationId);
         var groupIdsWithAccessAllEnabled = groups
             .Where(g => g.AccessAll)
-            .Select(g => new { GroupId = g.Id })
+            .Select(g => g.Id)
             .ToList();
 
         var organizationUsers = await organizationUserRepository.GetManyByOrganizationAsync(organizationId, type: null);
         var organizationUserIdsWithAccessAllEnabled = organizationUsers
             .Where(ou => ou.AccessAll)
-            .Select(ou => new { OrganizationUserId = ou.Id })
+            .Select(ou => ou.Id)
             .ToList();
-        var organizationUserIdsWithMigratedTypes = organizationUsers
+        // Migrated types are Managers and Custom users with no permissions or only 'editAssignedCollections' and 'deleteAssignedCollections'
+        var migratedUsers = organizationUsers
             .Where(ou =>
                 ou.Type == OrganizationUserType.Manager ||
                 (ou.Type == OrganizationUserType.Custom &&
@@ -72,15 +73,18 @@ public class OrganizationEnableCollectionEnhancementsCommand(
                     OrganizationUserId = user.Id,
                     user.ReadOnly,
                     user.HidePasswords
-                })).ToList();
+                }))
+            .Where(cud =>
+                migratedUsers.Any(mu => mu.OrganizationUserId == cud.OrganizationUserId))
+            .ToList();
 
         var logObject = new
         {
             OrganizationId = organizationId,
-            GroupIdsWithAccessAllEnabled = groupIdsWithAccessAllEnabled,
-            OrganizationUserIdsWithAccessAllEnabled = organizationUserIdsWithAccessAllEnabled,
-            OrganizationUserIdsWithMigratedTypes = organizationUserIdsWithMigratedTypes,
-            CollectionUsersData = collectionUsersData
+            GroupAccessAll = groupIdsWithAccessAllEnabled,
+            UserAccessAll = organizationUserIdsWithAccessAllEnabled,
+            MigratedUsers = migratedUsers,
+            CollectionUsers = collectionUsersData
         };
 
         logger.LogInformation("Flexible Collections data migration started. Backup data: {@LogObject}", logObject);
