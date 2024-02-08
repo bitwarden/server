@@ -75,10 +75,12 @@ public class PayPalController : Controller
 
         var transactionModel = new PayPalIPNTransactionModel(requestContent);
 
+        _logger.LogInformation("PayPal IPN: Transaction Type = {Type}", transactionModel.TransactionType);
+
         if (string.IsNullOrEmpty(transactionModel.TransactionId))
         {
             _logger.LogError("PayPal IPN: Transaction ID is missing");
-            return BadRequest();
+            return Ok();
         }
 
         var entityId = transactionModel.UserId ?? transactionModel.OrganizationId;
