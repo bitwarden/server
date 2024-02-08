@@ -349,7 +349,9 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         }
 
         var spEntityId = new Sustainsys.Saml2.Metadata.EntityId(
-            SsoConfigurationData.BuildSaml2ModulePath(_globalSettings.BaseServiceUri.Sso));
+            SsoConfigurationData.BuildSaml2ModulePath(
+                _globalSettings.BaseServiceUri.Sso,
+                config.SpUniqueEntityId ? name : null));
         bool? allowCreate = null;
         if (config.SpNameIdFormat != Saml2NameIdFormat.Transient)
         {

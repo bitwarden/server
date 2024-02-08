@@ -18,6 +18,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
 public class OrganizationCustomization : ICustomization
 {
     public bool UseGroups { get; set; }
+    public bool FlexibleCollections { get; set; }
 
     public void Customize(IFixture fixture)
     {
@@ -27,7 +28,8 @@ public class OrganizationCustomization : ICustomization
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.MaxCollections, maxCollections)
-            .With(o => o.UseGroups, UseGroups));
+            .With(o => o.UseGroups, UseGroups)
+            .With(o => o.FlexibleCollections, FlexibleCollections));
 
         fixture.Customize<Collection>(composer =>
             composer
@@ -139,7 +141,6 @@ public class SecretsManagerOrganizationCustomization : ICustomization
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.UseSecretsManager, true)
-            .With(o => o.SecretsManagerBeta, false)
             .With(o => o.PlanType, planType)
             .With(o => o.Plan, StaticStore.GetPlan(planType).Name)
             .With(o => o.MaxAutoscaleSmSeats, (int?)null)
@@ -147,10 +148,49 @@ public class SecretsManagerOrganizationCustomization : ICustomization
     }
 }
 
-internal class OrganizationCustomizeAttribute : BitCustomizeAttribute
+internal class TeamsStarterOrganizationCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        var organizationId = Guid.NewGuid();
+        const PlanType planType = PlanType.TeamsStarter;
+
+        fixture.Customize<Organization>(composer =>
+            composer
+                .With(organization => organization.Id, organizationId)
+                .With(organization => organization.PlanType, planType)
+                .With(organization => organization.Seats, 10)
+                .Without(organization => organization.MaxStorageGb));
+    }
+}
+
+internal class TeamsMonthlyWithAddOnsOrganizationCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        var organizationId = Guid.NewGuid();
+        const PlanType planType = PlanType.TeamsMonthly;
+
+        fixture.Customize<Organization>(composer =>
+            composer
+                .With(organization => organization.Id, organizationId)
+                .With(organization => organization.PlanType, planType)
+                .With(organization => organization.Seats, 20)
+                .With(organization => organization.UseSecretsManager, true)
+                .With(organization => organization.SmSeats, 5)
+                .With(organization => organization.SmServiceAccounts, 53));
+    }
+}
+
+public class OrganizationCustomizeAttribute : BitCustomizeAttribute
 {
     public bool UseGroups { get; set; }
-    public override ICustomization GetCustomization() => new OrganizationCustomization() { UseGroups = UseGroups };
+    public bool FlexibleCollections { get; set; }
+    public override ICustomization GetCustomization() => new OrganizationCustomization()
+    {
+        UseGroups = UseGroups,
+        FlexibleCollections = FlexibleCollections
+    };
 }
 
 internal class PaidOrganizationCustomizeAttribute : BitCustomizeAttribute
@@ -187,6 +227,16 @@ internal class SecretsManagerOrganizationCustomizeAttribute : BitCustomizeAttrib
 {
     public override ICustomization GetCustomization() =>
         new SecretsManagerOrganizationCustomization();
+}
+
+internal class TeamsStarterOrganizationCustomizeAttribute : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() => new TeamsStarterOrganizationCustomization();
+}
+
+internal class TeamsMonthlyWithAddOnsOrganizationCustomizeAttribute : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() => new TeamsMonthlyWithAddOnsOrganizationCustomization();
 }
 
 internal class EphemeralDataProtectionCustomization : ICustomization

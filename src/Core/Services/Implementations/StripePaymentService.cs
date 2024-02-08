@@ -1,5 +1,4 @@
-﻿using Bit.Billing.Models;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -8,6 +7,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Stripe;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
@@ -16,44 +16,40 @@ namespace Bit.Core.Services;
 public class StripePaymentService : IPaymentService
 {
     private const string PremiumPlanId = "premium-annually";
-    private const string PremiumPlanAppleIapId = "premium-annually-appleiap";
-    private const decimal PremiumPlanAppleIapPrice = 14.99M;
     private const string StoragePlanId = "storage-gb-annually";
     private const string ProviderDiscountId = "msp-discount-35";
+    private const string SecretsManagerStandaloneDiscountId = "sm-standalone";
 
     private readonly ITransactionRepository _transactionRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IAppleIapService _appleIapService;
     private readonly ILogger<StripePaymentService> _logger;
     private readonly Braintree.IBraintreeGateway _btGateway;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
-        IUserRepository userRepository,
-        IAppleIapService appleIapService,
         ILogger<StripePaymentService> logger,
         ITaxRateRepository taxRateRepository,
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IFeatureService featureService)
     {
         _transactionRepository = transactionRepository;
-        _userRepository = userRepository;
-        _appleIapService = appleIapService;
         _logger = logger;
         _taxRateRepository = taxRateRepository;
         _stripeAdapter = stripeAdapter;
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
         int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
-        int additionalSmSeats = 0, int additionalServiceAccount = 0)
+        int additionalSmSeats = 0, int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -104,7 +100,12 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Payment method is not supported at this time.");
         }
 
-        if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
+        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+
+        if (!pm5766AutomaticTaxIsEnabled &&
+            taxInfo != null &&
+            !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) &&
+            !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
         {
             var taxRateSearch = new TaxRate
             {
@@ -147,7 +148,11 @@ public class StripePaymentService : IPaymentService
                         },
                     },
                 },
-                Coupon = provider ? ProviderDiscountId : null,
+                Coupon = signupIsFromSecretsManagerTrial
+                    ? SecretsManagerStandaloneDiscountId
+                    : provider
+                        ? ProviderDiscountId
+                        : null,
                 Address = new Stripe.AddressOptions
                 {
                     Country = taxInfo.BillingAddressCountry,
@@ -169,6 +174,12 @@ public class StripePaymentService : IPaymentService
             });
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
             subCreateOptions.Customer = customer.Id;
+
+            if (pm5766AutomaticTaxIsEnabled)
+            {
+                subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
+            }
+
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {
@@ -250,8 +261,13 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Could not find customer payment profile.");
         }
 
+        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
         var taxInfo = upgrade.TaxInfo;
-        if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
+
+        if (!pm5766AutomaticTaxIsEnabled &&
+            taxInfo != null &&
+            !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) &&
+            !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
         {
             var taxRateSearch = new TaxRate
             {
@@ -268,7 +284,34 @@ public class StripePaymentService : IPaymentService
             }
         }
 
+        if (pm5766AutomaticTaxIsEnabled &&
+            !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressCountry) &&
+            !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressPostalCode))
+        {
+            var addressOptions = new AddressOptions
+            {
+                Country = upgrade.TaxInfo.BillingAddressCountry,
+                PostalCode = upgrade.TaxInfo.BillingAddressPostalCode,
+                // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name instead.
+                Line1 = upgrade.TaxInfo.BillingAddressLine1 ?? string.Empty,
+                Line2 = upgrade.TaxInfo.BillingAddressLine2,
+                City = upgrade.TaxInfo.BillingAddressCity,
+                State = upgrade.TaxInfo.BillingAddressState,
+            };
+            var customerUpdateOptions = new CustomerUpdateOptions { Address = addressOptions };
+            customerUpdateOptions.AddExpand("default_source");
+            customerUpdateOptions.AddExpand("invoice_settings.default_payment_method");
+            customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId, customerUpdateOptions);
+        }
+
         var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
+
+        if (pm5766AutomaticTaxIsEnabled)
+        {
+            subCreateOptions.DefaultTaxRates = new List<string>();
+            subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
+
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
         var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
@@ -345,21 +388,16 @@ public class StripePaymentService : IPaymentService
         {
             throw new BadRequestException("Your account does not have any credit available.");
         }
-        if (paymentMethodType == PaymentMethodType.BankAccount || paymentMethodType == PaymentMethodType.GoogleInApp)
+        if (paymentMethodType is PaymentMethodType.BankAccount)
         {
             throw new GatewayException("Payment method is not supported at this time.");
-        }
-        if ((paymentMethodType == PaymentMethodType.GoogleInApp ||
-            paymentMethodType == PaymentMethodType.AppleInApp) && additionalStorageGb > 0)
-        {
-            throw new BadRequestException("You cannot add storage with this payment method.");
         }
 
         var createdStripeCustomer = false;
         Stripe.Customer customer = null;
         Braintree.Customer braintreeCustomer = null;
-        var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
-            paymentMethodType == PaymentMethodType.BankAccount || paymentMethodType == PaymentMethodType.Credit;
+        var stripePaymentMethod = paymentMethodType is PaymentMethodType.Card or PaymentMethodType.BankAccount
+            or PaymentMethodType.Credit;
 
         string stipeCustomerPaymentMethodId = null;
         string stipeCustomerSourceToken = null;
@@ -379,19 +417,9 @@ public class StripePaymentService : IPaymentService
         {
             if (!string.IsNullOrWhiteSpace(paymentToken))
             {
-                try
-                {
-                    await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, true, taxInfo);
-                }
-                catch (Exception e)
-                {
-                    var message = e.Message.ToLowerInvariant();
-                    if (message.Contains("apple") || message.Contains("in-app"))
-                    {
-                        throw;
-                    }
-                }
+                await UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, taxInfo);
             }
+
             try
             {
                 customer = await _stripeAdapter.CustomerGetAsync(user.GatewayCustomerId);
@@ -424,18 +452,6 @@ public class StripePaymentService : IPaymentService
 
                 braintreeCustomer = customerResult.Target;
                 stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
-            }
-            else if (paymentMethodType == PaymentMethodType.AppleInApp)
-            {
-                var verifiedReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(paymentToken);
-                if (verifiedReceiptStatus == null)
-                {
-                    throw new GatewayException("Cannot verify apple in-app purchase.");
-                }
-                var receiptOriginalTransactionId = verifiedReceiptStatus.GetOriginalTransactionId();
-                await VerifyAppleReceiptNotInUseAsync(receiptOriginalTransactionId, user);
-                await _appleIapService.SaveReceiptAsync(verifiedReceiptStatus, user.Id);
-                stripeCustomerMetadata.Add("appleReceipt", receiptOriginalTransactionId);
             }
             else if (!stripePaymentMethod)
             {
@@ -488,15 +504,18 @@ public class StripePaymentService : IPaymentService
 
         subCreateOptions.Items.Add(new Stripe.SubscriptionItemOptions
         {
-            Plan = paymentMethodType == PaymentMethodType.AppleInApp ? PremiumPlanAppleIapId : PremiumPlanId,
-            Quantity = 1,
+            Plan = PremiumPlanId,
+            Quantity = 1
         });
 
-        if (!string.IsNullOrWhiteSpace(taxInfo?.BillingAddressCountry)
-                && !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode))
+        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+
+        if (!pm5766AutomaticTaxIsEnabled &&
+            !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressCountry) &&
+            !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode))
         {
             var taxRates = await _taxRateRepository.GetByLocationAsync(
-                new TaxRate()
+                new TaxRate
                 {
                     Country = taxInfo.BillingAddressCountry,
                     PostalCode = taxInfo.BillingAddressPostalCode
@@ -519,6 +538,12 @@ public class StripePaymentService : IPaymentService
                 Plan = StoragePlanId,
                 Quantity = additionalStorageGb
             });
+        }
+
+        if (pm5766AutomaticTaxIsEnabled)
+        {
+            subCreateOptions.DefaultTaxRates = new List<string>();
+            subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
         var subscription = await ChargeForNewSubscriptionAsync(user, customer, createdStripeCustomer,
@@ -547,7 +572,6 @@ public class StripePaymentService : IPaymentService
     {
         var addedCreditToStripeCustomer = false;
         Braintree.Transaction braintreeTransaction = null;
-        Transaction appleTransaction = null;
 
         var subInvoiceMetadata = new Dictionary<string, string>();
         Stripe.Subscription subscription = null;
@@ -558,45 +582,19 @@ public class StripePaymentService : IPaymentService
                 var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
                 {
                     Customer = customer.Id,
-                    SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
-                    SubscriptionDefaultTaxRates = subCreateOptions.DefaultTaxRates,
+                    SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
                 });
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax))
+                {
+                    previewInvoice.AutomaticTax = new InvoiceAutomaticTax { Enabled = true };
+                }
 
                 if (previewInvoice.AmountDue > 0)
                 {
-                    var appleReceiptOrigTransactionId = customer.Metadata != null &&
-                        customer.Metadata.ContainsKey("appleReceipt") ? customer.Metadata["appleReceipt"] : null;
                     var braintreeCustomerId = customer.Metadata != null &&
                         customer.Metadata.ContainsKey("btCustomerId") ? customer.Metadata["btCustomerId"] : null;
-                    if (!string.IsNullOrWhiteSpace(appleReceiptOrigTransactionId))
-                    {
-                        if (!subscriber.IsUser())
-                        {
-                            throw new GatewayException("In-app purchase is only allowed for users.");
-                        }
-
-                        var appleReceipt = await _appleIapService.GetReceiptAsync(
-                            appleReceiptOrigTransactionId);
-                        var verifiedAppleReceipt = await _appleIapService.GetVerifiedReceiptStatusAsync(
-                            appleReceipt.Item1);
-                        if (verifiedAppleReceipt == null)
-                        {
-                            throw new GatewayException("Failed to get Apple in-app purchase receipt data.");
-                        }
-                        subInvoiceMetadata.Add("appleReceipt", verifiedAppleReceipt.GetOriginalTransactionId());
-                        var lastTransactionId = verifiedAppleReceipt.GetLastTransactionId();
-                        subInvoiceMetadata.Add("appleReceiptTransactionId", lastTransactionId);
-                        var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                            GatewayType.AppStore, lastTransactionId);
-                        if (existingTransaction == null)
-                        {
-                            appleTransaction = verifiedAppleReceipt.BuildTransactionFromLastTransaction(
-                                PremiumPlanAppleIapPrice, subscriber.Id);
-                            appleTransaction.Type = TransactionType.Charge;
-                            await _transactionRepository.CreateAsync(appleTransaction);
-                        }
-                    }
-                    else if (!string.IsNullOrWhiteSpace(braintreeCustomerId))
+                    if (!string.IsNullOrWhiteSpace(braintreeCustomerId))
                     {
                         var btInvoiceAmount = (previewInvoice.AmountDue / 100M);
                         var transactionResult = await _btGateway.Transaction.SaleAsync(
@@ -643,12 +641,22 @@ public class StripePaymentService : IPaymentService
             }
             else if (paymentMethodType == PaymentMethodType.Credit)
             {
-                var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
+                var upcomingInvoiceOptions = new UpcomingInvoiceOptions
                 {
                     Customer = customer.Id,
                     SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
                     SubscriptionDefaultTaxRates = subCreateOptions.DefaultTaxRates,
-                });
+                };
+
+                var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+                if (pm5766AutomaticTaxIsEnabled)
+                {
+                    upcomingInvoiceOptions.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
+                    upcomingInvoiceOptions.SubscriptionDefaultTaxRates = new List<string>();
+                }
+
+                var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(upcomingInvoiceOptions);
+
                 if (previewInvoice.AmountDue > 0)
                 {
                     throw new GatewayException("Your account does not have enough credit available.");
@@ -657,6 +665,12 @@ public class StripePaymentService : IPaymentService
 
             subCreateOptions.OffSession = true;
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax))
+            {
+                subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+            }
+
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {
@@ -712,10 +726,6 @@ public class StripePaymentService : IPaymentService
             {
                 await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
             }
-            if (appleTransaction != null)
-            {
-                await _transactionRepository.DeleteAsync(appleTransaction);
-            }
 
             if (e is Stripe.StripeException strEx &&
                 (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
@@ -741,7 +751,6 @@ public class StripePaymentService : IPaymentService
         SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate)
     {
         // remember, when in doubt, throw
-
         var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId);
         if (sub == null)
         {
@@ -763,31 +772,36 @@ public class StripePaymentService : IPaymentService
             ProrationDate = prorationDate,
         };
 
+        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+        if (pm5766AutomaticTaxIsEnabled)
+        {
+            subUpdateOptions.DefaultTaxRates = new List<string>();
+            subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
+
         if (!subscriptionUpdate.UpdateNeeded(sub))
         {
             // No need to update subscription, quantity matches
             return null;
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(sub.CustomerId);
-
-        if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
-                && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
+        if (!pm5766AutomaticTaxIsEnabled)
         {
-            var taxRates = await _taxRateRepository.GetByLocationAsync(
-                new TaxRate()
+            var customer = await _stripeAdapter.CustomerGetAsync(sub.CustomerId);
+
+            if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
+                && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
+            {
+                var taxRates = await _taxRateRepository.GetByLocationAsync(new TaxRate
                 {
                     Country = customer.Address.Country,
                     PostalCode = customer.Address.PostalCode
-                }
-            );
-            var taxRate = taxRates.FirstOrDefault();
-            if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
-            {
-                subUpdateOptions.DefaultTaxRates = new List<string>(1)
+                });
+                var taxRate = taxRates.FirstOrDefault();
+                if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
                 {
-                    taxRate.Id
-                };
+                    subUpdateOptions.DefaultTaxRates = new List<string>(1) { taxRate.Id };
+                }
             }
         }
 
@@ -859,6 +873,30 @@ public class StripePaymentService : IPaymentService
 
         return paymentIntentClientSecret;
     }
+
+    public Task<string> AdjustSubscription(
+        Organization organization,
+        StaticStore.Plan updatedPlan,
+        int newlyPurchasedPasswordManagerSeats,
+        bool subscribedToSecretsManager,
+        int? newlyPurchasedSecretsManagerSeats,
+        int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+        int newlyPurchasedAdditionalStorage,
+        DateTime? prorationDate = null)
+        => FinalizeSubscriptionChangeAsync(
+            organization,
+            new CompleteSubscriptionUpdate(
+                organization,
+                new SubscriptionData
+                {
+                    Plan = updatedPlan,
+                    PurchasedPasswordManagerSeats = newlyPurchasedPasswordManagerSeats,
+                    SubscribedToSecretsManager = subscribedToSecretsManager,
+                    PurchasedSecretsManagerSeats = newlyPurchasedSecretsManagerSeats,
+                    PurchasedAdditionalSecretsManagerServiceAccounts = newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+                    PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage
+                }),
+            prorationDate);
 
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
     {
@@ -942,12 +980,6 @@ public class StripePaymentService : IPaymentService
         customerOptions.AddExpand("default_source");
         customerOptions.AddExpand("invoice_settings.default_payment_method");
         var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
-        var usingInAppPaymentMethod = customer.Metadata.ContainsKey("appleReceipt");
-        if (usingInAppPaymentMethod)
-        {
-            throw new BadRequestException("Cannot perform this action with in-app purchase payment method. " +
-                "Contact support.");
-        }
 
         string paymentIntentClientSecret = null;
 
@@ -1105,8 +1137,7 @@ public class StripePaymentService : IPaymentService
         return paymentIntentClientSecret;
     }
 
-    public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
-        bool skipInAppPurchaseCheck = false)
+    public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
     {
         if (subscriber == null)
         {
@@ -1116,15 +1147,6 @@ public class StripePaymentService : IPaymentService
         if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
         {
             throw new GatewayException("No subscription.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId) && !skipInAppPurchaseCheck)
-        {
-            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
-            if (customer.Metadata.ContainsKey("appleReceipt"))
-            {
-                throw new BadRequestException("You are required to manage your subscription from the app store.");
-            }
         }
 
         var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
@@ -1193,7 +1215,7 @@ public class StripePaymentService : IPaymentService
     }
 
     public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-        string paymentToken, bool allowInAppPurchases = false, TaxInfo taxInfo = null)
+        string paymentToken, TaxInfo taxInfo = null)
     {
         if (subscriber == null)
         {
@@ -1207,7 +1229,6 @@ public class StripePaymentService : IPaymentService
         }
 
         var createdCustomer = false;
-        AppleReceiptStatus appleReceiptStatus = null;
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
         string stipeCustomerPaymentMethodId = null;
@@ -1215,22 +1236,9 @@ public class StripePaymentService : IPaymentService
         {
             { "region", _globalSettings.BaseServiceUri.CloudRegion }
         };
-        var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
-                                  paymentMethodType == PaymentMethodType.BankAccount;
-        var inAppPurchase = paymentMethodType == PaymentMethodType.AppleInApp ||
-            paymentMethodType == PaymentMethodType.GoogleInApp;
+        var stripePaymentMethod = paymentMethodType is PaymentMethodType.Card or PaymentMethodType.BankAccount;
 
         Stripe.Customer customer = null;
-
-        if (!allowInAppPurchases && inAppPurchase)
-        {
-            throw new GatewayException("In-app purchase payment method is not allowed.");
-        }
-
-        if (!subscriber.IsUser() && inAppPurchase)
-        {
-            throw new GatewayException("In-app purchase payment method is only allowed for users.");
-        }
 
         if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
@@ -1241,16 +1249,6 @@ public class StripePaymentService : IPaymentService
             {
                 stripeCustomerMetadata = customer.Metadata;
             }
-        }
-
-        if (inAppPurchase && customer != null && customer.Balance != 0)
-        {
-            throw new GatewayException("Customer balance cannot exist when using in-app purchases.");
-        }
-
-        if (!inAppPurchase && customer != null && stripeCustomerMetadata.ContainsKey("appleReceipt"))
-        {
-            throw new GatewayException("Cannot change from in-app payment method. Contact support.");
         }
 
         var hadBtCustomer = stripeCustomerMetadata.ContainsKey("btCustomerId");
@@ -1322,15 +1320,6 @@ public class StripePaymentService : IPaymentService
                 braintreeCustomer = customerResult.Target;
             }
         }
-        else if (paymentMethodType == PaymentMethodType.AppleInApp)
-        {
-            appleReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(paymentToken);
-            if (appleReceiptStatus == null)
-            {
-                throw new GatewayException("Cannot verify Apple in-app purchase.");
-            }
-            await VerifyAppleReceiptNotInUseAsync(appleReceiptStatus.GetOriginalTransactionId(), subscriber);
-        }
         else
         {
             throw new GatewayException("Payment method is not supported at this time.");
@@ -1348,25 +1337,6 @@ public class StripePaymentService : IPaymentService
         else if (!string.IsNullOrWhiteSpace(braintreeCustomer?.Id))
         {
             stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
-        }
-
-        if (appleReceiptStatus != null)
-        {
-            var originalTransactionId = appleReceiptStatus.GetOriginalTransactionId();
-            if (stripeCustomerMetadata.ContainsKey("appleReceipt"))
-            {
-                if (originalTransactionId != stripeCustomerMetadata["appleReceipt"])
-                {
-                    var nowSec = Utilities.CoreHelpers.ToEpocSeconds(DateTime.UtcNow);
-                    stripeCustomerMetadata.Add($"appleReceipt_{nowSec}", stripeCustomerMetadata["appleReceipt"]);
-                }
-                stripeCustomerMetadata["appleReceipt"] = originalTransactionId;
-            }
-            else
-            {
-                stripeCustomerMetadata.Add("appleReceipt", originalTransactionId);
-            }
-            await _appleIapService.SaveReceiptAsync(appleReceiptStatus, subscriber.Id);
         }
 
         try
@@ -1566,41 +1536,45 @@ public class StripePaymentService : IPaymentService
 
         if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
-            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+            var customerGetOptions = new CustomerGetOptions();
+            customerGetOptions.AddExpand("discount.coupon.applies_to");
+            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
 
             if (customer.Discount != null)
             {
                 subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
             }
-
-            if (subscriber.IsUser())
-            {
-                subscriptionInfo.UsingInAppPurchase = customer.Metadata.ContainsKey("appleReceipt");
-            }
         }
 
-        if (!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
+        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
         {
-            var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
-            if (sub != null)
-            {
-                subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
-            }
+            return subscriptionInfo;
+        }
 
-            if (!sub.CanceledAt.HasValue && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+        if (sub != null)
+        {
+            subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
+        }
+
+        if (sub is { CanceledAt: not null } || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        {
+            return subscriptionInfo;
+        }
+
+        try
+        {
+            var upcomingInvoiceOptions = new UpcomingInvoiceOptions { Customer = subscriber.GatewayCustomerId };
+            var upcomingInvoice = await _stripeAdapter.InvoiceUpcomingAsync(upcomingInvoiceOptions);
+
+            if (upcomingInvoice != null)
             {
-                try
-                {
-                    var upcomingInvoice = await _stripeAdapter.InvoiceUpcomingAsync(
-                        new Stripe.UpcomingInvoiceOptions { Customer = subscriber.GatewayCustomerId });
-                    if (upcomingInvoice != null)
-                    {
-                        subscriptionInfo.UpcomingInvoice =
-                            new SubscriptionInfo.BillingUpcomingInvoice(upcomingInvoice);
-                    }
-                }
-                catch (Stripe.StripeException) { }
+                subscriptionInfo.UpcomingInvoice = new SubscriptionInfo.BillingUpcomingInvoice(upcomingInvoice);
             }
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogWarning(ex, "Encountered an unexpected Stripe error");
         }
 
         return subscriptionInfo;
@@ -1732,24 +1706,28 @@ public class StripePaymentService : IPaymentService
         return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount), prorationDate);
     }
 
+    public async Task<bool> RisksSubscriptionFailure(Organization organization)
+    {
+        var subscriptionInfo = await GetSubscriptionAsync(organization);
+
+        if (subscriptionInfo.Subscription is not { Status: "active" or "trialing" or "past_due" } ||
+            subscriptionInfo.UpcomingInvoice == null)
+        {
+            return false;
+        }
+
+        var customer = await GetCustomerAsync(organization.GatewayCustomerId);
+
+        var paymentSource = await GetBillingPaymentSourceAsync(customer);
+
+        return paymentSource == null;
+    }
+
     private Stripe.PaymentMethod GetLatestCardPaymentMethod(string customerId)
     {
         var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(
             new Stripe.PaymentMethodListOptions { Customer = customerId, Type = "card" });
         return cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
-    }
-
-    private async Task VerifyAppleReceiptNotInUseAsync(string receiptOriginalTransactionId, ISubscriber subscriber)
-    {
-        var existingReceipt = await _appleIapService.GetReceiptAsync(receiptOriginalTransactionId);
-        if (existingReceipt != null && existingReceipt.Item2.HasValue && existingReceipt.Item2 != subscriber.Id)
-        {
-            var existingUser = await _userRepository.GetByIdAsync(existingReceipt.Item2.Value);
-            if (existingUser != null)
-            {
-                throw new GatewayException("Apple receipt already in use by another user.");
-            }
-        }
     }
 
     private decimal GetBillingBalance(Stripe.Customer customer)
@@ -1762,14 +1740,6 @@ public class StripePaymentService : IPaymentService
         if (customer == null)
         {
             return null;
-        }
-
-        if (customer.Metadata?.ContainsKey("appleReceipt") ?? false)
-        {
-            return new BillingInfo.BillingSource
-            {
-                Type = PaymentMethodType.AppleInApp
-            };
         }
 
         if (customer.Metadata?.ContainsKey("btCustomerId") ?? false)

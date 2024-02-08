@@ -43,12 +43,23 @@ public class OrganizationController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> PostSubscriptionAsync([FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
+        try
+        {
+            await UpdatePasswordManagerAsync(model, _currentContext.OrganizationId.Value);
 
-        await UpdatePasswordManagerAsync(model, _currentContext.OrganizationId.Value);
+            var secretsManagerResult = await UpdateSecretsManagerAsync(model, _currentContext.OrganizationId.Value);
 
-        await UpdateSecretsManagerAsync(model, _currentContext.OrganizationId.Value);
+            if (!string.IsNullOrEmpty(secretsManagerResult))
+            {
+                return Ok(new { Message = secretsManagerResult });
+            }
 
-        return new OkResult();
+            return Ok(new { Message = "Subscription updated successfully." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "An error occurred while updating the subscription." });
+        }
     }
 
     private async Task UpdatePasswordManagerAsync(OrganizationSubscriptionUpdateRequestModel model, Guid organizationId)
@@ -67,15 +78,23 @@ public class OrganizationController : Controller
         }
     }
 
-    private async Task UpdateSecretsManagerAsync(OrganizationSubscriptionUpdateRequestModel model, Guid organizationId)
+    private async Task<string> UpdateSecretsManagerAsync(OrganizationSubscriptionUpdateRequestModel model, Guid organizationId)
     {
-        if (model.SecretsManager != null)
+        if (model.SecretsManager == null)
         {
-            var organization =
-                await _organizationRepository.GetByIdAsync(organizationId);
-
-            var organizationUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization);
-            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
+            return string.Empty;
         }
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+        if (!organization.UseSecretsManager)
+        {
+            return "Organization has no access to Secrets Manager.";
+        }
+
+        var secretsManagerUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization);
+        await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(secretsManagerUpdate);
+
+        return string.Empty;
     }
 }
