@@ -48,6 +48,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -693,16 +695,33 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         GlobalSettings globalSettings)
     {
-        if (globalSettings.SelfHosted || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+        if (!string.IsNullOrEmpty(globalSettings.DistributedCache?.Redis?.ConnectionString))
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = globalSettings.DistributedCache.Redis.ConnectionString;
+            });
+        }
+        else
         {
             services.AddDistributedMemoryCache();
-            return;
         }
 
-        services.AddStackExchangeRedisCache(options =>
+        if (!string.IsNullOrEmpty(globalSettings.DistributedCache?.Cosmos?.ConnectionString))
         {
-            options.Configuration = globalSettings.Redis.ConnectionString;
-        });
+            services.AddKeyedSingleton<IDistributedCache>("persistent", (s, _) =>
+                new CosmosCache(new CosmosCacheOptions
+                {
+                    DatabaseName = "cache",
+                    ContainerName = "persistent",
+                    CreateIfNotExists = false,
+                    ClientBuilder = new CosmosClientBuilder(globalSettings.DistributedCache?.Cosmos?.ConnectionString)
+                }));
+        }
+        else
+        {
+            services.AddKeyedSingleton<IDistributedCache, MemoryDistributedCache>("persistent");
+        }
     }
 
     public static IServiceCollection AddOptionality(this IServiceCollection services)
