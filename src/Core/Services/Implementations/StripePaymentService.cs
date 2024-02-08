@@ -21,29 +21,29 @@ public class StripePaymentService : IPaymentService
     private const string SecretsManagerStandaloneDiscountId = "sm-standalone";
 
     private readonly ITransactionRepository _transactionRepository;
-    private readonly IUserRepository _userRepository;
     private readonly ILogger<StripePaymentService> _logger;
     private readonly Braintree.IBraintreeGateway _btGateway;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
-        IUserRepository userRepository,
         ILogger<StripePaymentService> logger,
         ITaxRateRepository taxRateRepository,
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IFeatureService featureService)
     {
         _transactionRepository = transactionRepository;
-        _userRepository = userRepository;
         _logger = logger;
         _taxRateRepository = taxRateRepository;
         _stripeAdapter = stripeAdapter;
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
@@ -100,6 +100,28 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Payment method is not supported at this time.");
         }
 
+        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+
+        if (!pm5766AutomaticTaxIsEnabled &&
+            taxInfo != null &&
+            !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) &&
+            !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
+        {
+            var taxRateSearch = new TaxRate
+            {
+                Country = taxInfo.BillingAddressCountry,
+                PostalCode = taxInfo.BillingAddressPostalCode
+            };
+            var taxRates = await _taxRateRepository.GetByLocationAsync(taxRateSearch);
+
+            // should only be one tax rate per country/zip combo
+            var taxRate = taxRates.FirstOrDefault();
+            if (taxRate != null)
+            {
+                taxInfo.StripeTaxRateId = taxRate.Id;
+            }
+        }
+
         var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
         , additionalSmSeats, additionalServiceAccount);
 
@@ -153,7 +175,10 @@ public class StripePaymentService : IPaymentService
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
             subCreateOptions.Customer = customer.Id;
 
-            subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
+            if (pm5766AutomaticTaxIsEnabled)
+            {
+                subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
+            }
 
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
@@ -236,11 +261,34 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Could not find customer payment profile.");
         }
 
-        if (customer.Address is null &&
+        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+        var taxInfo = upgrade.TaxInfo;
+
+        if (!pm5766AutomaticTaxIsEnabled &&
+            taxInfo != null &&
+            !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) &&
+            !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
+        {
+            var taxRateSearch = new TaxRate
+            {
+                Country = taxInfo.BillingAddressCountry,
+                PostalCode = taxInfo.BillingAddressPostalCode
+            };
+            var taxRates = await _taxRateRepository.GetByLocationAsync(taxRateSearch);
+
+            // should only be one tax rate per country/zip combo
+            var taxRate = taxRates.FirstOrDefault();
+            if (taxRate != null)
+            {
+                taxInfo.StripeTaxRateId = taxRate.Id;
+            }
+        }
+
+        if (pm5766AutomaticTaxIsEnabled &&
             !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressCountry) &&
             !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressPostalCode))
         {
-            var addressOptions = new Stripe.AddressOptions
+            var addressOptions = new AddressOptions
             {
                 Country = upgrade.TaxInfo.BillingAddressCountry,
                 PostalCode = upgrade.TaxInfo.BillingAddressPostalCode,
@@ -250,17 +298,20 @@ public class StripePaymentService : IPaymentService
                 City = upgrade.TaxInfo.BillingAddressCity,
                 State = upgrade.TaxInfo.BillingAddressState,
             };
-            var customerUpdateOptions = new Stripe.CustomerUpdateOptions { Address = addressOptions };
+            var customerUpdateOptions = new CustomerUpdateOptions { Address = addressOptions };
             customerUpdateOptions.AddExpand("default_source");
             customerUpdateOptions.AddExpand("invoice_settings.default_payment_method");
             customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId, customerUpdateOptions);
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade)
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
+
+        if (pm5766AutomaticTaxIsEnabled)
         {
-            DefaultTaxRates = new List<string>(),
-            AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true }
-        };
+            subCreateOptions.DefaultTaxRates = new List<string>();
+            subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
+
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
         var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
@@ -457,6 +508,29 @@ public class StripePaymentService : IPaymentService
             Quantity = 1
         });
 
+        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+
+        if (!pm5766AutomaticTaxIsEnabled &&
+            !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressCountry) &&
+            !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode))
+        {
+            var taxRates = await _taxRateRepository.GetByLocationAsync(
+                new TaxRate
+                {
+                    Country = taxInfo.BillingAddressCountry,
+                    PostalCode = taxInfo.BillingAddressPostalCode
+                }
+            );
+            var taxRate = taxRates.FirstOrDefault();
+            if (taxRate != null)
+            {
+                subCreateOptions.DefaultTaxRates = new List<string>(1)
+                {
+                    taxRate.Id
+                };
+            }
+        }
+
         if (additionalStorageGb > 0)
         {
             subCreateOptions.Items.Add(new Stripe.SubscriptionItemOptions
@@ -466,7 +540,11 @@ public class StripePaymentService : IPaymentService
             });
         }
 
-        subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
+        if (pm5766AutomaticTaxIsEnabled)
+        {
+            subCreateOptions.DefaultTaxRates = new List<string>();
+            subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
 
         var subscription = await ChargeForNewSubscriptionAsync(user, customer, createdStripeCustomer,
             stripePaymentMethod, paymentMethodType, subCreateOptions, braintreeCustomer);
@@ -504,10 +582,13 @@ public class StripePaymentService : IPaymentService
                 var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
                 {
                     Customer = customer.Id,
-                    SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
-                    AutomaticTax =
-                        new Stripe.InvoiceAutomaticTaxOptions { Enabled = subCreateOptions.AutomaticTax.Enabled }
+                    SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
                 });
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax))
+                {
+                    previewInvoice.AutomaticTax = new InvoiceAutomaticTax { Enabled = true };
+                }
 
                 if (previewInvoice.AmountDue > 0)
                 {
@@ -560,13 +641,22 @@ public class StripePaymentService : IPaymentService
             }
             else if (paymentMethodType == PaymentMethodType.Credit)
             {
-                var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
+                var upcomingInvoiceOptions = new UpcomingInvoiceOptions
                 {
                     Customer = customer.Id,
                     SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
-                    AutomaticTax =
-                        new Stripe.InvoiceAutomaticTaxOptions { Enabled = subCreateOptions.AutomaticTax.Enabled }
-                });
+                    SubscriptionDefaultTaxRates = subCreateOptions.DefaultTaxRates,
+                };
+
+                var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+                if (pm5766AutomaticTaxIsEnabled)
+                {
+                    upcomingInvoiceOptions.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
+                    upcomingInvoiceOptions.SubscriptionDefaultTaxRates = new List<string>();
+                }
+
+                var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(upcomingInvoiceOptions);
+
                 if (previewInvoice.AmountDue > 0)
                 {
                     throw new GatewayException("Your account does not have enough credit available.");
@@ -575,7 +665,12 @@ public class StripePaymentService : IPaymentService
 
             subCreateOptions.OffSession = true;
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
-            subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax))
+            {
+                subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+            }
+
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {
@@ -675,14 +770,39 @@ public class StripePaymentService : IPaymentService
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice",
             ProrationDate = prorationDate,
-            DefaultTaxRates = new List<string>(),
-            AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true }
         };
+
+        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+        if (pm5766AutomaticTaxIsEnabled)
+        {
+            subUpdateOptions.DefaultTaxRates = new List<string>();
+            subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
 
         if (!subscriptionUpdate.UpdateNeeded(sub))
         {
             // No need to update subscription, quantity matches
             return null;
+        }
+
+        if (!pm5766AutomaticTaxIsEnabled)
+        {
+            var customer = await _stripeAdapter.CustomerGetAsync(sub.CustomerId);
+
+            if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
+                && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
+            {
+                var taxRates = await _taxRateRepository.GetByLocationAsync(new TaxRate
+                {
+                    Country = customer.Address.Country,
+                    PostalCode = customer.Address.PostalCode
+                });
+                var taxRate = taxRates.FirstOrDefault();
+                if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
+                {
+                    subUpdateOptions.DefaultTaxRates = new List<string>(1) { taxRate.Id };
+                }
+            }
         }
 
         string paymentIntentClientSecret = null;

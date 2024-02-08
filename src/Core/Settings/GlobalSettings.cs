@@ -61,7 +61,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual FileStorageSettings Send { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
-    public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
     public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
     public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
     public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
@@ -351,12 +350,6 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
-    public class DocumentDbSettings
-    {
-        public string Uri { get; set; }
-        public string Key { get; set; }
-    }
-
     public class SentrySettings
     {
         public string Dsn { get; set; }
@@ -520,6 +513,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class DistributedIpRateLimitingSettings
     {
+        public string RedisConnectionString { get; set; }
         public bool Enabled { get; set; } = true;
 
         /// <summary>

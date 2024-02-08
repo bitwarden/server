@@ -1,12 +1,12 @@
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        openssl \
-        gosu \
-&& rm -rf /var/lib/apt/lists/*
+    openssl \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY obj/build-output/publish .
