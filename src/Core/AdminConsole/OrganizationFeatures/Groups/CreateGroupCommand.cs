@@ -36,10 +36,10 @@ public class CreateGroupCommand : ICreateGroupCommand
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization,
-        IEnumerable<CollectionAccessSelection> collections = null,
+        ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> users = null)
     {
-        Validate(organization, group);
+        Validate(organization, group, collections);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
 
         if (users != null)
@@ -51,10 +51,10 @@ public class CreateGroupCommand : ICreateGroupCommand
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
-        IEnumerable<CollectionAccessSelection> collections = null,
+        ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> users = null)
     {
-        Validate(organization, group);
+        Validate(organization, group, collections);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
 
         if (users != null)
@@ -103,7 +103,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         }
     }
 
-    private static void Validate(Organization organization, Group group)
+    private static void Validate(Organization organization, Group group, IEnumerable<CollectionAccessSelection> collections)
     {
         if (organization == null)
         {
@@ -115,9 +115,18 @@ public class CreateGroupCommand : ICreateGroupCommand
             throw new BadRequestException("This organization cannot use groups.");
         }
 
-        if (organization.FlexibleCollections && group.AccessAll)
+        if (organization.FlexibleCollections)
         {
-            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
+            if (group.AccessAll)
+            {
+                throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
+            }
+
+            var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            if (invalidAssociations?.Any() ?? false)
+            {
+                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+            }
         }
     }
 }

@@ -118,14 +118,6 @@ public class Startup
         }
         else
         {
-            if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
-            {
-                services.AddHostedService<HostedServices.AzureQueueBlockIpHostedService>();
-            }
-            else if (CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
-            {
-                services.AddHostedService<HostedServices.AmazonSqsBlockIpHostedService>();
-            }
             if (CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
             {
                 services.AddHostedService<HostedServices.AzureQueueMailHostedService>();
