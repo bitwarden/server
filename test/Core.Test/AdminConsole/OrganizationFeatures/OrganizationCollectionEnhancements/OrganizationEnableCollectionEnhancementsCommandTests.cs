@@ -19,6 +19,8 @@ public class OrganizationEnableCollectionEnhancementsCommandTests
         SutProvider<OrganizationEnableCollectionEnhancementsCommand> sutProvider,
         Organization organization)
     {
+        organization.FlexibleCollections = false;
+
         await sutProvider.Sut.EnableCollectionEnhancements(organization);
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).EnableCollectionEnhancements(organization.Id);
