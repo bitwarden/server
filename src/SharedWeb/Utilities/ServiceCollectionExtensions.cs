@@ -713,7 +713,7 @@ public static class ServiceCollectionExtensions
                 new CosmosCache(new CosmosCacheOptions
                 {
                     DatabaseName = "cache",
-                    ContainerName = "persistent",
+                    ContainerName = "default",
                     CreateIfNotExists = false,
                     ClientBuilder = new CosmosClientBuilder(globalSettings.DistributedCache?.Cosmos?.ConnectionString)
                 }));
