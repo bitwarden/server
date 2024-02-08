@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Collections;
+using System.Security.Claims;
 using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
@@ -50,6 +51,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
 
     private readonly OrganizationsController _sut;
 
@@ -75,6 +77,7 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -96,7 +99,8 @@ public class OrganizationsControllerTests : IDisposable
             _licensingService,
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
-            _addSecretsManagerSubscriptionCommand);
+            _addSecretsManagerSubscriptionCommand,
+            _pushNotificationService);
     }
 
     public void Dispose()
@@ -355,11 +359,14 @@ public class OrganizationsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task EnableCollectionEnhancements_Success(Organization organization)
+    public async Task EnableCollectionEnhancements_Success(Organization organization, List<OrganizationUserUserDetails> admins)
     {
         organization.FlexibleCollections = false;
+        admins.ForEach(a => a.Type = OrganizationUserType.Admin);
         _currentContext.OrganizationOwner(organization.Id).Returns(true);
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
+            .Returns(admins);
 
         await _sut.EnableCollectionEnhancements(organization.Id);
 
@@ -368,6 +375,7 @@ public class OrganizationsControllerTests : IDisposable
             Arg.Is<Organization>(o =>
                 o.Id == organization.Id &&
                 o.FlexibleCollections));
+        admins.ForEach(a => _pushNotificationService.Received(1).PushSyncVaultAsync(a.UserId.Value));
     }
 
     [Theory, AutoData]
@@ -381,6 +389,7 @@ public class OrganizationsControllerTests : IDisposable
 
         await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
         await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncVaultAsync(Arg.Any<Guid>());
     }
 
     [Theory, AutoData]
@@ -395,5 +404,6 @@ public class OrganizationsControllerTests : IDisposable
 
         await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
         await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncVaultAsync(Arg.Any<Guid>());
     }
 }
