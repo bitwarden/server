@@ -167,7 +167,7 @@ static class CommandResultExtensions
 
         foreach (var h in commandResult.Headers)
         {
-            httpContext.Response.Headers.Add(h.Key, h.Value);
+            httpContext.Response.Headers.Append(h.Key, h.Value);
         }
 
         if (!string.IsNullOrEmpty(commandResult.ClearCookieName))
