@@ -87,6 +87,6 @@ public class OrganizationEnableCollectionEnhancementsCommand(
             CollectionUsers = collectionUsersData
         };
 
-        logger.LogInformation("Flexible Collections data migration started. Backup data: {@LogObject}", logObject);
+        logger.LogWarning("Flexible Collections data migration started. Backup data: {@LogObject}", logObject);
     }
 }
