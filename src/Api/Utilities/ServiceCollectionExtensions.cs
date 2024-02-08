@@ -90,9 +90,9 @@ public static class ServiceCollectionExtensions
                 builder.AddSqlServer(globalSettings.SqlServer.ConnectionString);
             }
 
-            if (CoreHelpers.SettingHasValue(globalSettings.Redis.ConnectionString))
+            if (CoreHelpers.SettingHasValue(globalSettings.DistributedCache?.Redis?.ConnectionString))
             {
-                builder.AddRedis(globalSettings.Redis.ConnectionString);
+                builder.AddRedis(globalSettings.DistributedCache.Redis.ConnectionString);
             }
 
             if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
