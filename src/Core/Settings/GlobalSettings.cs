@@ -520,6 +520,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class DistributedIpRateLimitingSettings
     {
+        public string RedisConnectionString { get; set; }
         public bool Enabled { get; set; } = true;
 
         /// <summary>
