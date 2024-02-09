@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
@@ -359,14 +358,17 @@ public class OrganizationsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task EnableCollectionEnhancements_Success(Organization organization, List<OrganizationUserUserDetails> admins)
+    public async Task EnableCollectionEnhancements_Success(Organization organization)
     {
         organization.FlexibleCollections = false;
-        admins.ForEach(a => a.Type = OrganizationUserType.Admin);
+        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin };
+        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner };
+        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User };
+        var orgUsers = new List<OrganizationUser> { admin, owner, user };
+
         _currentContext.OrganizationOwner(organization.Id).Returns(true);
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-        _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin)
-            .Returns(admins);
+        _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null).Returns(orgUsers);
 
         await _sut.EnableCollectionEnhancements(organization.Id);
 
@@ -375,7 +377,9 @@ public class OrganizationsControllerTests : IDisposable
             Arg.Is<Organization>(o =>
                 o.Id == organization.Id &&
                 o.FlexibleCollections));
-        admins.ForEach(a => _pushNotificationService.Received(1).PushSyncVaultAsync(a.UserId.Value));
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(admin.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(owner.UserId.Value);
+        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(user.UserId.Value);
     }
 
     [Theory, AutoData]

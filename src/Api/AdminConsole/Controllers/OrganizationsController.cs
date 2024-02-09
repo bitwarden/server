@@ -852,10 +852,11 @@ public class OrganizationsController : Controller
 
         // Force a vault sync for all owners and admins of the organization so that changes show immediately
         // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
-        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(id, OrganizationUserType.Admin);
-        await Task.WhenAll(admins
-            .Where(a => a.UserId.HasValue)
-            .Select(a => _pushNotificationService.PushSyncVaultAsync(a.UserId.Value)));
+        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, null);
+        await Task.WhenAll(orgUsers
+            .Where(ou => ou.UserId.HasValue &&
+                         ou.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+            .Select(ou => _pushNotificationService.PushSyncVaultAsync(ou.UserId.Value)));
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
