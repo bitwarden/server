@@ -50,19 +50,26 @@ public class OrganizationEnableCollectionEnhancementsCommand : IOrganizationEnab
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 
+    /// <summary>
+    /// This method logs the data that will be migrated to the new collection enhancements so that it can be restored if needed
+    /// </summary>
+    /// <param name="organizationId"></param>
     private async Task LogPreMigrationDataAsync(Guid organizationId)
     {
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
+        // Grab Group Ids that have AccessAll enabled as it will be removed in the data migration
         var groupIdsWithAccessAllEnabled = groups
             .Where(g => g.AccessAll)
             .Select(g => g.Id)
             .ToList();
 
         var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId, type: null);
+        // Grab OrganizationUser Ids that have AccessAll enabled as it will be removed in the data migration
         var organizationUserIdsWithAccessAllEnabled = organizationUsers
             .Where(ou => ou.AccessAll)
             .Select(ou => ou.Id)
             .ToList();
+        // Grab OrganizationUser Ids of Manager users as that will be downgraded to User in the data migration
         var migratedManagers = organizationUsers
             .Where(ou => ou.Type == OrganizationUserType.Manager)
             .Select(ou => ou.Id)
@@ -78,6 +85,7 @@ public class OrganizationEnableCollectionEnhancementsCommand : IOrganizationEnab
             .Select(ou => ou.Id)
             .ToList();
         var collectionUsers = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(organizationId);
+        // Grab CollectionUser permissions that will change in the data migration
         var collectionUsersData = collectionUsers.SelectMany(tuple =>
             tuple.Item2.Users.Select(user =>
                 new
