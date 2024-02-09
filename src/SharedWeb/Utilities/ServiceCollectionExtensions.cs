@@ -35,7 +35,6 @@ using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using DnsClient;
-using Duende.IdentityServer.Configuration;
 using IdentityModel;
 using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Interfaces;
@@ -632,18 +631,13 @@ public static class ServiceCollectionExtensions
                 });
     }
 
-    public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services, GlobalSettings globalSettings)
+    public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services)
     {
         services.AddOidcStateDataFormatterCache();
         services.AddSession();
         services.ConfigureApplicationCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
         services.ConfigureExternalCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
-        services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>>(
-            svcs => new ConfigureOpenIdConnectDistributedOptions(
-                svcs.GetRequiredService<IHttpContextAccessor>(),
-                globalSettings,
-                svcs.GetRequiredService<IdentityServerOptions>())
-        );
+        services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>, ConfigureOpenIdConnectDistributedOptions>();
 
         return services;
     }
