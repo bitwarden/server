@@ -1,4 +1,7 @@
-﻿using Bit.Core.Models.Api;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
+using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Api.SecretsManager.Models.Response;
@@ -24,29 +27,25 @@ public class BaseSecretResponseModel : ResponseModel
         Projects = secret.Projects?.Select(p => new SecretResponseInnerProject(p));
     }
 
-    public BaseSecretResponseModel(string objectName = _objectName) : base(objectName)
-    {
-    }
+    [Required]
+    public Guid Id { get; }
 
-    public BaseSecretResponseModel() : base(_objectName)
-    {
-    }
+    [Required]
+    public Guid OrganizationId { get; }
 
-    public Guid Id { get; set; }
+    public string? Key { get; }
 
-    public Guid OrganizationId { get; set; }
+    public string? Value { get; }
 
-    public string Key { get; set; }
+    public string? Note { get; }
 
-    public string Value { get; set; }
+    [Required]
+    public DateTime CreationDate { get; }
 
-    public string Note { get; set; }
+    [Required]
+    public DateTime RevisionDate { get; }
 
-    public DateTime CreationDate { get; set; }
-
-    public DateTime RevisionDate { get; set; }
-
-    public IEnumerable<SecretResponseInnerProject> Projects { get; set; }
+    public IEnumerable<SecretResponseInnerProject>? Projects { get; init; }
 
     public class SecretResponseInnerProject
     {
