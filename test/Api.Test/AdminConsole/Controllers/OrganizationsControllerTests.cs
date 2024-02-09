@@ -366,7 +366,9 @@ public class OrganizationsControllerTests : IDisposable
         var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User };
         var invited = new OrganizationUser
         {
-            UserId = null, Type = OrganizationUserType.Admin, Email = "invited@example.com"
+            UserId = null,
+            Type = OrganizationUserType.Admin,
+            Email = "invited@example.com"
         };
         var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
 
