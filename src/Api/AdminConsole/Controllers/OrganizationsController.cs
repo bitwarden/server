@@ -14,6 +14,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -67,6 +68,7 @@ public class OrganizationsController : Controller
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
     private readonly IGetSubscriptionQuery _getSubscriptionQuery;
     private readonly IReferenceEventService _referenceEventService;
+    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -92,7 +94,8 @@ public class OrganizationsController : Controller
         IPushNotificationService pushNotificationService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
         IGetSubscriptionQuery getSubscriptionQuery,
-        IReferenceEventService referenceEventService)
+        IReferenceEventService referenceEventService,
+        IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -118,6 +121,7 @@ public class OrganizationsController : Controller
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
         _getSubscriptionQuery = getSubscriptionQuery;
         _referenceEventService = referenceEventService;
+        _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
     }
 
     [HttpGet("{id}")]
@@ -888,15 +892,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (organization.FlexibleCollections)
-        {
-            throw new BadRequestException("Organization has already been migrated to the new collection enhancements");
-        }
-
-        await _organizationRepository.EnableCollectionEnhancements(id);
-
-        organization.FlexibleCollections = true;
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await _organizationEnableCollectionEnhancementsCommand.EnableCollectionEnhancements(organization);
 
         // Force a vault sync for all owners and admins of the organization so that changes show immediately
         // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
