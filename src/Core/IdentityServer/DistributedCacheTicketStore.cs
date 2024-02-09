@@ -1,23 +1,22 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 
 namespace Bit.Core.IdentityServer;
 
-public class RedisCacheTicketStore : ITicketStore
+public class DistributedCacheTicketStore : ITicketStore
 {
-    private const string _keyPrefix = "auth-";
+    private const string KeyPrefix = "auth-";
     private readonly IDistributedCache _cache;
 
-    public RedisCacheTicketStore(RedisCacheOptions options)
+    public DistributedCacheTicketStore(IDistributedCache distributedCache)
     {
-        _cache = new RedisCache(options);
+        _cache = distributedCache;
     }
 
     public async Task<string> StoreAsync(AuthenticationTicket ticket)
     {
-        var key = $"{_keyPrefix}{Guid.NewGuid()}";
+        var key = $"{KeyPrefix}{Guid.NewGuid()}";
         await RenewAsync(key, ticket);
 
         return key;
