@@ -11,6 +11,8 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -21,6 +23,7 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Services;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -50,6 +53,10 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly IReferenceEventService _referenceEventService;
 
     private readonly OrganizationsController _sut;
 
@@ -75,6 +82,10 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
+        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
+        _getSubscriptionQuery = Substitute.For<IGetSubscriptionQuery>();
+        _referenceEventService = Substitute.For<IReferenceEventService>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -96,7 +107,11 @@ public class OrganizationsControllerTests : IDisposable
             _licensingService,
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
-            _addSecretsManagerSubscriptionCommand);
+            _addSecretsManagerSubscriptionCommand,
+            _pushNotificationService,
+            _cancelSubscriptionCommand,
+            _getSubscriptionQuery,
+            _referenceEventService);
     }
 
     public void Dispose()
@@ -358,8 +373,20 @@ public class OrganizationsControllerTests : IDisposable
     public async Task EnableCollectionEnhancements_Success(Organization organization)
     {
         organization.FlexibleCollections = false;
+        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin };
+        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner };
+        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User };
+        var invited = new OrganizationUser
+        {
+            UserId = null,
+            Type = OrganizationUserType.Admin,
+            Email = "invited@example.com"
+        };
+        var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
+
         _currentContext.OrganizationOwner(organization.Id).Returns(true);
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null).Returns(orgUsers);
 
         await _sut.EnableCollectionEnhancements(organization.Id);
 
@@ -368,6 +395,9 @@ public class OrganizationsControllerTests : IDisposable
             Arg.Is<Organization>(o =>
                 o.Id == organization.Id &&
                 o.FlexibleCollections));
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(admin.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(owner.UserId.Value);
+        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(user.UserId.Value);
     }
 
     [Theory, AutoData]
@@ -381,6 +411,7 @@ public class OrganizationsControllerTests : IDisposable
 
         await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
         await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncVaultAsync(Arg.Any<Guid>());
     }
 
     [Theory, AutoData]
@@ -395,5 +426,6 @@ public class OrganizationsControllerTests : IDisposable
 
         await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
         await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncVaultAsync(Arg.Any<Guid>());
     }
 }
