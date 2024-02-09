@@ -51,6 +51,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
     private readonly OrganizationsController _sut;
@@ -77,6 +78,7 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
 
         _sut = new OrganizationsController(
@@ -100,6 +102,7 @@ public class OrganizationsControllerTests : IDisposable
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
+            _pushNotificationService,
             _organizationEnableCollectionEnhancementsCommand);
     }
 
@@ -362,12 +365,27 @@ public class OrganizationsControllerTests : IDisposable
     public async Task EnableCollectionEnhancements_Success(Organization organization)
     {
         organization.FlexibleCollections = false;
+        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin };
+        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner };
+        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User };
+        var invited = new OrganizationUser
+        {
+            UserId = null,
+            Type = OrganizationUserType.Admin,
+            Email = "invited@example.com"
+        };
+        var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
+
         _currentContext.OrganizationOwner(organization.Id).Returns(true);
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null).Returns(orgUsers);
 
         await _sut.EnableCollectionEnhancements(organization.Id);
 
         await _organizationEnableCollectionEnhancementsCommand.Received(1).EnableCollectionEnhancements(organization);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(admin.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(owner.UserId.Value);
+        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(user.UserId.Value);
     }
 
     [Theory, AutoData]
@@ -380,5 +398,6 @@ public class OrganizationsControllerTests : IDisposable
         await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
 
         await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncVaultAsync(Arg.Any<Guid>());
     }
 }

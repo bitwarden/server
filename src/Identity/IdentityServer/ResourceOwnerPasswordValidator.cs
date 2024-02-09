@@ -49,6 +49,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
+        [FromKeyedServices("persistent")]
         IDistributedCache distributedCache,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
         : base(userManager, deviceRepository, deviceService, userService, eventService,

@@ -58,6 +58,7 @@ public class OrganizationsController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
     public OrganizationsController(
@@ -81,6 +82,7 @@ public class OrganizationsController : Controller
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
+        IPushNotificationService pushNotificationService,
         IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand)
     {
         _organizationRepository = organizationRepository;
@@ -103,6 +105,7 @@ public class OrganizationsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
+        _pushNotificationService = pushNotificationService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
     }
 
@@ -842,6 +845,14 @@ public class OrganizationsController : Controller
         }
 
         await _organizationEnableCollectionEnhancementsCommand.EnableCollectionEnhancements(organization);
+
+        // Force a vault sync for all owners and admins of the organization so that changes show immediately
+        // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
+        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, null);
+        await Task.WhenAll(orgUsers
+            .Where(ou => ou.UserId.HasValue &&
+                         ou.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+            .Select(ou => _pushNotificationService.PushSyncVaultAsync(ou.UserId.Value)));
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
