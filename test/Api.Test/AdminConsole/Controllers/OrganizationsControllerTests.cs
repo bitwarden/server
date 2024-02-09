@@ -364,7 +364,11 @@ public class OrganizationsControllerTests : IDisposable
         var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin };
         var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner };
         var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User };
-        var orgUsers = new List<OrganizationUser> { admin, owner, user };
+        var invited = new OrganizationUser
+        {
+            UserId = null, Type = OrganizationUserType.Admin, Email = "invited@example.com"
+        };
+        var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
 
         _currentContext.OrganizationOwner(organization.Id).Returns(true);
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
