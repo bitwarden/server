@@ -383,9 +383,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
-        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "2faEmail:" + email);
-
+        var token = await base.GenerateTwoFactorTokenAsync(user,
+            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
         await _mailService.SendTwoFactorEmailAsync(email, token);
     }
 
@@ -398,8 +397,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
-        return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "2faEmail:" + email, token);
+        return await base.VerifyTwoFactorTokenAsync(user,
+            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), token);
     }
 
     public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
