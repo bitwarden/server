@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Entities;
 
@@ -27,10 +26,8 @@ public class BaseSecretResponseModel : ResponseModel
         Projects = secret.Projects?.Select(p => new SecretResponseInnerProject(p));
     }
 
-    [Required]
     public Guid Id { get; }
 
-    [Required]
     public Guid OrganizationId { get; }
 
     public string? Key { get; }
@@ -39,10 +36,8 @@ public class BaseSecretResponseModel : ResponseModel
 
     public string? Note { get; }
 
-    [Required]
     public DateTime CreationDate { get; }
 
-    [Required]
     public DateTime RevisionDate { get; }
 
     public IEnumerable<SecretResponseInnerProject>? Projects { get; init; }

@@ -71,6 +71,7 @@ public static class ServiceCollectionExtensions
             // config.UseReferencedDefinitionsForEnums();
 
             config.SchemaFilter<EnumSchemaFilter>();
+            config.SchemaFilter<RequireNotNullableSchemaFilter>();
 
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);
