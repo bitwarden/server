@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Api.AdminConsole.Public.Models;
@@ -9,27 +10,27 @@ public abstract class MemberBaseModel
 {
     public MemberBaseModel() { }
 
-    public MemberBaseModel(OrganizationUser user)
+    public MemberBaseModel(OrganizationUser user, bool flexibleCollectionsEnabled)
     {
         if (user == null)
         {
             throw new ArgumentNullException(nameof(user));
         }
 
-        Type = user.Type;
+        Type = flexibleCollectionsEnabled ? GetFlexibleCollectionsUserType(user.Type, user.GetPermissions()) : user.Type;
         AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
     }
 
-    public MemberBaseModel(OrganizationUserUserDetails user)
+    public MemberBaseModel(OrganizationUserUserDetails user, bool flexibleCollectionsEnabled)
     {
         if (user == null)
         {
             throw new ArgumentNullException(nameof(user));
         }
 
-        Type = user.Type;
+        Type = flexibleCollectionsEnabled ? GetFlexibleCollectionsUserType(user.Type, user.GetPermissions()) : user.Type;
         AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
@@ -58,4 +59,34 @@ public abstract class MemberBaseModel
     /// </summary>
     [Required]
     public bool ResetPasswordEnrolled { get; set; }
+
+    // TODO: AC-2188 - Remove this method when the custom users with no other permissions than 'Edit/Delete Assigned Collections' are migrated
+    private OrganizationUserType GetFlexibleCollectionsUserType(OrganizationUserType type, Permissions permissions)
+    {
+        // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+        if (type == OrganizationUserType.Custom)
+        {
+            if ((permissions.EditAssignedCollections || permissions.DeleteAssignedCollections) &&
+                permissions is
+                {
+                    AccessEventLogs: false,
+                    AccessImportExport: false,
+                    AccessReports: false,
+                    CreateNewCollections: false,
+                    EditAnyCollection: false,
+                    DeleteAnyCollection: false,
+                    ManageGroups: false,
+                    ManagePolicies: false,
+                    ManageSso: false,
+                    ManageUsers: false,
+                    ManageResetPassword: false,
+                    ManageScim: false
+                })
+            {
+                return OrganizationUserType.User;
+            }
+        }
+
+        return type;
+    }
 }

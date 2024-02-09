@@ -12,8 +12,9 @@ namespace Bit.Api.AdminConsole.Public.Models.Response;
 /// </summary>
 public class MemberResponseModel : MemberBaseModel, IResponseModel
 {
-    public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections)
-        : base(user)
+    public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections,
+        bool flexibleCollectionsEnabled)
+        : base(user, flexibleCollectionsEnabled)
     {
         if (user == null)
         {
@@ -28,8 +29,8 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     }
 
     public MemberResponseModel(OrganizationUserUserDetails user, bool twoFactorEnabled,
-        IEnumerable<CollectionAccessSelection> collections)
-        : base(user)
+        IEnumerable<CollectionAccessSelection> collections, bool flexibleCollectionsEnabled)
+        : base(user, flexibleCollectionsEnabled)
     {
         if (user == null)
         {
