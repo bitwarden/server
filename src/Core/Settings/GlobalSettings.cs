@@ -55,7 +55,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
-    public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
+    public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
@@ -549,5 +549,11 @@ public class GlobalSettings : IGlobalSettings
         public string SdkKey { get; set; }
         public string FlagDataFilePath { get; set; } = "flags.json";
         public Dictionary<string, string> FlagValues { get; set; } = new Dictionary<string, string>();
+    }
+
+    public class DistributedCacheSettings
+    {
+        public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
     }
 }

@@ -63,6 +63,7 @@ public class OrganizationsController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
     private readonly IGetSubscriptionQuery _getSubscriptionQuery;
     private readonly IReferenceEventService _referenceEventService;
@@ -88,6 +89,7 @@ public class OrganizationsController : Controller
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
+        IPushNotificationService pushNotificationService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
         IGetSubscriptionQuery getSubscriptionQuery,
         IReferenceEventService referenceEventService)
@@ -112,6 +114,7 @@ public class OrganizationsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
+        _pushNotificationService = pushNotificationService;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
         _getSubscriptionQuery = getSubscriptionQuery;
         _referenceEventService = referenceEventService;
@@ -894,6 +897,14 @@ public class OrganizationsController : Controller
 
         organization.FlexibleCollections = true;
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+
+        // Force a vault sync for all owners and admins of the organization so that changes show immediately
+        // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
+        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, null);
+        await Task.WhenAll(orgUsers
+            .Where(ou => ou.UserId.HasValue &&
+                         ou.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+            .Select(ou => _pushNotificationService.PushSyncVaultAsync(ou.UserId.Value)));
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
