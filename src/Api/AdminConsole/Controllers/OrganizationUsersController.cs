@@ -308,7 +308,7 @@ public class OrganizationUsersController : Controller
 
         var userId = _userService.GetProperUserId(User);
         await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+            model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), model.Groups);
     }
 
     [HttpPut("{id}/groups")]

@@ -21,9 +21,9 @@ public class PayPalIPNClient : IPayPalIPNClient
         _logger = logger;
     }
 
-    public async Task<bool> VerifyIPN(Guid entityId, string formData)
+    public async Task<bool> VerifyIPN(string transactionId, string formData)
     {
-        LogInfo(entityId, $"Verifying IPN against {_ipnEndpoint}");
+        LogInfo(transactionId, $"Verifying IPN against {_ipnEndpoint}");
 
         if (string.IsNullOrEmpty(formData))
         {
@@ -33,8 +33,6 @@ public class PayPalIPNClient : IPayPalIPNClient
         var requestMessage = new HttpRequestMessage { Method = HttpMethod.Post, RequestUri = _ipnEndpoint };
 
         var requestContent = string.Concat("cmd=_notify-validate&", formData);
-
-        LogInfo(entityId, $"Request Content: {requestContent}");
 
         requestMessage.Content = new StringContent(requestContent, Encoding.UTF8, "application/x-www-form-urlencoded");
 
@@ -52,35 +50,35 @@ public class PayPalIPNClient : IPayPalIPNClient
             };
         }
 
-        LogError(entityId, $"Unsuccessful Response | Status Code: {response.StatusCode} | Content: {responseContent}");
+        LogError(transactionId, $"Unsuccessful Response | Status Code: {response.StatusCode} | Content: {responseContent}");
 
         return false;
 
         bool Verified()
         {
-            LogInfo(entityId, "Verified");
+            LogInfo(transactionId, "Verified");
             return true;
         }
 
         bool Invalid()
         {
-            LogError(entityId, "Verification Invalid");
+            LogError(transactionId, "Verification Invalid");
             return false;
         }
 
         bool Unhandled(string content)
         {
-            LogWarning(entityId, $"Unhandled Response Content: {content}");
+            LogWarning(transactionId, $"Unhandled Response Content: {content}");
             return false;
         }
     }
 
-    private void LogInfo(Guid entityId, string message)
-        => _logger.LogInformation("Verify PayPal IPN ({RequestId}) | {Message}", entityId, message);
+    private void LogInfo(string transactionId, string message)
+        => _logger.LogInformation("Verify PayPal IPN ({Id}) | {Message}", transactionId, message);
 
-    private void LogWarning(Guid entityId, string message)
-        => _logger.LogWarning("Verify PayPal IPN ({RequestId}) | {Message}", entityId, message);
+    private void LogWarning(string transactionId, string message)
+        => _logger.LogWarning("Verify PayPal IPN ({Id}) | {Message}", transactionId, message);
 
-    private void LogError(Guid entityId, string message)
-        => _logger.LogError("Verify PayPal IPN ({RequestId}) | {Message}", entityId, message);
+    private void LogError(string transactionId, string message)
+        => _logger.LogError("Verify PayPal IPN ({Id}) | {Message}", transactionId, message);
 }

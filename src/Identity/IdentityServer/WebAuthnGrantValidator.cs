@@ -50,6 +50,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
+        [FromKeyedServices("persistent")]
         IDistributedCache distributedCache,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand

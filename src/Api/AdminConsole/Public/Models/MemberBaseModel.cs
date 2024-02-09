@@ -36,15 +36,16 @@ public abstract class MemberBaseModel
     }
 
     /// <summary>
-    /// The member's type (or role) within the organization.
+    /// The member's type (or role) within the organization. If your organization has is using the latest collection enhancements,
+    /// you will not be allowed to assign the Manager role (OrganizationUserType = 3).
     /// </summary>
     [Required]
     public OrganizationUserType? Type { get; set; }
     /// <summary>
     /// Determines if this member can access all collections within the organization, or only the associated
-    /// collections. If set to <c>true</c>, this option overrides any collection assignments.
+    /// collections. If set to <c>true</c>, this option overrides any collection assignments. If your organization is using
+    /// the latest collection enhancements, you will not be allowed to set this property to <c>true</c>.
     /// </summary>
-    [Required]
     public bool? AccessAll { get; set; }
     /// <summary>
     /// External identifier for reference or linking this member to another system, such as a user directory.

@@ -65,7 +65,7 @@ public class Startup
         }
 
         // Authentication
-        services.AddDistributedIdentityServices(globalSettings);
+        services.AddDistributedIdentityServices();
         services.AddAuthentication()
             .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
         services.AddSsoServices(globalSettings);

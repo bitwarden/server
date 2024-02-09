@@ -5,6 +5,7 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Health;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 
@@ -69,6 +70,8 @@ public static class ServiceCollectionExtensions
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
 
+            config.SchemaFilter<EnumSchemaFilter>();
+
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);
             var coreFilePath = Path.Combine(AppContext.BaseDirectory, "Core.xml");
@@ -90,9 +93,9 @@ public static class ServiceCollectionExtensions
                 builder.AddSqlServer(globalSettings.SqlServer.ConnectionString);
             }
 
-            if (CoreHelpers.SettingHasValue(globalSettings.Redis.ConnectionString))
+            if (CoreHelpers.SettingHasValue(globalSettings.DistributedCache?.Redis?.ConnectionString))
             {
-                builder.AddRedis(globalSettings.Redis.ConnectionString);
+                builder.AddRedis(globalSettings.DistributedCache.Redis.ConnectionString);
             }
 
             if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
