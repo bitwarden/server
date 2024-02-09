@@ -25,7 +25,7 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
         _distributedCache = distributedCache;
         _distributedCacheEntryOptions = new DistributedCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
         };
     }
 

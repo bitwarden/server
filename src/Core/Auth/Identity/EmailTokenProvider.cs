@@ -25,7 +25,7 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
         _distributedCache = distributedCache;
         _distributedCacheEntryOptions = new DistributedCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(20)
         };
     }
 
