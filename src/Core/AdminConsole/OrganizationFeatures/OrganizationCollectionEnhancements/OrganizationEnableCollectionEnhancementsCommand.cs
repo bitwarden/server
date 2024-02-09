@@ -6,7 +6,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements;
 
@@ -49,21 +48,20 @@ public class OrganizationEnableCollectionEnhancementsCommand(
             .Where(ou => ou.AccessAll)
             .Select(ou => ou.Id)
             .ToList();
-        // Migrated types are Managers and Custom users with no permissions or only 'editAssignedCollections' and 'deleteAssignedCollections'
-        var migratedUsers = organizationUsers
+        var migratedManagers = organizationUsers
+            .Where(ou => ou.Type == OrganizationUserType.Manager)
+            .Select(ou => ou.Id)
+            .ToList();
+
+        var usersEligibleToManageCollections = organizationUsers
             .Where(ou =>
                 ou.Type == OrganizationUserType.Manager ||
                 (ou.Type == OrganizationUserType.Custom &&
                  !string.IsNullOrEmpty(ou.Permissions) &&
-                 JObject.Parse(ou.Permissions)
-                     .Children<JProperty>()
-                     .All(permission =>
-                         (permission.Name is "editAssignedCollections" or "deleteAssignedCollections" && (bool)permission.Value == true) ||
-                         (bool)permission.Value == false))
+                 ou.GetPermissions().EditAssignedCollections)
             )
-            .Select(ou => new { OrganizationUserId = ou.Id, Type = (int)ou.Type })
+            .Select(ou => ou.Id)
             .ToList();
-
         var collectionUsers = await collectionRepository.GetManyByOrganizationIdWithAccessAsync(organizationId);
         var collectionUsersData = collectionUsers.SelectMany(tuple =>
             tuple.Item2.Users.Select(user =>
@@ -74,8 +72,7 @@ public class OrganizationEnableCollectionEnhancementsCommand(
                     user.ReadOnly,
                     user.HidePasswords
                 }))
-            .Where(cud =>
-                migratedUsers.Any(mu => mu.OrganizationUserId == cud.OrganizationUserId))
+            .Where(cud => usersEligibleToManageCollections.Any(ou => ou == cud.OrganizationUserId))
             .ToList();
 
         var logObject = new
@@ -83,7 +80,7 @@ public class OrganizationEnableCollectionEnhancementsCommand(
             OrganizationId = organizationId,
             GroupAccessAll = groupIdsWithAccessAllEnabled,
             UserAccessAll = organizationUserIdsWithAccessAllEnabled,
-            MigratedUsers = migratedUsers,
+            MigratedManagers = migratedManagers,
             CollectionUsers = collectionUsersData
         };
 
