@@ -49,13 +49,11 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        [FromKeyedServices("persistent")]
-        IDistributedCache distributedCache,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, userRepository, policyService,
-              tokenDataFactory, featureService, ssoConfigRepository, distributedCache, userDecryptionOptionsBuilder)
+              tokenDataFactory, featureService, ssoConfigRepository, userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
         _userService = userService;
