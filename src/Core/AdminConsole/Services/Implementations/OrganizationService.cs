@@ -655,18 +655,6 @@ public class OrganizationService : IOrganizationService
             });
             await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
-            if (!string.IsNullOrWhiteSpace(collectionName))
-            {
-                var defaultCollection = new Collection
-                {
-                    Name = collectionName,
-                    OrganizationId = organization.Id,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-                await _collectionRepository.CreateAsync(defaultCollection);
-            }
-
             OrganizationUser orgUser = null;
             if (ownerId != default)
             {
@@ -685,6 +673,7 @@ public class OrganizationService : IOrganizationService
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
+                orgUser.SetNewId();
 
                 await _organizationUserRepository.CreateAsync(orgUser);
 
@@ -692,6 +681,27 @@ public class OrganizationService : IOrganizationService
                 await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
                     organization.Id.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(collectionName))
+            {
+                var defaultCollection = new Collection
+                {
+                    Name = collectionName,
+                    OrganizationId = organization.Id,
+                    CreationDate = organization.CreationDate,
+                    RevisionDate = organization.CreationDate
+                };
+
+                // If using Flexible Collections, give the owner Can Manage access over the default collection
+                List<CollectionAccessSelection> defaultOwnerAccess = null;
+                if (organization.FlexibleCollections)
+                {
+                    defaultOwnerAccess =
+                        [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+                }
+
+                await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
             }
 
             return new Tuple<Organization, OrganizationUser>(organization, orgUser);
@@ -2548,12 +2558,21 @@ public class OrganizationService : IOrganizationService
 
         if (!string.IsNullOrWhiteSpace(collectionName))
         {
+            // If using Flexible Collections, give the owner Can Manage access over the default collection
+            List<CollectionAccessSelection> defaultOwnerAccess = null;
+            if (org.FlexibleCollections)
+            {
+                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, userId);
+                defaultOwnerAccess =
+                    [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+            }
+
             var defaultCollection = new Collection
             {
                 Name = collectionName,
                 OrganizationId = org.Id
             };
-            await _collectionRepository.CreateAsync(defaultCollection);
+            await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
         }
     }
 }
