@@ -28,7 +28,6 @@
         CREATE TABLE [dbo].[FCBackupOrganizationUserManagers] (
             [OrganizationId]        UNIQUEIDENTIFIER    NOT NULL,
             [OrganizationUserId]    UNIQUEIDENTIFIER    NOT NULL,
-            [Type]                  INT                 NOT NULL,
             PRIMARY KEY CLUSTERED ([OrganizationId], [OrganizationUserId])
         );
     END
@@ -69,25 +68,26 @@ BEGIN
     WHERE [OrganizationId] = @OrganizationId
       AND [AccessAll] = 1;
 
-    -- Backup OrganizationUser Ids and Types before being migrated to User type for the specified OrganizationId
-    INSERT INTO [dbo].[FCBackupOrganizationUserManagers] ([OrganizationId], [OrganizationUserId], [Type])
-    SELECT @OrganizationId, [Id] AS [OrganizationUserId], [Type]
+    -- Backup Manager Ids before being migrated to User type for the specified OrganizationId
+    INSERT INTO [dbo].[FCBackupOrganizationUserManagers] ([OrganizationId], [OrganizationUserId])
+    SELECT @OrganizationId, [Id] AS [OrganizationUserId]
     FROM [dbo].[OrganizationUser]
     WHERE [OrganizationId] = @OrganizationId
-        AND ([Type] = 3
-            OR ([Type] = 4
-                AND [Permissions] IS NOT NULL
-                AND ISJSON([Permissions]) > 0
-                AND (JSON_VALUE([Permissions], '$.editAssignedCollections') = 'true'
-                    OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true')
-            )
-        );
+      AND [Type] = 3;
 
     INSERT INTO [dbo].[FCBackupCollectionUserColumns] ([OrganizationId], [CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords])
     SELECT @OrganizationId, CU.[CollectionId], CU.[OrganizationUserId], CU.[ReadOnly], CU.[HidePasswords]
     FROM [dbo].[CollectionUser] CU
     INNER JOIN [dbo].[Collection] C ON CU.[CollectionId] = C.[Id]
-    WHERE C.[OrganizationId] = @OrganizationId;
+    INNER JOIN [dbo].[OrganizationUser] OU ON CU.[OrganizationUserId] = OU.[Id]
+    WHERE C.[OrganizationId] = @OrganizationId
+        AND (OU.[Type] = 3
+            OR (OU.[Type] = 4
+                AND OU.[Permissions] IS NOT NULL
+                AND ISJSON(OU.[Permissions]) > 0
+                AND (JSON_VALUE(OU.[Permissions], '$.editAssignedCollections') = 'true')
+            )
+        );
 END
 GO
 
@@ -114,9 +114,9 @@ BEGIN
             INNER JOIN [dbo].[FCBackupAccessAllOrganizationUsers] BOU ON OU.[Id] = BOU.[OrganizationUserId]
             WHERE OU.[OrganizationId] = @OrganizationId;
 
-            -- Restore OrganizationUser Types that were Manager/Custom with Edit/Delete Assigned Collections permissions
+            -- Restore Managers
             UPDATE OU
-            SET OU.[Type] = BOU.[Type], OU.[RevisionDate] = GETUTCDATE()
+            SET OU.[Type] = 3, OU.[RevisionDate] = GETUTCDATE()
             FROM [dbo].[OrganizationUser] OU
             INNER JOIN [dbo].[FCBackupOrganizationUserManagers] BOU ON OU.[Id] = BOU.[OrganizationUserId]
             WHERE OU.[OrganizationId] = @OrganizationId;

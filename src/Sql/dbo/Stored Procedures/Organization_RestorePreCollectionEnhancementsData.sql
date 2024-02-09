@@ -20,9 +20,9 @@ BEGIN
             INNER JOIN [dbo].[FCBackupAccessAllOrganizationUsers] BOU ON OU.[Id] = BOU.[OrganizationUserId]
             WHERE OU.[OrganizationId] = @OrganizationId;
 
-            -- Restore OrganizationUser Types that were Manager/Custom with Edit/Delete Assigned Collections permissions
+            -- Restore Managers
             UPDATE OU
-            SET OU.[Type] = BOU.[Type], OU.[RevisionDate] = GETUTCDATE()
+            SET OU.[Type] = 3, OU.[RevisionDate] = GETUTCDATE()
             FROM [dbo].[OrganizationUser] OU
             INNER JOIN [dbo].[FCBackupOrganizationUserManagers] BOU ON OU.[Id] = BOU.[OrganizationUserId]
             WHERE OU.[OrganizationId] = @OrganizationId;
