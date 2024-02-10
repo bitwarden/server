@@ -30,6 +30,15 @@ services:
       - storage
       - cloud
 
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    profiles:
+      - storage
+      - cloud
+
   mail:
     image: sj26/mailcatcher:latest
     ports:

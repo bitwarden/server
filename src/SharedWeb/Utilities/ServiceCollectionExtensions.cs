@@ -716,7 +716,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddKeyedSingleton<IDistributedCache, MemoryDistributedCache>("persistent");
+            services.AddKeyedSingleton("persistent", (s, _) => s.GetRequiredService<IDistributedCache>());
         }
     }
 
