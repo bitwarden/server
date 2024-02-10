@@ -1,11 +1,13 @@
-﻿namespace Bit.Core.Utilities;
+﻿using System.Buffers;
+
+namespace Bit.Core.Utilities;
 
 public static class SpanExtensions
 {
     public static bool TrySplitBy(this ReadOnlySpan<char> input,
-        char splitChar, out ReadOnlySpan<char> chunk, out ReadOnlySpan<char> rest)
+        SearchValues<char> splitChars, out ReadOnlySpan<char> chunk, out ReadOnlySpan<char> rest)
     {
-        var splitIndex = input.IndexOf(splitChar);
+        var splitIndex = input.IndexOfAny(splitChars);
 
         if (splitIndex == -1)
         {

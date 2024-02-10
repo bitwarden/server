@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Buffers.Text;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 
@@ -11,6 +12,9 @@ namespace Bit.Core.Utilities;
 /// </summary>
 public class EncryptedStringAttribute : ValidationAttribute
 {
+    private static readonly SearchValues<char> _pipeChar = SearchValues.Create("|");
+    private static readonly SearchValues<char> _periodChar = SearchValues.Create(".");
+
     internal static readonly Dictionary<EncryptionType, int> _encryptionTypeToRequiredPiecesMap = new()
     {
         [EncryptionType.AesCbc256_B64] = 2, // iv|ct
@@ -52,7 +56,7 @@ public class EncryptedStringAttribute : ValidationAttribute
 
     internal static bool IsValidCore(ReadOnlySpan<char> value)
     {
-        if (!value.TrySplitBy('.', out var headerChunk, out var rest))
+        if (!value.TrySplitBy(_periodChar, out var headerChunk, out var rest))
         {
             // We couldn't find a header part, this is the slow path, because we have to do two loops over
             // the data.
@@ -88,7 +92,7 @@ public class EncryptedStringAttribute : ValidationAttribute
         }
 
         // Simply cast the number to the enum, this could be a value that doesn't actually have a backing enum
-        // entry but that is alright we will use it to look in the dictionary and non-valid 
+        // entry but that is alright we will use it to look in the dictionary and non-valid
         // numbers will be filtered out there.
         encryptionType = (EncryptionType)encryptionTypeNumber;
 
@@ -110,24 +114,24 @@ public class EncryptedStringAttribute : ValidationAttribute
             if (requiredPieces == 1)
             {
                 // Only one more part is needed so don't split and check the chunk
-                if (!IsValidBase64(rest))
+                if (!Base64.IsValid(rest))
                 {
                     return false;
                 }
 
                 // Make sure there isn't another split character possibly denoting another chunk
-                return rest.IndexOf('|') == -1;
+                return rest.IndexOfAny(_pipeChar) == -1;
             }
             else
             {
                 // More than one part is required so split it out
-                if (!rest.TrySplitBy('|', out var chunk, out rest))
+                if (!rest.TrySplitBy(_pipeChar, out var chunk, out rest))
                 {
                     return false;
                 }
 
                 // Is the required chunk valid base 64?
-                if (!IsValidBase64(chunk))
+                if (!Base64.IsValid(chunk))
                 {
                     return false;
                 }
@@ -138,39 +142,6 @@ public class EncryptedStringAttribute : ValidationAttribute
         }
 
         // No more parts are required, so check there are no extra parts
-        return rest.IndexOf('|') == -1;
-    }
-
-    private static bool IsValidBase64(ReadOnlySpan<char> input)
-    {
-        const int StackLimit = 256;
-
-        byte[]? pooledChunks = null;
-
-        var upperLimitLength = CalculateBase64ByteLengthUpperLimit(input.Length);
-
-        // Ref: https://vcsjones.dev/stackalloc/
-        var byteBuffer = upperLimitLength > StackLimit
-            ? (pooledChunks = ArrayPool<byte>.Shared.Rent(upperLimitLength))
-            : stackalloc byte[StackLimit];
-
-        try
-        {
-            var successful = Convert.TryFromBase64Chars(input, byteBuffer, out var bytesWritten);
-            return successful && bytesWritten > 0;
-        }
-        finally
-        {
-            // Check if we rented the pool and if so, return it.
-            if (pooledChunks != null)
-            {
-                ArrayPool<byte>.Shared.Return(pooledChunks, true);
-            }
-        }
-    }
-
-    internal static int CalculateBase64ByteLengthUpperLimit(int charLength)
-    {
-        return 3 * (charLength / 4);
+        return rest.IndexOfAny(_pipeChar) == -1;
     }
 }
