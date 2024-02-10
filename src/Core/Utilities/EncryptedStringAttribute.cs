@@ -114,7 +114,7 @@ public class EncryptedStringAttribute : ValidationAttribute
             if (requiredPieces == 1)
             {
                 // Only one more part is needed so don't split and check the chunk
-                if (!Base64.IsValid(rest))
+                if (rest.IsEmpty || !Base64.IsValid(rest))
                 {
                     return false;
                 }
@@ -131,7 +131,7 @@ public class EncryptedStringAttribute : ValidationAttribute
                 }
 
                 // Is the required chunk valid base 64?
-                if (!Base64.IsValid(chunk))
+                if (chunk.IsEmpty || !Base64.IsValid(chunk))
                 {
                     return false;
                 }
