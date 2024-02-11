@@ -259,7 +259,6 @@ public class OrganizationServiceTests
         (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.Plan = planType;
-        var plan = StaticStore.GetPlan(signup.Plan);
         signup.AdditionalSeats = 0;
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
@@ -269,12 +268,31 @@ public class OrganizationServiceTests
             .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
             .Returns(true);
 
+        // Extract orgUserId when created
+        Guid? orgUserId = null;
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .CreateAsync(Arg.Do<OrganizationUser>(ou => orgUserId = ou.Id));
+
         var result = await sutProvider.Sut.SignUpAsync(signup);
 
+        // Assert: AccessAll is not used
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o =>
                 o.UserId == signup.Owner.Id &&
                 o.AccessAll == false));
+
+        // Assert: created a Can Manage association for the default collection instead
+        Assert.NotNull(orgUserId);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).CreateAsync(
+            Arg.Any<Collection>(),
+            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas => cas == null),
+            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas =>
+                cas.Count() == 1 &&
+                cas.All(c =>
+                    c.Id == orgUserId &&
+                    !c.ReadOnly &&
+                    !c.HidePasswords &&
+                    c.Manage)));
 
         Assert.NotNull(result);
         Assert.NotNull(result.Item1);
