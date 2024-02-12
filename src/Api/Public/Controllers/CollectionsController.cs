@@ -93,7 +93,7 @@ public class CollectionsController : Controller
         }
         var updatedCollection = model.ToCollection(existingCollection);
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(_currentContext.OrganizationId.Value);
-        var associations = model.Groups?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
+        var associations = model.Groups?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false)).ToList();
         await _collectionService.SaveAsync(updatedCollection, associations);
         var response = new CollectionResponseModel(updatedCollection, associations);
         return new JsonResult(response);
