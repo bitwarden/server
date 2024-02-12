@@ -55,13 +55,12 @@ public class GlobalSettings : IGlobalSettings
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
-    public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
+    public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
-    public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
     public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
     public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
     public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
@@ -351,12 +350,6 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
-    public class DocumentDbSettings
-    {
-        public string Uri { get; set; }
-        public string Key { get; set; }
-    }
-
     public class SentrySettings
     {
         public string Dsn { get; set; }
@@ -520,6 +513,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class DistributedIpRateLimitingSettings
     {
+        public string RedisConnectionString { get; set; }
         public bool Enabled { get; set; } = true;
 
         /// <summary>
@@ -555,5 +549,11 @@ public class GlobalSettings : IGlobalSettings
         public string SdkKey { get; set; }
         public string FlagDataFilePath { get; set; } = "flags.json";
         public Dictionary<string, string> FlagValues { get; set; } = new Dictionary<string, string>();
+    }
+
+    public class DistributedCacheSettings
+    {
+        public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
     }
 }
