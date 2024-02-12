@@ -58,6 +58,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using StackExchange.Redis;
+using static IdentityModel.ClaimComparer;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -68,45 +69,10 @@ public static class ServiceCollectionExtensions
 {
     public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        var selectedDatabaseProvider = globalSettings.DatabaseProvider;
-        var provider = SupportedDatabaseProviders.SqlServer;
-        var connectionString = string.Empty;
-
-        if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
-        {
-            switch (selectedDatabaseProvider.ToLowerInvariant())
-            {
-                case "postgres":
-                case "postgresql":
-                    provider = SupportedDatabaseProviders.Postgres;
-                    connectionString = globalSettings.PostgreSql.ConnectionString;
-                    break;
-                case "mysql":
-                case "mariadb":
-                    provider = SupportedDatabaseProviders.MySql;
-                    connectionString = globalSettings.MySql.ConnectionString;
-                    break;
-                case "sqlite":
-                    provider = SupportedDatabaseProviders.Sqlite;
-                    connectionString = globalSettings.Sqlite.ConnectionString;
-                    break;
-                case "sqlserver":
-                    connectionString = globalSettings.SqlServer.ConnectionString;
-                    break;
-                default:
-                    break;
-            }
-        }
-        else
-        {
-            // Default to attempting to use SqlServer connection string if globalSettings.DatabaseProvider has no value.
-            connectionString = globalSettings.SqlServer.ConnectionString;
-        }
-
-        services.SetupEntityFramework(connectionString, provider);
-
+        var (provider, connectionString) = GetDatabaseProvider(globalSettings);
         if (provider != SupportedDatabaseProviders.SqlServer)
         {
+            services.SetupEntityFramework(connectionString, provider);
             services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
         }
         else
@@ -700,7 +666,20 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddDistributedMemoryCache();
+            var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
+            if (databaseProvider == SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddDistributedSqlServerCache(o =>
+                {
+                    o.ConnectionString = databaseConnectionString;
+                    o.SchemaName = "dbo";
+                    o.TableName = "Cache";
+                });
+            }
+            else
+            {
+                // TODO: EF cache implementation
+            }
         }
 
         if (!string.IsNullOrEmpty(globalSettings.DistributedCache?.Cosmos?.ConnectionString))
@@ -716,7 +695,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddKeyedSingleton<IDistributedCache, MemoryDistributedCache>("persistent");
+            services.AddKeyedSingleton("persistent", (s, _) => s.GetRequiredService<IDistributedCache>());
         }
     }
 
@@ -731,5 +710,46 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
 
         return services;
+    }
+
+    private static (SupportedDatabaseProviders provider, string connectionString)
+        GetDatabaseProvider(GlobalSettings globalSettings)
+    {
+        var selectedDatabaseProvider = globalSettings.DatabaseProvider;
+        var provider = SupportedDatabaseProviders.SqlServer;
+        var connectionString = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
+        {
+            switch (selectedDatabaseProvider.ToLowerInvariant())
+            {
+                case "postgres":
+                case "postgresql":
+                    provider = SupportedDatabaseProviders.Postgres;
+                    connectionString = globalSettings.PostgreSql.ConnectionString;
+                    break;
+                case "mysql":
+                case "mariadb":
+                    provider = SupportedDatabaseProviders.MySql;
+                    connectionString = globalSettings.MySql.ConnectionString;
+                    break;
+                case "sqlite":
+                    provider = SupportedDatabaseProviders.Sqlite;
+                    connectionString = globalSettings.Sqlite.ConnectionString;
+                    break;
+                case "sqlserver":
+                    connectionString = globalSettings.SqlServer.ConnectionString;
+                    break;
+                default:
+                    break;
+            }
+        }
+        else
+        {
+            // Default to attempting to use SqlServer connection string if globalSettings.DatabaseProvider has no value.
+            connectionString = globalSettings.SqlServer.ConnectionString;
+        }
+
+        return (provider, connectionString);
     }
 }
