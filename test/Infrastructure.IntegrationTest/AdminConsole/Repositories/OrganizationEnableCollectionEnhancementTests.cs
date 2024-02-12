@@ -137,7 +137,39 @@ public class OrganizationEnableCollectionEnhancementTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task Migrate_Manager_WithoutAccessAll_WithGroupWithAccessAll_GivesCanManageAccessToAllCollections(
+    public async Task Migrate_Manager_WithoutAccessAll_InGroup_GivesCanManageAccess_ToGroupAssignedCollections(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        throw new NotImplementedException("TODO");
+        var user = await CreateUser(userRepository);
+        var organization = await CreateOrganization(organizationRepository);
+        var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
+        var collection1 = await CreateCollection(organization, collectionRepository, null, [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = true, ReadOnly = false, Manage = false }]);
+        var collection2 = await CreateCollection(organization, collectionRepository, null, [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = false }]);
+        var collection3 = await CreateCollection(organization, collectionRepository); // no access
+
+        await organizationRepository.EnableCollectionEnhancements(organization.Id);
+
+        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUser.Id);
+
+        Assert.Equal(OrganizationUserType.User, updatedOrgUser.Type);
+
+        Assert.Equal(2, collectionAccessSelections.Count);
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.DoesNotContain(collectionAccessSelections, cas =>
+            cas.Id == collection3.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task Migrate_Manager_WithoutAccessAll_InGroupWithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
@@ -162,6 +194,7 @@ public class OrganizationEnableCollectionEnhancementTests
 
         Assert.Equal(OrganizationUserType.User, updatedOrgUser.Type);
 
+        // OrgUser has direct Can Manage access to all collections
         Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
