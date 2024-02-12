@@ -26,10 +26,10 @@ public class UpdateGroupCommand : IUpdateGroupCommand
     }
 
     public async Task UpdateGroupAsync(Group group, Organization organization,
-        IEnumerable<CollectionAccessSelection> collections = null,
+        ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> userIds = null)
     {
-        Validate(organization);
+        Validate(organization, group, collections);
         await GroupRepositoryUpdateGroupAsync(group, collections);
 
         if (userIds != null)
@@ -41,10 +41,10 @@ public class UpdateGroupCommand : IUpdateGroupCommand
     }
 
     public async Task UpdateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
-        IEnumerable<CollectionAccessSelection> collections = null,
+        ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> userIds = null)
     {
-        Validate(organization);
+        Validate(organization, group, collections);
         await GroupRepositoryUpdateGroupAsync(group, collections);
 
         if (userIds != null)
@@ -97,7 +97,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         }
     }
 
-    private static void Validate(Organization organization)
+    private static void Validate(Organization organization, Group group, IEnumerable<CollectionAccessSelection> collections)
     {
         if (organization == null)
         {
@@ -107,6 +107,20 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         if (!organization.UseGroups)
         {
             throw new BadRequestException("This organization cannot use groups.");
+        }
+
+        if (organization.FlexibleCollections)
+        {
+            if (group.AccessAll)
+            {
+                throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
+            }
+
+            var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            if (invalidAssociations?.Any() ?? false)
+            {
+                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+            }
         }
     }
 }

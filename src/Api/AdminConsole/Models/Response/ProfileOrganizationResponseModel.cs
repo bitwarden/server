@@ -69,6 +69,37 @@ public class ProfileOrganizationResponseModel : ResponseModel
             KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
         }
+
+        if (FlexibleCollections)
+        {
+            // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+            if (Type == OrganizationUserType.Custom)
+            {
+                if ((Permissions.EditAssignedCollections || Permissions.DeleteAssignedCollections) &&
+                    Permissions is
+                    {
+                        AccessEventLogs: false,
+                        AccessImportExport: false,
+                        AccessReports: false,
+                        CreateNewCollections: false,
+                        EditAnyCollection: false,
+                        DeleteAnyCollection: false,
+                        ManageGroups: false,
+                        ManagePolicies: false,
+                        ManageSso: false,
+                        ManageUsers: false,
+                        ManageResetPassword: false,
+                        ManageScim: false
+                    })
+                {
+                    organization.Type = OrganizationUserType.User;
+                }
+            }
+
+            // Set 'Edit/Delete Assigned Collections' custom permissions to false
+            Permissions.EditAssignedCollections = false;
+            Permissions.DeleteAssignedCollections = false;
+        }
     }
 
     public Guid Id { get; set; }

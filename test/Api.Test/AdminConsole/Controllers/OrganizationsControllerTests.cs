@@ -5,12 +5,15 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -21,10 +24,11 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
+using Bit.Core.Tools.Services;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -50,6 +54,11 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -75,6 +84,11 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
+        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
+        _getSubscriptionQuery = Substitute.For<IGetSubscriptionQuery>();
+        _referenceEventService = Substitute.For<IReferenceEventService>();
+        _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -96,7 +110,12 @@ public class OrganizationsControllerTests : IDisposable
             _licensingService,
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
-            _addSecretsManagerSubscriptionCommand);
+            _addSecretsManagerSubscriptionCommand,
+            _pushNotificationService,
+            _cancelSubscriptionCommand,
+            _getSubscriptionQuery,
+            _referenceEventService,
+            _organizationEnableCollectionEnhancementsCommand);
     }
 
     public void Dispose()
@@ -352,5 +371,45 @@ public class OrganizationsControllerTests : IDisposable
         await _addSecretsManagerSubscriptionCommand.Received(1)
             .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_Success(Organization organization)
+    {
+        organization.FlexibleCollections = false;
+        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin };
+        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner };
+        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User };
+        var invited = new OrganizationUser
+        {
+            UserId = null,
+            Type = OrganizationUserType.Admin,
+            Email = "invited@example.com"
+        };
+        var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
+
+        _currentContext.OrganizationOwner(organization.Id).Returns(true);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null).Returns(orgUsers);
+
+        await _sut.EnableCollectionEnhancements(organization.Id);
+
+        await _organizationEnableCollectionEnhancementsCommand.Received(1).EnableCollectionEnhancements(organization);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(admin.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(owner.UserId.Value);
+        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(user.UserId.Value);
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_WhenNotOwner_Throws(Organization organization)
+    {
+        organization.FlexibleCollections = false;
+        _currentContext.OrganizationOwner(organization.Id).Returns(false);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
+
+        await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncVaultAsync(Arg.Any<Guid>());
     }
 }

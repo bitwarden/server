@@ -60,16 +60,7 @@ public static class LoggerFactoryExtensions
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 
-        if (CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
-            CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Key))
-        {
-            config.WriteTo.AzureCosmosDB(new Uri(globalSettings.DocumentDb.Uri),
-                globalSettings.DocumentDb.Key, timeToLive: TimeSpan.FromDays(7),
-                partitionKey: "_partitionKey")
-                .Enrich.FromLogContext()
-                .Enrich.WithProperty("Project", globalSettings.ProjectName);
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
+        if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
         {
             config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                 .Enrich.FromLogContext()
