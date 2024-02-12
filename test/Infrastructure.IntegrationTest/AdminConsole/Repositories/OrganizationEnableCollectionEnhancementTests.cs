@@ -9,7 +9,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 public class OrganizationEnableCollectionEnhancementTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task MigrateAccessAll_NonManagers_CreatesCanEditAssociations(IUserRepository userRepository,
+    public async Task Migrate_User_WithAccessAll_GivesCanEditAccessToAllCollections(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
@@ -19,24 +19,28 @@ public class OrganizationEnableCollectionEnhancementTests
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.User, accessAll:true, organizationUserRepository);
         var collection1 = await CreateCollection(organization, collectionRepository);
         var collection2 = await CreateCollection(organization, collectionRepository);
+        var collection3 = await CreateCollection(organization, collectionRepository);
 
         await organizationRepository.EnableCollectionEnhancements(organization.Id);
 
-        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUser.Id);
 
         Assert.False(updatedOrgUser.AccessAll);
 
-        Assert.Equal(2, collectionAccessSelections.Count);
+        Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
             cas is { HidePasswords: false, ReadOnly: false, Manage: false });
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
             cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection3.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task MigrateAccessAll_Managers_CreatesCanManageAssociationsAndDemotesToUser(IUserRepository userRepository,
+    public async Task Migrate_Manager_WithAccessAll_GivesCanManageAccessToAllCollections(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
@@ -46,19 +50,23 @@ public class OrganizationEnableCollectionEnhancementTests
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll:true, organizationUserRepository);
         var collection1 = await CreateCollection(organization, collectionRepository);
         var collection2 = await CreateCollection(organization, collectionRepository);
+        var collection3 = await CreateCollection(organization, collectionRepository);
 
         await organizationRepository.EnableCollectionEnhancements(organization.Id);
 
-        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUser.Id);
 
         Assert.False(updatedOrgUser.AccessAll);
 
-        Assert.Equal(2, collectionAccessSelections.Count);
+        Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
             cas is { HidePasswords: false, ReadOnly: false, Manage: true });
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection3.Id &&
             cas is { HidePasswords: false, ReadOnly: false, Manage: true });
     }
 
