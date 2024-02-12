@@ -49,6 +49,21 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// details for each collection.
     /// </summary>
     Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections);
+
+    /// <summary>
+    /// Returns all collections for an organization, including permission info for the specified user.
+    /// This does not perform any authorization checks internally!
+    /// Optionally, you can include access relationships for other Groups/Users and the collections.
+    /// </summary>
+    Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
+
+    /// <summary>
+    /// Returns the collection by Id, including permission info for the specified user.
+    /// This does not perform any authorization checks internally!
+    /// Optionally, you can include access relationships for other Groups/Users and the collection.
+    /// </summary>
+    Task<CollectionAdminDetails> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships);
+
     Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);
     Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);
     Task DeleteUserAsync(Guid collectionId, Guid organizationUserId);

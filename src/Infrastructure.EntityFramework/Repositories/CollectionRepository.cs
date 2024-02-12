@@ -48,6 +48,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public async Task<CollectionAdminDetails> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships) => throw new NotImplementedException();
+
     public async Task CreateAsync(Core.Entities.Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
     {
         await CreateAsync(obj);
@@ -369,6 +371,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                           }).ToListAsync();
         }
     }
+
+    public async Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships) => throw new NotImplementedException();
 
     public async Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id)
     {
