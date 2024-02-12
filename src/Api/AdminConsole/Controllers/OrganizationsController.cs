@@ -261,19 +261,19 @@ public class OrganizationsController : Controller
         return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
     }
 
-    [HttpGet("{id}/risks-subscription-failure")]
-    public async Task<OrganizationRisksSubscriptionFailureResponseModel> RisksSubscriptionFailure(Guid id)
+    [HttpGet("{id}/billing-status")]
+    public async Task<OrganizationBillingStatusResponseModel> GetBillingStatus(Guid id)
     {
         if (!await _currentContext.EditPaymentMethods(id))
         {
-            return new OrganizationRisksSubscriptionFailureResponseModel(id, false);
+            throw new NotFoundException();
         }
 
         var organization = await _organizationRepository.GetByIdAsync(id);
 
         var risksSubscriptionFailure = await _paymentService.RisksSubscriptionFailure(organization);
 
-        return new OrganizationRisksSubscriptionFailureResponseModel(id, risksSubscriptionFailure);
+        return new OrganizationBillingStatusResponseModel(organization, risksSubscriptionFailure);
     }
 
     [HttpPost("")]
