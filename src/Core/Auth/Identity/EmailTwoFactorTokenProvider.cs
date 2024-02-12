@@ -19,6 +19,10 @@ public class EmailTwoFactorTokenProvider : EmailTokenProvider
         base(distributedCache)
     {
         _serviceProvider = serviceProvider;
+
+        TokenAlpha = false;
+        TokenNumeric = true;
+        TokenLength = 6;
     }
 
     public override async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)

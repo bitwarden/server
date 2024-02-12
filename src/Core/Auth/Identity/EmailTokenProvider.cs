@@ -25,6 +25,10 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
         };
     }
 
+    public int TokenLength { protected get; set; } = 8;
+    public bool TokenAlpha { protected get; set; } = false;
+    public bool TokenNumeric { protected get; set; } = true;
+
     public virtual Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         return Task.FromResult(!string.IsNullOrEmpty(user.Email));
@@ -32,7 +36,7 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
 
     public virtual async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
     {
-        var code = CoreHelpers.SecureRandomString(8, false, false, false, true, false);
+        var code = CoreHelpers.SecureRandomString(TokenLength, TokenAlpha, true, false, TokenNumeric, false);
         var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
         await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(code), _distributedCacheEntryOptions);
         return code;
