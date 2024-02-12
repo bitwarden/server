@@ -31,6 +31,7 @@ public static class CoreHelpers
     private static readonly DateTime _max = new DateTime(9999, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly Random _random = new Random();
     private static readonly string RealConnectingIp = "X-Connecting-IP";
+    private static readonly Regex _whiteSpaceRegex = new Regex(@"\s+");
 
     /// <summary>
     /// Generate sequential Guid for Sql Server.
@@ -338,16 +339,50 @@ public static class CoreHelpers
         return Encoding.UTF8.GetString(Base64UrlDecode(input));
     }
 
+    /// <summary>
+    /// Encodes a Base64 URL formatted string.
+    /// </summary>
+    /// <param name="input">Byte data</param>
+    /// <returns>Base64 URL formatted string</returns>
     public static string Base64UrlEncode(byte[] input)
     {
-        var output = Convert.ToBase64String(input)
+        // Standard base64 encoder
+        var standardB64 = Convert.ToBase64String(input);
+        return TransformToBase64Url(standardB64);
+    }
+
+    /// <summary>
+    /// Transforms a Base64 standard formatted string to a Base64 URL formatted string.
+    /// </summary>
+    /// <param name="input">Base64 standard formatted string</param>
+    /// <returns>Base64 URL formatted string</returns>
+    public static string TransformToBase64Url(string input)
+    {
+        var output = input
             .Replace('+', '-')
             .Replace('/', '_')
             .Replace("=", string.Empty);
         return output;
     }
 
+    /// <summary>
+    /// Decodes a Base64 URL formatted string.
+    /// </summary>
+    /// <param name="input">Base64 URL formatted string</param>
+    /// <returns>Data as bytes</returns>
     public static byte[] Base64UrlDecode(string input)
+    {
+        var standardB64 = TransformFromBase64Url(input);
+        // Standard base64 decoder
+        return Convert.FromBase64String(standardB64);
+    }
+
+    /// <summary>
+    /// Transforms a Base64 URL formatted string to a Base64 standard formatted string.
+    /// </summary>
+    /// <param name="input">Base64 URL formatted string</param>
+    /// <returns>Base64 standard formatted string</returns>
+    public static string TransformFromBase64Url(string input)
     {
         var output = input;
         // 62nd char of encoding
@@ -370,8 +405,8 @@ public static class CoreHelpers
                 throw new InvalidOperationException("Illegal base64url string!");
         }
 
-        // Standard base64 decoder
-        return Convert.FromBase64String(output);
+        // Standard base64 string output
+        return output;
     }
 
     public static string PunyEncode(string text)
@@ -833,5 +868,10 @@ public static class CoreHelpers
         }
 
         return null;
+    }
+
+    public static string ReplaceWhiteSpace(string input, string newValue)
+    {
+        return _whiteSpaceRegex.Replace(input, newValue);
     }
 }

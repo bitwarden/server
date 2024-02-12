@@ -349,7 +349,9 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         }
 
         var spEntityId = new Sustainsys.Saml2.Metadata.EntityId(
-            SsoConfigurationData.BuildSaml2ModulePath(_globalSettings.BaseServiceUri.Sso));
+            SsoConfigurationData.BuildSaml2ModulePath(
+                _globalSettings.BaseServiceUri.Sso,
+                config.SpUniqueEntityId ? name : null));
         bool? allowCreate = null;
         if (config.SpNameIdFormat != Saml2NameIdFormat.Transient)
         {
@@ -415,7 +417,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         };
         options.IdentityProviders.Add(idp);
 
-        return new DynamicAuthenticationScheme(name, name, typeof(Saml2BitHandler), options, SsoType.Saml2);
+        return new DynamicAuthenticationScheme(name, name, typeof(Saml2Handler), options, SsoType.Saml2);
     }
 
     private NameIdFormat GetNameIdFormat(Saml2NameIdFormat format)
