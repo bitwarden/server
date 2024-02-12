@@ -25,9 +25,9 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
         };
     }
 
-    public int TokenLength { protected get; set; } = 8;
-    public bool TokenAlpha { protected get; set; } = false;
-    public bool TokenNumeric { protected get; set; } = true;
+    public int TokenLength { get; protected set; } = 8;
+    public bool TokenAlpha { get; protected set; } = false;
+    public bool TokenNumeric { get; protected set; } = true;
 
     public virtual Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
