@@ -104,13 +104,13 @@ public class AzureQueueHostedService : IHostedService, IDisposable
             var root = jsonDocument.RootElement;
             if (root.ValueKind == JsonValueKind.Array)
             {
-                var indexedEntities = root.ToObject<List<EventMessage>>()
+                var indexedEntities = root.Deserialize<List<EventMessage>>()
                     .SelectMany(e => EventTableEntity.IndexEvent(e));
                 events.AddRange(indexedEntities);
             }
             else if (root.ValueKind == JsonValueKind.Object)
             {
-                var eventMessage = root.ToObject<EventMessage>();
+                var eventMessage = root.Deserialize<EventMessage>();
                 events.AddRange(EventTableEntity.IndexEvent(eventMessage));
             }
 

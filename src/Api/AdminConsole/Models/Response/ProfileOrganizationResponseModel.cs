@@ -61,12 +61,44 @@ public class ProfileOrganizationResponseModel : ResponseModel
         AccessSecretsManager = organization.AccessSecretsManager;
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        FlexibleCollections = organization.FlexibleCollections;
 
         if (organization.SsoConfig != null)
         {
             var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
             KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
+        }
+
+        if (FlexibleCollections)
+        {
+            // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+            if (Type == OrganizationUserType.Custom)
+            {
+                if ((Permissions.EditAssignedCollections || Permissions.DeleteAssignedCollections) &&
+                    Permissions is
+                    {
+                        AccessEventLogs: false,
+                        AccessImportExport: false,
+                        AccessReports: false,
+                        CreateNewCollections: false,
+                        EditAnyCollection: false,
+                        DeleteAnyCollection: false,
+                        ManageGroups: false,
+                        ManagePolicies: false,
+                        ManageSso: false,
+                        ManageUsers: false,
+                        ManageResetPassword: false,
+                        ManageScim: false
+                    })
+                {
+                    organization.Type = OrganizationUserType.User;
+                }
+            }
+
+            // Set 'Edit/Delete Assigned Collections' custom permissions to false
+            Permissions.EditAssignedCollections = false;
+            Permissions.DeleteAssignedCollections = false;
         }
     }
 
@@ -116,4 +148,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool AccessSecretsManager { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool FlexibleCollections { get; set; }
 }

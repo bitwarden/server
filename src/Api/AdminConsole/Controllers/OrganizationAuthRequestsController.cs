@@ -1,14 +1,12 @@
 ﻿using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,7 +14,6 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/auth-requests")]
 [Authorize("Application")]
-[RequireFeature(FeatureFlagKeys.TrustedDeviceEncryption)]
 public class OrganizationAuthRequestsController : Controller
 {
     private readonly IAuthRequestRepository _authRequestRepository;

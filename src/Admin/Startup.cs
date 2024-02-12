@@ -9,6 +9,7 @@ using Stripe;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Services;
+using Bit.Core.Billing.Extensions;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -87,6 +88,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddScoped<IAccessControlService, AccessControlService>();
+        services.AddBillingCommands();
 
 #if OSS
         services.AddOosServices();
@@ -116,14 +118,6 @@ public class Startup
         }
         else
         {
-            if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
-            {
-                services.AddHostedService<HostedServices.AzureQueueBlockIpHostedService>();
-            }
-            else if (CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
-            {
-                services.AddHostedService<HostedServices.AmazonSqsBlockIpHostedService>();
-            }
             if (CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
             {
                 services.AddHostedService<HostedServices.AzureQueueMailHostedService>();

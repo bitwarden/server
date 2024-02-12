@@ -10,7 +10,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Entities;
 
-public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
+public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable, IReferenceable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -78,7 +78,6 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
-    public bool SecretsManagerBeta { get; set; }
     /// <summary>
     /// Refers to the ability for an organization to limit collection creation and deletion to owners and admins only
     /// </summary>
@@ -91,6 +90,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     /// </remarks>
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    /// <summary>
+    /// True if the organization is using the Flexible Collections permission changes, false otherwise.
+    /// For existing organizations, this must only be set to true once data migrations have been run for this organization.
+    /// </summary>
+    public bool FlexibleCollections { get; set; }
 
     public void SetNewId()
     {
@@ -135,6 +139,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return "organizationId";
     }
 
+    public bool IsOrganization() => true;
+
     public bool IsUser()
     {
         return false;
@@ -144,6 +150,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     {
         return "Organization";
     }
+
+    public bool IsExpired() => ExpirationDate.HasValue && ExpirationDate.Value <= DateTime.UtcNow;
 
     public long StorageBytesRemaining()
     {
@@ -236,11 +244,13 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return providers[provider];
     }
 
-    public void UpdateFromLicense(
-        OrganizationLicense license,
-        bool flexibleCollectionsMvpIsEnabled,
-        bool flexibleCollectionsV1IsEnabled)
+    public void UpdateFromLicense(OrganizationLicense license)
     {
+        // The following properties are intentionally excluded from being updated:
+        // - Id - self-hosted org will have its own unique Guid
+        // - MaxStorageGb - not enforced for self-hosted because we're not providing the storage
+        // - FlexibleCollections - the self-hosted organization must do its own data migration to set this property, it cannot be updated from cloud
+
         Name = license.Name;
         BusinessName = license.BusinessName;
         BillingEmail = license.BillingEmail;
@@ -270,7 +280,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-        LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion;
-        AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems;
+        LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
+        AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
     }
 }

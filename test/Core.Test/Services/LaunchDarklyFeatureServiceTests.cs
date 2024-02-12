@@ -4,6 +4,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using LaunchDarkly.Sdk.Server.Interfaces;
 using NSubstitute;
 using Xunit;
 
@@ -19,9 +20,16 @@ public class LaunchDarklyFeatureServiceTests
     {
         globalSettings.ProjectName = "LaunchDarkly Tests";
 
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.UserId.Returns(Guid.NewGuid());
+
+        var client = Substitute.For<ILdClient>();
+
         var fixture = new Fixture();
         return new SutProvider<LaunchDarklyFeatureService>(fixture)
             .SetDependency(globalSettings)
+            .SetDependency(currentContext)
+            .SetDependency(client)
             .Create();
     }
 
@@ -30,10 +38,7 @@ public class LaunchDarklyFeatureServiceTests
     {
         var sutProvider = GetSutProvider(new Settings.GlobalSettings { SelfHosted = true });
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.False(sutProvider.Sut.IsEnabled(key, currentContext));
+        Assert.False(sutProvider.Sut.IsEnabled(key));
     }
 
     [Fact]
@@ -41,10 +46,7 @@ public class LaunchDarklyFeatureServiceTests
     {
         var sutProvider = GetSutProvider(new Settings.GlobalSettings());
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey, currentContext));
+        Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey));
     }
 
     [Fact(Skip = "For local development")]
@@ -54,10 +56,7 @@ public class LaunchDarklyFeatureServiceTests
 
         var sutProvider = GetSutProvider(settings);
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey, currentContext));
+        Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey));
     }
 
     [Fact(Skip = "For local development")]
@@ -67,10 +66,7 @@ public class LaunchDarklyFeatureServiceTests
 
         var sutProvider = GetSutProvider(settings);
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.Equal(0, sutProvider.Sut.GetIntVariation(_fakeFeatureKey, currentContext));
+        Assert.Equal(0, sutProvider.Sut.GetIntVariation(_fakeFeatureKey));
     }
 
     [Fact(Skip = "For local development")]
@@ -80,10 +76,7 @@ public class LaunchDarklyFeatureServiceTests
 
         var sutProvider = GetSutProvider(settings);
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.Null(sutProvider.Sut.GetStringVariation(_fakeFeatureKey, currentContext));
+        Assert.Null(sutProvider.Sut.GetStringVariation(_fakeFeatureKey));
     }
 
     [Fact(Skip = "For local development")]
@@ -91,10 +84,7 @@ public class LaunchDarklyFeatureServiceTests
     {
         var sutProvider = GetSutProvider(new Settings.GlobalSettings());
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        var results = sutProvider.Sut.GetAll(currentContext);
+        var results = sutProvider.Sut.GetAll();
 
         Assert.NotNull(results);
         Assert.NotEmpty(results);

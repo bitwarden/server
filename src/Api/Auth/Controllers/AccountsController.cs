@@ -21,6 +21,9 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -32,6 +35,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -63,10 +68,13 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
     private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
@@ -95,6 +103,9 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
+        ICancelSubscriptionCommand cancelSubscriptionCommand,
+        IGetSubscriptionQuery getSubscriptionQuery,
+        IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
         IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
@@ -121,6 +132,9 @@ public class AccountsController : Controller
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
+        _cancelSubscriptionCommand = cancelSubscriptionCommand;
+        _getSubscriptionQuery = getSubscriptionQuery;
+        _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _cipherValidator = cipherValidator;
         _folderValidator = folderValidator;
@@ -425,7 +439,7 @@ public class AccountsController : Controller
         }
 
         IdentityResult result;
-        if (_featureService.IsEnabled(FeatureFlagKeys.KeyRotationImprovements, _currentContext))
+        if (_featureService.IsEnabled(FeatureFlagKeys.KeyRotationImprovements))
         {
             var dataModel = new RotateUserKeyData
             {
@@ -684,17 +698,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [HttpPost("iap-check")]
-    public async Task PostIapCheck([FromBody] IapCheckRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-        await _userService.IapCheckAsync(user, model.PaymentMethodType.Value);
-    }
-
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremium(PremiumRequestModel model)
     {
@@ -820,15 +823,43 @@ public class AccountsController : Controller
 
     [HttpPost("cancel-premium")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel()
+    public async Task PostCancel([FromBody] SubscriptionCancellationRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
         if (user == null)
         {
             throw new UnauthorizedAccessException();
         }
 
-        await _userService.CancelPremiumAsync(user);
+        var presentUserWithOffboardingSurvey =
+            _featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey);
+
+        if (presentUserWithOffboardingSurvey)
+        {
+            var subscription = await _getSubscriptionQuery.GetSubscription(user);
+
+            await _cancelSubscriptionCommand.CancelSubscription(subscription,
+                new OffboardingSurveyResponse
+                {
+                    UserId = user.Id,
+                    Reason = request.Reason,
+                    Feedback = request.Feedback
+                },
+                user.IsExpired());
+
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+                ReferenceEventType.CancelSubscription,
+                user,
+                _currentContext)
+            {
+                EndOfPeriod = user.IsExpired()
+            });
+        }
+        else
+        {
+            await _userService.CancelPremiumAsync(user);
+        }
     }
 
     [HttpPost("reinstate-premium")]
