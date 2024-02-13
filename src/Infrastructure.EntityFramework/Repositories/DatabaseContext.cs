@@ -73,7 +73,6 @@ public class DatabaseContext : DbContext
 
         // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
         // Entity Framework code first database configurations.
-        var eCache = builder.Entity<Cache>();
         var eCipher = builder.Entity<Cipher>();
         var eCollection = builder.Entity<Collection>();
         var eCollectionCipher = builder.Entity<CollectionCipher>();
@@ -95,7 +94,6 @@ public class DatabaseContext : DbContext
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
-        eCache.Property(c => c.Id).ValueGeneratedNever();
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
@@ -115,8 +113,6 @@ public class DatabaseContext : DbContext
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
-        eCache.HasIndex(c => c.ExpiresAtTime).IsClustered(false).IsDescending(false);
-
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
             Constants.DatabaseFieldProtectorPurpose);
         var dataProtectionConverter = new DataProtectionConverter(dataProtector);
@@ -134,7 +130,6 @@ public class DatabaseContext : DbContext
             //
         }
 
-        eCache.ToTable(nameof(Cache));
         eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
