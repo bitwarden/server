@@ -58,7 +58,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using StackExchange.Redis;
-using static IdentityModel.ClaimComparer;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
