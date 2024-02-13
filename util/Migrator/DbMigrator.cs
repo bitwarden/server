@@ -26,6 +26,7 @@ public class DbMigrator
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         bool repeatable = false,
+        bool dryRun = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         CancellationToken cancellationToken = default(CancellationToken))
     {
@@ -35,7 +36,7 @@ public class DbMigrator
         {
             try
             {
-                var success = MigrateDatabase(enableLogging, repeatable, folderName, cancellationToken);
+                var success = MigrateDatabase(enableLogging, repeatable, dryRun, folderName, cancellationToken);
                 return success;
             }
             catch (SqlException ex)
@@ -58,6 +59,7 @@ public class DbMigrator
 
     public bool MigrateDatabase(bool enableLogging = true,
         bool repeatable = false,
+        bool dryRun = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         CancellationToken cancellationToken = default(CancellationToken))
     {
@@ -130,6 +132,17 @@ public class DbMigrator
         }
 
         var upgrader = builder.Build();
+
+        if (dryRun)
+        {
+            var scriptsToExec = upgrader.GetScriptsToExecute();
+            foreach (var script in scriptsToExec)
+            {
+                _logger.LogInformation(Constants.BypassFiltersEventId, script.Name);
+            }
+            return true;
+        }
+
         var result = upgrader.PerformUpgrade();
 
         if (_logger != null)
