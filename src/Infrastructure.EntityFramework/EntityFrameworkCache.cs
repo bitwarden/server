@@ -1,13 +1,13 @@
 ﻿using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 
 namespace Bit.Infrastructure.EntityFramework;
 
 public class EntityFrameworkCache : IDistributedCache
 {
-    private readonly DatabaseContext _databaseContext;
     private readonly ISystemClock _systemClock;
     private readonly TimeSpan _expiredItemsDeletionInterval = TimeSpan.FromMinutes(30);
     private DateTimeOffset _lastExpirationScan;
@@ -15,17 +15,20 @@ public class EntityFrameworkCache : IDistributedCache
     private readonly TimeSpan _defaultSlidingExpiration = TimeSpan.FromMinutes(20);
     private readonly object _mutex = new();
 
-    public EntityFrameworkCache(DatabaseContext databaseContext)
+    public IServiceScopeFactory ServiceScopeFactory { get; }
+
+    public EntityFrameworkCache(IServiceScopeFactory serviceScopeFactory)
     {
-        _databaseContext = databaseContext;
         _systemClock = new SystemClock();
         _deleteExpiredCachedItemsDelegate = DeleteExpiredCacheItems;
+        ServiceScopeFactory = serviceScopeFactory;
     }
 
     public byte[] Get(string key)
     {
         ArgumentNullException.ThrowIfNull(key);
-        var cache = _databaseContext.Cache
+        using var scope = ServiceScopeFactory.CreateScope();
+        var cache = GetDatabaseContext(scope).Cache
             .Where(c => c.Id == key && c.ExpiresAtTime >= _systemClock.UtcNow)
             .SingleOrDefault();
         ScanForExpiredItemsIfRequired();
@@ -36,12 +39,14 @@ public class EntityFrameworkCache : IDistributedCache
     {
         ArgumentNullException.ThrowIfNull(key);
         token.ThrowIfCancellationRequested();
-        var cache = await _databaseContext.Cache
+        using var scope = ServiceScopeFactory.CreateScope();
+        var cache = await GetDatabaseContext(scope).Cache
             .Where(c => c.Id == key && c.ExpiresAtTime >= _systemClock.UtcNow)
-            .SingleOrDefaultAsync();
+            .SingleOrDefaultAsync(cancellationToken: token);
         ScanForExpiredItemsIfRequired();
         return cache?.Value;
     }
+
     public void Refresh(string key) => throw new NotImplementedException();
     public Task RefreshAsync(string key, CancellationToken token = default) => throw new NotImplementedException();
     public void Remove(string key) => throw new NotImplementedException();
@@ -67,5 +72,10 @@ public class EntityFrameworkCache : IDistributedCache
         _databaseContext.Cache
             .Where(c => c.ExpiresAtTime < _systemClock.UtcNow)
             .ExecuteDelete();
+    }
+
+    private DatabaseContext GetDatabaseContext(IServiceScope serviceScope)
+    {
+        return serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
     }
 }
