@@ -678,7 +678,7 @@ public static class ServiceCollectionExtensions
             }
             else
             {
-                // TODO: EF cache implementation
+                services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
             }
         }
 
