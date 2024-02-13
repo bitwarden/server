@@ -259,7 +259,6 @@ public class OrganizationServiceTests
         (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.Plan = planType;
-        var plan = StaticStore.GetPlan(signup.Plan);
         signup.AdditionalSeats = 0;
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
@@ -269,12 +268,31 @@ public class OrganizationServiceTests
             .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
             .Returns(true);
 
+        // Extract orgUserId when created
+        Guid? orgUserId = null;
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .CreateAsync(Arg.Do<OrganizationUser>(ou => orgUserId = ou.Id));
+
         var result = await sutProvider.Sut.SignUpAsync(signup);
 
+        // Assert: AccessAll is not used
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o =>
                 o.UserId == signup.Owner.Id &&
                 o.AccessAll == false));
+
+        // Assert: created a Can Manage association for the default collection instead
+        Assert.NotNull(orgUserId);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).CreateAsync(
+            Arg.Any<Collection>(),
+            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas => cas == null),
+            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas =>
+                cas.Count() == 1 &&
+                cas.All(c =>
+                    c.Id == orgUserId &&
+                    !c.ReadOnly &&
+                    !c.HidePasswords &&
+                    c.Manage)));
 
         Assert.NotNull(result);
         Assert.NotNull(result.Item1);
@@ -1089,7 +1107,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
+        ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
     {
         user.Id = default(Guid);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -1099,7 +1117,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
+        ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository.GetByIdAsync(user.Id).Returns(user);
@@ -1113,7 +1131,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
@@ -1145,7 +1163,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         Organization organization,
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1182,7 +1200,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
@@ -1217,7 +1235,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         Organization organization,
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
@@ -1251,7 +1269,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationOwner,
@@ -1295,7 +1313,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1330,7 +1348,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -1365,7 +1383,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Manager)] OrganizationUser newUserData,
         [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -1403,7 +1421,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser newUserData,
         [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        IEnumerable<CollectionAccessSelection> collections,
+        ICollection<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         SutProvider<OrganizationService> sutProvider)
     {

@@ -34,7 +34,7 @@ public class PayPalIPNClientTests
 
     [Fact]
     public async Task VerifyIPN_FormDataNull_ThrowsArgumentNullException()
-        => await Assert.ThrowsAsync<ArgumentNullException>(() => _payPalIPNClient.VerifyIPN(Guid.NewGuid(), null));
+        => await Assert.ThrowsAsync<ArgumentNullException>(() => _payPalIPNClient.VerifyIPN(string.Empty, null));
 
     [Fact]
     public async Task VerifyIPN_Unauthorized_ReturnsFalse()
@@ -46,7 +46,7 @@ public class PayPalIPNClientTests
             .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
             .Respond(HttpStatusCode.Unauthorized);
 
-        var verified = await _payPalIPNClient.VerifyIPN(Guid.NewGuid(), formData);
+        var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
 
         Assert.False(verified);
         Assert.Equal(1, _mockHttpMessageHandler.GetMatchCount(request));
@@ -62,7 +62,7 @@ public class PayPalIPNClientTests
             .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
             .Respond("application/text", "INVALID");
 
-        var verified = await _payPalIPNClient.VerifyIPN(Guid.NewGuid(), formData);
+        var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
 
         Assert.False(verified);
         Assert.Equal(1, _mockHttpMessageHandler.GetMatchCount(request));
@@ -78,7 +78,7 @@ public class PayPalIPNClientTests
             .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
             .Respond("application/text", "VERIFIED");
 
-        var verified = await _payPalIPNClient.VerifyIPN(Guid.NewGuid(), formData);
+        var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
 
         Assert.True(verified);
         Assert.Equal(1, _mockHttpMessageHandler.GetMatchCount(request));

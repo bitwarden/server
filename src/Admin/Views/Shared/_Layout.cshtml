@@ -1,4 +1,4 @@
-﻿@using Bit.Admin.Enums;
+@using Bit.Admin.Enums;
 
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
@@ -8,7 +8,6 @@
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
     var canViewOrgs = AccessControlService.UserHasPermission(Permission.Org_List_View);
     var canViewProviders = AccessControlService.UserHasPermission(Permission.Provider_List_View);
-    var canViewLogs = AccessControlService.UserHasPermission(Permission.Logs_View);
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
     var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
@@ -119,12 +118,6 @@
                                             </a>
                                         }
                                     </div>
-                                </li>
-                            }
-                            @if (canViewLogs)
-                            {
-                                <li class="nav-item" active-controller="Logs">
-                                    <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
                                 </li>
                             }
                         }

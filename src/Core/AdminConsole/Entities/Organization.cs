@@ -10,7 +10,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Entities;
 
-public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
+public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable, IReferenceable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -139,6 +139,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return "organizationId";
     }
 
+    public bool IsOrganization() => true;
+
     public bool IsUser()
     {
         return false;
@@ -148,6 +150,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     {
         return "Organization";
     }
+
+    public bool IsExpired() => ExpirationDate.HasValue && ExpirationDate.Value <= DateTime.UtcNow;
 
     public long StorageBytesRemaining()
     {

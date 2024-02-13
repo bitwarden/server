@@ -3,19 +3,15 @@ using Bit.Identity.IdentityServer;
 using Bit.Infrastructure.Dapper.Auth.Repositories;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using Microsoft.Extensions.Logging.Abstractions;
-using StackExchange.Redis;
 
 namespace Bit.MicroBenchmarks.Identity.IdentityServer;
 
 [MemoryDiagnoser]
-public class RedisPersistedGrantStoreTests
+public class PersistedGrantStoreTests
 {
     const string SQL = nameof(SQL);
-    const string Redis = nameof(Redis);
     const string Cosmos = nameof(Cosmos);
 
-    private readonly IPersistedGrantStore _redisGrantStore;
     private readonly IPersistedGrantStore _sqlGrantStore;
     private readonly IPersistedGrantStore _cosmosGrantStore;
     private readonly PersistedGrant _updateGrant;
@@ -39,14 +35,8 @@ public class RedisPersistedGrantStoreTests
     // 15) "ClientId"
     // 16) "web"
 
-    public RedisPersistedGrantStoreTests()
+    public PersistedGrantStoreTests()
     {
-        _redisGrantStore = new RedisPersistedGrantStore(
-            ConnectionMultiplexer.Connect("localhost"),
-            NullLogger<RedisPersistedGrantStore>.Instance,
-            new InMemoryPersistedGrantStore()
-        );
-
         var sqlConnectionString = "YOUR CONNECTION STRING HERE";
         _sqlGrantStore = new PersistedGrantStore(
             new GrantRepository(
@@ -78,17 +68,13 @@ public class RedisPersistedGrantStoreTests
         };
     }
 
-    [Params(Redis, SQL, Cosmos)]
+    [Params(SQL, Cosmos)]
     public string StoreType { get; set; } = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        if (StoreType == Redis)
-        {
-            _grantStore = _redisGrantStore;
-        }
-        else if (StoreType == SQL)
+        if (StoreType == SQL)
         {
             _grantStore = _sqlGrantStore;
         }
