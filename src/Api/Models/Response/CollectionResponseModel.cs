@@ -50,6 +50,17 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
         Users = users.Select(g => new SelectionReadOnlyResponseModel(g));
     }
 
+    public CollectionAccessDetailsResponseModel(CollectionAdminDetails collection)
+        : base(collection, "collectionAccessDetails")
+    {
+        Assigned = collection.Assigned;
+        ReadOnly = collection.ReadOnly;
+        HidePasswords = collection.HidePasswords;
+        Manage = collection.Manage;
+        Groups = collection.Groups?.Select(g => new SelectionReadOnlyResponseModel(g)) ?? Enumerable.Empty<SelectionReadOnlyResponseModel>();
+        Users = collection.Users?.Select(g => new SelectionReadOnlyResponseModel(g)) ?? Enumerable.Empty<SelectionReadOnlyResponseModel>();
+    }
+
     public IEnumerable<SelectionReadOnlyResponseModel> Groups { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Users { get; set; }
 
@@ -57,4 +68,8 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
     /// True if the acting user is explicitly assigned to the collection
     /// </summary>
     public bool Assigned { get; set; }
+
+    public bool ReadOnly { get; set; }
+    public bool HidePasswords { get; set; }
+    public bool Manage { get; set; }
 }

@@ -533,47 +533,45 @@ public class CollectionsController : Controller
     private async Task<CollectionAccessDetailsResponseModel> GetDetails_vNext(Guid id)
     {
         // New flexible collections logic
-        var (collection, access) = await _collectionRepository.GetByIdWithAccessAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ReadWithAccess)).Succeeded;
+        var collectionDetails =
+            await _collectionRepository.GetByIdWithPermissionsAsync(id, _currentContext.UserId, true);
+
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collectionDetails, BulkCollectionOperations.ReadWithAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
         }
 
-        return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
+        return new CollectionAccessDetailsResponseModel(collectionDetails);
     }
 
     private async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails_vNext(Guid orgId)
     {
-        // We always need to know which collections the current user is assigned to
-        var assignedOrgCollections = await _collectionRepository
-            .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId, true);
+        var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithPermissionsAsync(
+            orgId, _currentContext.UserId.Value, true);
 
         var readAllAuthorized =
             (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAllWithAccess(orgId))).Succeeded;
         if (readAllAuthorized)
         {
-            // The user can view all collections, but they may not always be assigned to all of them
-            var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
-
-            return new ListResponseModel<CollectionAccessDetailsResponseModel>(allOrgCollections.Select(c =>
-                new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
-                {
-                    // Manually determine which collections they're assigned to
-                    Assigned = assignedOrgCollections.Any(ac => ac.Item1.Id == c.Item1.Id)
-                })
+            return new ListResponseModel<CollectionAccessDetailsResponseModel>(
+                allOrgCollections.Select(c => new CollectionAccessDetailsResponseModel(c))
             );
         }
 
-        // Filter the assigned collections to only return those where the user has Manage permission
-        var manageableOrgCollections = assignedOrgCollections.Where(c => c.Item1.Manage).ToList();
+        // Filter collections to only return those where the user has Manage permission
+        var manageableOrgCollections = allOrgCollections.Where(c => c.Manage).ToList();
+
+        var authorized = (await _authorizationService.AuthorizeAsync(User, manageableOrgCollections, BulkCollectionOperations.ReadWithAccess)).Succeeded;
+
+        if (!authorized)
+        {
+            throw new NotFoundException();
+        }
 
         return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
-            new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
-            {
-                Assigned = true // Mapping from manageableOrgCollections implies they're all assigned
-            })
-        );
+            new CollectionAccessDetailsResponseModel(c)
+        ));
     }
 
     private async Task<ListResponseModel<CollectionResponseModel>> GetByOrgId_vNext(Guid orgId)
