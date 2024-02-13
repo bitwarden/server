@@ -10,8 +10,8 @@ public class StaticClientStore
     {
         ApiClients = new List<Client>
         {
-            new ApiClient(globalSettings, BitwardenClient.Mobile, 90, 1),
-            new ApiClient(globalSettings, BitwardenClient.Web, 30, 1),
+            new ApiClient(globalSettings, BitwardenClient.Mobile, 60, 1),
+            new ApiClient(globalSettings, BitwardenClient.Web, 7, 1),
             new ApiClient(globalSettings, BitwardenClient.Browser, 30, 1),
             new ApiClient(globalSettings, BitwardenClient.Desktop, 30, 1),
             new ApiClient(globalSettings, BitwardenClient.Cli, 30, 1),

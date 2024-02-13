@@ -115,7 +115,7 @@ public static class FeatureFlagKeys
     /// flexible collections
     /// </summary>
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
-
+    public const string AC1607_PresentUsersWithOffboardingSurvey = "AC-1607_present-user-offboarding-survey";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
 
     public static List<string> GetAllKeys()

@@ -14,10 +14,14 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -27,6 +31,9 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -57,6 +64,11 @@ public class OrganizationsController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -78,7 +90,12 @@ public class OrganizationsController : Controller
         ILicensingService licensingService,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
-        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand)
+        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
+        IPushNotificationService pushNotificationService,
+        ICancelSubscriptionCommand cancelSubscriptionCommand,
+        IGetSubscriptionQuery getSubscriptionQuery,
+        IReferenceEventService referenceEventService,
+        IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -100,6 +117,11 @@ public class OrganizationsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
+        _pushNotificationService = pushNotificationService;
+        _cancelSubscriptionCommand = cancelSubscriptionCommand;
+        _getSubscriptionQuery = getSubscriptionQuery;
+        _referenceEventService = referenceEventService;
+        _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
     }
 
     [HttpGet("{id}")]
@@ -444,15 +466,48 @@ public class OrganizationsController : Controller
 
     [HttpPost("{id}/cancel")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel(string id)
+    public async Task PostCancel(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.EditSubscription(orgIdGuid))
+        if (!await _currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        await _organizationService.CancelSubscriptionAsync(orgIdGuid);
+        var presentUserWithOffboardingSurvey =
+            _featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey);
+
+        if (presentUserWithOffboardingSurvey)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(id);
+
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var subscription = await _getSubscriptionQuery.GetSubscription(organization);
+
+            await _cancelSubscriptionCommand.CancelSubscription(subscription,
+                new OffboardingSurveyResponse
+                {
+                    UserId = _currentContext.UserId!.Value,
+                    Reason = request.Reason,
+                    Feedback = request.Feedback
+                },
+                organization.IsExpired());
+
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+                ReferenceEventType.CancelSubscription,
+                organization,
+                _currentContext)
+            {
+                EndOfPeriod = organization.IsExpired()
+            });
+        }
+        else
+        {
+            await _organizationService.CancelSubscriptionAsync(id);
+        }
     }
 
     [HttpPost("{id}/reinstate")]
@@ -837,15 +892,15 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (organization.FlexibleCollections)
-        {
-            throw new BadRequestException("Organization has already been migrated to the new collection enhancements");
-        }
+        await _organizationEnableCollectionEnhancementsCommand.EnableCollectionEnhancements(organization);
 
-        await _organizationRepository.EnableCollectionEnhancements(id);
-
-        organization.FlexibleCollections = true;
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        // Force a vault sync for all owners and admins of the organization so that changes show immediately
+        // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
+        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, null);
+        await Task.WhenAll(orgUsers
+            .Where(ou => ou.UserId.HasValue &&
+                         ou.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+            .Select(ou => _pushNotificationService.PushSyncVaultAsync(ou.UserId.Value)));
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
