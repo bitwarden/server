@@ -96,7 +96,6 @@ public class DatabaseContext : DbContext
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
         eCache.Property(c => c.Id).ValueGeneratedNever();
-        eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
         eFolder.Property(c => c.Id).ValueGeneratedNever();
@@ -114,6 +113,8 @@ public class DatabaseContext : DbContext
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
+
+        eCache.HasIndex(c => c.ExpiresAtTime).IsClustered(false).IsDescending(false);
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
             Constants.DatabaseFieldProtectorPurpose);
