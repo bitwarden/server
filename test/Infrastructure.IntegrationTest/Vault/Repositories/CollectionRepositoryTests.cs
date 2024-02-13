@@ -27,7 +27,9 @@ public class CollectionRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            PlanType = PlanType.EnterpriseAnnually
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = "billing@email.com"
         });
 
         var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -87,7 +89,9 @@ public class CollectionRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            PlanType = PlanType.EnterpriseAnnually
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = "billing@email.com"
         });
 
         var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -174,7 +178,4 @@ public class CollectionRepositoryTests
             Assert.False(c3.HidePasswords);
         });
     }
-
-
-
 }
