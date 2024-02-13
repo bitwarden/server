@@ -108,10 +108,29 @@ public class EntityFrameworkCache : IDistributedCache
         using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var cache = dbContext.Cache.Find(key);
-        SetCache(cache, key, value, options);
-        dbContext.SaveChanges();
+        var insert = cache == null;
+        cache = SetCache(cache, key, value, options);
+        if (insert)
+        {
+            dbContext.Add(cache);
+        }
 
-        // TODO: Catch duplicate key exception on insert
+        try
+        {
+            dbContext.SaveChanges();
+        }
+        catch (DbUpdateException e)
+        {
+            if (IsDuplicateKeyException(e))
+            {
+                // There is a possibility that multiple requests can try to add the same item to the cache, in
+                // which case we receive a 'duplicate key' exception on the primary key column.
+            }
+            else
+            {
+                throw;
+            }
+        }
 
         ScanForExpiredItemsIfRequired();
     }
@@ -127,15 +146,34 @@ public class EntityFrameworkCache : IDistributedCache
         using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var cache = await dbContext.Cache.FindAsync(new object[] { key }, cancellationToken: token);
-        SetCache(cache, key, value, options);
-        await dbContext.SaveChangesAsync(token);
+        var insert = cache == null;
+        cache = SetCache(cache, key, value, options);
+        if (insert)
+        {
+            await dbContext.AddAsync(cache, token);
+        }
 
-        // TODO: Catch duplicate key exception on insert
+        try
+        {
+            await dbContext.SaveChangesAsync(token);
+        }
+        catch (DbUpdateException e)
+        {
+            if (IsDuplicateKeyException(e))
+            {
+                // There is a possibility that multiple requests can try to add the same item to the cache, in
+                // which case we receive a 'duplicate key' exception on the primary key column.
+            }
+            else
+            {
+                throw;
+            }
+        }
 
         ScanForExpiredItemsIfRequired();
     }
 
-    private void SetCache(Cache cache, string key, byte[] value, DistributedCacheEntryOptions options)
+    private Cache SetCache(Cache cache, string key, byte[] value, DistributedCacheEntryOptions options)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -190,6 +228,8 @@ public class EntityFrameworkCache : IDistributedCache
         {
             throw new InvalidOperationException("Either absolute or sliding expiration needs to be provided.");
         }
+
+        return cache;
     }
 
     private bool UpdateCacheExpiration(Cache cache)
@@ -197,7 +237,7 @@ public class EntityFrameworkCache : IDistributedCache
         var utcNow = DateTime.UtcNow;
         if (cache.SlidingExpirationInSeconds.HasValue && (cache.AbsoluteExpiration.HasValue || cache.AbsoluteExpiration != cache.ExpiresAtTime))
         {
-            if ((cache.AbsoluteExpiration.Value - utcNow).TotalSeconds <= cache.SlidingExpirationInSeconds)
+            if (cache.AbsoluteExpiration.HasValue && (cache.AbsoluteExpiration.Value - utcNow).TotalSeconds <= cache.SlidingExpirationInSeconds)
             {
                 cache.ExpiresAtTime = cache.AbsoluteExpiration.Value;
             }
@@ -234,5 +274,21 @@ public class EntityFrameworkCache : IDistributedCache
     private DatabaseContext GetDatabaseContext(IServiceScope serviceScope)
     {
         return serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
+    }
+
+    private static bool IsDuplicateKeyException(DbUpdateException e)
+    {
+        // MySQL
+        if (e.InnerException is MySqlConnector.MySqlException myEx)
+        {
+            return myEx.ErrorCode == MySqlConnector.MySqlErrorCode.DuplicateKeyEntry;
+        }
+        // SQL Server
+        else if (e.InnerException is Microsoft.Data.SqlClient.SqlException msEx)
+        {
+            return msEx.Errors != null &&
+                msEx.Errors.Cast<Microsoft.Data.SqlClient.SqlError>().Any(error => error.Number == 2627);
+        }
+        return false;
     }
 }
