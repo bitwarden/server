@@ -122,6 +122,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<ICollection<CipherOrganizationDetails>> GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<CipherOrganizationDetails>(
+                $"[{Schema}].[CipherOrganizationDetails_ReadUnassignedByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
     {
         cipher.SetNewId();

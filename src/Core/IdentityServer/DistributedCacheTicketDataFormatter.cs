@@ -1,32 +1,32 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.IdentityServer;
 
 public class DistributedCacheTicketDataFormatter : ISecureDataFormat<AuthenticationTicket>
 {
-    private readonly IHttpContextAccessor _httpContext;
-    private readonly string _name;
+    private const string CacheKeyPrefix = "ticket-data";
 
-    public DistributedCacheTicketDataFormatter(IHttpContextAccessor httpContext, string name)
+    private readonly IDistributedCache _distributedCache;
+    private readonly IDataProtector _dataProtector;
+    private readonly string _prefix;
+
+    public DistributedCacheTicketDataFormatter(
+        IDistributedCache distributedCache,
+        IDataProtectionProvider dataProtectionProvider,
+        string name)
     {
-        _httpContext = httpContext;
-        _name = name;
+        _distributedCache = distributedCache;
+        _dataProtector = dataProtectionProvider.CreateProtector(CacheKeyPrefix, name);
+        _prefix = $"{CacheKeyPrefix}-{name}";
     }
-
-    private string CacheKeyPrefix => "ticket-data";
-    private IDistributedCache Cache => _httpContext.HttpContext.RequestServices.GetRequiredService<IDistributedCache>();
-    private IDataProtector Protector => _httpContext.HttpContext.RequestServices.GetRequiredService<IDataProtectionProvider>()
-        .CreateProtector(CacheKeyPrefix, _name);
 
     public string Protect(AuthenticationTicket data) => Protect(data, null);
     public string Protect(AuthenticationTicket data, string purpose)
     {
         var key = Guid.NewGuid().ToString();
-        var cacheKey = $"{CacheKeyPrefix}-{_name}-{purpose}-{key}";
+        var cacheKey = $"{_prefix}-{purpose}-{key}";
 
         var expiresUtc = data.Properties.ExpiresUtc ??
             DateTimeOffset.UtcNow.AddMinutes(15);
@@ -35,9 +35,9 @@ public class DistributedCacheTicketDataFormatter : ISecureDataFormat<Authenticat
         options.SetAbsoluteExpiration(expiresUtc);
 
         var ticket = TicketSerializer.Default.Serialize(data);
-        Cache.Set(cacheKey, ticket, options);
+        _distributedCache.Set(cacheKey, ticket, options);
 
-        return Protector.Protect(key);
+        return _dataProtector.Protect(key);
     }
 
     public AuthenticationTicket Unprotect(string protectedText) => Unprotect(protectedText, null);
@@ -49,9 +49,9 @@ public class DistributedCacheTicketDataFormatter : ISecureDataFormat<Authenticat
         }
 
         // Decrypt the key and retrieve the data from the cache.
-        var key = Protector.Unprotect(protectedText);
-        var cacheKey = $"{CacheKeyPrefix}-{_name}-{purpose}-{key}";
-        var ticket = Cache.Get(cacheKey);
+        var key = _dataProtector.Unprotect(protectedText);
+        var cacheKey = $"{_prefix}-{purpose}-{key}";
+        var ticket = _distributedCache.Get(cacheKey);
 
         if (ticket == null)
         {
