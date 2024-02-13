@@ -13,20 +13,19 @@ public class EntityFrameworkCache : IDistributedCache
     private readonly Action _deleteExpiredCachedItemsDelegate;
     private readonly TimeSpan _defaultSlidingExpiration = TimeSpan.FromMinutes(20);
     private readonly object _mutex = new();
-
-    public IServiceScopeFactory ServiceScopeFactory { get; }
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     public EntityFrameworkCache(IServiceScopeFactory serviceScopeFactory)
     {
         _deleteExpiredCachedItemsDelegate = DeleteExpiredCacheItems;
-        ServiceScopeFactory = serviceScopeFactory;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     public byte[] Get(string key)
     {
         ArgumentNullException.ThrowIfNull(key);
 
-        using var scope = ServiceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var cache = dbContext.Cache
             .Where(c => c.Id == key && DateTime.UtcNow <= c.ExpiresAtTime)
@@ -51,7 +50,7 @@ public class EntityFrameworkCache : IDistributedCache
         ArgumentNullException.ThrowIfNull(key);
         token.ThrowIfCancellationRequested();
 
-        using var scope = ServiceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var cache = await dbContext.Cache
             .Where(c => c.Id == key && DateTime.UtcNow <= c.ExpiresAtTime)
@@ -79,7 +78,7 @@ public class EntityFrameworkCache : IDistributedCache
     {
         ArgumentNullException.ThrowIfNull(key);
 
-        using var scope = ServiceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         GetDatabaseContext(scope).Cache
             .Where(c => c.Id == key)
             .ExecuteDelete();
@@ -92,7 +91,7 @@ public class EntityFrameworkCache : IDistributedCache
         ArgumentNullException.ThrowIfNull(key);
 
         token.ThrowIfCancellationRequested();
-        using var scope = ServiceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         await GetDatabaseContext(scope).Cache
             .Where(c => c.Id == key)
             .ExecuteDeleteAsync(cancellationToken: token);
@@ -106,7 +105,7 @@ public class EntityFrameworkCache : IDistributedCache
         ArgumentNullException.ThrowIfNull(value);
         ArgumentNullException.ThrowIfNull(options);
 
-        using var scope = ServiceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var cache = dbContext.Cache.Find(key);
         SetCache(cache, key, value, options);
@@ -125,7 +124,7 @@ public class EntityFrameworkCache : IDistributedCache
 
         token.ThrowIfCancellationRequested();
 
-        using var scope = ServiceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var cache = await dbContext.Cache.FindAsync(new object[] { key }, cancellationToken: token);
         SetCache(cache, key, value, options);
@@ -226,7 +225,7 @@ public class EntityFrameworkCache : IDistributedCache
 
     private void DeleteExpiredCacheItems()
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         GetDatabaseContext(scope).Cache
             .Where(c => DateTime.UtcNow > c.ExpiresAtTime)
             .ExecuteDelete();
