@@ -127,6 +127,12 @@ public class CipherDetailsResponseModel : CipherResponseModel
         CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? new List<Guid>();
     }
 
+    public CipherDetailsResponseModel(CipherDetailsWithCollections cipher, GlobalSettings globalSettings, string obj = "cipherDetails")
+        : base(cipher, globalSettings, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+    }
+
     public IEnumerable<Guid> CollectionIds { get; set; }
 }
 
@@ -144,6 +150,13 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         {
             CollectionIds = new Guid[] { };
         }
+    }
+
+    public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
+        GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMiniDetails")
+        : base(cipher, globalSettings, orgUseTotp, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
     }
 
     public IEnumerable<Guid> CollectionIds { get; set; }
