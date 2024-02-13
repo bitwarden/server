@@ -1,7 +1,6 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Models.Api;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+﻿using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
@@ -9,31 +8,33 @@ public class PotentialGranteeResponseModel : ResponseModel
 {
     private const string _objectName = "potentialGrantee";
 
-    public PotentialGranteeResponseModel(Group group)
+    public PotentialGranteeResponseModel(GroupGrantee grantee)
         : base(_objectName)
     {
-        if (group == null)
+        if (grantee == null)
         {
-            throw new ArgumentNullException(nameof(group));
+            throw new ArgumentNullException(nameof(grantee));
         }
 
-        Id = group.Id;
-        Name = group.Name;
         Type = "group";
+        Id = grantee.GroupId;
+        Name = grantee.Name;
+        CurrentUserInGroup = grantee.CurrentUserInGroup;
     }
 
-    public PotentialGranteeResponseModel(OrganizationUserUserDetails user)
+    public PotentialGranteeResponseModel(UserGrantee grantee)
         : base(_objectName)
     {
-        if (user == null)
+        if (grantee == null)
         {
-            throw new ArgumentNullException(nameof(user));
+            throw new ArgumentNullException(nameof(grantee));
         }
 
-        Id = user.Id;
-        Name = user.Name;
-        Email = user.Email;
         Type = "user";
+        Id = grantee.OrganizationUserId;
+        Name = grantee.Name;
+        Email = grantee.Email;
+        CurrentUser = grantee.CurrentUser;
     }
 
     public PotentialGranteeResponseModel(ServiceAccount serviceAccount)
@@ -67,9 +68,9 @@ public class PotentialGranteeResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
-
     public string Name { get; set; }
-
     public string Type { get; set; }
     public string Email { get; set; }
+    public bool CurrentUserInGroup { get; set; }
+    public bool CurrentUser { get; set; }
 }

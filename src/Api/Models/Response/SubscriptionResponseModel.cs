@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
@@ -19,7 +18,6 @@ public class SubscriptionResponseModel : ResponseModel
         MaxStorageGb = user.MaxStorageGb;
         License = license;
         Expiration = License.Expires;
-        UsingInAppPurchase = subscription.UsingInAppPurchase;
     }
 
     public SubscriptionResponseModel(User user, UserLicense license = null)
@@ -43,7 +41,22 @@ public class SubscriptionResponseModel : ResponseModel
     public BillingSubscription Subscription { get; set; }
     public UserLicense License { get; set; }
     public DateTime? Expiration { get; set; }
-    public bool UsingInAppPurchase { get; set; }
+}
+
+public class BillingCustomerDiscount
+{
+    public BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
+    {
+        Id = discount.Id;
+        Active = discount.Active;
+        PercentOff = discount.PercentOff;
+        AppliesTo = discount.AppliesTo;
+    }
+
+    public string Id { get; }
+    public bool Active { get; }
+    public decimal? PercentOff { get; }
+    public List<string> AppliesTo { get; }
 }
 
 public class BillingSubscription
@@ -78,22 +91,22 @@ public class BillingSubscription
     {
         public BillingSubscriptionItem(SubscriptionInfo.BillingSubscription.BillingSubscriptionItem item)
         {
+            ProductId = item.ProductId;
             Name = item.Name;
             Amount = item.Amount;
             Interval = item.Interval;
             Quantity = item.Quantity;
             SponsoredSubscriptionItem = item.SponsoredSubscriptionItem;
             AddonSubscriptionItem = item.AddonSubscriptionItem;
-            BitwardenProduct = item.BitwardenProduct;
         }
 
+        public string ProductId { get; set; }
         public string Name { get; set; }
         public decimal Amount { get; set; }
         public int Quantity { get; set; }
         public string Interval { get; set; }
         public bool SponsoredSubscriptionItem { get; set; }
         public bool AddonSubscriptionItem { get; set; }
-        public BitwardenProductType BitwardenProduct { get; set; }
     }
 }
 

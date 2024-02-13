@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -32,7 +33,7 @@ public class CreateSponsorshipCommand : ICreateSponsorshipCommand
         var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
         if (requiredSponsoringProductType == null ||
             sponsoringOrg == null ||
-            StaticStore.GetPasswordManagerPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+            StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
         {
             throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
         }

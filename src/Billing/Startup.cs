@@ -1,4 +1,6 @@
 ﻿using System.Globalization;
+using Bit.Billing.Services;
+using Bit.Billing.Services.Implementations;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -41,11 +43,11 @@ public class Startup
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 
-        // PayPal Client
-        services.AddSingleton<Utilities.PayPalIpnClient>();
-
         // BitPay Client
         services.AddSingleton<BitPayClient>();
+
+        // PayPal IPN Client
+        services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -80,6 +82,9 @@ public class Startup
 
         // Set up HttpClients
         services.AddHttpClient("FreshdeskApi");
+
+        services.AddScoped<IStripeFacade, StripeFacade>();
+        services.AddScoped<IStripeEventService, StripeEventService>();
     }
 
     public void Configure(

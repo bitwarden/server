@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
@@ -69,7 +70,6 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
-        SecretsManagerBeta = org.SecretsManagerBeta;
     }
 
     public BillingInfo BillingInfo { get; set; }
@@ -149,8 +149,6 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmServiceAccounts { get; set; }
     [Display(Name = "Max Autoscale Service Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
-    [Display(Name = "Secrets Manager Beta")]
-    public bool SecretsManagerBeta { get; set; }
 
     /**
      * Creates a Plan[] object for use in Javascript
@@ -158,11 +156,12 @@ public class OrganizationEditModel : OrganizationViewModel
      * Add mappings for individual properties as you need them
      */
     public IEnumerable<Dictionary<string, object>> GetPlansHelper() =>
-        StaticStore.SecretManagerPlans.Select(p =>
-            new Dictionary<string, object>
+        StaticStore.Plans
+            .Where(p => p.SupportsSecretsManager)
+            .Select(p => new Dictionary<string, object>
             {
                 { "type", p.Type },
-                { "baseServiceAccount", p.BaseServiceAccount }
+                { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
             });
 
     public Organization CreateOrganization(Provider provider)
@@ -208,7 +207,6 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxAutoscaleSmSeats = MaxAutoscaleSmSeats;
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
-        existingOrganization.SecretsManagerBeta = SecretsManagerBeta;
         return existingOrganization;
     }
 }

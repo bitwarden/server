@@ -2,8 +2,11 @@
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Providers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
@@ -47,6 +50,9 @@ public class OrganizationsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
+    private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -70,7 +76,10 @@ public class OrganizationsController : Controller
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
         IProjectRepository projectRepository,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
+        IRemovePaymentMethodCommand removePaymentMethodCommand)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -94,6 +103,9 @@ public class OrganizationsController : Controller
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
+        _providerOrganizationRepository = providerOrganizationRepository;
+        _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
+        _removePaymentMethodCommand = removePaymentMethodCommand;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -201,9 +213,7 @@ public class OrganizationsController : Controller
         var organization = await GetOrganization(id, model);
 
         if (organization.UseSecretsManager &&
-            !organization.SecretsManagerBeta
-            && StaticStore.GetSecretsManagerPlan(organization.PlanType) == null
-            )
+            !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
         {
             throw new BadRequestException("Plan does not support Secrets Manager");
         }
@@ -215,6 +225,7 @@ public class OrganizationsController : Controller
             EventRaisedByUser = _userService.GetUserName(User),
             SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
         });
+
         return RedirectToAction("Edit", new { id });
     }
 
@@ -285,6 +296,38 @@ public class OrganizationsController : Controller
 
         return Json(null);
     }
+
+    [HttpPost]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> UnlinkOrganizationFromProviderAsync(Guid id)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization is null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        var provider = await _providerRepository.GetByOrganizationIdAsync(id);
+        if (provider is null)
+        {
+            return RedirectToAction("Edit", new { id });
+        }
+
+        var providerOrganization = await _providerOrganizationRepository.GetByOrganizationId(id);
+        if (providerOrganization is null)
+        {
+            return RedirectToAction("Edit", new { id });
+        }
+
+        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(
+            provider,
+            providerOrganization,
+            organization);
+
+        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+
+        return Json(null);
+    }
     private async Task<Organization> GetOrganization(Guid id, OrganizationEditModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
@@ -319,7 +362,6 @@ public class OrganizationsController : Controller
             organization.UseTotp = model.UseTotp;
             organization.UsersGetPremium = model.UsersGetPremium;
             organization.UseSecretsManager = model.UseSecretsManager;
-            organization.SecretsManagerBeta = model.SecretsManagerBeta;
 
             //secrets
             organization.SmSeats = model.SmSeats;

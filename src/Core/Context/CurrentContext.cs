@@ -1,7 +1,10 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -321,27 +324,16 @@ public class CurrentContext : ICurrentContext
                     && (o.Permissions?.AccessReports ?? false)) ?? false);
     }
 
-    public async Task<bool> CreateNewCollections(Guid orgId)
-    {
-        return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.CreateNewCollections ?? false)) ?? false);
-    }
-
     public async Task<bool> EditAnyCollection(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
     }
 
-    public async Task<bool> DeleteAnyCollection(Guid orgId)
-    {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.DeleteAnyCollection ?? false)) ?? false);
-    }
-
     public async Task<bool> ViewAllCollections(Guid orgId)
     {
-        return await EditAnyCollection(orgId) || await DeleteAnyCollection(orgId);
+        var org = GetOrganization(orgId);
+        return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
     }
 
     public async Task<bool> EditAssignedCollections(Guid orgId)
@@ -358,9 +350,16 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewAssignedCollections(Guid orgId)
     {
-        return await CreateNewCollections(orgId) // Required to display the existing collections under which the new collection can be nested
-               || await EditAssignedCollections(orgId)
-               || await DeleteAssignedCollections(orgId);
+        /*
+         * Required to display the existing collections under which the new collection can be nested.
+         * Owner, Admin, Manager, and Provider checks are handled via the EditAssigned/DeleteAssigned context calls.
+         * This entire method will be moved to the CollectionAuthorizationHandler in the future
+         */
+
+        var org = GetOrganization(orgId);
+        return await EditAssignedCollections(orgId)
+               || await DeleteAssignedCollections(orgId)
+               || (org != null && org.Permissions.CreateNewCollections);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
@@ -490,6 +489,10 @@ public class CurrentContext : ICurrentContext
     {
         if (Organizations == null)
         {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
             var userOrgs = await organizationUserRepository.GetManyDetailsByUserAsync(userId);
             Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
                 .Select(ou => new CurrentContextOrganization(ou)).ToList();
@@ -502,11 +505,20 @@ public class CurrentContext : ICurrentContext
     {
         if (Providers == null)
         {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
             var userProviders = await providerUserRepository.GetManyByUserAsync(userId);
             Providers = userProviders.Where(ou => ou.Status == ProviderUserStatusType.Confirmed)
                 .Select(ou => new CurrentContextProvider(ou)).ToList();
         }
         return Providers;
+    }
+
+    public CurrentContextOrganization GetOrganization(Guid orgId)
+    {
+        return Organizations?.Find(o => o.Id == orgId);
     }
 
     private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)

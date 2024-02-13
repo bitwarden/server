@@ -5,7 +5,7 @@ using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -56,12 +56,16 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task ListByOrganization_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task ListByOrganization_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
@@ -71,7 +75,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task ListByOrganization_UserWithoutPermission_EmptyList()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -102,12 +106,16 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Create_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Create_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
@@ -134,7 +142,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Create_Success(PermissionType permissionType)
     {
-        var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
+        var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
         var orgUserId = adminOrgUser.Id;
         var currentUserId = adminOrgUser.UserId!.Value;
@@ -178,12 +186,16 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Update_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Update_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
         var initialProject = await _projectRepository.CreateAsync(new Project
@@ -231,7 +243,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Update_NonExistingProject_NotFound()
     {
-        await _organizationHelper.Initialize(true, true);
+        await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var request = new ProjectUpdateRequestModel
@@ -248,7 +260,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Update_MissingAccessPolicy_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -270,12 +282,16 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Get_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Get_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
@@ -295,7 +311,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Get_MissingAccessPolicy_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -312,7 +328,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Get_NonExistingProject_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -346,12 +362,16 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Delete_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Delete_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
         var projectIds = await CreateProjectsAsync(org.Id);
@@ -363,7 +383,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Delete_MissingAccessPolicy_AccessDenied()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -417,7 +437,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     private async Task<(List<Guid>, Organization)> SetupProjectsWithAccessAsync(PermissionType permissionType,
         int projectsToCreate = 3)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
         var projectIds = await CreateProjectsAsync(org.Id, projectsToCreate);
 
@@ -446,7 +466,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
     private async Task<Project> SetupProjectWithAccessAsync(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var initialProject = await _projectRepository.CreateAsync(new Project

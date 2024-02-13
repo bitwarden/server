@@ -1,3 +1,5 @@
+@inject IWebHostEnvironment HostingEnvironment
+@using Bit.Admin.Utilities
 @model OrganizationEditModel
 
 <script>
@@ -15,10 +17,11 @@
                 return;
             }
             if (gateway.value === '@((byte)GatewayType.Stripe)') {
-                window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
+                const url = `@(HostingEnvironment.GetStripeUrl())/customers/${customerId.value}/`;
+                window.open(url, '_blank');
             } else if (gateway.value === '@((byte)GatewayType.Braintree)') {
-                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/'
-                    + customerId.value, '_blank');
+                const url = `@(HostingEnvironment.GetBraintreeMerchantUrl())/@Model.BraintreeMerchantId/${customerId.value}`;
+                window.open(url, '_blank');
             }
         });
         document.getElementById('gateway-subscription-link')?.addEventListener('click', () => {
@@ -28,10 +31,11 @@
                 return;
             }
             if (gateway.value === '@((byte)GatewayType.Stripe)') {
-                window.open('https://dashboard.stripe.com/subscriptions/' + subId.value, '_blank');
+                const url = `@(HostingEnvironment.GetStripeUrl())/subscriptions/${subId.value}/`;
+                window.open(url, '_blank');
             } else if (gateway.value === '@((byte)GatewayType.Braintree)') {
-                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
-                    'subscriptions/' + subId.value, '_blank');
+                const url = `@(HostingEnvironment.GetBraintreeMerchantUrl())/@Model.BraintreeMerchantId/subscriptions/${subId.value}`;
+                window.open(url, '_blank');
             }
         });
         document.getElementById('@(nameof(Model.UseSecretsManager))').addEventListener('change', (event) => {
@@ -42,30 +46,19 @@
                 return;
             }
 
-            // SM beta requires SM access
-            document.getElementById('@(nameof(Model.SecretsManagerBeta))').checked = false;
             clearSecretsManagerConfiguration();
-        });
-
-        document.getElementById('@(nameof(Model.SecretsManagerBeta))').addEventListener('change', (event) => {
-            document.getElementById('organization-secrets-configuration').hidden = event.target.checked;
-
-            if (event.target.checked) {
-                // SM beta requires SM access
-                document.getElementById('@(nameof(Model.UseSecretsManager))').checked = true;
-                // SM Beta orgs do not have subscription limits
-                clearSecretsManagerConfiguration();
-                return;
-            }
-
-            setInitialSecretsManagerConfiguration();
         });
     })();
 
     function togglePlanFeatures(planType) {
         switch(planType) {
+            case '@((byte)PlanType.TeamsMonthly2019)':
+            case '@((byte)PlanType.TeamsAnnually2019)':
+            case '@((byte)PlanType.TeamsMonthly2020)':
+            case '@((byte)PlanType.TeamsAnnually2020)':
             case '@((byte)PlanType.TeamsMonthly)':
             case '@((byte)PlanType.TeamsAnnually)':
+            case '@((byte)PlanType.TeamsStarter)':
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
                 document.getElementById('@(nameof(Model.UseSso))').checked = false;
                 document.getElementById('@(nameof(Model.UseGroups))').checked = true;
@@ -81,6 +74,10 @@
                 document.getElementById('@(nameof(Model.UseScim))').checked = false;
             break;
 
+            case '@((byte)PlanType.EnterpriseMonthly2019)':
+            case '@((byte)PlanType.EnterpriseAnnually2019)':
+            case '@((byte)PlanType.EnterpriseMonthly2020)':
+            case '@((byte)PlanType.EnterpriseAnnually2020)':
             case '@((byte)PlanType.EnterpriseMonthly)':
             case '@((byte)PlanType.EnterpriseAnnually)':
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
@@ -98,6 +95,26 @@
                 document.getElementById('@(nameof(Model.UseScim))').checked = true;
             break;
         }
+    }
+
+    function unlinkProvider(id) {
+        if (confirm('Are you sure you want to unlink this organization from its provider?')) {
+            $.ajax({
+                type: "POST",
+                url: `@Url.Action("UnlinkOrganizationFromProvider", "Organizations")?id=${id}`,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    alert("Successfully unlinked provider");
+                    window.location.href = `@Url.Action("Edit", "Organizations")?id=${id}`;
+                },
+                error: function (response) {
+                    alert("Error!");
+                }
+            });
+        }
+        return false;
     }
 
     /***

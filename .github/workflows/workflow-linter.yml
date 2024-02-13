@@ -1,5 +1,5 @@
 ---
-name: Workflow Linter
+name: Workflow linter
 
 on:
   pull_request:
@@ -8,4 +8,5 @@ on:
 
 jobs:
   call-workflow:
-    uses: bitwarden/gh-actions/.github/workflows/workflow-linter.yml@f096207b7a2f31723165aee6ad03e91716686e78
+    name: Lint
+    uses: bitwarden/gh-actions/.github/workflows/workflow-linter.yml@main

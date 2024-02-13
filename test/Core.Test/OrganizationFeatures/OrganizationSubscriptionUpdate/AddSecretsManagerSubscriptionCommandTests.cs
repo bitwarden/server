@@ -1,4 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -16,9 +19,18 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 public class AddSecretsManagerSubscriptionCommandTests
 {
     [Theory]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public async Task SignUpAsync_ReturnsSuccessAndClientSecret_WhenOrganizationAndPlanExist(PlanType planType,
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
@@ -29,7 +41,7 @@ public class AddSecretsManagerSubscriptionCommandTests
     {
         organization.PlanType = planType;
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
 
         await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
 
@@ -46,8 +58,8 @@ public class AddSecretsManagerSubscriptionCommandTests
         // TODO: call ReferenceEventService - see AC-1481
 
         sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(c =>
-            c.SmSeats == plan.BaseSeats + additionalSmSeats &&
-            c.SmServiceAccounts == plan.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts &&
+            c.SmSeats == plan.SecretsManager.BaseSeats + additionalSmSeats &&
+            c.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts &&
             c.UseSecretsManager == true));
     }
 
@@ -97,33 +109,34 @@ public class AddSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_ThrowsException_WhenOrganizationEnrolledInSmBeta(
-        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
-        Organization organization)
-    {
-        organization.UseSecretsManager = true;
-        organization.SecretsManagerBeta = true;
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
-
-        Assert.Contains("Organization is enrolled in Secrets Manager Beta", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task SignUpAsync_ThrowsException_WhenOrganizationAlreadyHasSecretsManager(
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         Organization organization)
     {
         organization.UseSecretsManager = true;
-        organization.SecretsManagerBeta = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
 
         Assert.Contains("Organization already uses Secrets Manager", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_ThrowsException_WhenOrganizationIsManagedByMSP(
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization,
+        Provider provider)
+    {
+        organization.UseSecretsManager = false;
+        provider.Type = ProviderType.Msp;
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
+
+        Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 

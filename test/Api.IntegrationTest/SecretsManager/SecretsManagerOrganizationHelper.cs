@@ -1,5 +1,6 @@
 ﻿using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -25,13 +26,22 @@ public class SecretsManagerOrganizationHelper
         _ownerEmail = ownerEmail;
     }
 
-    public async Task<(Organization organization, OrganizationUser owner)> Initialize(bool useSecrets, bool ownerAccessSecrets)
+    public async Task<(Organization organization, OrganizationUser owner)> Initialize(bool useSecrets, bool ownerAccessSecrets, bool organizationEnabled)
     {
         (_organization, _owner) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: _ownerEmail, billingEmail: _ownerEmail);
 
-        if (useSecrets)
+        if (useSecrets || !organizationEnabled)
         {
-            _organization.UseSecretsManager = true;
+            if (useSecrets)
+            {
+                _organization.UseSecretsManager = true;
+            }
+
+            if (!organizationEnabled)
+            {
+                _organization.Enabled = false;
+            }
+
             await _organizationRepository.ReplaceAsync(_organization);
         }
 
@@ -42,6 +52,15 @@ public class SecretsManagerOrganizationHelper
         }
 
         return (_organization, _owner);
+    }
+
+    public async Task<Organization> CreateSmOrganizationAsync()
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var (organization, owner) =
+            await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: email, billingEmail: email);
+        return organization;
     }
 
     public async Task<(string email, OrganizationUser orgUser)> CreateNewUser(OrganizationUserType userType, bool accessSecrets)

@@ -1,16 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base",
-    ":combinePatchMinorReleases",
-    ":dependencyDashboard",
-    ":maintainLockFilesWeekly",
-    ":pinAllExceptPeerDependencies",
-    ":prConcurrentLimit10",
-    ":rebaseStalePrs",
-    "schedule:weekends",
-    ":separateMajorReleases"
-  ],
+  "extends": ["github>bitwarden/renovate-config"],
   "enabledManagers": [
     "dockerfile",
     "docker-compose",
@@ -35,19 +25,171 @@
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
-      "groupName": "npm minor",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchManagers": ["github-actions", "dockerfile", "docker-compose"],
+      "commitMessagePrefix": "[deps] DevOps:"
     },
     {
-      "groupName": "nuget minor",
-      "matchManagers": ["nuget"],
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchPackageNames": ["DnsClient", "Quartz"],
+      "description": "Admin Console owned dependencies",
+      "commitMessagePrefix": "[deps] AC:",
+      "reviewers": ["team:team-admin-console-dev"]
+    },
+    {
+      "matchFileNames": ["src/Admin/package.json", "src/Sso/package.json"],
+      "description": "Admin & SSO npm packages",
+      "commitMessagePrefix": "[deps] Auth:",
+      "reviewers": ["team:team-auth-dev"]
+    },
+    {
+      "matchPackageNames": [
+        "AspNetCoreRateLimit",
+        "AspNetCoreRateLimit.Redis",
+        "Azure.Extensions.AspNetCore.DataProtection.Blobs",
+        "Azure.Messaging.EventGrid",
+        "Azure.Messaging.ServiceBus",
+        "Azure.Storage.Blobs",
+        "Azure.Storage.Queues",
+        "Fido2.AspNet",
+        "Duende.IdentityServer",
+        "Microsoft.Azure.Cosmos",
+        "Microsoft.Azure.Cosmos.Table",
+        "Microsoft.Extensions.Caching.StackExchangeRedis",
+        "Microsoft.Extensions.Identity.Stores",
+        "Otp.NET",
+        "Sustainsys.Saml2.AspNetCore2",
+        "YubicoDotNetClient"
+      ],
+      "description": "Auth owned dependencies",
+      "commitMessagePrefix": "[deps] Auth:",
+      "reviewers": ["team:team-auth-dev"]
+    },
+    {
+      "matchPackageNames": [
+        "AutoFixture.AutoNSubstitute",
+        "AutoFixture.Xunit2",
+        "BenchmarkDotNet",
+        "BitPay.Light",
+        "Braintree",
+        "coverlet.collector",
+        "FluentAssertions",
+        "Kralizek.AutoFixture.Extensions.MockHttp",
+        "Microsoft.AspNetCore.Mvc.Testing",
+        "Microsoft.Extensions.Logging",
+        "Microsoft.Extensions.Logging.Console",
+        "Newtonsoft.Json",
+        "NSubstitute",
+        "Sentry.Serilog",
+        "Serilog.AspNetCore",
+        "Serilog.Extensions.Logging",
+        "Serilog.Extensions.Logging.File",
+        "Serilog.Sinks.AzureCosmosDB",
+        "Serilog.Sinks.SyslogMessages",
+        "Stripe.net",
+        "Swashbuckle.AspNetCore",
+        "Swashbuckle.AspNetCore.SwaggerGen",
+        "xunit",
+        "xunit.runner.visualstudio"
+      ],
+      "description": "Billing owned dependencies",
+      "commitMessagePrefix": "[deps] Billing:",
+      "reviewers": ["team:team-billing-dev"]
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.Extensions.Logging"],
+      "groupName": "Microsoft.Extensions.Logging",
+      "description": "Group Microsoft.Extensions.Logging to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackageNames": [
+        "Dapper",
+        "dbup-sqlserver",
+        "dotnet-ef",
+        "linq2db.EntityFrameworkCore",
+        "Microsoft.Data.SqlClient",
+        "Microsoft.EntityFrameworkCore.Design",
+        "Microsoft.EntityFrameworkCore.InMemory",
+        "Microsoft.EntityFrameworkCore.Relational",
+        "Microsoft.EntityFrameworkCore.Sqlite",
+        "Microsoft.EntityFrameworkCore.SqlServer",
+        "Npgsql.EntityFrameworkCore.PostgreSQL",
+        "Pomelo.EntityFrameworkCore.MySql"
+      ],
+      "description": "DbOps owned dependencies",
+      "commitMessagePrefix": "[deps] DbOps:",
+      "reviewers": ["team:dept-dbops"]
+    },
+    {
+      "matchPackageNames": ["CommandDotNet", "YamlDotNet"],
+      "description": "DevOps owned dependencies",
+      "commitMessagePrefix": "[deps] DevOps:",
+      "reviewers": ["team:dept-devops"]
+    },
+    {
+      "matchPackageNames": [
+        "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "Microsoft.AspNetCore.Http"
+      ],
+      "description": "Platform owned dependencies",
+      "commitMessagePrefix": "[deps] Platform:",
+      "reviewers": ["team:team-platform-dev"]
+    },
+    {
+      "matchPackagePatterns": ["EntityFrameworkCore", "^dotnet-ef"],
+      "groupName": "EntityFrameworkCore",
+      "description": "Group EntityFrameworkCore to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackageNames": [
+        "AutoMapper.Extensions.Microsoft.DependencyInjection",
+        "AWSSDK.SimpleEmail",
+        "AWSSDK.SQS",
+        "Handlebars.Net",
+        "LaunchDarkly.ServerSdk",
+        "MailKit",
+        "Microsoft.AspNetCore.SignalR.Protocols.MessagePack",
+        "Microsoft.AspNetCore.SignalR.StackExchangeRedis",
+        "Microsoft.Azure.NotificationHubs",
+        "Microsoft.Extensions.Configuration.EnvironmentVariables",
+        "Microsoft.Extensions.Configuration.UserSecrets",
+        "Microsoft.Extensions.Configuration",
+        "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "Microsoft.Extensions.DependencyInjection",
+        "SendGrid"
+      ],
+      "description": "Tools owned dependencies",
+      "commitMessagePrefix": "[deps] Tools:",
+      "reviewers": ["team:team-tools-dev"]
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.AspNetCore.SignalR"],
+      "groupName": "SignalR",
+      "description": "Group SignalR to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.Extensions.Configuration"],
+      "groupName": "Microsoft.Extensions.Configuration",
+      "description": "Group Microsoft.Extensions.Configuration to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.Extensions.DependencyInjection"],
+      "groupName": "Microsoft.Extensions.DependencyInjection",
+      "description": "Group Microsoft.Extensions.DependencyInjection to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackageNames": [
+        "AngleSharp",
+        "AspNetCore.HealthChecks.AzureServiceBus",
+        "AspNetCore.HealthChecks.AzureStorage",
+        "AspNetCore.HealthChecks.Network",
+        "AspNetCore.HealthChecks.Redis",
+        "AspNetCore.HealthChecks.SendGrid",
+        "AspNetCore.HealthChecks.SqlServer",
+        "AspNetCore.HealthChecks.Uris"
+      ],
+      "description": "Vault owned dependencies",
+      "commitMessagePrefix": "[deps] Vault:",
+      "reviewers": ["team:team-vault-dev"]
     }
   ],
-  "force": {
-    "constraints": {
-      "dotnet": "6.0.413"
-    }
-  }
+  "ignoreDeps": ["dotnet-sdk"]
 }
