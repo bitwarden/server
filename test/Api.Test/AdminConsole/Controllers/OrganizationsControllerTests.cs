@@ -377,14 +377,15 @@ public class OrganizationsControllerTests : IDisposable
     public async Task EnableCollectionEnhancements_Success(Organization organization)
     {
         organization.FlexibleCollections = false;
-        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin };
-        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner };
-        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User };
+        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin, Status = OrganizationUserStatusType.Confirmed };
+        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner, Status = OrganizationUserStatusType.Confirmed };
+        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User, Status = OrganizationUserStatusType.Confirmed };
         var invited = new OrganizationUser
         {
             UserId = null,
             Type = OrganizationUserType.Admin,
-            Email = "invited@example.com"
+            Email = "invited@example.com",
+            Status = OrganizationUserStatusType.Invited
         };
         var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
 
@@ -398,6 +399,7 @@ public class OrganizationsControllerTests : IDisposable
         await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(admin.UserId.Value);
         await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(owner.UserId.Value);
         await _pushNotificationService.DidNotReceive().PushSyncOrganizationsAsync(user.UserId.Value);
+        // Invited orgUser does not have a UserId we can use to assert here, but sut will throw if that null isn't handled
     }
 
     [Theory, AutoData]
