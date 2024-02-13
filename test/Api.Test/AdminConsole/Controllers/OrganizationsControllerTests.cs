@@ -395,9 +395,9 @@ public class OrganizationsControllerTests : IDisposable
         await _sut.EnableCollectionEnhancements(organization.Id);
 
         await _organizationEnableCollectionEnhancementsCommand.Received(1).EnableCollectionEnhancements(organization);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(admin.UserId.Value);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(owner.UserId.Value);
-        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(user.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(admin.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(owner.UserId.Value);
+        await _pushNotificationService.DidNotReceive().PushSyncOrganizationsAsync(user.UserId.Value);
     }
 
     [Theory, AutoData]
@@ -410,6 +410,6 @@ public class OrganizationsControllerTests : IDisposable
         await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
 
         await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
-        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncVaultAsync(Arg.Any<Guid>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncOrganizationsAsync(Arg.Any<Guid>());
     }
 }
