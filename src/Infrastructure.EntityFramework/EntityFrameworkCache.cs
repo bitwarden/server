@@ -197,7 +197,7 @@ public class EntityFrameworkCache : IDistributedCache
         var slidingExpiration = (long?)options.SlidingExpiration?.TotalSeconds;
 
         // calculate absolute expiration
-        DateTimeOffset? absoluteExpiration = null;
+        DateTime? absoluteExpiration = null;
         if (options.AbsoluteExpirationRelativeToNow.HasValue)
         {
             absoluteExpiration = utcNow.Add(options.AbsoluteExpirationRelativeToNow.Value);
@@ -209,7 +209,7 @@ public class EntityFrameworkCache : IDistributedCache
                 throw new InvalidOperationException("The absolute expiration value must be in the future.");
             }
 
-            absoluteExpiration = options.AbsoluteExpiration.Value;
+            absoluteExpiration = options.AbsoluteExpiration.Value.DateTime;
         }
 
         // set values on cache
@@ -288,6 +288,16 @@ public class EntityFrameworkCache : IDistributedCache
         {
             return msEx.Errors != null &&
                 msEx.Errors.Cast<Microsoft.Data.SqlClient.SqlError>().Any(error => error.Number == 2627);
+        }
+        // Postgres
+        else if (e.InnerException is Npgsql.PostgresException pgEx)
+        {
+            return pgEx.SqlState == "23505";
+        }
+        // Sqlite
+        else if (e.InnerException is Microsoft.Data.Sqlite.SqliteException liteEx)
+        {
+            return liteEx.SqliteErrorCode == 19 && liteEx.SqliteExtendedErrorCode == 1555;
         }
         return false;
     }
