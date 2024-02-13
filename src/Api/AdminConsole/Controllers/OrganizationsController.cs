@@ -899,8 +899,9 @@ public class OrganizationsController : Controller
         var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, null);
         await Task.WhenAll(orgUsers
             .Where(ou => ou.UserId.HasValue &&
+                         ou.Status == OrganizationUserStatusType.Confirmed &&
                          ou.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
-            .Select(ou => _pushNotificationService.PushSyncVaultAsync(ou.UserId.Value)));
+            .Select(ou => _pushNotificationService.PushSyncOrganizationsAsync(ou.UserId.Value)));
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
