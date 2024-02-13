@@ -28,6 +28,7 @@ public class DatabaseContext : DbContext
     public DbSet<UserServiceAccountAccessPolicy> UserServiceAccountAccessPolicy { get; set; }
     public DbSet<GroupServiceAccountAccessPolicy> GroupServiceAccountAccessPolicy { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
+    public DbSet<Cache> Cache { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
@@ -72,6 +73,7 @@ public class DatabaseContext : DbContext
 
         // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
         // Entity Framework code first database configurations.
+        var eCache = builder.Entity<Cache>();
         var eCipher = builder.Entity<Cipher>();
         var eCollection = builder.Entity<Collection>();
         var eCollectionCipher = builder.Entity<CollectionCipher>();
@@ -93,6 +95,7 @@ public class DatabaseContext : DbContext
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
+        eCache.Property(c => c.Id).ValueGeneratedNever();
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
@@ -129,6 +132,7 @@ public class DatabaseContext : DbContext
             //
         }
 
+        eCache.ToTable(nameof(Cache));
         eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
