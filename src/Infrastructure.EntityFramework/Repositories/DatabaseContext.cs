@@ -96,6 +96,7 @@ public class DatabaseContext : DbContext
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
         eCache.Property(c => c.Id).ValueGeneratedNever();
+        eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
         eFolder.Property(c => c.Id).ValueGeneratedNever();
