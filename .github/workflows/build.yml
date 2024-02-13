@@ -14,21 +14,6 @@ env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
 jobs:
-  cloc:
-    name: Count lines of code
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
-
-      - name: Install cloc
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install cloc
-
-      - name: Print lines of code
-        run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
-
   lint:
     name: Lint
     runs-on: ubuntu-22.04
@@ -529,7 +514,6 @@ jobs:
     if: always()
     runs-on: ubuntu-22.04
     needs:
-      - cloc
       - lint
       - build-artifacts
       - build-docker
@@ -544,7 +528,6 @@ jobs:
           || github.ref == 'refs/heads/rc'
           || github.ref == 'refs/heads/hotfix-rc'
         env:
-          CLOC_STATUS: ${{ needs.cloc.result }}
           LINT_STATUS: ${{ needs.lint.result }}
           TESTING_STATUS: ${{ needs.testing.result }}
           BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
@@ -554,9 +537,7 @@ jobs:
           TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.self-host-build.result }}
           TRIGGER_K8S_DEPLOY_STATUS: ${{ needs.trigger-k8s-deploy.result }}
         run: |
-          if [ "$CLOC_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$LINT_STATUS" = "failure" ]; then
+          if [ "$LINT_STATUS" = "failure" ]; then
               exit 1
           elif [ "$TESTING_STATUS" = "failure" ]; then
               exit 1

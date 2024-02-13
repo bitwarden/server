@@ -377,14 +377,15 @@ public class OrganizationsControllerTests : IDisposable
     public async Task EnableCollectionEnhancements_Success(Organization organization)
     {
         organization.FlexibleCollections = false;
-        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin };
-        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner };
-        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User };
+        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin, Status = OrganizationUserStatusType.Confirmed };
+        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner, Status = OrganizationUserStatusType.Confirmed };
+        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User, Status = OrganizationUserStatusType.Confirmed };
         var invited = new OrganizationUser
         {
             UserId = null,
             Type = OrganizationUserType.Admin,
-            Email = "invited@example.com"
+            Email = "invited@example.com",
+            Status = OrganizationUserStatusType.Invited
         };
         var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
 
@@ -395,9 +396,10 @@ public class OrganizationsControllerTests : IDisposable
         await _sut.EnableCollectionEnhancements(organization.Id);
 
         await _organizationEnableCollectionEnhancementsCommand.Received(1).EnableCollectionEnhancements(organization);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(admin.UserId.Value);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(owner.UserId.Value);
-        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(user.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(admin.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(owner.UserId.Value);
+        await _pushNotificationService.DidNotReceive().PushSyncOrganizationsAsync(user.UserId.Value);
+        // Invited orgUser does not have a UserId we can use to assert here, but sut will throw if that null isn't handled
     }
 
     [Theory, AutoData]
@@ -410,6 +412,6 @@ public class OrganizationsControllerTests : IDisposable
         await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
 
         await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
-        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncVaultAsync(Arg.Any<Guid>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncOrganizationsAsync(Arg.Any<Guid>());
     }
 }
