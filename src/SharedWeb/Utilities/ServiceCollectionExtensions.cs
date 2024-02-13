@@ -69,9 +69,10 @@ public static class ServiceCollectionExtensions
     public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings)
     {
         var (provider, connectionString) = GetDatabaseProvider(globalSettings);
+        services.SetupEntityFramework(connectionString, provider);
+
         if (provider != SupportedDatabaseProviders.SqlServer)
         {
-            services.SetupEntityFramework(connectionString, provider);
             services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
         }
         else
