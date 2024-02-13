@@ -195,7 +195,7 @@ public class Program
 
         migrator.MigrateMsSqlDatabaseWithRetries(log);
 
-        migrator.MigrateMsSqlDatabaseWithRetries(log, true, MigratorConstants.TransitionMigrationsFolderName);
+        migrator.MigrateMsSqlDatabaseWithRetries(log, true, false, MigratorConstants.TransitionMigrationsFolderName);
     }
 
     private static bool ValidateInstallation()
