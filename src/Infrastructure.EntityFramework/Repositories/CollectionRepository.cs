@@ -48,8 +48,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<CollectionAdminDetails> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships) => throw new NotImplementedException();
-
     public async Task CreateAsync(Core.Entities.Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
     {
         await CreateAsync(obj);
@@ -372,7 +370,95 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships) => throw new NotImplementedException();
+    public async Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(
+        Guid organizationId, Guid userId, bool includeAccessRelationships)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = CollectionAdminDetailsQuery.ByOrganizationId(organizationId, userId).Run(dbContext);
+            var collections = await query.ToListAsync();
+
+            if (!includeAccessRelationships)
+            {
+                return collections;
+            }
+
+            var groups = (from c in collections
+                          join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
+                          group cg by cg.CollectionId into g
+                          select g).ToList();
+
+            var users = (from c in collections
+                         join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
+                         group cu by cu.CollectionId into u
+                         select u).ToList();
+
+            foreach (var collection in collections)
+            {
+                collection.Groups = groups
+                    .FirstOrDefault(g => g.Key == collection.Id)?
+                    .Select(g => new CollectionAccessSelection
+                    {
+                        Id = g.GroupId,
+                        HidePasswords = g.HidePasswords,
+                        ReadOnly = g.ReadOnly,
+                        Manage = g.Manage,
+                    }).ToList() ?? new List<CollectionAccessSelection>();
+                collection.Users = users
+                    .FirstOrDefault(u => u.Key == collection.Id)?
+                    .Select(c => new CollectionAccessSelection
+                    {
+                        Id = c.OrganizationUserId,
+                        HidePasswords = c.HidePasswords,
+                        ReadOnly = c.ReadOnly,
+                        Manage = c.Manage
+                    }).ToList() ?? new List<CollectionAccessSelection>();
+            }
+
+            return collections;
+        }
+    }
+
+    public async Task<CollectionAdminDetails> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId,
+        bool includeAccessRelationships)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = CollectionAdminDetailsQuery.ByCollectionId(collectionId, userId).Run(dbContext);
+            var collectionDetails = await query.FirstOrDefaultAsync();
+
+            if (!includeAccessRelationships)
+            {
+                return collectionDetails;
+            }
+
+            var groupsQuery = from cg in dbContext.CollectionGroups
+                              where cg.CollectionId.Equals(collectionId)
+                              select new CollectionAccessSelection
+                              {
+                                  Id = cg.GroupId,
+                                  ReadOnly = cg.ReadOnly,
+                                  HidePasswords = cg.HidePasswords,
+                                  Manage = cg.Manage
+                              };
+            collectionDetails.Groups = await groupsQuery.ToListAsync();
+
+            var usersQuery = from cg in dbContext.CollectionUsers
+                             where cg.CollectionId.Equals(collectionId)
+                             select new CollectionAccessSelection
+                             {
+                                 Id = cg.OrganizationUserId,
+                                 ReadOnly = cg.ReadOnly,
+                                 HidePasswords = cg.HidePasswords,
+                                 Manage = cg.Manage
+                             };
+            collectionDetails.Users = await usersQuery.ToListAsync();
+
+            return collectionDetails;
+        }
+    }
 
     public async Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id)
     {
