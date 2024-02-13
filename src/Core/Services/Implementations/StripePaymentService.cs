@@ -776,7 +776,7 @@ public class StripePaymentService : IPaymentService
             CollectionMethod = "send_invoice",
             ProrationDate = prorationDate,
         };
-
+        var immediatelyInvoice = false;
         if (!invoiceNow && isPm5864DollarThresholdEnabled)
         {
             var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
@@ -789,7 +789,7 @@ public class StripePaymentService : IPaymentService
                 SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
             });
 
-            var immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 50000;
+            immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 50000;
 
             subUpdateOptions.BillingCycleAnchor = immediatelyInvoice
                 ? SubscriptionBillingCycleAnchor.Now
@@ -844,19 +844,21 @@ public class StripePaymentService : IPaymentService
             {
                 try
                 {
-                    if (chargeNow)
+                    if (!isPm5864DollarThresholdEnabled || immediatelyInvoice || invoiceNow)
                     {
-                        paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(
-                            storableSubscriber, invoice);
-                    }
-                    else
-                    {
-                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new Stripe.InvoiceFinalizeOptions
+                        if (chargeNow)
                         {
-                            AutoAdvance = false,
-                        });
-                        await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new Stripe.InvoiceSendOptions());
-                        paymentIntentClientSecret = null;
+                            paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(storableSubscriber, invoice);
+                        }
+                        else
+                        {
+                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new Stripe.InvoiceFinalizeOptions
+                            {
+                                AutoAdvance = false,
+                            });
+                            await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new Stripe.InvoiceSendOptions());
+                            paymentIntentClientSecret = null;
+                        }
                     }
                 }
                 catch
