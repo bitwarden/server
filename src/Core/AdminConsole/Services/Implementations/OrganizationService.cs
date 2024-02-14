@@ -698,7 +698,7 @@ public class OrganizationService : IOrganizationService
 
                 // If using Flexible Collections, give the owner Can Manage access over the default collection
                 List<CollectionAccessSelection> defaultOwnerAccess = null;
-                if (ownerId != default && organization.FlexibleCollections)
+                if (orgUser != null && organization.FlexibleCollections)
                 {
                     defaultOwnerAccess =
                         [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];

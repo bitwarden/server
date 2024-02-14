@@ -570,6 +570,8 @@ public class ProviderServiceTests
                 t.First().Item1.Type == OrganizationUserType.Owner &&
                 t.First().Item1.AccessAll == false &&
                 t.First().Item1.Collections.Single().Id == defaultCollection.Id &&
+                !t.First().Item1.Collections.Single().HidePasswords &&
+                !t.First().Item1.Collections.Single().ReadOnly &&
                 t.First().Item1.Collections.Single().Manage &&
                 t.First().Item2 == null));
     }
