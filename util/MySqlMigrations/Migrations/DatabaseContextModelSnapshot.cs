@@ -666,33 +666,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("WebAuthnCredential", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cache", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(449)
-                        .HasColumnType("varchar(449)");
-
-                    b.Property<DateTimeOffset?>("AbsoluteExpiration")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTimeOffset>("ExpiresAtTime")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<long?>("SlidingExpirationInSeconds")
-                        .HasColumnType("bigint");
-
-                    b.Property<byte[]>("Value")
-                        .HasColumnType("longblob");
-
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("ExpiresAtTime")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("Cache", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.Property<Guid>("Id")
