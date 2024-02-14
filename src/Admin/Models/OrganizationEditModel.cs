@@ -164,11 +164,11 @@ public class OrganizationEditModel : OrganizationViewModel
                 { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
             });
 
-    public Organization CreateOrganization(Provider provider)
+    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsSignupEnabled)
     {
         BillingEmail = provider.BillingEmail;
 
-        return ToOrganization(new Organization());
+        return ToOrganization(new Organization { FlexibleCollections = flexibleCollectionsSignupEnabled });
     }
 
     public Organization ToOrganization(Organization existingOrganization)
