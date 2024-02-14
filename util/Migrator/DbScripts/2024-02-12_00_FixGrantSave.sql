@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Grant_Save]
+CREATE OR ALTER PROCEDURE [dbo].[Grant_Save]
     @Key NVARCHAR(200),
     @Type NVARCHAR(50),
     @SubjectId NVARCHAR(200),
