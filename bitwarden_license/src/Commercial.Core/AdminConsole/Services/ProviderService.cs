@@ -496,7 +496,7 @@ public class ProviderService : IProviderService
     {
         ThrowOnInvalidPlanType(organizationSignup.Plan);
 
-        var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
+        var (organization, _, defaultCollection) = await _organizationService.SignUpAsync(organizationSignup, true);
 
         var providerOrganization = new ProviderOrganization
         {
@@ -508,7 +508,22 @@ public class ProviderService : IProviderService
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id,
+        // If using Flexible Collections, give the owner Can Manage access over the default collection
+        // The orgUser is not available when the org is created so we have to do it here as part of the invite
+        var defaultOwnerAccess = organization.FlexibleCollections && defaultCollection != null
+            ?
+            [
+                new CollectionAccessSelection
+                {
+                    Id = defaultCollection.Id,
+                    HidePasswords = false,
+                    ReadOnly = false,
+                    Manage = true
+                }
+            ]
+            : Array.Empty<CollectionAccessSelection>();
+
+        var orgUsers = await _organizationService.InviteUsersAsync(organization.Id, user.Id,
             new (OrganizationUserInvite, string)[]
             {
                 (
@@ -521,7 +536,7 @@ public class ProviderService : IProviderService
                         AccessAll = !organization.FlexibleCollections,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
-                        Collections = Array.Empty<CollectionAccessSelection>(),
+                        Collections = defaultOwnerAccess,
                     },
                     null
                 )

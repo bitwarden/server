@@ -523,7 +523,7 @@ public class ProviderServiceTests
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
-            .Returns(Tuple.Create(organization, null as OrganizationUser));
+            .Returns((organization, null as OrganizationUser, new Collection()));
 
         var providerOrganization =
             await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
@@ -539,20 +539,21 @@ public class ProviderServiceTests
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
                 t.First().Item1.Type == OrganizationUserType.Owner &&
                 t.First().Item1.AccessAll &&
+                !t.First().Item1.Collections.Any() &&
                 t.First().Item2 == null));
     }
 
     [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
     public async Task CreateOrganizationAsync_WithFlexibleCollections_SetsAccessAllToFalse
         (Provider provider, OrganizationSignup organizationSignup, Organization organization, string clientOwnerEmail,
-            User user, SutProvider<ProviderService> sutProvider)
+            User user, SutProvider<ProviderService> sutProvider, Collection defaultCollection)
     {
         organizationSignup.Plan = PlanType.EnterpriseAnnually;
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
-            .Returns(Tuple.Create(organization, null as OrganizationUser));
+            .Returns((organization, null as OrganizationUser, defaultCollection));
 
         var providerOrganization =
             await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
@@ -568,6 +569,8 @@ public class ProviderServiceTests
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
                 t.First().Item1.Type == OrganizationUserType.Owner &&
                 t.First().Item1.AccessAll == false &&
+                t.First().Item1.Collections.Single().Id == defaultCollection.Id &&
+                t.First().Item1.Collections.Single().Manage &&
                 t.First().Item2 == null));
     }
 
