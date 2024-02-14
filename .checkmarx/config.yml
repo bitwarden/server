@@ -8,4 +8,4 @@ checkmarx:
     configs:
       sast:
         # Exclude test directory
-        filter: "!/test/**"
+        filter: "!test"
