@@ -10,10 +10,10 @@ public class DuoUserStateTokenable : Tokenable
     public const string DataProtectorPurpose = "DuoUserIdTokenDataProtector";
     public const string TokenIdentifier = "DuoUserIdToken";
     public string Identifier { get; set; } = TokenIdentifier;
-    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
 
     public override bool Valid => Identifier == TokenIdentifier &&
-                                  Id != default;
+                                  UserId != default;
 
     [JsonConstructor]
     public DuoUserStateTokenable()
@@ -22,16 +22,16 @@ public class DuoUserStateTokenable : Tokenable
 
     public DuoUserStateTokenable(User user)
     {
-        Id = user?.Id ?? default;
+        UserId = user?.Id ?? default;
     }
 
     public bool TokenIsValid(User user)
     {
-        if (Id == default || user == null)
+        if (UserId == default || user == null)
         {
             return false;
         }
 
-        return Id == user.Id;
+        return UserId == user.Id;
     }
 }
