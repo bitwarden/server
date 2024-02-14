@@ -53,6 +53,9 @@
     <dt class="col-sm-4 col-lg-3">Public/Private Keys</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.HasPublicPrivateKeys ? "Yes" : "No")</dd>
 
+    <dt class="col-sm-4 col-lg-3">Flexible Collections</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.Organization.FlexibleCollections ? "Yes" : "No")</dd>
+
     <dt class="col-sm-4 col-lg-3">Created</dt>
     <dd class="col-sm-8 col-lg-9">@Model.Organization.CreationDate.ToString()</dd>
 
