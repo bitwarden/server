@@ -43,6 +43,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
         }
         else
         {
+            /*
             if (CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
             {
                 _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
@@ -52,6 +53,8 @@ public class MultiServicePushNotificationService : IPushNotificationService
             {
                 _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
             }
+            */
+            // TODO
         }
 
         _logger = logger;

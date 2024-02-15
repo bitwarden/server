@@ -405,20 +405,32 @@ public class GlobalSettings : IGlobalSettings
 
     public class NotificationHubSettings
     {
-        private string _connectionString;
+        public HubRegistration Legacy { get; set; }
+        public List<HubRegistration> Ios { get; set; }
+        public List<HubRegistration> Android { get; set; }
+        // Example more:
+        //public List<HubRegistration> BrowserExtenstion { get; set; }
+        //public List<HubRegistration> Desktop { get; set; }
+        //public List<HubRegistration> Web { get; set; }
 
-        public string ConnectionString
+        public class HubRegistration
         {
-            get => _connectionString;
-            set => _connectionString = value.Trim('"');
-        }
-        public string HubName { get; set; }
+            private string _connectionString;
 
-        /// <summary>
-        /// Enables TestSend on the Azure Notification Hub, which allows tracing of the request through the hub and to the platform-specific push notification service (PNS).
-        /// Enabling this will result in delayed responses because the Hub must wait on delivery to the PNS.  This should ONLY be enabled in a non-production environment, as results are throttled.
-        /// </summary>
-        public bool EnableSendTracing { get; set; } = false;
+            public string ConnectionString
+            {
+                get => _connectionString;
+                set => _connectionString = value.Trim('"');
+            }
+            public string HubName { get; set; }
+
+            /// <summary>
+            /// Enables TestSend on the Azure Notification Hub, which allows tracing of the request through the hub and to the platform-specific push notification service (PNS).
+            /// Enabling this will result in delayed responses because the Hub must wait on delivery to the PNS.  This should ONLY be enabled in a non-production environment, as results are throttled.
+            /// </summary>
+            public bool EnableSendTracing { get; set; } = false;
+            public bool OpenForRegistration { get; set; }
+        }
     }
 
     public class YubicoSettings

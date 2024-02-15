@@ -2,6 +2,7 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 
 namespace Bit.Core.Services;
@@ -11,7 +12,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
 
-    private NotificationHubClient _client = null;
+    private Dictionary<DeviceType, NotificationHubClient> _clients = new();
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
@@ -19,14 +20,32 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
-        _client = NotificationHubClient.CreateClientFromConnectionString(
-            _globalSettings.NotificationHub.ConnectionString,
-            _globalSettings.NotificationHub.HubName);
+
+        AddHub(globalSettings.NotificationHub.Ios, DeviceType.iOS);
+        AddHub(globalSettings.NotificationHub.Android, DeviceType.Android);
+    }
+
+    private void AddHub(List<GlobalSettings.NotificationHubSettings.HubRegistration> deviceHubs, DeviceType deviceType)
+    {
+        var hubRegistration = _globalSettings.NotificationHub.Ios.FirstOrDefault(h => h.OpenForRegistration);
+        if (hubRegistration != null)
+        {
+            var client = NotificationHubClient.CreateClientFromConnectionString(
+                hubRegistration.ConnectionString,
+                hubRegistration.HubName,
+                hubRegistration.EnableSendTracing);
+            _clients.Add(deviceType, client);
+        }
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
         string identifier, DeviceType type)
     {
+        if (!_clients.ContainsKey(type))
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(pushToken))
         {
             return;
@@ -84,7 +103,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
             userId, identifier);
 
-        await _client.CreateOrUpdateInstallationAsync(installation);
+        await _clients[type].CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
         {
             await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
@@ -119,11 +138,15 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         installation.Templates.Add(fullTemplateId, template);
     }
 
-    public async Task DeleteRegistrationAsync(string deviceId)
+    public async Task DeleteRegistrationAsync(string deviceId, DeviceType deviceType)
     {
+        if (!_clients.ContainsKey(deviceType))
+        {
+            return;
+        }
         try
         {
-            await _client.DeleteInstallationAsync(deviceId);
+            await _clients[deviceType].DeleteInstallationAsync(deviceId);
             if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
                 await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
@@ -135,31 +158,31 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<KeyValuePair<string, DeviceType>> devices, string organizationId)
     {
-        await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Add, $"organizationId:{organizationId}");
-        if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+        await PatchTagsForUserDevicesAsync(devices, UpdateOperationType.Add, $"organizationId:{organizationId}");
+        if (devices.Any() && InstallationDeviceEntity.IsInstallationDeviceId(devices.First().Key))
         {
-            var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
+            var entities = devices.Select(e => new InstallationDeviceEntity(e.Key));
             await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
         }
     }
 
-    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<KeyValuePair<string, DeviceType>> devices, string organizationId)
     {
-        await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Remove,
+        await PatchTagsForUserDevicesAsync(devices, UpdateOperationType.Remove,
             $"organizationId:{organizationId}");
-        if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+        if (devices.Any() && InstallationDeviceEntity.IsInstallationDeviceId(devices.First().Key))
         {
-            var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
+            var entities = devices.Select(e => new InstallationDeviceEntity(e.Key));
             await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
         }
     }
 
-    private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op,
+    private async Task PatchTagsForUserDevicesAsync(IEnumerable<KeyValuePair<string, DeviceType>> devices, UpdateOperationType op,
         string tag)
     {
-        if (!deviceIds.Any())
+        if (!devices.Any())
         {
             return;
         }
@@ -179,11 +202,15 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             operation.Path += $"/{tag}";
         }
 
-        foreach (var id in deviceIds)
+        foreach (var device in devices)
         {
+            if (!_clients.ContainsKey(device.Value))
+            {
+                continue;
+            }
             try
             {
-                await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
+                await _clients[device.Value].PatchInstallationAsync(device.Key, new List<PartialUpdateOperation> { operation });
             }
             catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {

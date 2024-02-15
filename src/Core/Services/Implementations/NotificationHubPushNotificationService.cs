@@ -32,10 +32,9 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
+        // TODO
         _client = NotificationHubClient.CreateClientFromConnectionString(
-            _globalSettings.NotificationHub.ConnectionString,
-            _globalSettings.NotificationHub.HubName,
-            _globalSettings.NotificationHub.EnableSendTracing);
+            "", "", true);
         _logger = logger;
     }
 
@@ -261,7 +260,8 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 { "type",  ((byte)type).ToString() },
                 { "payload", JsonSerializer.Serialize(payload) }
             }, tag);
-        if (_globalSettings.NotificationHub.EnableSendTracing)
+        // TODO
+        if (false)
         {
             _logger.LogInformation("Azure Notification Hub Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
                 outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
