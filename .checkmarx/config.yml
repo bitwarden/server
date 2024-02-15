@@ -6,5 +6,8 @@ version: 1
 checkmarx:
   scan:
     configs:
+      sast:
+        # Exclude test directory
+        filter: "!test"
       kics:
         filter: "!dev,!.devcontainer"
