@@ -136,10 +136,12 @@ public class DbMigrator
         if (dryRun)
         {
             var scriptsToExec = upgrader.GetScriptsToExecute();
+            var stringBuilder = new StringBuilder();
             foreach (var script in scriptsToExec)
             {
-                _logger.LogInformation(Constants.BypassFiltersEventId, script.Name);
+                stringBuilder.AppendLine(script.Name);
             }
+            _logger.LogInformation(Constants.BypassFiltersEventId, stringBuilder.ToString());
             return true;
         }
 

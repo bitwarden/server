@@ -23,7 +23,7 @@ internal class Program
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         [Option("dryrun", Description = "Dry run migrations. It'll print the scripts that will be run without actually running them")]
         bool dryRun = false
-        ) => MigrateDatabase(databaseConnectionString, verbose, repeatable, folderName);
+        ) => MigrateDatabase(databaseConnectionString, verbose, repeatable, folderName, dryRun);
 
     private static void WriteUsageToConsole()
     {
