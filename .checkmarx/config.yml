@@ -7,4 +7,4 @@ checkmarx:
   scan:
     configs:
       kics:
-        filter: "!dev"
+        filter: "!dev,!.devcontainer"
