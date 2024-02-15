@@ -190,7 +190,7 @@ public class CollectionsController : Controller
     {
         var collections = await _collectionRepository.GetManyByUserIdAsync(
             _userService.GetProperUserId(User).Value, false);
-        var responses = collections.Select(c => new CollectionDetailsResponseModel(c));
+        var responses = collections.Select(CollectionDetailsResponseModel.FromAssigned);
         return new ListResponseModel<CollectionDetailsResponseModel>(responses);
     }
 
@@ -607,7 +607,7 @@ public class CollectionsController : Controller
         return responses;
     }
 
-    private async Task<CollectionResponseModel> Post_vNext(Guid orgId, [FromBody] CollectionRequestModel model)
+    private async Task<CollectionDetailsResponseModel> Post_vNext(Guid orgId, [FromBody] CollectionRequestModel model)
     {
         var collection = model.ToCollection(orgId);
 
@@ -624,19 +624,16 @@ public class CollectionsController : Controller
 
         if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(orgId))
         {
-            return new CollectionResponseModel(collection);
+            return CollectionDetailsResponseModel.FromUnassigned(collection);
         }
 
-        // If we have a user, fetch the collection to get the latest permission details
-        var userCollectionDetails = await _collectionRepository.GetByIdAsync(collection.Id,
-            _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
+        // If we have a user, fetch the latest collection permission details
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
-        return userCollectionDetails == null
-            ? new CollectionResponseModel(collection)
-            : new CollectionDetailsResponseModel(userCollectionDetails);
+        return new CollectionDetailsResponseModel(collectionWithPermissions);
     }
 
-    private async Task<CollectionResponseModel> Put_vNext(Guid id, CollectionRequestModel model)
+    private async Task<CollectionDetailsResponseModel> Put_vNext(Guid id, CollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
@@ -651,15 +648,13 @@ public class CollectionsController : Controller
 
         if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId))
         {
-            return new CollectionResponseModel(collection);
+            return CollectionDetailsResponseModel.FromUnassigned(collection);
         }
 
-        // If we have a user, fetch the collection details to get the latest permission details for the user
-        var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
+        // If we have a user, fetch the latest collection permission details
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
-        return updatedCollectionDetails == null
-            ? new CollectionResponseModel(collection)
-            : new CollectionDetailsResponseModel(updatedCollectionDetails);
+        return new CollectionDetailsResponseModel(collectionWithPermissions);
     }
 
     private async Task PutUsers_vNext(Guid id, IEnumerable<SelectionReadOnlyRequestModel> model)
