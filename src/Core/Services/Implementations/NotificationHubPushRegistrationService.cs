@@ -2,7 +2,6 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 
 namespace Bit.Core.Services;
@@ -12,7 +11,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
 
-    private Dictionary<DeviceType, NotificationHubClient> _clients = new();
+    private Dictionary<DeviceType?, NotificationHubClient> _clients = [];
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
@@ -22,9 +21,10 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         _globalSettings = globalSettings;
 
         // Is this dirty to do in the ctor?
-        void addHub(List<GlobalSettings.NotificationHubSettings.HubRegistration> deviceHubs, DeviceType deviceType)
+        void addHub(DeviceType? deviceType)
         {
-            var hubRegistration = deviceHubs.FirstOrDefault(h => h.OpenForRegistration);
+            var hubRegistration = globalSettings.NotificationHubs.FirstOrDefault(
+                h => h.DeviceType == deviceType && h.OpenForRegistration);
             if (hubRegistration != null)
             {
                 var client = NotificationHubClient.CreateClientFromConnectionString(
@@ -35,18 +35,14 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             }
         }
 
-        addHub(globalSettings.NotificationHub.Ios, DeviceType.iOS);
-        addHub(globalSettings.NotificationHub.Android, DeviceType.Android);
+        addHub(null);
+        addHub(DeviceType.iOS);
+        addHub(DeviceType.Android);
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
         string identifier, DeviceType type)
     {
-        if (!_clients.ContainsKey(type))
-        {
-            return;
-        }
-
         if (string.IsNullOrWhiteSpace(pushToken))
         {
             return;
@@ -104,7 +100,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
             userId, identifier);
 
-        await _clients[type].CreateOrUpdateInstallationAsync(installation);
+        await GetClient(type).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
         {
             await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
@@ -141,13 +137,9 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 
     public async Task DeleteRegistrationAsync(string deviceId, DeviceType deviceType)
     {
-        if (!_clients.ContainsKey(deviceType))
-        {
-            return;
-        }
         try
         {
-            await _clients[deviceType].DeleteInstallationAsync(deviceId);
+            await GetClient(deviceType).DeleteInstallationAsync(deviceId);
             if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
                 await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
@@ -211,12 +203,17 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             }
             try
             {
-                await _clients[device.Value].PatchInstallationAsync(device.Key, new List<PartialUpdateOperation> { operation });
+                await GetClient(device.Value).PatchInstallationAsync(device.Key, new List<PartialUpdateOperation> { operation });
             }
             catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {
                 throw;
             }
         }
+    }
+
+    private NotificationHubClient GetClient(DeviceType deviceType)
+    {
+        return _clients[_clients.ContainsKey(deviceType) ? deviceType : null];
     }
 }
