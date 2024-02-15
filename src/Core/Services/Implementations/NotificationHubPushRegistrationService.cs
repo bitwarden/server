@@ -21,21 +21,22 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
 
-        AddHub(globalSettings.NotificationHub.Ios, DeviceType.iOS);
-        AddHub(globalSettings.NotificationHub.Android, DeviceType.Android);
-    }
-
-    private void AddHub(List<GlobalSettings.NotificationHubSettings.HubRegistration> deviceHubs, DeviceType deviceType)
-    {
-        var hubRegistration = deviceHubs.FirstOrDefault(h => h.OpenForRegistration);
-        if (hubRegistration != null)
+        // Is this dirty to do in the ctor?
+        void addHub(List<GlobalSettings.NotificationHubSettings.HubRegistration> deviceHubs, DeviceType deviceType)
         {
-            var client = NotificationHubClient.CreateClientFromConnectionString(
-                hubRegistration.ConnectionString,
-                hubRegistration.HubName,
-                hubRegistration.EnableSendTracing);
-            _clients.Add(deviceType, client);
+            var hubRegistration = deviceHubs.FirstOrDefault(h => h.OpenForRegistration);
+            if (hubRegistration != null)
+            {
+                var client = NotificationHubClient.CreateClientFromConnectionString(
+                    hubRegistration.ConnectionString,
+                    hubRegistration.HubName,
+                    hubRegistration.EnableSendTracing);
+                _clients.Add(deviceType, client);
+            }
         }
+
+        addHub(globalSettings.NotificationHub.Ios, DeviceType.iOS);
+        addHub(globalSettings.NotificationHub.Android, DeviceType.Android);
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
