@@ -38,7 +38,7 @@ internal class Program
     {
         var logger = CreateLogger(verbose);
 
-        logger.LogInformation($"Migrating database with repeatable: {repeatable}, folderName: {folderName} and dry-run: {dryRun}.");
+        logger.LogInformation($"Migrating database with repeatable: {repeatable}, folderName: {folderName}, dry-run: {dryRun}.");
 
         var migrator = new DbMigrator(databaseConnectionString, logger);
         bool success = false;
