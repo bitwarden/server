@@ -1,0 +1,40 @@
+name: Scan
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+      - "rc"
+      - "hotfix-rc"
+  pull_request:
+    branches-ignore:
+      - "renovate/**"
+
+permissions: read-all
+
+jobs:
+  scan:
+    name: Scan
+    runs-on: ubuntu-22.04
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+      - name: Scan with Checkmarx
+        uses: checkmarx/ast-github-action@162ff7e1c3dfd3c304c3ade36768b792c7cbd72c #2.0.19
+        with:
+          project_name: ${{ github.repository }}
+          cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
+          base_uri: https://ast.checkmarx.net/
+          cx_client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
+          cx_client_secret: ${{ secrets.CHECKMARX_SECRET }}
+          additional_params: --report-format sarif --output-path .
+
+      - name: Upload Checkmarx results to GitHub
+        uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+        with:
+          sarif_file: cx_result.sarif
