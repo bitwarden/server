@@ -21,7 +21,7 @@ internal class Program
         bool repeatable = false,
         [Option('f', "folder", Description = "Folder name of database scripts")]
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
-        [Option("dryrun", Description = "Dry run migrations. It'll print the scripts that will be run without actually running them")]
+        [Option("dry-run", Description = "Print the scripts that will be applied without actually executing them")]
         bool dryRun = false
         ) => MigrateDatabase(databaseConnectionString, verbose, repeatable, folderName, dryRun);
 
@@ -29,7 +29,7 @@ internal class Program
     {
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string>");
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs)");
-        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> --dryrun (for dry run migrations. It'll print the scripts that will be run without actually running them)");
+        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> --dry-run (print the scripts that will be applied without actually executing them)");
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -r|--repeatable (for marking scripts as repeatable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs) -r|--repeatable (for marking scripts as repeatable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
     }
@@ -38,7 +38,7 @@ internal class Program
     {
         var logger = CreateLogger(verbose);
 
-        logger.LogInformation($"Migrating database with repeatable: {repeatable}, folderName: {folderName} and dry-run: {dryRun}.");
+        logger.LogInformation($"Migrating database with repeatable: {repeatable}, folderName: {folderName}, dry-run: {dryRun}.");
 
         var migrator = new DbMigrator(databaseConnectionString, logger);
         bool success = false;
