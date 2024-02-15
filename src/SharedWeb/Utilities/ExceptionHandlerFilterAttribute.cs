@@ -59,11 +59,6 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             errorMessage = "Resource not found.";
             context.HttpContext.Response.StatusCode = 404;
         }
-        else if (exception is SecurityTokenValidationException)
-        {
-            errorMessage = "Invalid token.";
-            context.HttpContext.Response.StatusCode = 403;
-        }
         else if (exception is UnauthorizedAccessException)
         {
             errorMessage = "Unauthorized.";
