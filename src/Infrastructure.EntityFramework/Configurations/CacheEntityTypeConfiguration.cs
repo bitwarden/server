@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Bit.Infrastructure.EntityFramework.Auth.Configurations;
+namespace Bit.Infrastructure.EntityFramework.Configurations;
 
 public class CacheEntityTypeConfiguration : IEntityTypeConfiguration<Cache>
 {

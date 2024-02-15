@@ -8,10 +8,10 @@ namespace Bit.Infrastructure.EntityFramework;
 
 public class EntityFrameworkCache : IDistributedCache
 {
-    private readonly TimeSpan _expiredItemsDeletionInterval = TimeSpan.FromMinutes(30);
-    private DateTimeOffset _lastExpirationScan;
+    private static readonly TimeSpan _defaultSlidingExpiration = TimeSpan.FromMinutes(20);
+    private static readonly TimeSpan _expiredItemsDeletionInterval = TimeSpan.FromMinutes(30);
+    private static DateTimeOffset _lastExpirationScan;
     private readonly Action _deleteExpiredCachedItemsDelegate;
-    private readonly TimeSpan _defaultSlidingExpiration = TimeSpan.FromMinutes(20);
     private readonly object _mutex = new();
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
