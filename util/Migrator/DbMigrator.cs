@@ -5,6 +5,7 @@ using DbUp;
 using DbUp.Helpers;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace Bit.Migrator;
 
