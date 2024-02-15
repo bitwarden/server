@@ -9,3 +9,5 @@ checkmarx:
       sast:
         # Exclude test directory
         filter: "!test"
+      kics:
+        filter: "!dev,!.devcontainer"
