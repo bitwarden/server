@@ -27,7 +27,9 @@ public class OrganizationCustomization : ICustomization
         var maxCollections = (short)new Random().Next(10, short.MaxValue);
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == PlanType);
         var seats = (short)new Random().Next(plan.PasswordManager.BaseSeats, plan.PasswordManager.MaxSeats ?? short.MaxValue);
-        var smSeats = (short)new Random().Next(plan.SecretsManager.BaseSeats, plan.SecretsManager.MaxSeats ?? short.MaxValue);
+        var smSeats = plan.SupportsSecretsManager
+            ? (short?)new Random().Next(plan.SecretsManager.BaseSeats, plan.SecretsManager.MaxSeats ?? short.MaxValue)
+            : null;
 
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
