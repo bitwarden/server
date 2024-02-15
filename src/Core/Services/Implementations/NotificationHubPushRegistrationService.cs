@@ -27,7 +27,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 
     private void AddHub(List<GlobalSettings.NotificationHubSettings.HubRegistration> deviceHubs, DeviceType deviceType)
     {
-        var hubRegistration = _globalSettings.NotificationHub.Ios.FirstOrDefault(h => h.OpenForRegistration);
+        var hubRegistration = deviceHubs.FirstOrDefault(h => h.OpenForRegistration);
         if (hubRegistration != null)
         {
             var client = NotificationHubClient.CreateClientFromConnectionString(
