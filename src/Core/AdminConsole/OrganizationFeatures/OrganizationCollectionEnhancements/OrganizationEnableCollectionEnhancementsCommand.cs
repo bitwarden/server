@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
@@ -107,6 +108,6 @@ public class OrganizationEnableCollectionEnhancementsCommand : IOrganizationEnab
             CollectionUsers = collectionUsersData
         };
 
-        _logger.LogWarning("Flexible Collections data migration started. Backup data: {@LogObject}", logObject);
+        _logger.LogWarning("Flexible Collections data migration started. Backup data: {LogObject}", JsonSerializer.Serialize(logObject));
     }
 }
