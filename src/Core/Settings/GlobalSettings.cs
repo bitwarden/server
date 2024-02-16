@@ -420,7 +420,7 @@ public class GlobalSettings : IGlobalSettings
         /// </summary>
         public bool EnableSendTracing { get; set; } = false;
         /// <summary>
-        /// At least one hub configiration should have registration enabled.
+        /// At least one hub configuration should have registration enabled, preferably the General hub as a safety net.
         /// </summary>
         public bool EnableRegistration { get; set; }
         public NotificationHubType HubType { get; set; }

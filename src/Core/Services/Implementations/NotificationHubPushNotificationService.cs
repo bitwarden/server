@@ -278,17 +278,16 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
         await Task.WhenAll(tasks);
 
-        if (!_enableTracing)
+        if (_enableTracing)
         {
-            return;
-        }
-        for (var i = 0; i < tasks.Count; i++)
-        {
-            if (_clients[i].EnableTestSend)
+            for (var i = 0; i < tasks.Count; i++)
             {
-                var outcome = await tasks[i];
-                _logger.LogInformation("Azure Notification Hub Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
-                    outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+                if (_clients[i].EnableTestSend)
+                {
+                    var outcome = await tasks[i];
+                    _logger.LogInformation("Azure Notification Hub Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
+                        outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+                }
             }
         }
     }
