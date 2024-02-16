@@ -20,8 +20,9 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private NotificationHubClient _client = null;
-    private ILogger _logger;
+    private readonly List<NotificationHubClient> _clients = [];
+    private readonly bool _enableTracing = false;
+    private readonly ILogger _logger;
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,
@@ -32,9 +33,18 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
-        // TODO
-        _client = NotificationHubClient.CreateClientFromConnectionString(
-            "", "", true);
+
+        foreach (var hub in globalSettings.NotificationHubs)
+        {
+            var client = NotificationHubClient.CreateClientFromConnectionString(
+                hub.ConnectionString,
+                hub.HubName,
+                hub.EnableSendTracing);
+            _clients.Add(client);
+
+            _enableTracing = _enableTracing || hub.EnableSendTracing;
+        }
+
         _logger = logger;
     }
 
@@ -254,17 +264,32 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     private async Task SendPayloadAsync(string tag, PushType type, object payload)
     {
-        var outcome = await _client.SendTemplateNotificationAsync(
-            new Dictionary<string, string>
-            {
-                { "type",  ((byte)type).ToString() },
-                { "payload", JsonSerializer.Serialize(payload) }
-            }, tag);
-        // TODO
-        if (false)
+        var tasks = new List<Task<NotificationOutcome>>();
+        foreach (var client in _clients)
         {
-            _logger.LogInformation("Azure Notification Hub Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
-                outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+            var task = client.SendTemplateNotificationAsync(
+                new Dictionary<string, string>
+                {
+                    { "type",  ((byte)type).ToString() },
+                    { "payload", JsonSerializer.Serialize(payload) }
+                }, tag);
+            tasks.Add(task);
+        }
+
+        await Task.WhenAll(tasks);
+
+        if (!_enableTracing)
+        {
+            return;
+        }
+        for (var i = 0; i < tasks.Count; i++)
+        {
+            if (_clients[i].EnableTestSend)
+            {
+                var outcome = await tasks[i];
+                _logger.LogInformation("Azure Notification Hub Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
+                    outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+            }
         }
     }
 
