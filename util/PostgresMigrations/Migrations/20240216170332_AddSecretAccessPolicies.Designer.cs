@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240119205211_AddSecretAccessPolicies")]
+    [Migration("20240216170332_AddSecretAccessPolicies")]
     partial class AddSecretAccessPolicies
     {
         /// <inheritdoc />
@@ -142,9 +142,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<int?>("Seats")
                         .HasColumnType("integer");
-
-                    b.Property<bool>("SecretsManagerBeta")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("SelfHost")
                         .HasColumnType("boolean");
