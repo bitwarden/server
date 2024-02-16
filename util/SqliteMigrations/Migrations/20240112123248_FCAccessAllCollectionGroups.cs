@@ -7,7 +7,7 @@ namespace Bit.SqliteMigrations.Migrations;
 
 public partial class FCAccessAllCollectionGroups : Migration
 {
-    private const string _accessAllCollectionGroupsScript = "SqliteMigrations.HelperScripts.2024-01-12_00_AccessAllCollectionGroups.sql";
+    private const string _accessAllCollectionGroupsScript = "SqliteMigrations.HelperScripts.2024-02-16_00_AccessAllCollectionGroups.sql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {

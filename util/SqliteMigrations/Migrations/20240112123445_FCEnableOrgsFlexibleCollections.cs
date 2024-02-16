@@ -7,7 +7,7 @@ namespace Bit.SqliteMigrations.Migrations;
 
 public partial class FCEnableOrgsFlexibleCollections : Migration
 {
-    private const string _enableOrgsFlexibleCollectionsScript = "SqliteMigrations.HelperScripts.2024-01-12_03_EnableOrgsFlexibleCollections.sql";
+    private const string _enableOrgsFlexibleCollectionsScript = "SqliteMigrations.HelperScripts.2024-02-16_03_EnableOrgsFlexibleCollections.sql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
