@@ -3,6 +3,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Azure.NotificationHubs;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -10,34 +11,36 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
-
-    private Dictionary<DeviceType?, NotificationHubClient> _clients = [];
+    private readonly ILogger<NotificationHubPushRegistrationService> _logger;
+    private Dictionary<NotificationHubType, NotificationHubClient> _clients = [];
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        ILogger<NotificationHubPushRegistrationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
+        _logger = logger;
 
         // Is this dirty to do in the ctor?
-        void addHub(DeviceType? deviceType)
+        void addHub(NotificationHubType type)
         {
             var hubRegistration = globalSettings.NotificationHubs.FirstOrDefault(
-                h => h.DeviceType == deviceType && h.OpenForRegistration);
+                h => h.HubType == type && h.EnableRegistration);
             if (hubRegistration != null)
             {
                 var client = NotificationHubClient.CreateClientFromConnectionString(
                     hubRegistration.ConnectionString,
                     hubRegistration.HubName,
                     hubRegistration.EnableSendTracing);
-                _clients.Add(deviceType, client);
+                _clients.Add(type, client);
             }
         }
 
-        addHub(null);
-        addHub(DeviceType.iOS);
-        addHub(DeviceType.Android);
+        addHub(NotificationHubType.General);
+        addHub(NotificationHubType.iOS);
+        addHub(NotificationHubType.Android);
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -197,10 +200,6 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 
         foreach (var device in devices)
         {
-            if (!_clients.ContainsKey(device.Value))
-            {
-                continue;
-            }
             try
             {
                 await GetClient(device.Value).PatchInstallationAsync(device.Key, new List<PartialUpdateOperation> { operation });
@@ -214,6 +213,51 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 
     private NotificationHubClient GetClient(DeviceType deviceType)
     {
-        return _clients[_clients.ContainsKey(deviceType) ? deviceType : null];
+        var hubType = NotificationHubType.General;
+        switch (deviceType)
+        {
+            case DeviceType.Android:
+                hubType = NotificationHubType.Android;
+                break;
+            case DeviceType.iOS:
+                hubType = NotificationHubType.iOS;
+                break;
+            case DeviceType.ChromeExtension:
+            case DeviceType.FirefoxExtension:
+            case DeviceType.OperaExtension:
+            case DeviceType.EdgeExtension:
+            case DeviceType.VivaldiExtension:
+            case DeviceType.SafariExtension:
+                hubType = NotificationHubType.GeneralBrowserExtension;
+                break;
+            case DeviceType.WindowsDesktop:
+            case DeviceType.MacOsDesktop:
+            case DeviceType.LinuxDesktop:
+                hubType = NotificationHubType.GeneralDesktop;
+                break;
+            case DeviceType.ChromeBrowser:
+            case DeviceType.FirefoxBrowser:
+            case DeviceType.OperaBrowser:
+            case DeviceType.EdgeBrowser:
+            case DeviceType.IEBrowser:
+            case DeviceType.UnknownBrowser:
+            case DeviceType.SafariBrowser:
+            case DeviceType.VivaldiBrowser:
+                hubType = NotificationHubType.GeneralWeb;
+                break;
+            default:
+                break;
+        }
+
+        if (!_clients.ContainsKey(hubType))
+        {
+            _logger.LogWarning("No hub client for '{0}'. Using general hub instead.", hubType);
+            hubType = NotificationHubType.General;
+            if (!_clients.ContainsKey(hubType))
+            {
+                throw new Exception("No general hub client found.");
+            }
+        }
+        return _clients[hubType];
     }
 }
