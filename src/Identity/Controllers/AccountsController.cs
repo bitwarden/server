@@ -12,7 +12,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -85,7 +84,6 @@ public class AccountsController : Controller
     }
 
     [HttpGet("webauthn/assertion-options")]
-    [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
     public WebAuthnLoginAssertionOptionsResponseModel GetWebAuthnLoginAssertionOptions()
     {
         var options = _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptions();

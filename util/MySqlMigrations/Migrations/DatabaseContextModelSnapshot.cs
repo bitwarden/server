@@ -136,9 +136,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int?>("Seats")
                         .HasColumnType("int");
 
-                    b.Property<bool>("SecretsManagerBeta")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<bool>("SelfHost")
                         .HasColumnType("tinyint(1)");
 
