@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Entities;
 
-public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser, IReferenceable
+public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser, IReferenceable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -111,8 +111,6 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return "userId";
     }
 
-    public bool IsOrganization() => false;
-
     public bool IsUser()
     {
         return true;
@@ -122,8 +120,6 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     {
         return "Subscriber";
     }
-
-    public bool IsExpired() => PremiumExpirationDate.HasValue && PremiumExpirationDate.Value <= DateTime.UtcNow;
 
     public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
     {

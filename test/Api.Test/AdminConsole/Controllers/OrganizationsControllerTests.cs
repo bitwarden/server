@@ -12,8 +12,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -24,7 +22,6 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Services;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -55,9 +52,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
     private readonly OrganizationsController _sut;
@@ -85,9 +79,6 @@ public class OrganizationsControllerTests : IDisposable
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
-        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
-        _getSubscriptionQuery = Substitute.For<IGetSubscriptionQuery>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
 
         _sut = new OrganizationsController(
@@ -112,9 +103,6 @@ public class OrganizationsControllerTests : IDisposable
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
             _pushNotificationService,
-            _cancelSubscriptionCommand,
-            _getSubscriptionQuery,
-            _referenceEventService,
             _organizationEnableCollectionEnhancementsCommand);
     }
 
