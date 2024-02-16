@@ -33,7 +33,7 @@ WHERE CG.`CollectionId` IS NULL;
 -- Step 5: Update Group to clear AccessAll flag
 UPDATE `Group` G
 INNER JOIN TempGroup TG ON G.`Id` = TG.`GroupId`
-SET G.`AccessAll` = 0;
+SET G.`AccessAll` = 0, G.`RevisionDate` = UTC_TIMESTAMP();
 
 -- Step 6: Update User AccountRevisionDate for each unique OrganizationUserId
 UPDATE `User` U

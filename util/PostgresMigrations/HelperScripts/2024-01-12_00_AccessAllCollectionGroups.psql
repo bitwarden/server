@@ -31,7 +31,7 @@ WHERE CG."CollectionId" IS NULL;
 
 -- Step 5: Update Group to clear AccessAll flag
 UPDATE "Group" G
-SET "AccessAll" = false
+SET "AccessAll" = false, "RevisionDate" = current_timestamp
 FROM TempGroup TG
 WHERE G."Id" = TG."GroupId";
 
