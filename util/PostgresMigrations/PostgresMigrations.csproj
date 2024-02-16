@@ -24,9 +24,9 @@
     <EmbeddedResource Include="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.psql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.psql" />
-    <EmbeddedResource Include="HelperScripts\2024-01-12_00_AccessAllCollectionGroups.psql" />
-    <EmbeddedResource Include="HelperScripts\2024-01-12_01_AccessAllCollectionUsers.psql" />
-    <EmbeddedResource Include="HelperScripts\2024-01-12_02_ManagersEditAssignedCollectionUsers.psql" />
-    <EmbeddedResource Include="HelperScripts\2024-01-12_03_EnableOrgsFlexibleCollections.psql" />
+    <EmbeddedResource Include="HelperScripts\2024-02-16_00_AccessAllCollectionGroups.psql" />
+    <EmbeddedResource Include="HelperScripts\2024-02-16_01_AccessAllCollectionUsers.psql" />
+    <EmbeddedResource Include="HelperScripts\2024-02-16_02_ManagersEditAssignedCollectionUsers.psql" />
+    <EmbeddedResource Include="HelperScripts\2024-02-16_03_EnableOrgsFlexibleCollections.psql" />
   </ItemGroup>
 </Project>

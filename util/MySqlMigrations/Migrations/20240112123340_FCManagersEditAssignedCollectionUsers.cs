@@ -7,7 +7,7 @@ namespace Bit.MySqlMigrations.Migrations;
 
 public partial class FCManagersEditAssignedCollectionUsers : Migration
 {
-    private const string _managersEditAssignedCollectionUsersScript = "MySqlMigrations.HelperScripts.2024-01-12_02_ManagersEditAssignedCollectionUsers.sql";
+    private const string _managersEditAssignedCollectionUsersScript = "MySqlMigrations.HelperScripts.2024-02-16_02_ManagersEditAssignedCollectionUsers.sql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {

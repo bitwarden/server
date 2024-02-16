@@ -7,7 +7,7 @@ namespace Bit.PostgresMigrations.Migrations;
 
 public partial class FCManagersEditAssignedCollectionUsers : Migration
 {
-    private const string _managersEditAssignedCollectionUsersScript = "PostgresMigrations.HelperScripts.2024-01-12_02_ManagersEditAssignedCollectionUsers.psql";
+    private const string _managersEditAssignedCollectionUsersScript = "PostgresMigrations.HelperScripts.2024-02-16_02_ManagersEditAssignedCollectionUsers.psql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {

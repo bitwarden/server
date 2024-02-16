@@ -24,10 +24,10 @@
   <ItemGroup>
     <EmbeddedResource Include="HelperScripts\2023-12-04_00_Up_GrantIndexes.sql" />
     <EmbeddedResource Include="HelperScripts\2023-12-04_00_Down_GrantIndexes.sql" />
-    <EmbeddedResource Include="HelperScripts\2024-01-12_00_AccessAllCollectionGroups.sql" />
-    <EmbeddedResource Include="HelperScripts\2024-01-12_01_AccessAllCollectionUsers.sql" />
-    <EmbeddedResource Include="HelperScripts\2024-01-12_02_ManagersEditAssignedCollectionUsers.sql" />
-    <EmbeddedResource Include="HelperScripts\2024-01-12_03_EnableOrgsFlexibleCollections.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-02-16_00_AccessAllCollectionGroups.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-02-16_01_AccessAllCollectionUsers.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-02-16_02_ManagersEditAssignedCollectionUsers.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-02-16_03_EnableOrgsFlexibleCollections.sql" />
   </ItemGroup>
 
 </Project>

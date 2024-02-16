@@ -7,7 +7,7 @@ namespace Bit.PostgresMigrations.Migrations;
 
 public partial class FCAccessAllCollectionGroups : Migration
 {
-    private const string _accessAllCollectionGroupsScript = "PostgresMigrations.HelperScripts.2024-01-12_00_AccessAllCollectionGroups.psql";
+    private const string _accessAllCollectionGroupsScript = "PostgresMigrations.HelperScripts.2024-02-16_00_AccessAllCollectionGroups.psql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
