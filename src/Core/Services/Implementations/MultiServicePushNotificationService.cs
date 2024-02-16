@@ -43,8 +43,8 @@ public class MultiServicePushNotificationService : IPushNotificationService
         }
         else
         {
-            /*
-            if (CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
+            if (globalSettings.NotificationHubs != null && globalSettings.NotificationHubs.Count > 0 &&
+                CoreHelpers.SettingHasValue(globalSettings.NotificationHubs.First().ConnectionString))
             {
                 _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
                     globalSettings, httpContextAccessor, hubLogger));
@@ -53,8 +53,6 @@ public class MultiServicePushNotificationService : IPushNotificationService
             {
                 _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
             }
-            */
-            // TODO
         }
 
         _logger = logger;
