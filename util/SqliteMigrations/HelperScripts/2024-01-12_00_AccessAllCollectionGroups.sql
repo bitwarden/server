@@ -33,7 +33,7 @@ WHERE CG."CollectionId" IS NULL;
 
 -- Step 5: Update Group to clear AccessAll flag
 UPDATE "Group"
-SET "AccessAll" = 0
+SET "AccessAll" = 0, "RevisionDate" = CURRENT_TIMESTAMP
 WHERE "Id" IN (SELECT "GroupId" FROM TempGroup);
 
 -- Step 6: Update User AccountRevisionDate for each unique OrganizationUserId
