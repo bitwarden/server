@@ -67,14 +67,14 @@ public class AzureQueueMailHostedService : IHostedService
 
                     if (root.ValueKind == JsonValueKind.Array)
                     {
-                        foreach (var mailQueueMessage in root.ToObject<List<MailQueueMessage>>())
+                        foreach (var mailQueueMessage in root.Deserialize<List<MailQueueMessage>>())
                         {
                             await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                         }
                     }
                     else if (root.ValueKind == JsonValueKind.Object)
                     {
-                        var mailQueueMessage = root.ToObject<MailQueueMessage>();
+                        var mailQueueMessage = root.Deserialize<MailQueueMessage>();
                         await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                     }
                 }

@@ -46,23 +46,7 @@
                 return;
             }
 
-            // SM beta requires SM access
-            document.getElementById('@(nameof(Model.SecretsManagerBeta))').checked = false;
             clearSecretsManagerConfiguration();
-        });
-
-        document.getElementById('@(nameof(Model.SecretsManagerBeta))').addEventListener('change', (event) => {
-            document.getElementById('organization-secrets-configuration').hidden = event.target.checked;
-
-            if (event.target.checked) {
-                // SM beta requires SM access
-                document.getElementById('@(nameof(Model.UseSecretsManager))').checked = true;
-                // SM Beta orgs do not have subscription limits
-                clearSecretsManagerConfiguration();
-                return;
-            }
-
-            setInitialSecretsManagerConfiguration();
         });
     })();
 
@@ -111,6 +95,26 @@
                 document.getElementById('@(nameof(Model.UseScim))').checked = true;
             break;
         }
+    }
+
+    function unlinkProvider(id) {
+        if (confirm('Are you sure you want to unlink this organization from its provider?')) {
+            $.ajax({
+                type: "POST",
+                url: `@Url.Action("UnlinkOrganizationFromProvider", "Organizations")?id=${id}`,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    alert("Successfully unlinked provider");
+                    window.location.href = `@Url.Action("Edit", "Organizations")?id=${id}`;
+                },
+                error: function (response) {
+                    alert("Error!");
+                }
+            });
+        }
+        return false;
     }
 
     /***

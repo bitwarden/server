@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -12,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.14">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.15">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -23,6 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="HelperScripts\2023-12-04_00_Up_GrantIndexes.sql" />
+    <EmbeddedResource Include="HelperScripts\2023-12-04_00_Down_GrantIndexes.sql" />
     <EmbeddedResource Include="HelperScripts\2024-01-12_00_AccessAllCollectionGroups.sql" />
     <EmbeddedResource Include="HelperScripts\2024-01-12_01_AccessAllCollectionUsers.sql" />
     <EmbeddedResource Include="HelperScripts\2024-01-12_02_ManagersEditAssignedCollectionUsers.sql" />

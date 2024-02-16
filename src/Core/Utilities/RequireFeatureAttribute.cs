@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,10 +24,9 @@ public class RequireFeatureAttribute : ActionFilterAttribute
 
     public override void OnActionExecuting(ActionExecutingContext context)
     {
-        var currentContext = context.HttpContext.RequestServices.GetRequiredService<ICurrentContext>();
         var featureService = context.HttpContext.RequestServices.GetRequiredService<IFeatureService>();
 
-        if (!featureService.IsEnabled(_featureFlagKey, currentContext))
+        if (!featureService.IsEnabled(_featureFlagKey))
         {
             throw new FeatureUnavailableException();
         }

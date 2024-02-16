@@ -90,12 +90,12 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
 
     public async Task<HttpContext> GroupsPostAsync(Guid organizationId, ScimGroupRequestModel model)
     {
-        return await Server.PostAsync($"/v2/{organizationId}/groups", GetStringContent(model), httpContext => httpContext.Request.Headers.Add(HeaderNames.UserAgent, "Okta"));
+        return await Server.PostAsync($"/v2/{organizationId}/groups", GetStringContent(model), httpContext => httpContext.Request.Headers.Append(HeaderNames.UserAgent, "Okta"));
     }
 
     public async Task<HttpContext> GroupsPutAsync(Guid organizationId, Guid id, ScimGroupRequestModel model)
     {
-        return await Server.PutAsync($"/v2/{organizationId}/groups/{id}", GetStringContent(model), httpContext => httpContext.Request.Headers.Add(HeaderNames.UserAgent, "Okta"));
+        return await Server.PutAsync($"/v2/{organizationId}/groups/{id}", GetStringContent(model), httpContext => httpContext.Request.Headers.Append(HeaderNames.UserAgent, "Okta"));
     }
 
     public async Task<HttpContext> GroupsPatchAsync(Guid organizationId, Guid id, ScimPatchModel model)

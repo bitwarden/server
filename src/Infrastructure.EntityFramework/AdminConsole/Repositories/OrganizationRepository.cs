@@ -5,15 +5,23 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Organization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    public OrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Organizations)
-    { }
+    private readonly ILogger<OrganizationRepository> _logger;
+
+    public OrganizationRepository(
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        ILogger<OrganizationRepository> logger)
+        : base(serviceScopeFactory, mapper, context => context.Organizations)
+    {
+        _logger = logger;
+    }
 
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
     {
@@ -240,6 +248,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public async Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId)
     {
+        _logger.LogInformation("AC-1758: Executing GetOwnerEmailAddressesById (Entity Framework)");
+
         using var scope = ServiceScopeFactory.CreateScope();
 
         var dbContext = GetDatabaseContext(scope);
@@ -256,5 +266,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             select grouped.Key;
 
         return await query.ToListAsync();
+    }
+
+    public Task EnableCollectionEnhancements(Guid organizationId)
+    {
+        throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
     }
 }
