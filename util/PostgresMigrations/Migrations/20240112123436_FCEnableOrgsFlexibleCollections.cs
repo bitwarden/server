@@ -7,7 +7,7 @@ namespace Bit.PostgresMigrations.Migrations;
 
 public partial class FCEnableOrgsFlexibleCollections : Migration
 {
-    private const string _enableOrgsFlexibleCollectionsScript = "PostgresMigrations.HelperScripts.2024-01-12_03_EnableOrgsFlexibleCollections.psql";
+    private const string _enableOrgsFlexibleCollectionsScript = "PostgresMigrations.HelperScripts.2024-02-16_03_EnableOrgsFlexibleCollections.psql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
