@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240112123340_FCManagersEditAssignedCollectionUsers")]
+    [Migration("20240216131454_FCManagersEditAssignedCollectionUsers")]
     partial class FCManagersEditAssignedCollectionUsers
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace Bit.MySqlMigrations.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.14")
+                .HasAnnotation("ProductVersion", "7.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
@@ -138,9 +138,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<int?>("Seats")
                         .HasColumnType("int");
-
-                    b.Property<bool>("SecretsManagerBeta")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("SelfHost")
                         .HasColumnType("tinyint(1)");
@@ -536,7 +533,11 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.HasKey("Id")
+                        .HasName("PK_Grant")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("ExpirationDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("Key")
                         .IsUnique();
@@ -593,9 +594,19 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("OrganizationId", "ExternalId")
+                        .IsUnique()
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UserId" })
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("OrganizationId", "UserId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("SsoUser", (string)null);
                 });
