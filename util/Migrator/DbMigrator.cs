@@ -1,11 +1,11 @@
 ﻿using System.Data;
 using System.Reflection;
+using System.Text;
 using Bit.Core;
 using DbUp;
 using DbUp.Helpers;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using System.Text;
 
 namespace Bit.Migrator;
 
