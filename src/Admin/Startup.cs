@@ -108,7 +108,6 @@ public class Startup
          {
              o.ViewLocationFormats.Add("/Auth/Views/{1}/{0}.cshtml");
              o.ViewLocationFormats.Add("/AdminConsole/Views/{1}/{0}.cshtml");
-             o.ViewLocationFormats.Add("/AdminConsole/Views/Shared/{0}.cshtml");
          });
 
         // Jobs service
