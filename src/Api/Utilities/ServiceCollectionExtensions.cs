@@ -1,4 +1,5 @@
-﻿using Bit.Api.Vault.AuthorizationHandlers.Collections;
+﻿using Azure.Storage.Queues;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core.IdentityServer;
@@ -100,14 +101,16 @@ public static class ServiceCollectionExtensions
 
             if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
             {
-                builder.AddAzureQueueStorage(globalSettings.Storage.ConnectionString, name: "storage_queue")
-                    .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue");
+                builder.Services.AddKeyedSingleton(serviceKey: "storage_health_queue_client", new QueueServiceClient(globalSettings.Storage.ConnectionString));
+                builder.Services.AddKeyedSingleton(serviceKey: "events_health_queue_client", new QueueServiceClient(globalSettings.Events.ConnectionString));
+                builder.AddAzureQueueStorage(name: "storage_queue", clientFactory: sp => sp.GetRequiredKeyedService<QueueServiceClient>("storage_health_queue_client"));
+                builder.AddAzureQueueStorage(name: "events_queue", clientFactory: sp => sp.GetRequiredKeyedService<QueueServiceClient>("events_health_queue_client"));
             }
 
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications.ConnectionString))
             {
-                builder.AddAzureQueueStorage(globalSettings.Notifications.ConnectionString,
-                    name: "notifications_queue");
+                builder.Services.AddKeyedSingleton(serviceKey: "notifications_health_queue_client", new QueueServiceClient(globalSettings.Notifications.ConnectionString));
+                builder.AddAzureQueueStorage(name: "notifications_queue", clientFactory: sp => sp.GetRequiredKeyedService<QueueServiceClient>("notifications_health_queue_client"));
             }
 
             if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString))
