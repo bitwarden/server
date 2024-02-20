@@ -12,9 +12,6 @@ namespace Bit.Core.Utilities;
 /// </summary>
 public class EncryptedStringAttribute : ValidationAttribute
 {
-    private static readonly SearchValues<char> _pipeChar = SearchValues.Create("|");
-    private static readonly SearchValues<char> _periodChar = SearchValues.Create(".");
-
     internal static readonly Dictionary<EncryptionType, int> _encryptionTypeToRequiredPiecesMap = new()
     {
         [EncryptionType.AesCbc256_B64] = 2, // iv|ct
@@ -56,7 +53,7 @@ public class EncryptedStringAttribute : ValidationAttribute
 
     internal static bool IsValidCore(ReadOnlySpan<char> value)
     {
-        if (!value.TrySplitBy(_periodChar, out var headerChunk, out var rest))
+        if (!value.TrySplitBy('.', out var headerChunk, out var rest))
         {
             // We couldn't find a header part, this is the slow path, because we have to do two loops over
             // the data.
@@ -120,12 +117,12 @@ public class EncryptedStringAttribute : ValidationAttribute
                 }
 
                 // Make sure there isn't another split character possibly denoting another chunk
-                return rest.IndexOfAny(_pipeChar) == -1;
+                return rest.IndexOf('|') == -1;
             }
             else
             {
                 // More than one part is required so split it out
-                if (!rest.TrySplitBy(_pipeChar, out var chunk, out rest))
+                if (!rest.TrySplitBy('|', out var chunk, out rest))
                 {
                     return false;
                 }
@@ -142,6 +139,6 @@ public class EncryptedStringAttribute : ValidationAttribute
         }
 
         // No more parts are required, so check there are no extra parts
-        return rest.IndexOfAny(_pipeChar) == -1;
+        return rest.IndexOf('|') == -1;
     }
 }

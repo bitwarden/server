@@ -5,9 +5,9 @@ namespace Bit.Core.Utilities;
 public static class SpanExtensions
 {
     public static bool TrySplitBy(this ReadOnlySpan<char> input,
-        SearchValues<char> splitChars, out ReadOnlySpan<char> chunk, out ReadOnlySpan<char> rest)
+        char splitChar, out ReadOnlySpan<char> chunk, out ReadOnlySpan<char> rest)
     {
-        var splitIndex = input.IndexOfAny(splitChars);
+        var splitIndex = input.IndexOf(splitChar);
 
         if (splitIndex == -1)
         {

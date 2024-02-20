@@ -8,8 +8,6 @@ namespace Bit.Core.Test.Utilities;
 
 public class SpanExtensionsTests
 {
-    private static readonly SearchValues<char> _periodChar = SearchValues.Create(".");
-
     [Theory]
     [InlineData(".", "", "")]
     [InlineData("T.T", "T", "T")]
@@ -18,18 +16,18 @@ public class SpanExtensionsTests
     [InlineData("T.T.T", "T", "T.T")]
     public void TrySplitBy_CanSplit_Success(string fullString, string firstPart, string secondPart)
     {
-        var success = fullString.AsSpan().TrySplitBy(_periodChar, out var firstPartSpan, out var secondPartSpan);
+        var success = fullString.AsSpan().TrySplitBy('.', out var firstPartSpan, out var secondPartSpan);
         Assert.True(success);
         Assert.Equal(firstPart, firstPartSpan.ToString());
         Assert.Equal(secondPart, secondPartSpan.ToString());
     }
 
     [Theory]
-    [InlineData("Test", ".")]
-    [InlineData("Other test", "S")]
-    public void TrySplitBy_CanNotSplit_Success(string fullString, string splitChar)
+    [InlineData("Test", '.')]
+    [InlineData("Other test", 'S')]
+    public void TrySplitBy_CanNotSplit_Success(string fullString, char splitChar)
     {
-        var success = fullString.AsSpan().TrySplitBy(SearchValues.Create(splitChar), out var splitChunk, out var rest);
+        var success = fullString.AsSpan().TrySplitBy(splitChar, out var splitChunk, out var rest);
         Assert.False(success);
         Assert.True(splitChunk.IsEmpty);
         Assert.Equal(fullString, rest.ToString());
