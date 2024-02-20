@@ -6,6 +6,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Xunit;
+using EfOrganizationRepository = Bit.Infrastructure.EntityFramework.Repositories.OrganizationRepository;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
@@ -18,6 +19,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.User, accessAll: true, organizationUserRepository);
@@ -49,6 +55,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var organization = await CreateOrganization(organizationRepository);
         var group = await CreateGroup(organization, accessAll: true, groupRepository);
         var collection1 = await CreateCollection(organization, collectionRepository);
@@ -80,6 +91,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: true, organizationUserRepository);
@@ -113,6 +129,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
@@ -145,6 +166,11 @@ public class OrganizationEnableCollectionEnhancementTests
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
@@ -192,6 +218,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
@@ -255,6 +286,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: true,
@@ -290,6 +326,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
@@ -323,6 +364,11 @@ public class OrganizationEnableCollectionEnhancementTests
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
@@ -370,6 +416,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
@@ -434,6 +485,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         var userUser= await CreateUser(userRepository);
         var adminUser= await CreateUser(userRepository);
         var ownerUser= await CreateUser(userRepository);
@@ -507,6 +563,11 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
+        if (IsEfDatabase(organizationRepository))
+        {
+            return;
+        }
+
         // Target organization to be migrated
         var targetUser = await CreateUser(userRepository);
         var targetOrganization = await CreateOrganization(organizationRepository);
@@ -597,5 +658,13 @@ public class OrganizationEnableCollectionEnhancementTests
         var collection = new Collection { Name = $"Test collection {Guid.NewGuid()}", OrganizationId = organization.Id };
         await collectionRepository.CreateAsync(collection, groups: groups, users: users);
         return collection;
+    }
+
+    // This sproc is intentionally not implemented in EF repositories because it is for opt-in on cloud only.
+    // We handle this by returning early if we detect an EF repository, using IOrganizationRepository as a canary.
+    // This is intentionally NOT scalable because we really shouldn't be repeating this pattern in the future.
+    private bool IsEfDatabase(IOrganizationRepository organizationRepository)
+    {
+        return organizationRepository is EfOrganizationRepository;
     }
 }
