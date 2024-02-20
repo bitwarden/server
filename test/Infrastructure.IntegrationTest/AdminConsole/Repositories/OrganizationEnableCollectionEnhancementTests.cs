@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
@@ -247,6 +248,185 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: false, ReadOnly: false, Manage: false });
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task Migrate_CustomUser_WithEditAssignedCollections_WithAccessAll_GivesCanManageAccessToAllCollections(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var user = await CreateUser(userRepository);
+        var organization = await CreateOrganization(organizationRepository);
+        var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: true,
+            organizationUserRepository, new Permissions { EditAssignedCollections = true});
+        var collection1 = await CreateCollection(organization, collectionRepository);
+        var collection2 = await CreateCollection(organization, collectionRepository);
+        var collection3 = await CreateCollection(organization, collectionRepository);
+
+        await organizationRepository.EnableCollectionEnhancements(organization.Id);
+
+        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUser.Id);
+
+        Assert.False(updatedOrgUser.AccessAll);
+        // Note: custom users do not have their types changed yet, this was done in code with a migration to follow
+        Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
+
+        Assert.Equal(3, collectionAccessSelections.Count);
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection3.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_GivesCanManageAccessToAssignedCollections(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var user = await CreateUser(userRepository);
+        var organization = await CreateOrganization(organizationRepository);
+        var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
+            organizationUserRepository, new Permissions { EditAssignedCollections = true});
+        var collection1 = await CreateCollection(organization, collectionRepository, null, [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = true, ReadOnly = false, Manage = false }]);
+        var collection2 = await CreateCollection(organization, collectionRepository, null, [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = false }]);
+        var collection3 = await CreateCollection(organization, collectionRepository); // no access
+
+        await organizationRepository.EnableCollectionEnhancements(organization.Id);
+
+        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUser.Id);
+
+        Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
+
+        Assert.Equal(2, collectionAccessSelections.Count);
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.DoesNotContain(collectionAccessSelections, cas =>
+            cas.Id == collection3.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_GivesCanManageAccess_ToGroupAssignedCollections(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        IGroupRepository groupRepository)
+    {
+        var user = await CreateUser(userRepository);
+        var organization = await CreateOrganization(organizationRepository);
+        var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
+            organizationUserRepository, new Permissions { EditAssignedCollections = true});
+        var group = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
+
+        var collection1 = await CreateCollection(organization, collectionRepository, new []{new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false}});
+        var collection2 = await CreateCollection(organization, collectionRepository, new []{new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false}});
+        var collection3 = await CreateCollection(organization, collectionRepository); // no access
+
+        await organizationRepository.EnableCollectionEnhancements(organization.Id);
+
+        var (updatedOrgUser, updatedUserAccess) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUser.Id);
+
+        // Assert: user should be given Can Manage permissions over all group assigned collections
+        Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
+        Assert.Equal(2, updatedUserAccess.Count);
+        Assert.Contains(updatedUserAccess, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.Contains(updatedUserAccess, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.DoesNotContain(updatedUserAccess, cas =>
+            cas.Id == collection3.Id);
+
+        // Assert: group should only have Can Edit permissions (making sure no side-effects from the Manager migration)
+        var (updatedGroup, updatedGroupAccess) = await groupRepository.GetByIdWithCollectionsAsync(group.Id);
+        Assert.Equal(2, updatedGroupAccess.Count);
+        Assert.Contains(updatedGroupAccess, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+        Assert.Contains(updatedGroupAccess, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+        Assert.DoesNotContain(updatedGroupAccess, cas =>
+            cas.Id == collection3.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_InGroupWithAccessAll_GivesCanManageAccessToAllCollections(
+        IUserRepository userRepository,
+        IGroupRepository groupRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var user = await CreateUser(userRepository);
+        var organization = await CreateOrganization(organizationRepository);
+        var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
+            organizationUserRepository, new Permissions { EditAssignedCollections = true});
+
+        // Use 2 groups to test for overlapping access
+        var group1 = await CreateGroup(organization, accessAll: true, groupRepository, orgUser);
+        var group2 = await CreateGroup(organization, accessAll: true, groupRepository, orgUser);
+
+        var collection1 = await CreateCollection(organization, collectionRepository);
+        var collection2 = await CreateCollection(organization, collectionRepository);
+        var collection3 = await CreateCollection(organization, collectionRepository);
+
+        await organizationRepository.EnableCollectionEnhancements(organization.Id);
+
+        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUser.Id);
+
+        Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
+
+        // OrgUser has direct Can Manage access to all collections
+        Assert.Equal(3, collectionAccessSelections.Count);
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+        Assert.Contains(collectionAccessSelections, cas =>
+            cas.Id == collection3.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+
+        // Assert: group should only have Can Edit permissions (making sure no side-effects from the Manager migration)
+        var (updatedGroup1, updatedGroupAccess1) = await groupRepository.GetByIdWithCollectionsAsync(group1.Id);
+        Assert.Equal(3, updatedGroupAccess1.Count);
+        Assert.Contains(updatedGroupAccess1, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+        Assert.Contains(updatedGroupAccess1, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+        Assert.Contains(updatedGroupAccess1, cas =>
+            cas.Id == collection3.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+
+        var (updatedGroup2, updatedGroupAccess2) = await groupRepository.GetByIdWithCollectionsAsync(group2.Id);
+        Assert.Equal(3, updatedGroupAccess2.Count);
+        Assert.Contains(updatedGroupAccess2, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+        Assert.Contains(updatedGroupAccess2, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+        Assert.Contains(updatedGroupAccess2, cas =>
+            cas.Id == collection3.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+    }
+
     private async Task<User> CreateUser(IUserRepository userRepository)
     {
         return await userRepository.CreateAsync(new User
@@ -287,7 +467,8 @@ public class OrganizationEnableCollectionEnhancementTests
     }
 
     private async Task<OrganizationUser> CreateOrganizationUser(User user, Organization organization,
-        OrganizationUserType type, bool accessAll, IOrganizationUserRepository organizationUserRepository)
+        OrganizationUserType type, bool accessAll, IOrganizationUserRepository organizationUserRepository,
+        Permissions? permissions = null)
     {
         return await organizationUserRepository.CreateAsync(new OrganizationUser
         {
@@ -295,7 +476,8 @@ public class OrganizationEnableCollectionEnhancementTests
             UserId = user.Id,
             Status = OrganizationUserStatusType.Confirmed,
             Type = type,
-            AccessAll = accessAll
+            AccessAll = accessAll,
+            Permissions = permissions == null ? null : CoreHelpers.ClassToJsonData(permissions)
         });
     }
 
