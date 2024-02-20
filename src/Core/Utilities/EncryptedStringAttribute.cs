@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+﻿using System.Buffers.Text;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 
@@ -88,7 +88,7 @@ public class EncryptedStringAttribute : ValidationAttribute
         }
 
         // Simply cast the number to the enum, this could be a value that doesn't actually have a backing enum
-        // entry but that is alright we will use it to look in the dictionary and non-valid 
+        // entry but that is alright we will use it to look in the dictionary and non-valid
         // numbers will be filtered out there.
         encryptionType = (EncryptionType)encryptionTypeNumber;
 
@@ -110,7 +110,7 @@ public class EncryptedStringAttribute : ValidationAttribute
             if (requiredPieces == 1)
             {
                 // Only one more part is needed so don't split and check the chunk
-                if (!IsValidBase64(rest))
+                if (rest.IsEmpty || !Base64.IsValid(rest))
                 {
                     return false;
                 }
@@ -127,7 +127,7 @@ public class EncryptedStringAttribute : ValidationAttribute
                 }
 
                 // Is the required chunk valid base 64?
-                if (!IsValidBase64(chunk))
+                if (chunk.IsEmpty || !Base64.IsValid(chunk))
                 {
                     return false;
                 }
@@ -139,38 +139,5 @@ public class EncryptedStringAttribute : ValidationAttribute
 
         // No more parts are required, so check there are no extra parts
         return rest.IndexOf('|') == -1;
-    }
-
-    private static bool IsValidBase64(ReadOnlySpan<char> input)
-    {
-        const int StackLimit = 256;
-
-        byte[]? pooledChunks = null;
-
-        var upperLimitLength = CalculateBase64ByteLengthUpperLimit(input.Length);
-
-        // Ref: https://vcsjones.dev/stackalloc/
-        var byteBuffer = upperLimitLength > StackLimit
-            ? (pooledChunks = ArrayPool<byte>.Shared.Rent(upperLimitLength))
-            : stackalloc byte[StackLimit];
-
-        try
-        {
-            var successful = Convert.TryFromBase64Chars(input, byteBuffer, out var bytesWritten);
-            return successful && bytesWritten > 0;
-        }
-        finally
-        {
-            // Check if we rented the pool and if so, return it.
-            if (pooledChunks != null)
-            {
-                ArrayPool<byte>.Shared.Return(pooledChunks, true);
-            }
-        }
-    }
-
-    internal static int CalculateBase64ByteLengthUpperLimit(int charLength)
-    {
-        return 3 * (charLength / 4);
     }
 }
