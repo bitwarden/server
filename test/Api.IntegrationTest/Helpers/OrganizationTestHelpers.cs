@@ -22,7 +22,7 @@ public static class OrganizationTestHelpers
 
         var owner = await userRepository.GetByEmailAsync(ownerEmail);
 
-        return await organizationService.SignUpAsync(new OrganizationSignup
+        var signUpResult = await organizationService.SignUpAsync(new OrganizationSignup
         {
             Name = name,
             BillingEmail = billingEmail,
@@ -30,6 +30,8 @@ public static class OrganizationTestHelpers
             OwnerKey = ownerKey,
             Owner = owner,
         });
+
+        return new Tuple<Organization, OrganizationUser>(signUpResult.organization, signUpResult.organizationUser);
     }
 
     public static async Task<OrganizationUser> CreateUserAsync<T>(
