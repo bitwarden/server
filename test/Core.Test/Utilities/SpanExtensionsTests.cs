@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Xunit;
 
 #nullable enable
