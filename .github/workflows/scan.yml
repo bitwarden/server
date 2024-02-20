@@ -14,8 +14,8 @@ on:
 permissions: read-all
 
 jobs:
-  scan:
-    name: Scan
+  sast:
+    name: SAST scan
     runs-on: ubuntu-22.04
     permissions:
       security-events: write
@@ -38,3 +38,17 @@ jobs:
         uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
         with:
           sarif_file: cx_result.sarif
+
+  quality:
+    name: Quality scan
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+      - name: Scan with SonarCloud
+        uses: sonarsource/sonarcloud-github-action@49e6cd3b187936a73b8280d59ffd9da69df63ec9 # v2.1.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
