@@ -38,7 +38,7 @@
                                     @admin.Status
                                 </td>
                                 <td>
-                                    @if(admin.Status.Equals(ProviderUserStatusType.Confirmed) 
+                                    @if(admin.Status.Equals(ProviderUserStatusType.Confirmed)
                                         && @Model.Provider.Status.Equals(ProviderStatusType.Pending)
                                         && canResendEmailInvite)
                                     {
@@ -48,9 +48,9 @@
                                         }
                                         else
                                         {
-                                            <a class="btn btn-outline-secondary btn-sm" 
-                                                data-id="@admin.Id" asp-controller="Providers" 
-                                                asp-action="ResendInvite" asp-route-ownerId="@admin.UserId" 
+                                            <a class="btn btn-outline-secondary btn-sm"
+                                                data-id="@admin.Id" asp-controller="Providers"
+                                                asp-action="ResendInvite" asp-route-ownerId="@admin.UserId"
                                                 asp-route-providerId="@Model.Provider.Id">
                                                 Resend Setup Invite
                                             </a>

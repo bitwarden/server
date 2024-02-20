@@ -1,4 +1,6 @@
 ﻿@using Bit.Admin.Enums;
+@using Bit.Admin.Models
+@using Bit.Core.Enums
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model OrganizationEditModel
 @{
@@ -12,7 +14,7 @@
 }
 
 @section Scripts {
-    @await Html.PartialAsync("_OrganizationFormScripts")
+    @await Html.PartialAsync("~/AdminConsole/Views/Shared/_OrganizationFormScripts.cshtml")
 
     <script>
         (() => {
@@ -77,7 +79,7 @@
         new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
 }
 
-@await Html.PartialAsync("_OrganizationForm", Model)
+@await Html.PartialAsync("~/AdminConsole/Views/Shared/_OrganizationForm.cshtml", Model)
 
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>

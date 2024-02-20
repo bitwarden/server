@@ -11,7 +11,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.SharedWeb.Utilities;
 
-namespace Bit.Admin.Models;
+namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationEditModel : OrganizationViewModel
 {
