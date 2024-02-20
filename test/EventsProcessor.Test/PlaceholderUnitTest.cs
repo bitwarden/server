@@ -1,6 +1,7 @@
 ﻿namespace EventsProcessor.Test;
 
-public class UnitTest1
+// Delete this file once you have real tests
+public class PlaceholderUnitTest
 {
     [Fact]
     public void Test1()
