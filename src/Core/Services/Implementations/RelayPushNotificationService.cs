@@ -114,6 +114,11 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await PushUserAsync(userId, PushType.SyncVault);
     }
 
+    public async Task PushSyncOrganizationsAsync(Guid userId)
+    {
+        await PushUserAsync(userId, PushType.SyncOrganizations);
+    }
+
     public async Task PushSyncOrgKeysAsync(Guid userId)
     {
         await PushUserAsync(userId, PushType.SyncOrgKeys);
