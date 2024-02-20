@@ -427,6 +427,116 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: false, ReadOnly: false, Manage: false });
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task Migrate_NonManagers_WithoutAccessAll_NoChangeToRoleOrCollectionAccess(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var userUser= await CreateUser(userRepository);
+        var adminUser= await CreateUser(userRepository);
+        var ownerUser= await CreateUser(userRepository);
+        var customUser= await CreateUser(userRepository);
+
+        var organization = await CreateOrganization(organizationRepository);
+
+        // All roles that are unaffected by this change without AccessAll
+        var orgUser = await CreateOrganizationUser(userUser, organization, OrganizationUserType.User, accessAll: false, organizationUserRepository);
+        var admin = await CreateOrganizationUser(adminUser, organization, OrganizationUserType.Admin, accessAll: false, organizationUserRepository);
+        var owner = await CreateOrganizationUser(ownerUser, organization, OrganizationUserType.Owner, accessAll: false, organizationUserRepository);
+        var custom = await CreateOrganizationUser(customUser, organization, OrganizationUserType.Custom, accessAll: false, organizationUserRepository, new Permissions { DeleteAssignedCollections = true, AccessReports = true});
+
+        var collection1 = await CreateCollection(organization, collectionRepository, null, new []
+        {
+            new CollectionAccessSelection {Id = orgUser.Id},
+            new CollectionAccessSelection {Id = custom.Id, HidePasswords = true}
+        });
+        var collection2 = await CreateCollection(organization, collectionRepository,null, new []
+        {
+            new CollectionAccessSelection { Id = owner.Id, HidePasswords = true}  ,
+            new CollectionAccessSelection { Id = admin.Id, ReadOnly = true}
+        });
+        var collection3 = await CreateCollection(organization, collectionRepository, null, new []
+        {
+            new CollectionAccessSelection { Id = owner.Id }
+        });
+
+        await organizationRepository.EnableCollectionEnhancements(organization.Id);
+
+        var (updatedOrgUser, orgUserAccess) = await organizationUserRepository
+            .GetDetailsByIdWithCollectionsAsync(orgUser.Id);
+        Assert.Equal(OrganizationUserType.User, updatedOrgUser.Type);
+        Assert.Equal(1, orgUserAccess.Count);
+        Assert.Contains(orgUserAccess, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+
+        var (updatedAdmin, adminAccess) = await organizationUserRepository
+            .GetDetailsByIdWithCollectionsAsync(admin.Id);
+        Assert.Equal(OrganizationUserType.Admin, updatedAdmin.Type);
+        Assert.Equal(1, adminAccess.Count);
+        Assert.Contains(adminAccess, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: false, ReadOnly: true, Manage: false });
+
+        var (updatedOwner, ownerAccess) = await organizationUserRepository
+            .GetDetailsByIdWithCollectionsAsync(owner.Id);
+        Assert.Equal(OrganizationUserType.Owner, updatedOwner.Type);
+        Assert.Equal(2, ownerAccess.Count);
+        Assert.Contains(ownerAccess, cas =>
+            cas.Id == collection2.Id &&
+            cas is { HidePasswords: true, ReadOnly: false, Manage: false });
+        Assert.Contains(ownerAccess, cas =>
+            cas.Id == collection3.Id &&
+            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+
+        var (updatedCustom, customAccess) = await organizationUserRepository
+            .GetDetailsByIdWithCollectionsAsync(custom.Id);
+        Assert.Equal(OrganizationUserType.Custom, updatedCustom.Type);
+        Assert.Equal(1, customAccess.Count);
+        Assert.Contains(customAccess, cas =>
+            cas.Id == collection1.Id &&
+            cas is { HidePasswords: true, ReadOnly: false, Manage: false });
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task Migrate_DoesNotAffect_OtherOrganizations(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Target organization to be migrated
+        var targetUser = await CreateUser(userRepository);
+        var targetOrganization = await CreateOrganization(organizationRepository);
+        await CreateOrganizationUser(targetUser, targetOrganization, OrganizationUserType.Manager, accessAll: true, organizationUserRepository);
+        await CreateCollection(targetOrganization, collectionRepository);
+        await CreateCollection(targetOrganization, collectionRepository);
+        await CreateCollection(targetOrganization, collectionRepository);
+
+        // Unrelated organization
+        var user = await CreateUser(userRepository);
+        var organization = await CreateOrganization(organizationRepository);
+        var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: true, organizationUserRepository);
+        await CreateCollection(organization, collectionRepository);
+        await CreateCollection(organization, collectionRepository);
+        await CreateCollection(organization, collectionRepository);
+
+        await organizationRepository.EnableCollectionEnhancements(targetOrganization.Id);
+
+        var (updatedOrgUser, collectionAccessSelections) = await organizationUserRepository
+            .GetDetailsByIdWithCollectionsAsync(orgUser.Id);
+
+        // OrgUser should not have changed
+        Assert.Equal(OrganizationUserType.Manager, updatedOrgUser.Type);
+        Assert.True(updatedOrgUser.AccessAll);
+        Assert.Equal(0, collectionAccessSelections.Count);
+
+        var updatedOrganization = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.False(updatedOrganization.FlexibleCollections);
+    }
+
     private async Task<User> CreateUser(IUserRepository userRepository)
     {
         return await userRepository.CreateAsync(new User
