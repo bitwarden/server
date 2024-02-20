@@ -34,13 +34,13 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
     }
 
     [DatabaseTheory, MssqlDatabaseData]
@@ -64,13 +64,13 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
     }
 
     [DatabaseTheory, MssqlDatabaseData]
@@ -97,13 +97,13 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
     }
 
     [DatabaseTheory, MssqlDatabaseData]
@@ -129,10 +129,10 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(2, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.DoesNotContain(collectionAccessSelections, cas =>
             cas.Id == collection3.Id);
     }
@@ -164,10 +164,10 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(2, updatedUserAccess.Count);
         Assert.Contains(updatedUserAccess, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(updatedUserAccess, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.DoesNotContain(updatedUserAccess, cas =>
             cas.Id == collection3.Id);
 
@@ -176,10 +176,10 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(2, updatedGroupAccess.Count);
         Assert.Contains(updatedGroupAccess, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.DoesNotContain(updatedGroupAccess, cas =>
             cas.Id == collection3.Id);
     }
@@ -214,38 +214,38 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
 
         // Assert: group should only have Can Edit permissions (making sure no side-effects from the Manager migration)
         var (updatedGroup1, updatedGroupAccess1) = await groupRepository.GetByIdWithCollectionsAsync(group1.Id);
         Assert.Equal(3, updatedGroupAccess1.Count);
         Assert.Contains(updatedGroupAccess1, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess1, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess1, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
 
         var (updatedGroup2, updatedGroupAccess2) = await groupRepository.GetByIdWithCollectionsAsync(group2.Id);
         Assert.Equal(3, updatedGroupAccess2.Count);
         Assert.Contains(updatedGroupAccess2, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess2, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess2, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
     }
 
     [DatabaseTheory, MssqlDatabaseData]
@@ -274,13 +274,13 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
     }
 
     [DatabaseTheory, MssqlDatabaseData]
@@ -307,10 +307,10 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(2, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.DoesNotContain(collectionAccessSelections, cas =>
             cas.Id == collection3.Id);
     }
@@ -342,10 +342,10 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(2, updatedUserAccess.Count);
         Assert.Contains(updatedUserAccess, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(updatedUserAccess, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.DoesNotContain(updatedUserAccess, cas =>
             cas.Id == collection3.Id);
 
@@ -354,10 +354,10 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(2, updatedGroupAccess.Count);
         Assert.Contains(updatedGroupAccess, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.DoesNotContain(updatedGroupAccess, cas =>
             cas.Id == collection3.Id);
     }
@@ -393,38 +393,38 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(3, collectionAccessSelections.Count);
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
         Assert.Contains(collectionAccessSelections, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: true });
+            CanManage(cas));
 
         // Assert: group should only have Can Edit permissions (making sure no side-effects from the Manager migration)
         var (updatedGroup1, updatedGroupAccess1) = await groupRepository.GetByIdWithCollectionsAsync(group1.Id);
         Assert.Equal(3, updatedGroupAccess1.Count);
         Assert.Contains(updatedGroupAccess1, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess1, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess1, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
 
         var (updatedGroup2, updatedGroupAccess2) = await groupRepository.GetByIdWithCollectionsAsync(group2.Id);
         Assert.Equal(3, updatedGroupAccess2.Count);
         Assert.Contains(updatedGroupAccess2, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess2, cas =>
             cas.Id == collection2.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
         Assert.Contains(updatedGroupAccess2, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
     }
 
     [DatabaseTheory, MssqlDatabaseData]
@@ -470,7 +470,7 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Equal(1, orgUserAccess.Count);
         Assert.Contains(orgUserAccess, cas =>
             cas.Id == collection1.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
 
         var (updatedAdmin, adminAccess) = await organizationUserRepository
             .GetDetailsByIdWithCollectionsAsync(admin.Id);
@@ -489,7 +489,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: true, ReadOnly: false, Manage: false });
         Assert.Contains(ownerAccess, cas =>
             cas.Id == collection3.Id &&
-            cas is { HidePasswords: false, ReadOnly: false, Manage: false });
+            CanEdit(cas));
 
         var (updatedCustom, customAccess) = await organizationUserRepository
             .GetDetailsByIdWithCollectionsAsync(custom.Id);
@@ -597,5 +597,15 @@ public class OrganizationEnableCollectionEnhancementTests
         var collection = new Collection { Name = $"Test collection {Guid.NewGuid()}", OrganizationId = organization.Id };
         await collectionRepository.CreateAsync(collection, groups: groups, users: users);
         return collection;
+    }
+
+    private bool CanEdit(CollectionAccessSelection collectionAccess)
+    {
+        return collectionAccess is { HidePasswords: false, ReadOnly: false, Manage: false };
+    }
+
+    private bool CanManage(CollectionAccessSelection collectionAccess)
+    {
+        return collectionAccess is { HidePasswords: false, ReadOnly: false, Manage: true };
     }
 }
