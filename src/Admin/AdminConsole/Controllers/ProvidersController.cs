@@ -1,6 +1,7 @@
 ﻿using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -31,6 +32,7 @@ public class ProvidersController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly IUserService _userService;
     private readonly ICreateProviderCommand _createProviderCommand;
+    private readonly IFeatureService _featureService;
 
     public ProvidersController(
         IOrganizationRepository organizationRepository,
@@ -43,7 +45,8 @@ public class ProvidersController : Controller
         IApplicationCacheService applicationCacheService,
         IReferenceEventService referenceEventService,
         IUserService userService,
-        ICreateProviderCommand createProviderCommand)
+        ICreateProviderCommand createProviderCommand,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
@@ -56,6 +59,7 @@ public class ProvidersController : Controller
         _referenceEventService = referenceEventService;
         _userService = userService;
         _createProviderCommand = createProviderCommand;
+        _featureService = featureService;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -236,7 +240,9 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        var organization = model.CreateOrganization(provider);
+        var flexibleCollectionsSignupEnabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
+        var flexibleCollectionsV1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
+        var organization = model.CreateOrganization(provider, flexibleCollectionsSignupEnabled, flexibleCollectionsV1Enabled);
         await _organizationService.CreatePendingOrganization(organization, model.Owners, User, _userService, model.SalesAssistedTrialStarted);
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
