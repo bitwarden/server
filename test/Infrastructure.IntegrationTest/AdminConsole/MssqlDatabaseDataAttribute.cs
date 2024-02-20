@@ -1,39 +1,20 @@
-﻿using System.Reflection;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
-using Bit.Infrastructure.EntityFramework;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit.Sdk;
 
-namespace Bit.Infrastructure.IntegrationTest;
+namespace Bit.Infrastructure.IntegrationTest.AdminConsole;
 
-public class DatabaseDataAttribute : DataAttribute
+/// <summary>
+/// Used to test the mssql database only.
+/// This is generally NOT what you want and is only used for Flexible Collections which has an opt-in method specific
+/// to cloud (and therefore mssql) only. This should be deleted during cleanup so that others don't use it.
+/// </summary>
+internal class MssqlDatabaseDataAttribute : DatabaseDataAttribute
 {
-    public bool SelfHosted { get; set; }
-
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
-    {
-        var parameters = testMethod.GetParameters();
-
-        var config = DatabaseTheoryAttribute.GetConfiguration();
-
-        var serviceProviders = GetDatabaseProviders(config);
-
-        foreach (var provider in serviceProviders)
-        {
-            var objects = new object[parameters.Length];
-            for (var i = 0; i < parameters.Length; i++)
-            {
-                objects[i] = provider.GetRequiredService(parameters[i].ParameterType);
-            }
-            yield return objects;
-        }
-    }
-
-    protected virtual IEnumerable<IServiceProvider> GetDatabaseProviders(IConfiguration config)
+    protected override IEnumerable<IServiceProvider> GetDatabaseProviders(IConfiguration config)
     {
         var configureLogging = (ILoggingBuilder builder) =>
         {
@@ -67,16 +48,6 @@ public class DatabaseDataAttribute : DataAttribute
                 dapperSqlServerCollection.AddSingleton(database);
                 dapperSqlServerCollection.AddDataProtection();
                 yield return dapperSqlServerCollection.BuildServiceProvider();
-            }
-            else
-            {
-                var efCollection = new ServiceCollection();
-                efCollection.AddLogging(configureLogging);
-                efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
-                efCollection.AddPasswordManagerEFRepositories(SelfHosted);
-                efCollection.AddSingleton(database);
-                efCollection.AddDataProtection();
-                yield return efCollection.BuildServiceProvider();
             }
         }
     }

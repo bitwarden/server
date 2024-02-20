@@ -6,24 +6,18 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Xunit;
-using EfOrganizationRepository = Bit.Infrastructure.EntityFramework.Repositories.OrganizationRepository;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationEnableCollectionEnhancementTests
 {
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_User_WithAccessAll_GivesCanEditAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.User, accessAll: true, organizationUserRepository);
@@ -49,17 +43,12 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: false, ReadOnly: false, Manage: false });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_Group_WithAccessAll_GivesCanEditAccessToAllCollections(
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var organization = await CreateOrganization(organizationRepository);
         var group = await CreateGroup(organization, accessAll: true, groupRepository);
         var collection1 = await CreateCollection(organization, collectionRepository);
@@ -84,18 +73,13 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: false, ReadOnly: false, Manage: false });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_Manager_WithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: true, organizationUserRepository);
@@ -122,18 +106,13 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: false, ReadOnly: false, Manage: true });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_GivesCanManageAccessToAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
@@ -158,7 +137,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_GivesCanManageAccess_ToGroupAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -166,18 +145,13 @@ public class OrganizationEnableCollectionEnhancementTests
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
         var group = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
 
-        var collection1 = await CreateCollection(organization, collectionRepository, new []{new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false}});
-        var collection2 = await CreateCollection(organization, collectionRepository, new []{new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false}});
+        var collection1 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
+        var collection2 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
         var collection3 = await CreateCollection(organization, collectionRepository); // no access
 
         await organizationRepository.EnableCollectionEnhancements(organization.Id);
@@ -210,7 +184,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_InGroupWithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
@@ -218,11 +192,6 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
@@ -279,22 +248,17 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: false, ReadOnly: false, Manage: false });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: true,
-            organizationUserRepository, new Permissions { EditAssignedCollections = true});
+            organizationUserRepository, new Permissions { EditAssignedCollections = true });
         var collection1 = await CreateCollection(organization, collectionRepository);
         var collection2 = await CreateCollection(organization, collectionRepository);
         var collection3 = await CreateCollection(organization, collectionRepository);
@@ -319,22 +283,17 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: false, ReadOnly: false, Manage: true });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_GivesCanManageAccessToAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
-            organizationUserRepository, new Permissions { EditAssignedCollections = true});
+            organizationUserRepository, new Permissions { EditAssignedCollections = true });
         var collection1 = await CreateCollection(organization, collectionRepository, null, [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = true, ReadOnly = false, Manage = false }]);
         var collection2 = await CreateCollection(organization, collectionRepository, null, [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = false }]);
         var collection3 = await CreateCollection(organization, collectionRepository); // no access
@@ -356,7 +315,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_GivesCanManageAccess_ToGroupAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -364,19 +323,14 @@ public class OrganizationEnableCollectionEnhancementTests
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
-            organizationUserRepository, new Permissions { EditAssignedCollections = true});
+            organizationUserRepository, new Permissions { EditAssignedCollections = true });
         var group = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
 
-        var collection1 = await CreateCollection(organization, collectionRepository, new []{new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false}});
-        var collection2 = await CreateCollection(organization, collectionRepository, new []{new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false}});
+        var collection1 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
+        var collection2 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
         var collection3 = await CreateCollection(organization, collectionRepository); // no access
 
         await organizationRepository.EnableCollectionEnhancements(organization.Id);
@@ -408,7 +362,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_InGroupWithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
@@ -416,15 +370,10 @@ public class OrganizationEnableCollectionEnhancementTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Custom, accessAll: false,
-            organizationUserRepository, new Permissions { EditAssignedCollections = true});
+            organizationUserRepository, new Permissions { EditAssignedCollections = true });
 
         // Use 2 groups to test for overlapping access
         var group1 = await CreateGroup(organization, accessAll: true, groupRepository, orgUser);
@@ -478,22 +427,17 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: false, ReadOnly: false, Manage: false });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_NonManagers_WithoutAccessAll_NoChangeToRoleOrCollectionAccess(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
-        var userUser= await CreateUser(userRepository);
-        var adminUser= await CreateUser(userRepository);
-        var ownerUser= await CreateUser(userRepository);
-        var customUser= await CreateUser(userRepository);
+        var userUser = await CreateUser(userRepository);
+        var adminUser = await CreateUser(userRepository);
+        var ownerUser = await CreateUser(userRepository);
+        var customUser = await CreateUser(userRepository);
 
         var organization = await CreateOrganization(organizationRepository);
 
@@ -501,19 +445,19 @@ public class OrganizationEnableCollectionEnhancementTests
         var orgUser = await CreateOrganizationUser(userUser, organization, OrganizationUserType.User, accessAll: false, organizationUserRepository);
         var admin = await CreateOrganizationUser(adminUser, organization, OrganizationUserType.Admin, accessAll: false, organizationUserRepository);
         var owner = await CreateOrganizationUser(ownerUser, organization, OrganizationUserType.Owner, accessAll: false, organizationUserRepository);
-        var custom = await CreateOrganizationUser(customUser, organization, OrganizationUserType.Custom, accessAll: false, organizationUserRepository, new Permissions { DeleteAssignedCollections = true, AccessReports = true});
+        var custom = await CreateOrganizationUser(customUser, organization, OrganizationUserType.Custom, accessAll: false, organizationUserRepository, new Permissions { DeleteAssignedCollections = true, AccessReports = true });
 
-        var collection1 = await CreateCollection(organization, collectionRepository, null, new []
+        var collection1 = await CreateCollection(organization, collectionRepository, null, new[]
         {
             new CollectionAccessSelection {Id = orgUser.Id},
             new CollectionAccessSelection {Id = custom.Id, HidePasswords = true}
         });
-        var collection2 = await CreateCollection(organization, collectionRepository,null, new []
+        var collection2 = await CreateCollection(organization, collectionRepository, null, new[]
         {
             new CollectionAccessSelection { Id = owner.Id, HidePasswords = true}  ,
             new CollectionAccessSelection { Id = admin.Id, ReadOnly = true}
         });
-        var collection3 = await CreateCollection(organization, collectionRepository, null, new []
+        var collection3 = await CreateCollection(organization, collectionRepository, null, new[]
         {
             new CollectionAccessSelection { Id = owner.Id }
         });
@@ -556,18 +500,13 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: true, ReadOnly: false, Manage: false });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [DatabaseTheory, MssqlDatabaseData]
     public async Task Migrate_DoesNotAffect_OtherOrganizations(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository)
     {
-        if (IsEfDatabase(organizationRepository))
-        {
-            return;
-        }
-
         // Target organization to be migrated
         var targetUser = await CreateUser(userRepository);
         var targetOrganization = await CreateOrganization(organizationRepository);
@@ -658,13 +597,5 @@ public class OrganizationEnableCollectionEnhancementTests
         var collection = new Collection { Name = $"Test collection {Guid.NewGuid()}", OrganizationId = organization.Id };
         await collectionRepository.CreateAsync(collection, groups: groups, users: users);
         return collection;
-    }
-
-    // This sproc is intentionally not implemented in EF repositories because it is for opt-in on cloud only.
-    // We handle this by returning early if we detect an EF repository, using IOrganizationRepository as a canary.
-    // This is intentionally NOT scalable because we really shouldn't be repeating this pattern in the future.
-    private bool IsEfDatabase(IOrganizationRepository organizationRepository)
-    {
-        return organizationRepository is EfOrganizationRepository;
     }
 }
