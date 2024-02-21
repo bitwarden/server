@@ -8,16 +8,10 @@ on:
       - "rc"
       - "hotfix-rc"
   pull_request:
-    branches-ignore:
-      - "renovate/**"
 
 permissions: read-all
 
 jobs:
-  build:
-    uses: ./.github/workflows/build.yml
-    secrets: inherit
-
   sast:
     name: SAST scan
     runs-on: ubuntu-22.04
@@ -64,27 +58,3 @@ jobs:
             -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
             -Dsonar.test.exclusions=test/**
             -Dsonar.tests=test/
-
-  container:
-    name: Container scan
-    runs-on: ubuntu-22.04
-    needs: build
-
-    steps:
-      - name: Log in to Azure - production subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Scan image
-        id: container-sarif
-        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
-        with:
-          image: ${{ needs.build.outputs.docker-image-names }}
-          fail-build: false
-          output-format: sarif
-
-      - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
-        with:
-          sarif_file: ${{ steps.container-sarif.outputs.sarif }}
