@@ -8,7 +8,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Admin.Controllers;
+namespace Bit.Admin.AdminConsole.Controllers;
 
 [Authorize]
 [SelfHosted(NotSelfHostedOnly = true)]

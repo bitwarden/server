@@ -1,5 +1,5 @@
-﻿using Bit.Admin.Enums;
-using Bit.Admin.Models;
+﻿using Bit.Admin.AdminConsole.Models;
+using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
@@ -23,7 +23,7 @@ using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Admin.Controllers;
+namespace Bit.Admin.AdminConsole.Controllers;
 
 [Authorize]
 public class OrganizationsController : Controller
@@ -38,7 +38,6 @@ public class OrganizationsController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPaymentService _paymentService;
-    private readonly ILicensingService _licensingService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly GlobalSettings _globalSettings;
     private readonly IReferenceEventService _referenceEventService;
@@ -65,7 +64,6 @@ public class OrganizationsController : Controller
         IGroupRepository groupRepository,
         IPolicyRepository policyRepository,
         IPaymentService paymentService,
-        ILicensingService licensingService,
         IApplicationCacheService applicationCacheService,
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
@@ -91,7 +89,6 @@ public class OrganizationsController : Controller
         _groupRepository = groupRepository;
         _policyRepository = policyRepository;
         _paymentService = paymentService;
-        _licensingService = licensingService;
         _applicationCacheService = applicationCacheService;
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;

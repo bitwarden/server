@@ -1,8 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Admin.Models;
+using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Admin.Models;
+namespace Bit.Admin.AdminConsole.Models;
 
-public class ProvidersModel : PagedModel<Provider>
+public class OrganizationsModel : PagedModel<Organization>
 {
     public string Name { get; set; }
     public string UserEmail { get; set; }

@@ -5,7 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Vault.Entities;
 
-namespace Bit.Admin.Models;
+namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationViewModel
 {

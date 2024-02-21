@@ -1,3 +1,4 @@
+@using Bit.Core.Enums
 @model OrganizationViewModel
 <h2>Connections</h2>
 <div class="row">
@@ -49,7 +50,7 @@
                                     }
                                 </td>
                                 <td>
-                                    @if(connection.Enabled) 
+                                    @if(connection.Enabled)
                                     {
                                         @if(@TempData["ConnectionActivated"] != null && @TempData["ConnectionActivated"].ToString() == @Model.Organization.Id.ToString())
                                         {
@@ -62,8 +63,8 @@
                                         {
                                             @if(connection.Type.Equals(OrganizationConnectionType.CloudBillingSync))
                                             {
-                                                <a class="btn btn-outline-secondary btn-sm" 
-                                                    data-id="@connection.Id" asp-controller="Organizations" 
+                                                <a class="btn btn-outline-secondary btn-sm"
+                                                    data-id="@connection.Id" asp-controller="Organizations"
                                                     asp-action="TriggerBillingSync" asp-route-id="@Model.Organization.Id">
                                                     Manually Sync
                                                 </a>

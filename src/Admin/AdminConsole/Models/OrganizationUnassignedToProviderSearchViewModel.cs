@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Admin.Models;
 
-namespace Bit.Admin.Models;
+namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationUnassignedToProviderSearchViewModel : PagedModel<OrganizationSelectableViewModel>
 {

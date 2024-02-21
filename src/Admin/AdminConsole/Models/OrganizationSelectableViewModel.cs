@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Admin.Models;
+namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationSelectableViewModel : Organization
 {

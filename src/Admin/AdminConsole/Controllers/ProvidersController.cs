@@ -1,5 +1,5 @@
-﻿using Bit.Admin.Enums;
-using Bit.Admin.Models;
+﻿using Bit.Admin.AdminConsole.Models;
+using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -15,7 +15,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Admin.Controllers;
+namespace Bit.Admin.AdminConsole.Controllers;
 
 [Authorize]
 [SelfHosted(NotSelfHostedOnly = true)]
