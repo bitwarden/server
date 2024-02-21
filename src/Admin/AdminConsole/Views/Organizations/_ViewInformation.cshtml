@@ -1,5 +1,4 @@
-﻿@using Bit.Infrastructure.EntityFramework.AdminConsole.Models
-@model OrganizationViewModel
+﻿@model OrganizationViewModel
 <dl class="row">
     <dt class="col-sm-4 col-lg-3">Id</dt>
     <dd class="col-sm-8 col-lg-9"><code>@Model.Organization.Id</code></dd>
@@ -27,33 +26,6 @@
     <dt class="col-sm-4 col-lg-3">Using 2FA</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.Organization.TwoFactorIsEnabled() ? "Yes" : "No")</dd>
 
-    <dt class="col-sm-4 col-lg-3">Items</dt>
-    <dd class="col-sm-8 col-lg-9">@Model.CipherCount</dd>
-
-    <dt class="col-sm-4 col-lg-3">Collections</dt>
-    <dd class="col-sm-8 col-lg-9">@Model.CollectionCount</dd>
-
-    <dt class="col-sm-4 col-lg-3">Collection management enhancements</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.Organization.FlexibleCollections ? "On" : "Off")</dd>
-
-    <dt class="col-sm-4 col-lg-3">Administrators manage all collections</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.GetCollectionManagementSetting(Model.Organization.AllowAdminAccessToAllCollectionItems))</dd>
-
-    <dt class="col-sm-4 col-lg-3">Limit collection creation to administrators</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.GetCollectionManagementSetting(Model.Organization.LimitCollectionCreationDeletion))</dd>
-
-    <dt class="col-sm-4 col-lg-3">Secrets</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.SecretsCount: "N/A")</dd>
-
-    <dt class="col-sm-4 col-lg-3">Projects</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ProjectsCount: "N/A")</dd>
-
-    <dt class="col-sm-4 col-lg-3">Service Accounts</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ServiceAccountsCount: "N/A")</dd>
-
-    <dt class="col-sm-4 col-lg-3">Secrets Manager Seats</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.OccupiedSmSeatsCount: "N/A" )</dd>
-
     <dt class="col-sm-4 col-lg-3">Groups</dt>
     <dd class="col-sm-8 col-lg-9">@Model.GroupCount</dd>
 
@@ -68,4 +40,37 @@
 
     <dt class="col-sm-4 col-lg-3">Modified</dt>
     <dd class="col-sm-8 col-lg-9">@Model.Organization.RevisionDate.ToString()</dd>
+</dl>
+
+<h2>Password Manager</h2>
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Items</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.CipherCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Collections</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.CollectionCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Collection management enhancements</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.Organization.FlexibleCollections ? "On" : "Off")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Administrators manage all collections</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.GetCollectionManagementSetting(Model.Organization.AllowAdminAccessToAllCollectionItems))</dd>
+
+    <dt class="col-sm-4 col-lg-3">Limit collection creation to administrators</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.GetCollectionManagementSetting(Model.Organization.LimitCollectionCreationDeletion))</dd>
+</dl>
+
+<h2>Secrets Manager</h2>
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Secrets</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.SecretsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Projects</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ProjectsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Service Accounts</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ServiceAccountsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Secrets Manager Seats</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.OccupiedSmSeatsCount: "N/A" )</dd>
 </dl>
