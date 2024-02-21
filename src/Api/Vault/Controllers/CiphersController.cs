@@ -322,9 +322,13 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
+        // We do NOT need to check the organization collection management setting here because Owners/Admins can
+        // ALWAYS access all ciphers in order to export them. Additionally, custom users with AccessImportExport or
+        // EditAnyCollection permissions can also always access all ciphers.
         if (org is
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.AccessImportExport: true })
+        { Permissions.AccessImportExport: true } or
+        { Permissions.EditAnyCollection: true })
         {
             return true;
         }
