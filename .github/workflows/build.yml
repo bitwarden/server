@@ -2,6 +2,7 @@
 name: Build
 
 on:
+  workflow_call:
   workflow_dispatch:
   push:
     branches:
@@ -120,6 +121,8 @@ jobs:
     name: Build Docker images
     runs-on: ubuntu-22.04
     needs: build-artifacts
+    outputs:
+      output1: ${{ steps.image-names.outputs.names }}
     strategy:
       fail-fast: false
       matrix:
