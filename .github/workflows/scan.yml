@@ -57,6 +57,12 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ github.repository_owner }}
+            -Dsonar.projectKey=${{ github.repository_owner }}-${{ github.event.repository.name }}
+            -Dsonar.test.exclusions=test/**
+            -Dsonar.tests=test/
 
   container:
     name: Container scan
