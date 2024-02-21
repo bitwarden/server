@@ -204,8 +204,8 @@ public class PayPalController : Controller
 
                     if (parentTransaction == null)
                     {
-                        _logger.LogError("PayPal IPN ({Id}): Could not find parent transaction", transactionModel.TransactionId);
-                        return BadRequest();
+                        _logger.LogWarning("PayPal IPN ({Id}): Could not find parent transaction", transactionModel.TransactionId);
+                        return Ok();
                     }
 
                     var refundAmount = Math.Abs(transactionModel.MerchantGross);
