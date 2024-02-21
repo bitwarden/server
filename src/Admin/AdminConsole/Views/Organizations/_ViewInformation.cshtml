@@ -1,4 +1,5 @@
-﻿@model OrganizationViewModel
+﻿@using Bit.Infrastructure.EntityFramework.AdminConsole.Models
+@model OrganizationViewModel
 <dl class="row">
     <dt class="col-sm-4 col-lg-3">Id</dt>
     <dd class="col-sm-8 col-lg-9"><code>@Model.Organization.Id</code></dd>
@@ -32,6 +33,15 @@
     <dt class="col-sm-4 col-lg-3">Collections</dt>
     <dd class="col-sm-8 col-lg-9">@Model.CollectionCount</dd>
 
+    <dt class="col-sm-4 col-lg-3">Collection management enhancements</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.Organization.FlexibleCollections ? "On" : "Off")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Administrators manage all collections</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.GetCollectionManagementSetting(Model.Organization.AllowAdminAccessToAllCollectionItems))</dd>
+
+    <dt class="col-sm-4 col-lg-3">Limit collection creation to administrators</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.GetCollectionManagementSetting(Model.Organization.LimitCollectionCreationDeletion))</dd>
+
     <dt class="col-sm-4 col-lg-3">Secrets</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.SecretsCount: "N/A")</dd>
 
@@ -52,9 +62,6 @@
 
     <dt class="col-sm-4 col-lg-3">Public/Private Keys</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.HasPublicPrivateKeys ? "Yes" : "No")</dd>
-
-    <dt class="col-sm-4 col-lg-3">Flexible Collections</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.Organization.FlexibleCollections ? "Yes" : "No")</dd>
 
     <dt class="col-sm-4 col-lg-3">Created</dt>
     <dd class="col-sm-8 col-lg-9">@Model.Organization.CreationDate.ToString()</dd>
