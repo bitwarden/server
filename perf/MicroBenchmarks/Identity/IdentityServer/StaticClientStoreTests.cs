@@ -1,4 +1,4 @@
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer;
 using Duende.IdentityServer.Models;
