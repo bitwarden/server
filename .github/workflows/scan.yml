@@ -71,11 +71,14 @@ jobs:
     needs: build
 
     steps:
+      - name: Check out repo
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
       - name: Scan image
         id: container-sarif
         uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
         with:
-          image: ${{ needs.build.outputs.names }}
+          image: ${{ needs.build.outputs.docker-image-names }}
           fail-build: false
           output-format: sarif
 

@@ -3,6 +3,10 @@ name: Build
 
 on:
   workflow_call:
+    outputs:
+      docker-image-names:
+        description: "Docker image names built"
+        value: ${{ jobs.build-docker.outputs.output1 }}
   workflow_dispatch:
   push:
     branches:
