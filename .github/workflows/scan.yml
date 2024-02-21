@@ -29,13 +29,15 @@ jobs:
 
       - name: Scan with Checkmarx
         uses: checkmarx/ast-github-action@749fec53e0db0f6404a97e2e0807c3e80e3583a7 #2.0.23
+        env:
+          INCREMENTAL: "${{ github.event_name == 'pull_request' && '--sast-incremental' || '' }}"
         with:
           project_name: ${{ github.repository }}
           cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
           base_uri: https://ast.checkmarx.net/
           cx_client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
           cx_client_secret: ${{ secrets.CHECKMARX_SECRET }}
-          additional_params: --report-format sarif --output-path .
+          additional_params: --report-format sarif --output-path . ${{ env.INCREMENTAL }}
 
       - name: Upload Checkmarx results to GitHub
         uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
