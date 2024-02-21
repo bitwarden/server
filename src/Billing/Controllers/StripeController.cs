@@ -188,7 +188,7 @@ public class StripeController : Controller
                     }
 
                     var user = await _userService.GetUserByIdAsync(userId);
-                    if (user.Premium)
+                    if (user?.Premium == true)
                     {
                         await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
                     }
@@ -253,7 +253,9 @@ public class StripeController : Controller
                 var customer = await _stripeFacade.GetCustomer(subscription.CustomerId);
                 if (!subscription.AutomaticTax.Enabled &&
                     !string.IsNullOrEmpty(customer.Address?.PostalCode) &&
-                    !string.IsNullOrEmpty(customer.Address?.Country))
+                    !string.IsNullOrEmpty(customer.Address?.Country) &&
+                    !string.IsNullOrEmpty(customer.Tax?.Location.Country) &&
+                    !string.IsNullOrEmpty(customer.Tax?.Location.State))
                 {
                     subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
                         new SubscriptionUpdateOptions
@@ -319,7 +321,7 @@ public class StripeController : Controller
             {
                 var user = await _userService.GetUserByIdAsync(userId.Value);
 
-                if (user.Premium)
+                if (user?.Premium == true)
                 {
                     await SendEmails(new List<string> { user.Email });
                 }
@@ -672,9 +674,9 @@ public class StripeController : Controller
         }
     }
 
-    private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
+    private static Tuple<Guid?, Guid?> GetIdsFromMetaData(Dictionary<string, string> metaData)
     {
-        if (metaData == null || !metaData.Any())
+        if (metaData == null || metaData.Count == 0)
         {
             return new Tuple<Guid?, Guid?>(null, null);
         }
@@ -682,29 +684,35 @@ public class StripeController : Controller
         Guid? orgId = null;
         Guid? userId = null;
 
-        if (metaData.ContainsKey("organizationId"))
+        if (metaData.TryGetValue("organizationId", out var orgIdString))
         {
-            orgId = new Guid(metaData["organizationId"]);
+            orgId = new Guid(orgIdString);
         }
-        else if (metaData.ContainsKey("userId"))
+        else if (metaData.TryGetValue("userId", out var userIdString))
         {
-            userId = new Guid(metaData["userId"]);
+            userId = new Guid(userIdString);
         }
 
-        if (userId == null && orgId == null)
+        if (userId != null && userId != Guid.Empty || orgId != null && orgId != Guid.Empty)
         {
-            var orgIdKey = metaData.Keys.FirstOrDefault(k => k.ToLowerInvariant() == "organizationid");
-            if (!string.IsNullOrWhiteSpace(orgIdKey))
+            return new Tuple<Guid?, Guid?>(orgId, userId);
+        }
+
+        var orgIdKey = metaData.Keys
+            .FirstOrDefault(k => k.Equals("organizationid", StringComparison.InvariantCultureIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(orgIdKey))
+        {
+            orgId = new Guid(metaData[orgIdKey]);
+        }
+        else
+        {
+            var userIdKey = metaData.Keys
+                .FirstOrDefault(k => k.Equals("userid", StringComparison.InvariantCultureIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(userIdKey))
             {
-                orgId = new Guid(metaData[orgIdKey]);
-            }
-            else
-            {
-                var userIdKey = metaData.Keys.FirstOrDefault(k => k.ToLowerInvariant() == "userid");
-                if (!string.IsNullOrWhiteSpace(userIdKey))
-                {
-                    userId = new Guid(metaData[userIdKey]);
-                }
+                userId = new Guid(metaData[userIdKey]);
             }
         }
 
