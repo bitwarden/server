@@ -16,6 +16,7 @@ permissions: read-all
 jobs:
   build:
     uses: ./.github/workflows/build.yml
+    secrets: inherit
 
   sast:
     name: SAST scan
