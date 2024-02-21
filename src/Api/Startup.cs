@@ -26,6 +26,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -169,6 +170,8 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
+        services.AddBillingCommands();
+        services.AddBillingQueries();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
@@ -288,6 +291,12 @@ public class Startup
                     "Bitwarden Public API");
                 config.OAuthClientId("accountType.id");
                 config.OAuthClientSecret("secretKey");
+
+                // Persist authorization on page refresh - for development use only
+                if (Environment.IsDevelopment())
+                {
+                    config.EnablePersistAuthorization();
+                }
             });
         }
 

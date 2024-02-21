@@ -105,6 +105,12 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
+    public Task PushSyncOrganizationsAsync(Guid userId)
+    {
+        PushToServices((s) => s.PushSyncOrganizationsAsync(userId));
+        return Task.FromResult(0);
+    }
+
     public Task PushSyncOrgKeysAsync(Guid userId)
     {
         PushToServices((s) => s.PushSyncOrgKeysAsync(userId));

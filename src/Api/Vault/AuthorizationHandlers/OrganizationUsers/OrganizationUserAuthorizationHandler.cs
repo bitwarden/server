@@ -1,9 +1,5 @@
 ﻿#nullable enable
-using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
@@ -15,27 +11,15 @@ namespace Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 public class OrganizationUserAuthorizationHandler : AuthorizationHandler<OrganizationUserOperationRequirement>
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
-    public OrganizationUserAuthorizationHandler(
-        ICurrentContext currentContext,
-        IFeatureService featureService)
+    public OrganizationUserAuthorizationHandler(ICurrentContext currentContext)
     {
         _currentContext = currentContext;
-        _featureService = featureService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         OrganizationUserOperationRequirement requirement)
     {
-        if (!FlexibleCollectionsIsEnabled)
-        {
-            // Flexible collections is OFF, should not be using this handler
-            throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
-        }
-
         if (!_currentContext.UserId.HasValue)
         {
             context.Fail();
@@ -61,19 +45,10 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
     private async Task CanReadAllAsync(AuthorizationHandlerContext context, OrganizationUserOperationRequirement requirement,
         CurrentContextOrganization? org)
     {
-        // If the limit collection management setting is disabled, allow any user to read all organization users
-        // Otherwise, Owners, Admins, and users with any of ManageGroups, ManageUsers, EditAnyCollection, DeleteAnyCollection, CreateNewCollections permissions can always read all organization users
-        if (org is
-        { LimitCollectionCreationDeletion: false } or
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.ManageGroups: true } or
-        { Permissions.ManageUsers: true } or
-        { Permissions.EditAnyCollection: true } or
-        { Permissions.DeleteAnyCollection: true } or
-        { Permissions.CreateNewCollections: true })
+        // All users of an organization can read all other users of that organization for collection access management
+        if (org is not null)
         {
             context.Succeed(requirement);
-            return;
         }
 
         // Allow provider users to read all organization users if they are a provider for the target organization

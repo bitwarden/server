@@ -12,5 +12,7 @@ public class AssociationWithPermissionsResponseModel : AssociationWithPermission
         }
         Id = selection.Id;
         ReadOnly = selection.ReadOnly;
+        HidePasswords = selection.HidePasswords;
+        Manage = selection.Manage;
     }
 }
