@@ -175,7 +175,7 @@ public class StripePaymentService : IPaymentService
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
             subCreateOptions.Customer = customer.Id;
 
-            if (pm5766AutomaticTaxIsEnabled)
+            if (pm5766AutomaticTaxIsEnabled && CustomerHasTaxLocationVerified(customer))
             {
                 subCreateOptions.AutomaticTax = new Stripe.SubscriptionAutomaticTaxOptions { Enabled = true };
             }
@@ -306,7 +306,7 @@ public class StripePaymentService : IPaymentService
 
         var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
 
-        if (pm5766AutomaticTaxIsEnabled)
+        if (pm5766AutomaticTaxIsEnabled && CustomerHasTaxLocationVerified(customer))
         {
             subCreateOptions.DefaultTaxRates = new List<string>();
             subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
@@ -540,7 +540,7 @@ public class StripePaymentService : IPaymentService
             });
         }
 
-        if (pm5766AutomaticTaxIsEnabled)
+        if (pm5766AutomaticTaxIsEnabled && CustomerHasTaxLocationVerified(customer))
         {
             subCreateOptions.DefaultTaxRates = new List<string>();
             subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
@@ -666,7 +666,8 @@ public class StripePaymentService : IPaymentService
             subCreateOptions.OffSession = true;
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax))
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax) &&
+                CustomerHasTaxLocationVerified(customer))
             {
                 subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
             }
@@ -1872,21 +1873,24 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    private static bool CustomerHasTaxLocationVerified(Stripe.Customer customer) =>
+        customer?.Address != null &&
+        !string.IsNullOrEmpty(customer.Address?.Country) &&
+        !string.IsNullOrEmpty(customer.Address?.PostalCode) &&
+        customer.Tax?.Location != null &&
+        !string.IsNullOrEmpty(customer.Tax.Location.Country);
+
     // We are taking only first 30 characters of the SubscriberName because stripe provide
     // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create
-    public static string GetFirstThirtyCharacters(string subscriberName)
+    private static string GetFirstThirtyCharacters(string subscriberName)
     {
         if (string.IsNullOrWhiteSpace(subscriberName))
         {
-            return "";
+            return string.Empty;
         }
-        else if (subscriberName.Length <= 30)
-        {
-            return subscriberName;
-        }
-        else
-        {
-            return subscriberName.Substring(0, 30);
-        }
+
+        return subscriberName.Length <= 30
+            ? subscriberName
+            : subscriberName[..30];
     }
 }
