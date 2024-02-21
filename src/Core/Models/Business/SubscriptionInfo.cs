@@ -42,6 +42,7 @@ public class SubscriptionInfo
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
             }
+            CollectionMethod = sub.CollectionMethod;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -54,6 +55,8 @@ public class SubscriptionInfo
         public string Status { get; set; }
         public bool Cancelled { get; set; }
         public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
+        public string CollectionMethod { get; set; }
+        public DateTime? SuspensionDate { get; set; }
 
         public class BillingSubscriptionItem
         {

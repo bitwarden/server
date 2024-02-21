@@ -4,34 +4,18 @@ namespace Bit.Core.Services;
 
 public class StripeAdapter : IStripeAdapter
 {
-    private readonly Stripe.CustomerService _customerService;
-    private readonly Stripe.SubscriptionService _subscriptionService;
-    private readonly Stripe.InvoiceService _invoiceService;
-    private readonly Stripe.PaymentMethodService _paymentMethodService;
-    private readonly Stripe.TaxRateService _taxRateService;
-    private readonly Stripe.TaxIdService _taxIdService;
-    private readonly Stripe.ChargeService _chargeService;
-    private readonly Stripe.RefundService _refundService;
-    private readonly Stripe.CardService _cardService;
-    private readonly Stripe.BankAccountService _bankAccountService;
-    private readonly Stripe.PriceService _priceService;
-    private readonly Stripe.TestHelpers.TestClockService _testClockService;
-
-    public StripeAdapter()
-    {
-        _customerService = new Stripe.CustomerService();
-        _subscriptionService = new Stripe.SubscriptionService();
-        _invoiceService = new Stripe.InvoiceService();
-        _paymentMethodService = new Stripe.PaymentMethodService();
-        _taxRateService = new Stripe.TaxRateService();
-        _taxIdService = new Stripe.TaxIdService();
-        _chargeService = new Stripe.ChargeService();
-        _refundService = new Stripe.RefundService();
-        _cardService = new Stripe.CardService();
-        _bankAccountService = new Stripe.BankAccountService();
-        _priceService = new Stripe.PriceService();
-        _testClockService = new Stripe.TestHelpers.TestClockService();
-    }
+    private readonly Stripe.CustomerService _customerService = new();
+    private readonly Stripe.SubscriptionService _subscriptionService = new();
+    private readonly Stripe.InvoiceService _invoiceService = new();
+    private readonly Stripe.PaymentMethodService _paymentMethodService = new();
+    private readonly Stripe.TaxRateService _taxRateService = new();
+    private readonly Stripe.TaxIdService _taxIdService = new();
+    private readonly Stripe.ChargeService _chargeService = new();
+    private readonly Stripe.RefundService _refundService = new();
+    private readonly Stripe.CardService _cardService = new();
+    private readonly Stripe.BankAccountService _bankAccountService = new();
+    private readonly Stripe.PriceService _priceService = new();
+    private readonly Stripe.TestHelpers.TestClockService _testClockService = new();
 
     public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
     {
@@ -102,6 +86,9 @@ public class StripeAdapter : IStripeAdapter
 
         return invoices;
     }
+
+    public async Task<List<Stripe.Invoice>> InvoiceSearchAsync(Stripe.InvoiceSearchOptions options)
+        => (await _invoiceService.SearchAsync(options)).Data;
 
     public Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options)
     {
