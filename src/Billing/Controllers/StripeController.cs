@@ -3,6 +3,7 @@ using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -250,22 +251,20 @@ public class StripeController : Controller
             var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
             if (pm5766AutomaticTaxIsEnabled)
             {
-                var customer = await _stripeFacade.GetCustomer(subscription.CustomerId);
+                var customerGetOptions = new CustomerGetOptions();
+                customerGetOptions.AddExpand("tax");
+                var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
                 if (!subscription.AutomaticTax.Enabled &&
-                    !string.IsNullOrEmpty(customer.Address?.PostalCode) &&
-                    !string.IsNullOrEmpty(customer.Address?.Country) &&
-                    !string.IsNullOrEmpty(customer.Tax?.Location.Country) &&
-                    !string.IsNullOrEmpty(customer.Tax?.Location.State))
+                    customer.Tax?.AutomaticTax == StripeCustomerAutomaticTaxStatus.Supported)
                 {
                     subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
                         new SubscriptionUpdateOptions
                         {
-                            DefaultTaxRates = new List<string>(),
+                            DefaultTaxRates = [],
                             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
                         });
                 }
             }
-
 
             var updatedSubscription = pm5766AutomaticTaxIsEnabled
                 ? subscription
@@ -573,7 +572,7 @@ public class StripeController : Controller
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.CustomerUpdated))
         {
             var customer =
-                await _stripeEventService.GetCustomer(parsedEvent, true, new List<string> { "subscriptions" });
+                await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
 
             if (customer.Subscriptions == null || !customer.Subscriptions.Any())
             {
@@ -616,7 +615,7 @@ public class StripeController : Controller
         {
             Customer = paymentMethod.CustomerId,
             Status = StripeSubscriptionStatus.Unpaid,
-            Expand = new List<string> { "data.latest_invoice" }
+            Expand = ["data.latest_invoice"]
         };
 
         StripeList<Subscription> unpaidSubscriptions;
@@ -899,9 +898,9 @@ public class StripeController : Controller
             return subscription;
         }
 
-        subscription.DefaultTaxRates = new List<Stripe.TaxRate> { stripeTaxRate };
+        subscription.DefaultTaxRates = [stripeTaxRate];
 
-        var subscriptionOptions = new SubscriptionUpdateOptions { DefaultTaxRates = new List<string> { stripeTaxRate.Id } };
+        var subscriptionOptions = new SubscriptionUpdateOptions { DefaultTaxRates = [stripeTaxRate.Id] };
         subscription = await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionOptions);
 
         return subscription;
