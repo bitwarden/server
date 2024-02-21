@@ -1,2 +1,3 @@
 ignore:
   - "test" # Tests
+  - "util" # Utils (migrators)
