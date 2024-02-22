@@ -129,7 +129,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(false);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(false);
 
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
@@ -154,7 +154,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.UnsupportedTransactionType);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
@@ -183,7 +183,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
@@ -212,7 +212,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.RefundMissingParentTransaction);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
@@ -241,7 +241,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.ECheckPayment);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
@@ -270,7 +270,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.NonUSDPayment);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
@@ -299,7 +299,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -332,7 +332,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -367,7 +367,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPaymentForOrganizationCredit);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -417,7 +417,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPaymentForUserCredit);
 
-        _payPalIPNClient.VerifyIPN(userId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -467,7 +467,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -504,7 +504,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -545,7 +545,7 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 
-        _payPalIPNClient.VerifyIPN(organizationId, ipnBody).Returns(true);
+        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,

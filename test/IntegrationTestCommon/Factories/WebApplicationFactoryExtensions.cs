@@ -28,7 +28,7 @@ public static class WebApplicationFactoryExtensions
             {
                 foreach (var header in content.Headers)
                 {
-                    httpContext.Request.Headers.Add(header.Key, new StringValues(header.Value.ToArray()));
+                    httpContext.Request.Headers.Append(header.Key, new StringValues(header.Value.ToArray()));
                 }
 
                 httpContext.Request.Body = content.ReadAsStream();
@@ -64,7 +64,7 @@ public static class WebApplicationFactoryExtensions
 
     public static HttpContext SetAuthEmail(this HttpContext context, string username)
     {
-        context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username));
+        context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username));
         return context;
     }
 

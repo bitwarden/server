@@ -75,6 +75,14 @@ public class PayPalController : Controller
 
         var transactionModel = new PayPalIPNTransactionModel(requestContent);
 
+        _logger.LogInformation("PayPal IPN: Transaction Type = {Type}", transactionModel.TransactionType);
+
+        if (string.IsNullOrEmpty(transactionModel.TransactionId))
+        {
+            _logger.LogError("PayPal IPN: Transaction ID is missing");
+            return Ok();
+        }
+
         var entityId = transactionModel.UserId ?? transactionModel.OrganizationId;
 
         if (!entityId.HasValue)
@@ -83,7 +91,7 @@ public class PayPalController : Controller
             return BadRequest();
         }
 
-        var verified = await _payPalIPNClient.VerifyIPN(entityId.Value, requestContent);
+        var verified = await _payPalIPNClient.VerifyIPN(transactionModel.TransactionId, requestContent);
 
         if (!verified)
         {
