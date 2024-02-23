@@ -63,29 +63,6 @@ public class UpgradeOrganizationPlanCommandTests
         Assert.Contains("already on this plan", exception.Message);
     }
 
-    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
-    public async Task UpgradePlan_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
-        Assert.Contains("can only upgrade", exception.Message);
-    }
-
-    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
-    public async Task UpgradePlan_SM_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
-        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
-    {
-        upgrade.UseSecretsManager = true;
-        upgrade.AdditionalSmSeats = 10;
-        upgrade.AdditionalServiceAccounts = 10;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
-        Assert.Contains("can only upgrade", exception.Message);
-    }
-
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
     public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
@@ -96,6 +73,41 @@ public class UpgradeOrganizationPlanCommandTests
         upgrade.AdditionalSeats = 10;
         upgrade.Plan = PlanType.TeamsAnnually;
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsStarter)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task UpgradePlan_FromFamilies_Passes(
+        PlanType planType,
+        Organization organization,
+        OrganizationUpgrade organizationUpgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        organization.PlanType = PlanType.FamiliesAnnually;
+
+        organizationUpgrade.AdditionalSeats = 30;
+        organizationUpgrade.UseSecretsManager = true;
+        organizationUpgrade.AdditionalSmSeats = 20;
+        organizationUpgrade.AdditionalServiceAccounts = 5;
+        organizationUpgrade.AdditionalStorageGb = 3;
+        organizationUpgrade.Plan = planType;
+
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, organizationUpgrade);
+        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSubscription(
+            organization,
+            StaticStore.GetPlan(planType),
+            organizationUpgrade.AdditionalSeats,
+            organizationUpgrade.UseSecretsManager,
+            organizationUpgrade.AdditionalSmSeats,
+            5,
+            3);
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
     }
 
@@ -129,7 +141,6 @@ public class UpgradeOrganizationPlanCommandTests
         Assert.True(result.Item1);
         Assert.NotNull(result.Item2);
     }
-
 
     [Theory, FreeOrganizationUpgradeCustomize]
     [BitAutoData(PlanType.EnterpriseMonthly)]

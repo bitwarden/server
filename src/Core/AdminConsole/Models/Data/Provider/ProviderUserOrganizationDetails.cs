@@ -39,4 +39,7 @@ public class ProviderUserOrganizationDetails
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string ProviderName { get; set; }
     public Core.Enums.PlanType PlanType { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool FlexibleCollections { get; set; }
 }

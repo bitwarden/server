@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -16,7 +15,6 @@ using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Castle.Core.Internal;
 using NSubstitute;
 using Xunit;
 
@@ -36,6 +34,7 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider)
     {
         organization.MaxCollections = null;
+        organization.FlexibleCollections = false;
         importingOrganizationUser.OrganizationId = organization.Id;
 
         foreach (var collection in collections)
@@ -62,10 +61,6 @@ public class CipherServiceTests
             .GetByOrganizationAsync(organization.Id, importingUserId)
             .Returns(importingOrganizationUser);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(false);
-
         // Set up a collection that already exists in the organization
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
@@ -79,7 +74,7 @@ public class CipherServiceTests
                         !cols.Any(c => c.Id == collections[0].Id) && // Check that the collection that already existed in the organization was not added
                         cols.All(c => collections.Any(x => c.Name == x.Name))),
             Arg.Is<IEnumerable<CollectionCipher>>(c => c.Count() == ciphers.Count),
-            Arg.Is<IEnumerable<CollectionUser>>(i => i.IsNullOrEmpty()));
+            Arg.Is<IEnumerable<CollectionUser>>(i => !i.Any()));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
         await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
             Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.VaultImported));
@@ -95,6 +90,7 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider)
     {
         organization.MaxCollections = null;
+        organization.FlexibleCollections = true;
         importingOrganizationUser.OrganizationId = organization.Id;
 
         foreach (var collection in collections)
@@ -120,10 +116,6 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, importingUserId)
             .Returns(importingOrganizationUser);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(true);
 
         // Set up a collection that already exists in the organization
         sutProvider.GetDependency<ICollectionRepository>()
@@ -690,7 +682,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organization.Id, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
     [Theory]
@@ -846,7 +838,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
     private async Task AssertNoActionsAsync(SutProvider<CipherService> sutProvider)

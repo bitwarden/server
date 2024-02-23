@@ -263,7 +263,7 @@ public class HandlebarsMailService : IMailService
             });
         var model = new PasswordlessSignInModel
         {
-            Url = url.ToString()
+            Url = url.OriginalString
         };
         await AddMessageContentAsync(message, "Auth.PasswordlessSignIn", model);
         message.Category = "PasswordlessSignIn";
@@ -751,6 +751,30 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Provider.ProviderUserRemoved", model);
         message.Category = "ProviderUserRemoved";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendProviderUpdatePaymentMethod(
+        Guid organizationId,
+        string organizationName,
+        string providerName,
+        IEnumerable<string> emails)
+    {
+        var message = CreateDefaultMessage("Update your billing information", emails);
+
+        var model = new ProviderUpdatePaymentMethodViewModel
+        {
+            OrganizationId = organizationId.ToString(),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+            ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+            SiteName = _globalSettings.SiteName,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+        };
+
+        await AddMessageContentAsync(message, "Provider.ProviderUpdatePaymentMethod", model);
+
+        message.Category = "ProviderUpdatePaymentMethod";
+
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

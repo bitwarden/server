@@ -49,6 +49,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
     public int? AdditionalServiceAccounts { get; set; }
     [Required]
     public bool UseSecretsManager { get; set; }
+    public bool IsFromSecretsManagerTrial { get; set; }
 
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
@@ -70,6 +71,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
             AdditionalSmSeats = AdditionalSmSeats.GetValueOrDefault(),
             AdditionalServiceAccounts = AdditionalServiceAccounts.GetValueOrDefault(),
             UseSecretsManager = UseSecretsManager,
+            IsFromSecretsManagerTrial = IsFromSecretsManagerTrial,
             TaxInfo = new TaxInfo
             {
                 TaxIdNumber = TaxIdNumber,

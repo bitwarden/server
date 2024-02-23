@@ -64,6 +64,7 @@ public record TeamsStarterPlan : Plan
             HasAdditionalStorageOption = true;
 
             StripePlanId = "teams-org-starter";
+            StripeStoragePlanId = "storage-gb-monthly";
             AdditionalStoragePricePerGb = 0.5M;
         }
     }

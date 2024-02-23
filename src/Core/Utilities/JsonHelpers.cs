@@ -46,18 +46,6 @@ public static class JsonHelpers
         };
     }
 
-    [Obsolete("This is built into .NET 6, it SHOULD be removed when we upgrade")]
-    public static T ToObject<T>(this JsonElement element, JsonSerializerOptions options = null)
-    {
-        return JsonSerializer.Deserialize<T>(element.GetRawText(), options ?? Default);
-    }
-
-    [Obsolete("This is built into .NET 6, it SHOULD be removed when we upgrade")]
-    public static T ToObject<T>(this JsonDocument document, JsonSerializerOptions options = null)
-    {
-        return JsonSerializer.Deserialize<T>(document.RootElement.GetRawText(), options ?? default);
-    }
-
     public static T DeserializeOrNew<T>(string json, JsonSerializerOptions options = null)
         where T : new()
     {

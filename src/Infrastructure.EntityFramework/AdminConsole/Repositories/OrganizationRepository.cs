@@ -5,15 +5,23 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Organization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    public OrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Organizations)
-    { }
+    private readonly ILogger<OrganizationRepository> _logger;
+
+    public OrganizationRepository(
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        ILogger<OrganizationRepository> logger)
+        : base(serviceScopeFactory, mapper, context => context.Organizations)
+    {
+        _logger = logger;
+    }
 
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
     {
@@ -88,7 +96,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseResetPassword = e.UseResetPassword,
                 UseScim = e.UseScim,
                 UseCustomPermissions = e.UseCustomPermissions,
-                UsePolicies = e.UsePolicies
+                UsePolicies = e.UsePolicies,
+                LimitCollectionCreationDeletion = e.LimitCollectionCreationDeletion,
+                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
+                FlexibleCollections = e.FlexibleCollections
             }).ToListAsync();
         }
     }
@@ -157,6 +168,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await deleteCiphersTransaction.CommitAsync();
 
             var organizationDeleteTransaction = await dbContext.Database.BeginTransactionAsync();
+            await dbContext.AuthRequests.Where(ar => ar.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             await dbContext.SsoUsers.Where(su => su.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.SsoConfigs.Where(sc => sc.OrganizationId == organization.Id)
@@ -166,6 +179,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUser.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUser.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.UserSecretAccessPolicy.Where(ap => ap.OrganizationUser.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
@@ -235,6 +250,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public async Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId)
     {
+        _logger.LogInformation("AC-1758: Executing GetOwnerEmailAddressesById (Entity Framework)");
+
         using var scope = ServiceScopeFactory.CreateScope();
 
         var dbContext = GetDatabaseContext(scope);
@@ -251,5 +268,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             select grouped.Key;
 
         return await query.ToListAsync();
+    }
+
+    public Task EnableCollectionEnhancements(Guid organizationId)
+    {
+        throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
     }
 }
