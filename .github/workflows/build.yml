@@ -276,7 +276,7 @@ jobs:
         id: container-scan
         uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
         with:
-          image: ${{ steps.image-names.outputs.names }}
+          path: ${{ matrix.base_path }}/${{ matrix.project_name }}
           fail-build: false
           output-format: sarif
 
