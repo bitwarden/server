@@ -234,19 +234,20 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Generate image name(s)
-        id: image-names
+      - name: Generate image tags(s)
+        id: image-tags
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
         run: |
-          NAMES="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          TAGS="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          echo "primary_tag=$TAGS" >> $GITHUB_OUTPUT
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short ${SHA})
-            NAMES=$NAMES",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
+            TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
-          echo "names=$NAMES" >> $GITHUB_OUTPUT
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
@@ -268,7 +269,7 @@ jobs:
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.image-names.outputs.names }}
+          tags: ${{ steps.image-tags.outputs.tags }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
@@ -276,7 +277,7 @@ jobs:
         id: container-scan
         uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
         with:
-          image: ${{ steps.image-names.outputs.names }}
+          image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
           output-format: sarif
 
