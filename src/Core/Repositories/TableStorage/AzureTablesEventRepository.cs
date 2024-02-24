@@ -6,15 +6,15 @@ using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Repositories.TableStorage;
 
-public class EventRepository : IEventRepository
+public class AzureTablesEventRepository : IEventRepository
 {
     private readonly CloudTable _table;
 
-    public EventRepository(GlobalSettings globalSettings)
+    public AzureTablesEventRepository(GlobalSettings globalSettings)
         : this(globalSettings.Events.ConnectionString)
     { }
 
-    public EventRepository(string storageConnectionString)
+    public AzureTablesEventRepository(string storageConnectionString)
     {
         var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
         var tableClient = storageAccount.CreateCloudTableClient();

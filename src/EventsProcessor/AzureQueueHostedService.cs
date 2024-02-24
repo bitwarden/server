@@ -56,7 +56,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
             return;
         }
 
-        var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
+        var repo = new Core.Repositories.TableStorage.AzureTablesEventRepository(storageConnectionString);
         _eventWriteService = new RepositoryEventWriteService(repo);
         _queueClient = new QueueClient(storageConnectionString, "event");
 
