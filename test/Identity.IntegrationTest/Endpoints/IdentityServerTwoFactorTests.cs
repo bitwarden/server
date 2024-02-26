@@ -75,7 +75,9 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             var organizationRepository = _factory.Services.GetService<IOrganizationRepository>();
             var organization = await organizationRepository.CreateAsync(new Organization
             {
-                Name = "Test Org", Use2fa = true, TwoFactorProviders = orgTwoFactor,
+                Name = "Test Org",
+                Use2fa = true,
+                TwoFactorProviders = orgTwoFactor,
             });
 
             await _factory.Services.GetService<IOrganizationUserRepository>()
@@ -105,7 +107,8 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         // Register user
         await _factory.RegisterAsync(new RegisterRequestModel
         {
-            Email = username, MasterPasswordHash = "master_password_hash"
+            Email = username,
+            MasterPasswordHash = "master_password_hash"
         });
 
         // Add two factor
