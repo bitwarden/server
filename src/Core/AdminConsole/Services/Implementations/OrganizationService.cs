@@ -533,6 +533,7 @@ public class OrganizationService : IOrganizationService
                 PlanName = plan.Name,
                 PlanType = plan.Type,
                 Seats = returnValue.Item1.Seats,
+                SignupInitiationPath = signup.InitiationPath,
                 Storage = returnValue.Item1.MaxStorageGb,
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
@@ -2526,7 +2527,7 @@ public class OrganizationService : IOrganizationService
         });
     }
 
-    public async Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName)
+    public async Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
     {
         await ValidateSignUpPoliciesAsync(userId);
 
@@ -2565,9 +2566,8 @@ public class OrganizationService : IOrganizationService
             List<CollectionAccessSelection> defaultOwnerAccess = null;
             if (org.FlexibleCollections)
             {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, userId);
                 defaultOwnerAccess =
-                    [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+                    [new CollectionAccessSelection { Id = organizationUserId, HidePasswords = false, ReadOnly = false, Manage = true }];
             }
 
             var defaultCollection = new Collection

@@ -14,7 +14,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.AdminConsole.Repositories;
 public class PolicyRepositoryTests
 {
     [CiSkippedTheory, EfPolicyAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         Policy policy,
         Organization organization,
         PolicyCompare equalityComparer,

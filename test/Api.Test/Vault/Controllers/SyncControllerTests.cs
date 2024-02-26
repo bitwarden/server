@@ -313,7 +313,7 @@ public class SyncControllerTests
     }
 
 
-    private async void AssertMethodsCalledAsync(IUserService userService,
+    private async Task AssertMethodsCalledAsync(IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository, IFolderRepository folderRepository,
         ICipherRepository cipherRepository, ISendRepository sendRepository,

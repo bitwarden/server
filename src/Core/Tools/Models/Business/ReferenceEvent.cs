@@ -234,4 +234,13 @@ public class ReferenceEvent
     /// <see langword="null"/> when the event was not originated by an application.
     /// </value>
     public Version? ClientVersion { get; set; }
+
+    /// <summary>
+    /// The initiation path of a user who signed up for a paid version of Bitwarden. For example, "Trial from marketing website".
+    /// </summary>
+    /// <value>
+    /// This value should only be populated when the <see cref="ReferenceEventType"/> is <see cref="ReferenceEventType.Signup"/>. Otherwise,
+    /// the value should be <see langword="null" />.
+    /// </value>
+    public string SignupInitiationPath { get; set; }
 }

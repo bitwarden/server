@@ -147,7 +147,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" }
+            { Fido2VaultCredentials, "true" },
+            { DuoRedirect, "true" }
         };
     }
 }

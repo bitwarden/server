@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class DeviceRepositoryTests
 {
     [CiSkippedTheory, EfDeviceAutoData]
-    public async void CreateAsync_Works_DataMatches(Device device, User user,
+    public async Task CreateAsync_Works_DataMatches(Device device, User user,
         DeviceCompare equalityComparer, List<EfRepo.DeviceRepository> suts,
         List<EfRepo.UserRepository> efUserRepos, SqlRepo.DeviceRepository sqlDeviceRepo,
         SqlRepo.UserRepository sqlUserRepo)
