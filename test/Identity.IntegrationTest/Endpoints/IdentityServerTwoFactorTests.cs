@@ -57,7 +57,8 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     {
         // Arrange
         var username = "test+org2farequired@email.com";
-        // use valid keys so DuoWeb.SignRequest doesn't throw
+        // use valid length keys so DuoWeb.SignRequest doesn't throw
+        // ikey: 20, skey: 40, akey: 40
         var orgTwoFactor =
             """{"6":{"Enabled":true,"MetaData":{"IKey":"DIEFB13LB49IEB3459N2","SKey":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
 
