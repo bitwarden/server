@@ -533,6 +533,7 @@ public class OrganizationService : IOrganizationService
                 PlanName = plan.Name,
                 PlanType = plan.Type,
                 Seats = returnValue.Item1.Seats,
+                SignupInitiationPath = signup.InitiationPath,
                 Storage = returnValue.Item1.MaxStorageGb,
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
