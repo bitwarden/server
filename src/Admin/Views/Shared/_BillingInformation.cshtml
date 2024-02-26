@@ -24,13 +24,14 @@
                     {
                         <tr>
                             <td>@invoice.Date</td>
-                            <td><a target="_blank" href="@invoice.Url" title="View Invoice">@invoice.Number</a></td>
+                            <td><a target="_blank" rel="noreferrer" href="@invoice.Url" title="View Invoice">@invoice.Number</a>
+                            </td>
                             <td>@invoice.Amount.ToString("C")</td>
                             <td>@(invoice.Paid ? "Paid" : "Unpaid")</td>
                             @if (canDownloadInvoice) 
                             {
                                 <td>
-                                    <a target="_blank" href="@invoice.PdfUrl" title="Download Invoice">
+                                    <a target="_blank" rel="noreferrer" href="@invoice.PdfUrl" title="Download Invoice">
                                         <i class="fa fa-file-pdf-o"></i>
                                     </a>
                                 </td>

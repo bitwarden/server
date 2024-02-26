@@ -44,12 +44,10 @@ public class CiphersController : Controller
     private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
-
-    private bool UseFlexibleCollectionsV1 =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -62,7 +60,8 @@ public class CiphersController : Controller
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
         IFeatureService featureService,
-        IOrganizationCiphersQuery organizationCiphersQuery)
+        IOrganizationCiphersQuery organizationCiphersQuery,
+        IApplicationCacheService applicationCacheService)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -75,6 +74,7 @@ public class CiphersController : Controller
         _globalSettings = globalSettings;
         _featureService = featureService;
         _organizationCiphersQuery = organizationCiphersQuery;
+        _applicationCacheService = applicationCacheService;
     }
 
     [HttpGet("{id}")]
@@ -241,7 +241,7 @@ public class CiphersController : Controller
     public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId)
     {
         // Flexible Collections Logic
-        if (UseFlexibleCollectionsV1)
+        if (await UseFlexibleCollectionsV1Async(organizationId))
         {
             return await GetAllOrganizationCiphersAsync(organizationId);
         }
@@ -266,7 +266,7 @@ public class CiphersController : Controller
     [HttpGet("organization-details/assigned")]
     public async Task<ListResponseModel<CipherDetailsResponseModel>> GetAssignedOrganizationCiphers(Guid organizationId)
     {
-        if (!UseFlexibleCollectionsV1)
+        if (!await UseFlexibleCollectionsV1Async(organizationId))
         {
             throw new FeatureUnavailableException();
         }
@@ -322,9 +322,13 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
+        // We do NOT need to check the organization collection management setting here because Owners/Admins can
+        // ALWAYS access all ciphers in order to export them. Additionally, custom users with AccessImportExport or
+        // EditAnyCollection permissions can also always access all ciphers.
         if (org is
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.AccessImportExport: true })
+        { Permissions.AccessImportExport: true } or
+        { Permissions.EditAnyCollection: true })
         {
             return true;
         }
@@ -973,5 +977,16 @@ public class CiphersController : Controller
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
     {
         return await _cipherRepository.GetByIdAsync(cipherId, userId, UseFlexibleCollections);
+    }
+
+    private async Task<bool> UseFlexibleCollectionsV1Async(Guid organizationId)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        {
+            return false;
+        }
+
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        return organizationAbility?.FlexibleCollections ?? false;
     }
 }
