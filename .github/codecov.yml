@@ -1,3 +1,9 @@
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+
 ignore:
   - "test" # Tests
   - "util" # Utils (migrators)
