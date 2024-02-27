@@ -7,11 +7,11 @@ namespace Bit.MySqlMigrations.Migrations;
 
 public partial class FCAccessAllCollectionGroups : Migration
 {
-    private const string _accessAllCollectionGroupsScript = "MySqlMigrations.HelperScripts.2024-02-16_00_AccessAllCollectionGroups.sql";
+    public const string AccessAllCollectionGroupsScript = "MySqlMigrations.HelperScripts.2024-02-16_00_AccessAllCollectionGroups.sql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_accessAllCollectionGroupsScript));
+        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(AccessAllCollectionGroupsScript));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
