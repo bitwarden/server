@@ -112,11 +112,11 @@ public static class CoreHelpers
         }
     }
 
-    public static string GetEmbeddedResourceContentsAsync(string file)
+    public static string GetEmbeddedResourceContentsAsync(string file, Assembly assembly = null)
     {
-        var assembly = Assembly.GetCallingAssembly();
-        var resourceName = assembly.GetManifestResourceNames().Single(n => n.EndsWith(file));
-        using (var stream = assembly.GetManifestResourceStream(resourceName))
+        var resourceAssembly = assembly ?? Assembly.GetCallingAssembly();
+        var resourceName = resourceAssembly.GetManifestResourceNames().Single(n => n.EndsWith(file));
+        using (var stream = resourceAssembly.GetManifestResourceStream(resourceName))
         using (var reader = new StreamReader(stream))
         {
             return reader.ReadToEnd();
