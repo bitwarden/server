@@ -109,7 +109,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetProjectAccessPolicies_ReturnsEmptyList(
+    public async Task GetProjectAccessPolicies_ReturnsEmptyList(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id, Project data)
@@ -144,7 +144,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetProjectAccessPolicies_UserWithoutPermission_Throws(
+    public async Task GetProjectAccessPolicies_UserWithoutPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project data)
@@ -163,7 +163,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetProjectAccessPolicies_Success(
+    public async Task GetProjectAccessPolicies_Success(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
@@ -202,7 +202,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetProjectAccessPolicies_ProjectsExist_UserWithoutPermission_Throws(
+    public async Task GetProjectAccessPolicies_ProjectsExist_UserWithoutPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project data,
@@ -225,7 +225,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetServiceAccountGrantedPolicies_ReturnsEmptyList(
+    public async Task GetServiceAccountGrantedPolicies_ReturnsEmptyList(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id, ServiceAccount data)
@@ -257,7 +257,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetServiceAccountGrantedPolicies_Success(
+    public async Task GetServiceAccountGrantedPolicies_Success(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
@@ -289,7 +289,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateProjectAccessPolicies_RequestMoreThanMax_Throws(
+    public async Task CreateProjectAccessPolicies_RequestMoreThanMax_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project mockProject,
@@ -311,7 +311,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateProjectAccessPolicies_ProjectDoesNotExist_Throws(
+    public async Task CreateProjectAccessPolicies_ProjectDoesNotExist_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         AccessPoliciesCreateRequest request)
@@ -325,7 +325,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateProjectAccessPolicies_DuplicatePolicy_Throws(
+    public async Task CreateProjectAccessPolicies_DuplicatePolicy_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project mockProject,
@@ -348,7 +348,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateProjectAccessPolicies_NoAccess_Throws(
+    public async Task CreateProjectAccessPolicies_NoAccess_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project mockProject,
@@ -377,7 +377,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateProjectAccessPolicies_Success(
+    public async Task CreateProjectAccessPolicies_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project mockProject,
@@ -405,7 +405,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccountGrantedPolicies_RequestMoreThanMax_Throws(
+    public async Task CreateServiceAccountGrantedPolicies_RequestMoreThanMax_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         ServiceAccount serviceAccount,
@@ -428,7 +428,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccountGrantedPolicies_ServiceAccountDoesNotExist_Throws(
+    public async Task CreateServiceAccountGrantedPolicies_ServiceAccountDoesNotExist_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         List<GrantedAccessPolicyRequest> request)
@@ -442,7 +442,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccountGrantedPolicies_DuplicatePolicy_Throws(
+    public async Task CreateServiceAccountGrantedPolicies_DuplicatePolicy_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         ServiceAccount serviceAccount,
@@ -467,7 +467,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccountGrantedPolicies_NoAccess_Throws(
+    public async Task CreateServiceAccountGrantedPolicies_NoAccess_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         ServiceAccount serviceAccount,
@@ -494,7 +494,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccountGrantedPolicies_Success(
+    public async Task CreateServiceAccountGrantedPolicies_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         ServiceAccount serviceAccount,
@@ -520,7 +520,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateAccessPolicies_NoAccess_Throws(
+    public async Task UpdateAccessPolicies_NoAccess_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         UserProjectAccessPolicy data,
@@ -542,7 +542,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateAccessPolicies_Success(
+    public async Task UpdateAccessPolicies_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         UserProjectAccessPolicy data,
@@ -563,7 +563,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void DeleteAccessPolicies_NoAccess_Throws(SutProvider<AccessPoliciesController> sutProvider, Guid id)
+    public async Task DeleteAccessPolicies_NoAccess_Throws(SutProvider<AccessPoliciesController> sutProvider, Guid id)
     {
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), new UserProjectAccessPolicy(),
@@ -579,7 +579,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void DeleteAccessPolicies_Success(SutProvider<AccessPoliciesController> sutProvider, Guid id)
+    public async Task DeleteAccessPolicies_Success(SutProvider<AccessPoliciesController> sutProvider, Guid id)
     {
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), new UserProjectAccessPolicy(),
@@ -595,7 +595,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetPeoplePotentialGrantees_ReturnsEmptyList(
+    public async Task GetPeoplePotentialGrantees_ReturnsEmptyList(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
@@ -617,7 +617,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetPeoplePotentialGrantees_UserWithoutPermission_Throws(
+    public async Task GetPeoplePotentialGrantees_UserWithoutPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
     {
@@ -640,7 +640,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetPeoplePotentialGrantees_Success(
+    public async Task GetPeoplePotentialGrantees_Success(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
@@ -665,7 +665,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetServiceAccountsPotentialGrantees_ReturnsEmptyList(
+    public async Task GetServiceAccountsPotentialGrantees_ReturnsEmptyList(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
@@ -683,7 +683,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountsPotentialGranteesAsync_UserWithoutPermission_Throws(
+    public async Task GetServiceAccountsPotentialGranteesAsync_UserWithoutPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
     {
@@ -700,7 +700,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetServiceAccountsPotentialGranteesAsync_Success(
+    public async Task GetServiceAccountsPotentialGranteesAsync_Success(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
@@ -724,7 +724,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetProjectPotentialGrantees_ReturnsEmptyList(
+    public async Task GetProjectPotentialGrantees_ReturnsEmptyList(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
@@ -742,7 +742,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetProjectPotentialGrantees_UserWithoutPermission_Throws(
+    public async Task GetProjectPotentialGrantees_UserWithoutPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
     {
@@ -759,7 +759,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetProjectPotentialGrantees_Success(
+    public async Task GetProjectPotentialGrantees_Success(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
@@ -783,7 +783,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetProjectPeopleAccessPolicies_ReturnsEmptyList(
+    public async Task GetProjectPeopleAccessPolicies_ReturnsEmptyList(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id, Project data)
@@ -817,7 +817,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetProjectPeopleAccessPolicies_UserWithoutPermission_Throws(
+    public async Task GetProjectPeopleAccessPolicies_UserWithoutPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project data)
@@ -835,7 +835,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetProjectPeopleAccessPolicies_ProjectsExist_UserWithoutPermission_Throws(
+    public async Task GetProjectPeopleAccessPolicies_ProjectsExist_UserWithoutPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project data,
@@ -858,7 +858,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetProjectPeopleAccessPolicies_Success(
+    public async Task GetProjectPeopleAccessPolicies_Success(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
@@ -897,7 +897,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutProjectPeopleAccessPolicies_ProjectDoesNotExist_Throws(
+    public async Task PutProjectPeopleAccessPolicies_ProjectDoesNotExist_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         PeopleAccessPoliciesRequestModel request)
@@ -911,7 +911,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutProjectPeopleAccessPoliciesAsync_DuplicatePolicy_Throws(
+    public async Task PutProjectPeopleAccessPoliciesAsync_DuplicatePolicy_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Project project,
         PeopleAccessPoliciesRequestModel request)
@@ -929,7 +929,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutProjectPeopleAccessPoliciesAsync_NoAccess_Throws(
+    public async Task PutProjectPeopleAccessPoliciesAsync_NoAccess_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         Project project,
         PeopleAccessPoliciesRequestModel request)
@@ -949,7 +949,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutProjectPeopleAccessPoliciesAsync_Success(
+    public async Task PutProjectPeopleAccessPoliciesAsync_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid userId,
         Project project,
@@ -973,7 +973,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountPeopleAccessPoliciesAsync_ServiceAccountDoesntExist_ThrowsNotFound(
+    public async Task GetServiceAccountPeopleAccessPoliciesAsync_ServiceAccountDoesntExist_ThrowsNotFound(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data)
     {
@@ -989,7 +989,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetServiceAccountPeopleAccessPoliciesAsync_ReturnsEmptyList(
+    public async Task GetServiceAccountPeopleAccessPoliciesAsync_ReturnsEmptyList(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data)
@@ -1020,7 +1020,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountPeopleAccessPoliciesAsync_UserWithoutPermission_Throws(
+    public async Task GetServiceAccountPeopleAccessPoliciesAsync_UserWithoutPermission_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data)
     {
@@ -1039,7 +1039,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetServiceAccountPeopleAccessPoliciesAsync_Success(
+    public async Task GetServiceAccountPeopleAccessPoliciesAsync_Success(
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
@@ -1073,7 +1073,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountPeopleAccessPolicies_ServiceAccountDoesNotExist_Throws(
+    public async Task PutServiceAccountPeopleAccessPolicies_ServiceAccountDoesNotExist_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         PeopleAccessPoliciesRequestModel request)
@@ -1087,7 +1087,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountPeopleAccessPolicies_DuplicatePolicy_Throws(
+    public async Task PutServiceAccountPeopleAccessPolicies_DuplicatePolicy_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         PeopleAccessPoliciesRequestModel request)
@@ -1105,7 +1105,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountPeopleAccessPolicies_NotCanReadWrite_Throws(
+    public async Task PutServiceAccountPeopleAccessPolicies_NotCanReadWrite_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         PeopleAccessPoliciesRequestModel request)
@@ -1122,7 +1122,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountPeopleAccessPolicies_NoAccess_Throws(
+    public async Task PutServiceAccountPeopleAccessPolicies_NoAccess_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         PeopleAccessPoliciesRequestModel request)
@@ -1143,7 +1143,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountPeopleAccessPolicies_Success(
+    public async Task PutServiceAccountPeopleAccessPolicies_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         Guid userId,
