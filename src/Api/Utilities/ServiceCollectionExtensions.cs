@@ -92,22 +92,6 @@ public static class ServiceCollectionExtensions
             {
                 builder.AddSqlServer(globalSettings.SqlServer.ConnectionString);
             }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.DistributedCache?.Redis?.ConnectionString))
-            {
-                builder.AddRedis(globalSettings.DistributedCache.Redis.ConnectionString);
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString))
-            {
-                builder.AddAzureServiceBusTopic(_ => globalSettings.ServiceBus.ConnectionString,
-                    _ => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "service_bus");
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
-            {
-                builder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
-            }
         });
     }
 
