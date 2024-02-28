@@ -1,4 +1,7 @@
 # Uses our MsSqlMigratorUtility to run migrations on our local dev database.
+# WARNING: DO NOT USE if your dev database has been set up using our migrate.ps1 script.
+# This should only be used on a new database.
+
 # TODO:
 # - call this from migrate.ps1
 # - figure out any migration pathway for existing dev database
