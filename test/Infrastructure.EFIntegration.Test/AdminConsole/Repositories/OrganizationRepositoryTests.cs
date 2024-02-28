@@ -14,7 +14,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class OrganizationRepositoryTests
 {
     [CiSkippedTheory, EfOrganizationAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         Organization organization,
         SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
         List<EfRepo.OrganizationRepository> suts)
@@ -37,7 +37,7 @@ public class OrganizationRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationAutoData]
-    public async void ReplaceAsync_Works_DataMatches(Organization postOrganization,
+    public async Task ReplaceAsync_Works_DataMatches(Organization postOrganization,
         Organization replaceOrganization, SqlRepo.OrganizationRepository sqlOrganizationRepo,
         OrganizationCompare equalityComparer, List<EfRepo.OrganizationRepository> suts)
     {
@@ -65,7 +65,7 @@ public class OrganizationRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationAutoData]
-    public async void DeleteAsync_Works_DataMatches(Organization organization,
+    public async Task DeleteAsync_Works_DataMatches(Organization organization,
         SqlRepo.OrganizationRepository sqlOrganizationRepo, List<EfRepo.OrganizationRepository> suts)
     {
         foreach (var sut in suts)
@@ -94,7 +94,7 @@ public class OrganizationRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationAutoData]
-    public async void GetByIdentifierAsync_Works_DataMatches(Organization organization,
+    public async Task GetByIdentifierAsync_Works_DataMatches(Organization organization,
         SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
         List<EfRepo.OrganizationRepository> suts)
     {
@@ -116,7 +116,7 @@ public class OrganizationRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationAutoData]
-    public async void GetManyByEnabledAsync_Works_DataMatches(Organization organization,
+    public async Task GetManyByEnabledAsync_Works_DataMatches(Organization organization,
         SqlRepo.OrganizationRepository sqlOrganizationRepo, List<EfRepo.OrganizationRepository> suts)
     {
         var returnedOrgs = new List<Organization>();
@@ -137,7 +137,7 @@ public class OrganizationRepositoryTests
 
     // testing data matches here would require manipulating all organization abilities in the db
     [CiSkippedTheory, EfOrganizationAutoData]
-    public async void GetManyAbilitiesAsync_Works(SqlRepo.OrganizationRepository sqlOrganizationRepo, List<EfRepo.OrganizationRepository> suts)
+    public async Task GetManyAbilitiesAsync_Works(SqlRepo.OrganizationRepository sqlOrganizationRepo, List<EfRepo.OrganizationRepository> suts)
     {
         var list = new List<OrganizationAbility>();
         foreach (var sut in suts)
@@ -150,7 +150,7 @@ public class OrganizationRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationUserAutoData]
-    public async void SearchUnassignedAsync_Works(OrganizationUser orgUser, User user, Organization org,
+    public async Task SearchUnassignedAsync_Works(OrganizationUser orgUser, User user, Organization org,
         List<EfRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo, SqlRepo.UserRepository sqlUserRepo)
     {
