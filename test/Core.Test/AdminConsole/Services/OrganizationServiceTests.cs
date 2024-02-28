@@ -2381,6 +2381,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.IsFromSecretsManagerTrial = true;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AC2101UpdateTrialInitiationEmail).Returns(true);
 
         await sutProvider.Sut.SignUpAsync(signup);
 
