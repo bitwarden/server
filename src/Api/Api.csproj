@@ -32,9 +32,7 @@
   </Choose>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.AzureServiceBus" Version="8.0.0" />
-    <PackageReference Include="AspNetCore.HealthChecks.Azure.Storage.Queues" Version="8.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Network" Version="8.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="8.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.SendGrid" Version="8.0.0" />
