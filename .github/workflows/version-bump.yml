@@ -1,5 +1,5 @@
 ---
-name: Bump version
+name: Version Bump
 
 on:
   workflow_dispatch:
