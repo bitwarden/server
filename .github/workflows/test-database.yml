@@ -60,6 +60,8 @@ jobs:
         working-directory: "dev"
         run: "./migrate.ps1"
         shell: pwsh
+        env:
+          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
 
       - name: Migrate MySQL
         working-directory: "util/MySqlMigrations"

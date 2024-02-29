@@ -30,21 +30,19 @@ if ($all -or $postgres -or $mysql -or $sqlite) {
 
 if ($all -or $mssql) {
   if ($selfhost) {
-    $migrationArgs = "-s"
+    $userSecrets = Get-UserSecrets
+    $msSqlConnectionString = $userSecrets.'dev:selfHostOverride:globalSettings:sqlServer:connectionString'
   } elseif ($pipeline) {
-    $migrationArgs = "-p"
+    # pipeline sets this through an environment variable, see test-database.yml
+    $msSqlConnectionString = "$Env:CONN_STR"
+  } else {
+    $userSecrets = Get-UserSecrets
+    $msSqlConnectionString = $userSecrets.'globalSettings:sqlServer:connectionString'
   }
 
   Write-Host "Starting Microsoft SQL Server Migrations"
-  docker run `
-    -v "$(pwd)/helpers/mssql:/mnt/helpers" `
-    -v "$(pwd)/../util/Migrator:/mnt/migrator/" `
-    -v "$(pwd)/.data/mssql:/mnt/data" `
-    --env-file .env `
-    --network=bitwardenserver_default `
-    --rm `
-    mcr.microsoft.com/mssql-tools `
-    /mnt/helpers/run_migrations.sh $migrationArgs
+
+  dotnet run --project ../util/MsSqlMigratorUtility/ "$msSqlConnectionString"
 }
 
 $currentDir = Get-Location
@@ -60,3 +58,7 @@ Foreach ($item in @(@($mysql, "MySQL", "MySqlMigrations"), @($postgres, "Postgre
 }
 
 Set-Location "$currentDir"
+
+function Get-UserSecrets {
+  return dotnet user-secrets list --json --project ../src/Api | ConvertFrom-Json
+}
