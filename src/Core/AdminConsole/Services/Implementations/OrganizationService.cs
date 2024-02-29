@@ -537,6 +537,15 @@ public class OrganizationService : IOrganizationService
                 Storage = returnValue.Item1.MaxStorageGb,
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
+
+        var isAc2101UpdateTrialInitiationEmail =
+            _featureService.IsEnabled(FeatureFlagKeys.AC2101UpdateTrialInitiationEmail);
+
+        if (signup.IsFromSecretsManagerTrial && isAc2101UpdateTrialInitiationEmail)
+        {
+            await _mailService.SendTrialInitiationEmailAsync(signup.BillingEmail);
+        }
+
         return returnValue;
     }
 
