@@ -38,14 +38,17 @@ if ($all -or $mssql) {
 
   if ($selfhost) {
     $msSqlConnectionString = $(Get-UserSecrets).'dev:selfHostOverride:globalSettings:sqlServer:connectionString'
+    $envName = "self-host"
   } elseif ($pipeline) {
     # pipeline sets this through an environment variable, see test-database.yml
     $msSqlConnectionString = "$Env:CONN_STR"
+    $envName = "pipeline"
   } else {
     $msSqlConnectionString = $(Get-UserSecrets).'globalSettings:sqlServer:connectionString'
+    $envName = "cloud"
   }
 
-  Write-Host "Starting Microsoft SQL Server Migrations"
+  Write-Host "Starting Microsoft SQL Server Migrations for $envName"
 
   dotnet run --project ../util/MsSqlMigratorUtility/ "$msSqlConnectionString"
 }
