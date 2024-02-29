@@ -15,7 +15,7 @@ on:
 
 jobs:
   bump_version:
-    name: Bump
+    name: Bump Version
     runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.set-job-output.outputs.version }}
