@@ -94,7 +94,7 @@ jobs:
       - name: Bump version props - Version Override
         if: ${{ inputs.version_number_override != '' }}
         id: bump-version-override
-        uses: bitwarden/gh-actions/version-bump@main
+        uses: bitwarden/gh-actions/version-bump@a162eac2907814117e049408c15bfb6740522d59
         with:
           version: ${{ inputs.version_number_override }}
           file_path: "Directory.Build.props"
@@ -102,7 +102,7 @@ jobs:
       - name: Bump version props - Automatic Calculation
         if: ${{ inputs.version_number_override == '' }}
         id: bump-version-automatic
-        uses: bitwarden/gh-actions/version-bump@main
+        uses: bitwarden/gh-actions/version-bump@a162eac2907814117e049408c15bfb6740522d59
         with:
           file_path: "Directory.Build.props"
 
