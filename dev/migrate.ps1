@@ -7,14 +7,17 @@
 # docker-compose --profile mssql exec mssql bash /mnt/helpers/run_migrations.sh @args
 
 param(
-  [switch]$all = $false,
-  [switch]$postgres = $false,
-  [switch]$mysql = $false,
-  [switch]$mssql = $false,
-  [switch]$sqlite = $false,
-  [switch]$selfhost = $false,
-  [switch]$pipeline = $false
+  [switch]$all,
+  [switch]$postgres,
+  [switch]$mysql,
+  [switch]$mssql,
+  [switch]$sqlite,
+  [switch]$selfhost,
+  [switch]$pipeline
 )
+
+# Abort on any error
+$ErrorActionPreference = "Stop"
 
 if (!$all -and !$postgres -and !$mysql -and !$sqlite) {
   $mssql = $true;
@@ -29,15 +32,17 @@ if ($all -or $postgres -or $mysql -or $sqlite) {
 }
 
 if ($all -or $mssql) {
+  function Get-UserSecrets {
+    return dotnet user-secrets list --json --project ../src/Api | ConvertFrom-Json
+  }
+
   if ($selfhost) {
-    $userSecrets = Get-UserSecrets
-    $msSqlConnectionString = $userSecrets.'dev:selfHostOverride:globalSettings:sqlServer:connectionString'
+    $msSqlConnectionString = $(Get-UserSecrets).'dev:selfHostOverride:globalSettings:sqlServer:connectionString'
   } elseif ($pipeline) {
     # pipeline sets this through an environment variable, see test-database.yml
     $msSqlConnectionString = "$Env:CONN_STR"
   } else {
-    $userSecrets = Get-UserSecrets
-    $msSqlConnectionString = $userSecrets.'globalSettings:sqlServer:connectionString'
+    $msSqlConnectionString = $(Get-UserSecrets).'globalSettings:sqlServer:connectionString'
   }
 
   Write-Host "Starting Microsoft SQL Server Migrations"
@@ -58,7 +63,3 @@ Foreach ($item in @(@($mysql, "MySQL", "MySqlMigrations"), @($postgres, "Postgre
 }
 
 Set-Location "$currentDir"
-
-function Get-UserSecrets {
-  return dotnet user-secrets list --json --project ../src/Api | ConvertFrom-Json
-}
