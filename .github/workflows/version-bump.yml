@@ -65,7 +65,9 @@ jobs:
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Install xmllint
-        run: sudo apt install -y libxml2-utils
+        run: |
+          apt-get update
+          apt-get install -y libxml2-utils
 
       - name: Verify input version
         if: ${{ inputs.version_number_override != '' }}
