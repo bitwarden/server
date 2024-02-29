@@ -26,6 +26,8 @@ public class Startup
         // Settings
         services.AddGlobalSettingsServices(Configuration, Environment);
 
+        services.AddSingleton<IProcessor, AzureQueueEventProcessor>();
+
         // Hosted Services
         services.AddHostedService<AzureQueueHostedService>();
     }

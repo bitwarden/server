@@ -15,6 +15,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\EventsProcessor\EventsProcessor.csproj" />
