@@ -191,7 +191,9 @@ jobs:
           ref: main
 
       - name: Install xmllint
-        run: sudo apt install -y libxml2-utils
+        run: |
+          apt-get update
+          apt-get install -y libxml2-utils
 
       - name: Verify version has been updated
         env:
