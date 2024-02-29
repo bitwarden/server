@@ -66,8 +66,8 @@ jobs:
 
       - name: Install xmllint
         run: |
-          apt-get update
-          apt-get install -y libxml2-utils
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
 
       - name: Verify input version
         if: ${{ inputs.version_number_override != '' }}
@@ -194,8 +194,8 @@ jobs:
 
       - name: Install xmllint
         run: |
-          apt-get update
-          apt-get install -y libxml2-utils
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
 
       - name: Verify version has been updated
         env:
