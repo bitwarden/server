@@ -147,71 +147,6 @@ public class AccessPoliciesControllerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async Task GetServiceAccountGrantedPolicies_ReturnsEmptyList(
-        PermissionType permissionType,
-        SutProvider<AccessPoliciesController> sutProvider,
-        Guid id, ServiceAccount data)
-    {
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
-
-        switch (permissionType)
-        {
-            case PermissionType.RunAsAdmin:
-                SetupAdmin(sutProvider, data.OrganizationId);
-                break;
-            case PermissionType.RunAsUserWithPermission:
-                SetupUserWithPermission(sutProvider, data.OrganizationId);
-                sutProvider.GetDependency<IServiceAccountRepository>()
-                    .UserHasWriteAccessToServiceAccount(default, default)
-                    .ReturnsForAnyArgs(true);
-                break;
-        }
-
-        var result = await sutProvider.Sut.GetServiceAccountGrantedPoliciesAsync(id);
-
-        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetManyByServiceAccountIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
-
-        Assert.Empty(result.Data);
-    }
-
-    [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async Task GetServiceAccountGrantedPolicies_Success(
-        PermissionType permissionType,
-        SutProvider<AccessPoliciesController> sutProvider,
-        Guid id,
-        ServiceAccount data,
-        ServiceAccountProjectAccessPolicy resultAccessPolicy)
-    {
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        switch (permissionType)
-        {
-            case PermissionType.RunAsAdmin:
-                SetupAdmin(sutProvider, data.OrganizationId);
-                break;
-            case PermissionType.RunAsUserWithPermission:
-                SetupUserWithPermission(sutProvider, data.OrganizationId);
-                break;
-        }
-
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByServiceAccountIdAsync(default, default, default)
-            .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
-
-        var result = await sutProvider.Sut.GetServiceAccountGrantedPoliciesAsync(id);
-
-        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetManyByServiceAccountIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
-
-        Assert.NotEmpty(result.Data);
-    }
-
-    [Theory]
     [BitAutoData]
     public async Task CreateProjectAccessPolicies_RequestMoreThanMax_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
@@ -1092,7 +1027,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountGrantedPoliciesAsync_NoAccess_ThrowsNotFound(
+    public async Task GetServiceAccountGrantedPoliciesAsync_NoAccess_ThrowsNotFound(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data)
     {
@@ -1113,7 +1048,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     [BitAutoData(AccessClientType.User)]
-    public async void GetServiceAccountGrantedPoliciesAsync_HasAccessNoPolicies_ReturnsEmptyList(
+    public async Task GetServiceAccountGrantedPoliciesAsync_HasAccessNoPolicies_ReturnsEmptyList(
         AccessClientType accessClientType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid userId,
@@ -1141,7 +1076,7 @@ public class AccessPoliciesControllerTests
     [Theory]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     [BitAutoData(AccessClientType.User)]
-    public async void GetServiceAccountGrantedPoliciesAsync_HasAccess_Success(
+    public async Task GetServiceAccountGrantedPoliciesAsync_HasAccess_Success(
         AccessClientType accessClientType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid userId,
@@ -1170,7 +1105,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountGrantedPoliciesAsync_ServiceAccountDoesNotExist_Throws(
+    public async Task PutServiceAccountGrantedPoliciesAsync_ServiceAccountDoesNotExist_Throws(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         ServiceAccountGrantedPoliciesRequestModel request)
@@ -1184,7 +1119,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountGrantedPoliciesAsync_DuplicatePolicyRequest_ThrowsBadRequestException(
+    public async Task PutServiceAccountGrantedPoliciesAsync_DuplicatePolicyRequest_ThrowsBadRequestException(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         ServiceAccountGrantedPoliciesRequestModel request)
@@ -1203,7 +1138,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountGrantedPoliciesAsync_InvalidPolicyRequest_ThrowsBadRequestException(
+    public async Task PutServiceAccountGrantedPoliciesAsync_InvalidPolicyRequest_ThrowsBadRequestException(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         ServiceAccountGrantedPoliciesRequestModel request)
@@ -1222,7 +1157,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountGrantedPoliciesAsync_UserHasNoAccess_ThrowsNotFoundException(
+    public async Task PutServiceAccountGrantedPoliciesAsync_UserHasNoAccess_ThrowsNotFoundException(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         ServiceAccountGrantedPoliciesRequestModel request)
@@ -1243,7 +1178,7 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void PutServiceAccountGrantedPoliciesAsync_Success(
+    public async Task PutServiceAccountGrantedPoliciesAsync_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
         ServiceAccountGrantedPoliciesRequestModel request)
