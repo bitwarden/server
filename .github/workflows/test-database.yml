@@ -61,7 +61,7 @@ jobs:
         run: "./migrate.ps1 -pipeline"
         shell: pwsh
         env:
-          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
+          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Encrypt=True;TrustServerCertificate=True"
 
       - name: Migrate MySQL
         working-directory: "util/MySqlMigrations"
@@ -153,7 +153,7 @@ jobs:
         run: "./migrate.ps1 -pipeline"
         shell: pwsh
         env:
-          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
+          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Encrypt=True;TrustServerCertificate=True"
 
       - name: Diff .sqlproj to migrations
         run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
