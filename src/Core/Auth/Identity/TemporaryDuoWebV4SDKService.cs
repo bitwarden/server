@@ -129,7 +129,7 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
             (string)provider.MetaData["Host"],
             redirectUri).Build();
 
-        if (!await client.DoHealthCheck())
+        if (!await client.DoHealthCheck(true))
         {
             return null;
         }
