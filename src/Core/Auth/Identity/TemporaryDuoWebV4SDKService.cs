@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Microsoft.Extensions.Logging;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Identity;
@@ -25,6 +26,7 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory;
+    private readonly ILogger<TemporaryDuoWebV4SDKService> _logger;
 
     /// <summary>
     /// Constructor for the DuoUniversalPromptService. Used to supplement v2 implementation of Duo with v4 SDK
@@ -34,11 +36,13 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     public TemporaryDuoWebV4SDKService(
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
+        ILogger<TemporaryDuoWebV4SDKService> logger)
     {
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _tokenDataFactory = tokenDataFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -131,6 +135,7 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
 
         if (!await client.DoHealthCheck(true))
         {
+            _logger.LogError("Unable to connect to Duo. Health check failed.");
             return null;
         }
         return client;
