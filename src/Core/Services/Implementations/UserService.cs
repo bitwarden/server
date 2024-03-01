@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -28,7 +27,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using File = System.IO.File;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bit.Core.Services;
 
@@ -338,6 +339,26 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
+
+            if (!string.IsNullOrEmpty(user.ReferenceData))
+            {
+                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
+                if (referenceData.TryGetValue("initiationPath", out var value))
+                {
+                    var initiationPath = value.ToString();
+                    if (!string.IsNullOrEmpty(initiationPath))
+                    {
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
+                            {
+                                SignupInitiationPath = initiationPath
+                            });
+
+                        return result;
+                    }
+                }
+            }
+
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 

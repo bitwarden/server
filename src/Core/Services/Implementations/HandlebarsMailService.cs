@@ -251,6 +251,19 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendTrialInitiationEmailAsync(string userEmail)
+    {
+        var message = CreateDefaultMessage("Welcome to Bitwarden!", userEmail);
+        var model = new BaseMailModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "TrialInitiation", model);
+        message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendPasswordlessSignInAsync(string returnUrl, string token, string email)
     {
         var message = CreateDefaultMessage("[Admin] Continue Logging In", email);
@@ -263,7 +276,7 @@ public class HandlebarsMailService : IMailService
             });
         var model = new PasswordlessSignInModel
         {
-            Url = url.ToString()
+            Url = url.OriginalString
         };
         await AddMessageContentAsync(message, "Auth.PasswordlessSignIn", model);
         message.Category = "PasswordlessSignIn";

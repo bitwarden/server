@@ -1,6 +1,9 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -378,6 +381,74 @@ public class IdentityServerSsoTests
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.True);
 
+    }
+
+    [Fact]
+    public async Task SsoLogin_TrustedDeviceEncryption_ProviderUserHasManageResetPassword_ReturnsCorrectOptions()
+    {
+        var challenge = new string('c', 50);
+
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+        }, challenge);
+
+        var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
+        var providerRepository = factory.Services.GetRequiredService<IProviderRepository>();
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider",
+        });
+
+        var providerUserRepository = factory.Services.GetRequiredService<IProviderUserRepository>();
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = user.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Permissions = CoreHelpers.ClassToJsonData(new Permissions
+            {
+                ManageResetPassword = true,
+            }),
+        });
+
+        var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var organizationUser = (await organizationUserRepository.GetManyByUserAsync(user.Id)).Single();
+
+        var providerOrganizationRepository = factory.Services.GetRequiredService<IProviderOrganizationRepository>();
+        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organizationUser.OrganizationId,
+        });
+
+        // Act
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "10" },
+            { "deviceIdentifier", "test_id" },
+            { "deviceName", "firefox" },
+            { "twoFactorToken", "TEST"},
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }));
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = responseBody.RootElement;
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.True);
     }
 
     [Fact]
