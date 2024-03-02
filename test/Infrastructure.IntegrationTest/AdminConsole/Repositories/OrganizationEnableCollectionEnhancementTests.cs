@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationEnableCollectionEnhancementTests
 {
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_User_WithAccessAll_GivesCanEditAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -43,7 +43,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanEdit(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Group_WithAccessAll_GivesCanEditAccessToAllCollections(
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
@@ -73,7 +73,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanEdit(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Manager_WithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -106,7 +106,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanManage(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_GivesCanManageAccessToAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -137,7 +137,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_GivesCanManageAccess_ToGroupAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -184,7 +184,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_InGroupWithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
@@ -248,7 +248,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanEdit(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -283,7 +283,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanManage(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_GivesCanManageAccessToAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -315,7 +315,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_GivesCanManageAccess_ToGroupAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -362,7 +362,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_InGroupWithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
@@ -427,7 +427,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanEdit(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_NonManagers_WithoutAccessAll_NoChangeToRoleOrCollectionAccess(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -500,7 +500,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: true, ReadOnly: false, Manage: false });
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_DoesNotAffect_OtherOrganizations(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
