@@ -1,9 +1,4 @@
-﻿using System.Text.Json;
-using Azure.Storage.Queues;
-using Bit.Core.Models.Data;
-using Bit.Core.Services;
-
-namespace Bit.EventsProcessor;
+﻿namespace Bit.EventsProcessor;
 
 public class AzureQueueHostedService : BackgroundService, IDisposable
 {

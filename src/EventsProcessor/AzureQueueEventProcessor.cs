@@ -1,12 +1,10 @@
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.Models.Data;
-using Bit.Core.Services;
 using Bit.Core.Repositories.TableStorage;
-using System.Buffers.Text;
-using System.Buffers;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+using Bit.Core.Services;
+using Bit.Core.Utilities;
 
 namespace Bit.EventsProcessor;
 
@@ -59,16 +57,16 @@ public class AzureQueueEventProcessor : IProcessor
 
         foreach (var message in messages.Value)
         {
-            await ProcessQueueMessageAsync(message.Body.ToMemory());
+            await ProcessQueueMessageAsync(message.DecodeMessageText());
             await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, CancellationToken.None);
         }
 
         return true;
     }
 
-    private async Task ProcessQueueMessageAsync(ReadOnlyMemory<byte> message)
+    private async Task ProcessQueueMessageAsync(string messageText)
     {
-        if (!TryGetMessages(message, out var messages))
+        if (!TryGetMessages(messageText, out var messages))
         {
             return;
         }
@@ -77,24 +75,11 @@ public class AzureQueueEventProcessor : IProcessor
         _logger.LogInformation("Processed message.");
     }
 
-    private bool TryGetMessages(ReadOnlyMemory<byte> message, [NotNullWhen(true)] out IReadOnlyList<IEvent>? messages)
+    private bool TryGetMessages(string messageText, [NotNullWhen(true)] out IReadOnlyList<IEvent>? messages)
     {
-        const int StackAllocThreshold = 256;
-        byte[]? rentedBuffer = null;
-        var decodedLength = Base64.GetMaxEncodedToUtf8Length(message.Length);
-
-        Span<byte> buffer = decodedLength > StackAllocThreshold
-            ? (rentedBuffer = ArrayPool<byte>.Shared.Rent(decodedLength))
-            : stackalloc byte[StackAllocThreshold];
-
         try
         {
-            // TODO: Do we want to assert on the outs at all?
-            // TODO: Check operation status
-            var status = Base64.EncodeToUtf8(message.Span, buffer, out _, out _);
-            Debug.Assert(status == OperationStatus.Done, $"Operation instead has status {status}");
-
-            using var jsonDocument = JsonSerializer.Deserialize<JsonDocument>(buffer)!;
+            using var jsonDocument = JsonSerializer.Deserialize<JsonDocument>(messageText)!;
             var root = jsonDocument.RootElement;
 
             if (root.ValueKind == JsonValueKind.Array)
@@ -114,14 +99,6 @@ public class AzureQueueEventProcessor : IProcessor
         catch (JsonException jsonException)
         {
             _logger.LogError(jsonException, "Unable to parse message");
-            throw jsonException;
-        }
-        finally
-        {
-            if (rentedBuffer != null)
-            {
-                ArrayPool<byte>.Shared.Return(rentedBuffer, true);
-            }
         }
 
         messages = null;
