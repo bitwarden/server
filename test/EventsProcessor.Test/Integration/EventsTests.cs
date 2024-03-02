@@ -139,6 +139,7 @@ public class AzureTablesEventRepositoryTests
     {
         return new TheoryData<Func<IEventService, Task>, Func<IEventRepository, DateTime, Task>>
         {
+            // General user event
             {
                 (es) => es.LogUserEventAsync(_userInSingleOrg, EventType.User_LoggedIn),
                 async (eventRepository, start) =>
@@ -156,6 +157,7 @@ public class AzureTablesEventRepositoryTests
                     Assert.Equal(_org1Id, orgEvent.OrganizationId);
                 }
             },
+            // User event for a user in multiple organizations
             {
                 (es) => es.LogUserEventAsync(_userInTwoOrgs, EventType.User_ChangedPassword),
                 async (eventRepository, start) =>
@@ -187,6 +189,7 @@ public class AzureTablesEventRepositoryTests
                     Assert.Equal(_org3Id, orgEvent.OrganizationId);
                 }
             },
+            // Cipher event
             {
                 (es) => es.LogCipherEventAsync(_cipher, EventType.Cipher_ClientAutofilled),
                 async (eventRepository, start) =>
@@ -203,6 +206,7 @@ public class AzureTablesEventRepositoryTests
                     Assert.Equal(_cipher.Id, cipherEvent.CipherId);
                 }
             },
+            // Collection event
             {
                 (es) => es.LogCollectionEventAsync(_collection, EventType.Collection_Updated),
                 async (er, start) =>
