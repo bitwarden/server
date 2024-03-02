@@ -3,6 +3,7 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -270,8 +271,193 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         return await query.ToListAsync();
     }
 
-    public Task EnableCollectionEnhancements(Guid organizationId)
+    public async Task EnableCollectionEnhancements(Guid organizationId)
     {
-        throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
+        using var scope = ServiceScopeFactory.CreateScope();
+        var context = GetDatabaseContext(scope);
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Step 1: AccessAll migration for Groups
+            var groupsWithAccessAll = context.Groups
+                .Where(g => g.OrganizationId == organizationId && g.AccessAll == true)
+                .Select(g => g.Id)
+                .ToList();
+
+            // Update existing CollectionGroup rows
+            context.CollectionGroups
+                .Where(cg =>
+                    groupsWithAccessAll.Contains(cg.GroupId) &&
+                    cg.Collection.OrganizationId == organizationId)
+                .ToList()
+                .ForEach(cg =>
+                {
+                    cg.ReadOnly = false;
+                    cg.HidePasswords = false;
+                    cg.Manage = false;
+                });
+
+            // Insert new rows into CollectionGroup
+            foreach (var group in groupsWithAccessAll)
+            {
+                var newCollectionGroups = context.Collections
+                    .Where(c =>
+                        c.OrganizationId == organizationId &&
+                        !context.CollectionGroups.Any(cg => cg.CollectionId == c.Id && cg.GroupId == group))
+                    .Select(c => new CollectionGroup
+                    {
+                        CollectionId = c.Id,
+                        GroupId = group,
+                        ReadOnly = false,
+                        HidePasswords = false,
+                        Manage = false
+                    })
+                    .ToList();
+                context.CollectionGroups.AddRange(newCollectionGroups);
+            }
+
+            // Update Group to clear AccessAll flag
+            context.Groups
+                .Where(g => groupsWithAccessAll.Contains(g.Id))
+                .ToList()
+                .ForEach(g => g.AccessAll = false);
+
+            await context.SaveChangesAsync();
+
+            // Step 2: AccessAll migration for OrganizationUsers
+            var organizationUsersWithAccessAll = context.OrganizationUsers
+                .Where(ou => ou.OrganizationId == organizationId && ou.AccessAll == true)
+                .Select(ou => ou.Id)
+                .ToList();
+
+            // Update existing CollectionUser rows
+            context.CollectionUsers
+                .Where(cu =>
+                    organizationUsersWithAccessAll.Contains(cu.OrganizationUserId) &&
+                    cu.Collection.OrganizationId == organizationId)
+                .ToList()
+                .ForEach(cu =>
+                {
+                    cu.ReadOnly = false;
+                    cu.HidePasswords = false;
+                    cu.Manage = false;
+                });
+
+            // Insert new rows into CollectionUser
+            foreach (var organizationUser in organizationUsersWithAccessAll)
+            {
+                var newCollectionUsers = context.Collections
+                    .Where(c =>
+                        c.OrganizationId == organizationId &&
+                        !context.CollectionUsers.Any(cu => cu.CollectionId == c.Id && cu.OrganizationUserId == organizationUser))
+                    .Select(c => new CollectionUser
+                    {
+                        CollectionId = c.Id,
+                        OrganizationUserId = organizationUser,
+                        ReadOnly = false,
+                        HidePasswords = false,
+                        Manage = false
+                    })
+                    .ToList();
+                context.CollectionUsers.AddRange(newCollectionUsers);
+            }
+
+            // Update OrganizationUser to clear AccessAll flag
+            context.OrganizationUsers
+                .Where(ou => organizationUsersWithAccessAll.Contains(ou.Id))
+                .ToList()
+                .ForEach(ou => ou.AccessAll = false);
+
+            await context.SaveChangesAsync();
+
+            // Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission
+            // update their existing CollectionUser rows and insert new rows with [Manage] = 1
+            // and finally update all OrganizationUsers with Manager role to User role
+            var managerUsers = context.OrganizationUsers
+                .Where(ou =>
+                    ou.OrganizationId == organizationId &&
+                    (ou.Type == OrganizationUserType.Manager ||
+                     (ou.Permissions != null && EF.Functions.Like(ou.Permissions, "%\"editAssignedCollections\":true%"))))
+                .Select(ou => ou.Id)
+                .ToList();
+
+            // Update CollectionUser rows with Manage = true
+            context.CollectionUsers
+                .Where(cu => managerUsers.Contains(cu.OrganizationUserId))
+                .ToList()
+                .ForEach(cu =>
+                {
+                    cu.ReadOnly = false;
+                    cu.HidePasswords = false;
+                    cu.Manage = true;
+                });
+
+            // Insert rows into CollectionUser with Manage = true
+            foreach (var manager in managerUsers)
+            {
+                var newCollectionUsersWithManage = (from cg in context.CollectionGroups
+                                                    join gu in context.GroupUsers on cg.GroupId equals gu.GroupId
+                                                    where gu.OrganizationUserId == manager &&
+                                                          !context.CollectionUsers.Any(cu =>
+                                                              cu.CollectionId == cg.CollectionId &&
+                                                              cu.OrganizationUserId == manager)
+                                                    select new CollectionUser
+                                                    {
+                                                        CollectionId = cg.CollectionId,
+                                                        OrganizationUserId = manager,
+                                                        ReadOnly = false,
+                                                        HidePasswords = false,
+                                                        Manage = true
+                                                    }).Distinct().ToList();
+                context.CollectionUsers.AddRange(newCollectionUsersWithManage);
+            }
+
+            // Update OrganizationUser to migrate Managers to User role
+            context.OrganizationUsers
+                .Where(ou =>
+                    managerUsers.Contains(ou.Id) &&
+                    ou.Type == OrganizationUserType.Manager)
+                .ToList()
+                .ForEach(ou => ou.Type = OrganizationUserType.User);
+
+            await context.SaveChangesAsync();
+
+            // Step 4: Bump AccountRevisionDate for all OrganizationUsers updated in the previous steps
+            // Combine and union the distinct OrganizationUserIds from all steps into a single variable
+            var accessAllGroupUserIds = context.GroupUsers
+                .Where(gu => groupsWithAccessAll.Contains(gu.GroupId))
+                .Select(gu => gu.OrganizationUserId)
+                .ToList();
+            var orgUsersToBump = accessAllGroupUserIds
+                .Union(organizationUsersWithAccessAll)
+                .Union(managerUsers)
+                .Distinct()
+                .ToList();
+
+            foreach (var organizationUserId in orgUsersToBump)
+            {
+                var userToUpdate = context.Users
+                    .FirstOrDefault(u => context.OrganizationUsers.Any(ou =>
+                        ou.UserId == u.Id &&
+                        ou.Id == organizationUserId &&
+                        ou.Status == OrganizationUserStatusType.Confirmed));
+
+                if (userToUpdate != null)
+                {
+                    userToUpdate.AccountRevisionDate = DateTime.UtcNow;
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            // Rollback transaction
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }
