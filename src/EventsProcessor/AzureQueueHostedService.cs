@@ -4,6 +4,8 @@ public class AzureQueueHostedService : BackgroundService, IDisposable
 {
     private readonly IProcessor _processor;
     private readonly ILogger<AzureQueueHostedService> _logger;
+    private readonly IDisposable _loggerScope;
+
     private readonly IConfiguration _configuration;
 
     public AzureQueueHostedService(
@@ -12,6 +14,7 @@ public class AzureQueueHostedService : BackgroundService, IDisposable
         _processor = processor;
         _logger = logger;
         _configuration = configuration;
+        _loggerScope = _logger.BeginScope("BackgroundService: AzureQueueHostedService");
     }
 
     protected async override Task ExecuteAsync(CancellationToken cancellationToken)
@@ -26,6 +29,7 @@ public class AzureQueueHostedService : BackgroundService, IDisposable
         {
             try
             {
+                using var _ = _logger.BeginScope("Executing {RunId}", Guid.NewGuid());
                 var didProcess = await _processor.ProcessAsync(cancellationToken);
                 if (!didProcess)
                 {
@@ -40,5 +44,11 @@ public class AzureQueueHostedService : BackgroundService, IDisposable
         }
 
         _logger.LogWarning("Done processing.");
+    }
+
+    public override void Dispose()
+    {
+        _loggerScope.Dispose();
+        base.Dispose();
     }
 }
