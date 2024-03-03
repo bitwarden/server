@@ -35,7 +35,7 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         var globalSettings = new GlobalSettingsFactory(args)
             .GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
-        var connectionString = globalSettings.Sqlite?.ConnectionString ?? Environment.GetEnvironmentVariable("CONN_STR") ?? "Data Source=:memory:";
+        var connectionString = globalSettings.Sqlite?.ConnectionString ?? "Data Source=:memory:";
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new Exception("No Sqlite connection string found.");
