@@ -14,9 +14,6 @@ public partial class EnableCollectionEnhancements : Migration
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        // Ensure the database is created before running the migration
-        _dbContext.Database.EnsureCreated();
-
         var organizations = _dbContext.Organizations.Where(o => o.FlexibleCollections == false).ToList();
         foreach (var organization in organizations)
         {
