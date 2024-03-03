@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -41,7 +42,7 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
             throw new Exception("No Sqlite connection string found.");
         }
         optionsBuilder.UseSqlite(
-            connectionString,
+            new SqliteConnection(connectionString),
             b => b.MigrationsAssembly("SqliteMigrations"))
            .UseApplicationServiceProvider(serviceProvider);
         return new DatabaseContext(optionsBuilder.Options);
