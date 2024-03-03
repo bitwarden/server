@@ -36,7 +36,7 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
             .GlobalSettings;
 
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
-        var connectionString = globalSettings.MySql?.ConnectionString ?? Environment.GetEnvironmentVariable("CONN_STR"); ;
+        var connectionString = globalSettings.MySql?.ConnectionString ?? Environment.GetEnvironmentVariable("CONN_STR");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new Exception("No MySql connection string found.");

@@ -35,7 +35,7 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         var globalSettings = new GlobalSettingsFactory(args)
             .GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
-        var connectionString = globalSettings.PostgreSql?.ConnectionString;
+        var connectionString = globalSettings.PostgreSql?.ConnectionString ?? Environment.GetEnvironmentVariable("CONN_STR");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new Exception("No Postgres connection string found.");
