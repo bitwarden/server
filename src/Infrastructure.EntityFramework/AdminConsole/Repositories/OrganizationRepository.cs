@@ -274,21 +274,21 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
     public async Task EnableCollectionEnhancements(Guid organizationId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var context = GetDatabaseContext(scope);
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         try
         {
             // Step 1: AccessAll migration for Groups
-            var groupsWithAccessAll = context.Groups
+            var groupIdsWithAccessAll = dbContext.Groups
                 .Where(g => g.OrganizationId == organizationId && g.AccessAll == true)
                 .Select(g => g.Id)
                 .ToList();
 
             // Update existing CollectionGroup rows
-            context.CollectionGroups
+            dbContext.CollectionGroups
                 .Where(cg =>
-                    groupsWithAccessAll.Contains(cg.GroupId) &&
+                    groupIdsWithAccessAll.Contains(cg.GroupId) &&
                     cg.Collection.OrganizationId == organizationId)
                 .ToList()
                 .ForEach(cg =>
@@ -299,12 +299,12 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 });
 
             // Insert new rows into CollectionGroup
-            foreach (var group in groupsWithAccessAll)
+            foreach (var group in groupIdsWithAccessAll)
             {
-                var newCollectionGroups = context.Collections
+                var newCollectionGroups = dbContext.Collections
                     .Where(c =>
                         c.OrganizationId == organizationId &&
-                        !context.CollectionGroups.Any(cg => cg.CollectionId == c.Id && cg.GroupId == group))
+                        !dbContext.CollectionGroups.Any(cg => cg.CollectionId == c.Id && cg.GroupId == group))
                     .Select(c => new CollectionGroup
                     {
                         CollectionId = c.Id,
@@ -314,27 +314,28 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                         Manage = false
                     })
                     .ToList();
-                context.CollectionGroups.AddRange(newCollectionGroups);
+                dbContext.CollectionGroups.AddRange(newCollectionGroups);
             }
 
             // Update Group to clear AccessAll flag
-            context.Groups
-                .Where(g => groupsWithAccessAll.Contains(g.Id))
+            dbContext.Groups
+                .Where(g => groupIdsWithAccessAll.Contains(g.Id))
                 .ToList()
                 .ForEach(g => g.AccessAll = false);
 
-            await context.SaveChangesAsync();
+            // Save changes for Step 1
+            await dbContext.SaveChangesAsync();
 
             // Step 2: AccessAll migration for OrganizationUsers
-            var organizationUsersWithAccessAll = context.OrganizationUsers
+            var orgUserIdsWithAccessAll = dbContext.OrganizationUsers
                 .Where(ou => ou.OrganizationId == organizationId && ou.AccessAll == true)
                 .Select(ou => ou.Id)
                 .ToList();
 
             // Update existing CollectionUser rows
-            context.CollectionUsers
+            dbContext.CollectionUsers
                 .Where(cu =>
-                    organizationUsersWithAccessAll.Contains(cu.OrganizationUserId) &&
+                    orgUserIdsWithAccessAll.Contains(cu.OrganizationUserId) &&
                     cu.Collection.OrganizationId == organizationId)
                 .ToList()
                 .ForEach(cu =>
@@ -345,12 +346,12 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 });
 
             // Insert new rows into CollectionUser
-            foreach (var organizationUser in organizationUsersWithAccessAll)
+            foreach (var organizationUser in orgUserIdsWithAccessAll)
             {
-                var newCollectionUsers = context.Collections
+                var newCollectionUsers = dbContext.Collections
                     .Where(c =>
                         c.OrganizationId == organizationId &&
-                        !context.CollectionUsers.Any(cu => cu.CollectionId == c.Id && cu.OrganizationUserId == organizationUser))
+                        !dbContext.CollectionUsers.Any(cu => cu.CollectionId == c.Id && cu.OrganizationUserId == organizationUser))
                     .Select(c => new CollectionUser
                     {
                         CollectionId = c.Id,
@@ -360,21 +361,22 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                         Manage = false
                     })
                     .ToList();
-                context.CollectionUsers.AddRange(newCollectionUsers);
+                dbContext.CollectionUsers.AddRange(newCollectionUsers);
             }
 
             // Update OrganizationUser to clear AccessAll flag
-            context.OrganizationUsers
-                .Where(ou => organizationUsersWithAccessAll.Contains(ou.Id))
+            dbContext.OrganizationUsers
+                .Where(ou => orgUserIdsWithAccessAll.Contains(ou.Id))
                 .ToList()
                 .ForEach(ou => ou.AccessAll = false);
 
-            await context.SaveChangesAsync();
+            // Save changes for Step 2
+            await dbContext.SaveChangesAsync();
 
             // Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission
             // update their existing CollectionUser rows and insert new rows with [Manage] = 1
             // and finally update all OrganizationUsers with Manager role to User role
-            var managerUsers = context.OrganizationUsers
+            var managerOrgUsersIds = dbContext.OrganizationUsers
                 .Where(ou =>
                     ou.OrganizationId == organizationId &&
                     (ou.Type == OrganizationUserType.Manager ||
@@ -383,8 +385,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ToList();
 
             // Update CollectionUser rows with Manage = true
-            context.CollectionUsers
-                .Where(cu => managerUsers.Contains(cu.OrganizationUserId))
+            dbContext.CollectionUsers
+                .Where(cu => managerOrgUsersIds.Contains(cu.OrganizationUserId))
                 .ToList()
                 .ForEach(cu =>
                 {
@@ -394,12 +396,12 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 });
 
             // Insert rows into CollectionUser with Manage = true
-            foreach (var manager in managerUsers)
+            foreach (var manager in managerOrgUsersIds)
             {
-                var newCollectionUsersWithManage = (from cg in context.CollectionGroups
-                                                    join gu in context.GroupUsers on cg.GroupId equals gu.GroupId
+                var newCollectionUsersWithManage = (from cg in dbContext.CollectionGroups
+                                                    join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
                                                     where gu.OrganizationUserId == manager &&
-                                                          !context.CollectionUsers.Any(cu =>
+                                                          !dbContext.CollectionUsers.Any(cu =>
                                                               cu.CollectionId == cg.CollectionId &&
                                                               cu.OrganizationUserId == manager)
                                                     select new CollectionUser
@@ -410,35 +412,38 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                                                         HidePasswords = false,
                                                         Manage = true
                                                     }).Distinct().ToList();
-                context.CollectionUsers.AddRange(newCollectionUsersWithManage);
+                dbContext.CollectionUsers.AddRange(newCollectionUsersWithManage);
             }
 
             // Update OrganizationUser to migrate Managers to User role
-            context.OrganizationUsers
+            dbContext.OrganizationUsers
                 .Where(ou =>
-                    managerUsers.Contains(ou.Id) &&
+                    managerOrgUsersIds.Contains(ou.Id) &&
                     ou.Type == OrganizationUserType.Manager)
                 .ToList()
                 .ForEach(ou => ou.Type = OrganizationUserType.User);
 
-            await context.SaveChangesAsync();
+            // Save changes for Step 3
+            await dbContext.SaveChangesAsync();
 
             // Step 4: Bump AccountRevisionDate for all OrganizationUsers updated in the previous steps
-            // Combine and union the distinct OrganizationUserIds from all steps into a single variable
-            var accessAllGroupUserIds = context.GroupUsers
-                .Where(gu => groupsWithAccessAll.Contains(gu.GroupId))
+            // Get all OrganizationUserIds that have AccessAll from Group
+            var accessAllGroupOrgUserIds = dbContext.GroupUsers
+                .Where(gu => groupIdsWithAccessAll.Contains(gu.GroupId))
                 .Select(gu => gu.OrganizationUserId)
                 .ToList();
-            var orgUsersToBump = accessAllGroupUserIds
-                .Union(organizationUsersWithAccessAll)
-                .Union(managerUsers)
+
+            // Combine and union the distinct OrganizationUserIds from all steps into a single variable
+            var orgUsersToBump = accessAllGroupOrgUserIds
+                .Union(orgUserIdsWithAccessAll)
+                .Union(managerOrgUsersIds)
                 .Distinct()
                 .ToList();
 
             foreach (var organizationUserId in orgUsersToBump)
             {
-                var userToUpdate = context.Users
-                    .FirstOrDefault(u => context.OrganizationUsers.Any(ou =>
+                var userToUpdate = dbContext.Users
+                    .FirstOrDefault(u => dbContext.OrganizationUsers.Any(ou =>
                         ou.UserId == u.Id &&
                         ou.Id == organizationUserId &&
                         ou.Status == OrganizationUserStatusType.Confirmed));
@@ -449,7 +454,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 }
             }
 
-            await context.SaveChangesAsync();
+            // Save changes for Step 4
+            await dbContext.SaveChangesAsync();
 
             await transaction.CommitAsync();
         }
@@ -457,7 +463,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         {
             // Rollback transaction
             await transaction.RollbackAsync();
-            throw;
+            throw new Exception("Error occurred. Rolling back transaction.");
         }
     }
 }
