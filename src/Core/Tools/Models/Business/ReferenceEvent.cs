@@ -243,4 +243,12 @@ public class ReferenceEvent
     /// the value should be <see langword="null" />.
     /// </value>
     public string SignupInitiationPath { get; set; }
+
+    /// <summary>
+    /// The will hold the details around the plan cusomer is and the plan they are migrating to. For example, "Teams Starter → Teams, Enterprise".
+    /// </summary>
+    /// <value>
+    /// <see langword="null"/> when the event was not originated by an application.
+    /// </value>
+    public string PlanUpgradePath { get; set; }
 }

@@ -16,4 +16,6 @@ public class OrganizationUpgrade
     public int? AdditionalServiceAccounts { get; set; }
     public bool UseSecretsManager { get; set; }
     public bool IsFromSecretsManagerTrial { get; set; }
+    public string InitiationPath { get; set; }
+    public string PlanUpgradePath { get; set; }
 }

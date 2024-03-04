@@ -23,6 +23,8 @@ public class OrganizationUpgradeRequestModel
     public string BillingAddressCountry { get; set; }
     public string BillingAddressPostalCode { get; set; }
     public OrganizationKeysRequestModel Keys { get; set; }
+    public string InitiationPath { get; set; }
+    public string PlanUpgradePath { get; set; }
 
     public OrganizationUpgrade ToOrganizationUpgrade()
     {
@@ -40,7 +42,9 @@ public class OrganizationUpgradeRequestModel
             {
                 BillingAddressCountry = BillingAddressCountry,
                 BillingAddressPostalCode = BillingAddressPostalCode
-            }
+            },
+            InitiationPath = InitiationPath,
+            PlanUpgradePath = PlanUpgradePath,
         };
 
         Keys?.ToOrganizationUpgrade(orgUpgrade);

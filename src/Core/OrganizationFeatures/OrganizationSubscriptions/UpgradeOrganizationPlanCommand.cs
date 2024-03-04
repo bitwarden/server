@@ -287,6 +287,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                     OldPlanName = existingPlan.Name,
                     OldPlanType = existingPlan.Type,
                     Seats = organization.Seats,
+                    SignupInitiationPath = upgrade.InitiationPath,
+                    PlanUpgradePath = upgrade.PlanUpgradePath,
                     Storage = organization.MaxStorageGb,
                     // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
                 });
