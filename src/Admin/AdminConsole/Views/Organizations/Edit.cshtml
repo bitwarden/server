@@ -60,12 +60,6 @@
 
 <h1>@(Model.Provider != null ? "Client " : string.Empty)Organization <small>@Model.Organization.Name</small></h1>
 
-@if (Model.Provider != null)
-{
-    <h2>Provider Relationship</h2>
-    @await Html.PartialAsync("_ProviderInformation", Model.Provider)
-}
-
 @if (canViewOrganizationInformation)
 {
     @await Html.PartialAsync("_ViewInformation", Model)
