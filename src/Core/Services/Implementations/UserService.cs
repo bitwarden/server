@@ -488,9 +488,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
 
         Fido2.CredentialMakeResult credentialResponse = null;
-        try {
+        try
+        {
             credentialResponse = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-        } catch (Fido2VerificationException e) {
+        }
+        catch (Fido2VerificationException e)
+        {
             base.Logger.LogError(e, "Unable to verify WebAuthn credential.");
             return false;
         }

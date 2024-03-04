@@ -15,7 +15,7 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly ILogger<CreateWebAuthnLoginCredentialCommand> _logger;
 
-    public CreateWebAuthnLoginCredentialCommand(IFido2 fido2, 
+    public CreateWebAuthnLoginCredentialCommand(IFido2 fido2,
                                 IWebAuthnCredentialRepository webAuthnCredentialRepository,
                                 ILogger<CreateWebAuthnLoginCredentialCommand> logger)
     {
@@ -36,9 +36,12 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
 
         Fido2.CredentialMakeResult credentialResponse = null;
-        try {
+        try
+        {
             credentialResponse = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-        } catch (Fido2VerificationException e) {
+        }
+        catch (Fido2VerificationException e)
+        {
             _logger.LogError(e, "Unable to verify WebAuthn credential.");
             return false;
         }
