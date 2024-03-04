@@ -6,7 +6,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Fido2NetLib;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
@@ -15,7 +14,6 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
     private readonly IFido2 _fido2;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserRepository _userRepository;
-    private readonly ILogger<AssertWebAuthnLoginCredentialCommand> _logger;
 
     public AssertWebAuthnLoginCredentialCommand(IFido2 fido2, IWebAuthnCredentialRepository webAuthnCredentialRepository, IUserRepository userRepository)
     {
