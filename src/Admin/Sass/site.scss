@@ -49,3 +49,24 @@ h3 {
 .form-check-input {
     margin-top: .45rem;
 }
+
+// TODO: fix various spacing per Figma
+// TODO: collapse to single column when screen is small
+// TODO: incorporate provider info
+.description-list-container {
+  display: flex;
+
+  dl {
+    display: flex;
+    flex-wrap: wrap;
+
+    dt,dd {
+      width: 50%;
+    }
+
+    h2 {
+      width: 100%;
+    }
+  }
+
+}
