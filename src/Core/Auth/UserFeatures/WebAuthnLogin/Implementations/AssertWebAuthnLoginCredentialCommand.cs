@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Fido2NetLib;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
@@ -14,6 +15,7 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
     private readonly IFido2 _fido2;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ILogger<AssertWebAuthnLoginCredentialCommand> _logger;
 
     public AssertWebAuthnLoginCredentialCommand(IFido2 fido2, IWebAuthnCredentialRepository webAuthnCredentialRepository, IUserRepository userRepository)
     {
@@ -46,8 +48,14 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
         // Always return true, since we've already filtered the credentials after user id
         IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
         var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
-        var assertionVerificationResult = await _fido2.MakeAssertionAsync(
-            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+        
+        Fido2NetLib.Objects.AssertionVerificationResult assertionVerificationResult = null;
+        try {
+            assertionVerificationResult = await _fido2.MakeAssertionAsync(
+                assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+        } catch (Fido2VerificationException) {
+            throw new BadRequestException("Unable to verify credential.");
+        }
 
         // Update SignatureCounter
         credential.Counter = (int)assertionVerificationResult.Counter;
