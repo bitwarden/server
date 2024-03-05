@@ -275,11 +275,11 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                                              upgrade.AdditionalServiceAccounts.GetValueOrDefault();
         }
 
-        var oldPlanType = organization.PlanType;
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
         if (success)
         {
+            var upgradePath = GetUpgradePath(existingPlan.Product, newPlan.Product);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
                 {
@@ -289,7 +289,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                     OldPlanType = existingPlan.Type,
                     Seats = organization.Seats,
                     SignupInitiationPath = "Upgrade in-product",
-                    PlanUpgradePath = GetUpgradePath(oldPlanType, upgrade.Plan),
+                    PlanUpgradePath = upgradePath,
                     Storage = organization.MaxStorageGb,
                     // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
                 });
@@ -298,11 +298,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 
-    private static string GetUpgradePath(PlanType oldPlanType, PlanType newPlanType)
+    private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
     {
-        var newPlan = StaticStore.GetPlan(newPlanType);
-        var oldPlan = StaticStore.GetPlan(oldPlanType);
-
         var upgradePaths = new Dictionary<(ProductType, ProductType), string>
         {
             [(ProductType.Free, ProductType.Families)] = "2-person org → Families",
@@ -317,7 +314,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             [(ProductType.Teams, ProductType.Enterprise)] = "Teams → Enterprise"
         };
 
-        return upgradePaths.TryGetValue((oldPlan.Product, newPlan.Product), out var upgradePath) ? upgradePath : null;
+        return upgradePaths.TryGetValue((oldProductType, newProductType), out var upgradePath) ? upgradePath : null;
     }
 
     private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,
