@@ -51,6 +51,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
     public bool UseSecretsManager { get; set; }
     public bool IsFromSecretsManagerTrial { get; set; }
 
+    public string InitiationPath { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -82,6 +84,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 BillingAddressPostalCode = BillingAddressPostalCode,
                 BillingAddressCountry = BillingAddressCountry,
             },
+            InitiationPath = InitiationPath,
         };
 
         Keys?.ToOrganizationSignup(orgSignup);
