@@ -57,7 +57,7 @@ jobs:
         run: sleep 15s
 
       - name: Migrate SQL Server
-        run: "dotnet run --project util/MsSqlMigratorUtility/ Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+        run: "dotnet run --project util/MsSqlMigratorUtility/ Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;"
 
       - name: Migrate MySQL
         working-directory: "util/MySqlMigrations"
@@ -145,7 +145,7 @@ jobs:
         shell: pwsh
 
       - name: Migrate
-        run: "dotnet run --project util/MsSqlMigratorUtility/ Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+        run: "dotnet run --project util/MsSqlMigratorUtility/ Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;"
         shell: pwsh
 
       - name: Diff .sqlproj to migrations
