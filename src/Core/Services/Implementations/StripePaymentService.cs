@@ -131,7 +131,7 @@ public class StripePaymentService : IPaymentService
         {
             customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
             {
-                Description = org.BusinessName,
+                Description = org.DisplayBusinessName(),
                 Email = org.BillingEmail,
                 Source = stipeCustomerSourceToken,
                 PaymentMethod = stipeCustomerPaymentMethodId,

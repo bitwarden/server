@@ -329,7 +329,7 @@ public class PolicyServiceTests
             .DeleteUserAsync(policy.OrganizationId, orgUserDetail.Id, savingUserId);
 
         await sutProvider.GetDependency<IMailService>().Received()
-            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(org.Name, orgUserDetail.Email);
+            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(org.DisplayName(), orgUserDetail.Email);
 
         await sutProvider.GetDependency<IEventService>().Received()
             .LogPolicyEventAsync(policy, EventType.Policy_Updated);
