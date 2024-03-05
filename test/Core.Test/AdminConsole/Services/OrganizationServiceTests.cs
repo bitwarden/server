@@ -232,10 +232,8 @@ public class OrganizationServiceTests
                 referenceEvent.Storage == result.Item1.MaxStorageGb));
         // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
 
-        Assert.NotNull(result);
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
             Arg.Any<Organization>(),
@@ -259,7 +257,6 @@ public class OrganizationServiceTests
         (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.Plan = planType;
-        var plan = StaticStore.GetPlan(signup.Plan);
         signup.AdditionalSeats = 0;
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
@@ -269,17 +266,34 @@ public class OrganizationServiceTests
             .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
             .Returns(true);
 
+        // Extract orgUserId when created
+        Guid? orgUserId = null;
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .CreateAsync(Arg.Do<OrganizationUser>(ou => orgUserId = ou.Id));
+
         var result = await sutProvider.Sut.SignUpAsync(signup);
 
+        // Assert: AccessAll is not used
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o =>
                 o.UserId == signup.Owner.Id &&
                 o.AccessAll == false));
 
-        Assert.NotNull(result);
+        // Assert: created a Can Manage association for the default collection instead
+        Assert.NotNull(orgUserId);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).CreateAsync(
+            Arg.Any<Collection>(),
+            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas => cas == null),
+            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas =>
+                cas.Count() == 1 &&
+                cas.All(c =>
+                    c.Id == orgUserId &&
+                    !c.ReadOnly &&
+                    !c.HidePasswords &&
+                    c.Manage)));
+
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
     }
 
     [Theory]
@@ -305,10 +319,8 @@ public class OrganizationServiceTests
                 o.UserId == signup.Owner.Id &&
                 o.AccessAll == true));
 
-        Assert.NotNull(result);
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
     }
 
     [Theory]
@@ -349,10 +361,8 @@ public class OrganizationServiceTests
                 referenceEvent.Storage == result.Item1.MaxStorageGb));
         // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
 
-        Assert.NotNull(result);
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
             Arg.Any<Organization>(),
@@ -1734,7 +1744,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 
@@ -2351,6 +2361,55 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, invitePermissions));
 
         Assert.Contains("custom users can only grant the same custom permissions that they have.", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    public async Task SignUp_EmailSent_When_FromSecretsManagerTrial(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.Plan = planType;
+
+        var plan = StaticStore.GetPlan(signup.Plan);
+
+        signup.UseSecretsManager = true;
+        signup.AdditionalSeats = 15;
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalServiceAccounts = 20;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.IsFromSecretsManagerTrial = true;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AC2101UpdateTrialInitiationEmail).Returns(true);
+
+        await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IMailService>().Received(1).SendTrialInitiationEmailAsync(signup.BillingEmail);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    public async Task SignUp_NoEmailSent_When_NotFromSecretsManagerTrial(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.Plan = planType;
+
+        var plan = StaticStore.GetPlan(signup.Plan);
+
+        signup.UseSecretsManager = true;
+        signup.AdditionalSeats = 15;
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalServiceAccounts = 20;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.IsFromSecretsManagerTrial = false;
+
+        await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IMailService>().Received(0).SendTrialInitiationEmailAsync(signup.BillingEmail);
     }
 
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions

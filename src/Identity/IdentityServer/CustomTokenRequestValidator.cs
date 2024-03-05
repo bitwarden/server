@@ -15,7 +15,6 @@ using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using IdentityModel;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Distributed;
 
 #nullable enable
 
@@ -46,14 +45,12 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
-        [FromKeyedServices("persistent")]
-        IDistributedCache distributedCache,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
             organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
             userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository,
-            distributedCache, userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
     }

@@ -15,7 +15,6 @@ using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -49,13 +48,11 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        [FromKeyedServices("persistent")]
-        IDistributedCache distributedCache,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, userRepository, policyService,
-              tokenDataFactory, featureService, ssoConfigRepository, distributedCache, userDecryptionOptionsBuilder)
+              tokenDataFactory, featureService, ssoConfigRepository, userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
         _userService = userService;
