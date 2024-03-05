@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class TaxRateRepositoryTests
 {
     [CiSkippedTheory, EfTaxRateAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         TaxRate taxRate,
         TaxRateCompare equalityComparer,
         List<EfRepo.TaxRateRepository> suts,

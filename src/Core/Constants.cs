@@ -35,6 +35,20 @@ public static class Constants
     /// If true, the organization plan assigned to that provider is updated to a 2020 plan.
     /// </summary>
     public static readonly DateTime ProviderCreatedPriorNov62023 = new DateTime(2023, 11, 6);
+
+    /// <summary>
+    /// When you set the ProrationBehavior to create_prorations,
+    /// Stripe will automatically create prorations for any changes made to the subscription,
+    /// such as changing the plan, adding or removing quantities, or applying discounts.
+    /// </summary>
+    public const string CreateProrations = "create_prorations";
+
+    /// <summary>
+    /// When you set the ProrationBehavior to always_invoice,
+    /// Stripe will always generate an invoice when a subscription update occurs,
+    /// regardless of whether there is a proration or not.
+    /// </summary>
+    public const string AlwaysInvoice = "always_invoice";
 }
 
 public static class AuthConstants
@@ -117,6 +131,9 @@ public static class FeatureFlagKeys
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
     public const string AC1607_PresentUsersWithOffboardingSurvey = "AC-1607_present-user-offboarding-survey";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
+    public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
+    public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
+    public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
 
     public static List<string> GetAllKeys()
     {
@@ -132,7 +149,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" }
+            { Fido2VaultCredentials, "true" },
+            { DuoRedirect, "true" }
         };
     }
 }

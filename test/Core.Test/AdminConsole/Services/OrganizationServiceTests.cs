@@ -232,10 +232,8 @@ public class OrganizationServiceTests
                 referenceEvent.Storage == result.Item1.MaxStorageGb));
         // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
 
-        Assert.NotNull(result);
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
             Arg.Any<Organization>(),
@@ -294,10 +292,8 @@ public class OrganizationServiceTests
                     !c.HidePasswords &&
                     c.Manage)));
 
-        Assert.NotNull(result);
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
     }
 
     [Theory]
@@ -323,10 +319,8 @@ public class OrganizationServiceTests
                 o.UserId == signup.Owner.Id &&
                 o.AccessAll == true));
 
-        Assert.NotNull(result);
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
     }
 
     [Theory]
@@ -367,10 +361,8 @@ public class OrganizationServiceTests
                 referenceEvent.Storage == result.Item1.MaxStorageGb));
         // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
 
-        Assert.NotNull(result);
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
             Arg.Any<Organization>(),
@@ -2369,6 +2361,55 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, invitePermissions));
 
         Assert.Contains("custom users can only grant the same custom permissions that they have.", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    public async Task SignUp_EmailSent_When_FromSecretsManagerTrial(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.Plan = planType;
+
+        var plan = StaticStore.GetPlan(signup.Plan);
+
+        signup.UseSecretsManager = true;
+        signup.AdditionalSeats = 15;
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalServiceAccounts = 20;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.IsFromSecretsManagerTrial = true;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AC2101UpdateTrialInitiationEmail).Returns(true);
+
+        await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IMailService>().Received(1).SendTrialInitiationEmailAsync(signup.BillingEmail);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    public async Task SignUp_NoEmailSent_When_NotFromSecretsManagerTrial(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.Plan = planType;
+
+        var plan = StaticStore.GetPlan(signup.Plan);
+
+        signup.UseSecretsManager = true;
+        signup.AdditionalSeats = 15;
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalServiceAccounts = 20;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.IsFromSecretsManagerTrial = false;
+
+        await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IMailService>().Received(0).SendTrialInitiationEmailAsync(signup.BillingEmail);
     }
 
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
