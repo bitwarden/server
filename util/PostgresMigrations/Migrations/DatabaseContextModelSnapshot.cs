@@ -1170,6 +1170,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("CipherId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 

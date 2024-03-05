@@ -537,6 +537,15 @@ public class OrganizationService : IOrganizationService
                 Storage = returnValue.Item1.MaxStorageGb,
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
+
+        var isAc2101UpdateTrialInitiationEmail =
+            _featureService.IsEnabled(FeatureFlagKeys.AC2101UpdateTrialInitiationEmail);
+
+        if (signup.IsFromSecretsManagerTrial && isAc2101UpdateTrialInitiationEmail)
+        {
+            await _mailService.SendTrialInitiationEmailAsync(signup.BillingEmail);
+        }
+
         return returnValue;
     }
 
@@ -819,7 +828,7 @@ public class OrganizationService : IOrganizationService
             await customerService.UpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Email = organization.BillingEmail,
-                Description = organization.BusinessName
+                Description = organization.DisplayBusinessName()
             });
         }
     }
@@ -1276,7 +1285,7 @@ public class OrganizationService : IOrganizationService
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email);
                 await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));

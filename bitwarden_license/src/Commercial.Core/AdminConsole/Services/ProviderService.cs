@@ -257,7 +257,7 @@ public class ProviderService : IProviderService
 
                 await _providerUserRepository.ReplaceAsync(providerUser);
                 events.Add((providerUser, EventType.ProviderUser_Confirmed, null));
-                await _mailService.SendProviderConfirmedEmailAsync(provider.Name, user.Email);
+                await _mailService.SendProviderConfirmedEmailAsync(provider.DisplayName(), user.Email);
                 result.Add(Tuple.Create(providerUser, ""));
             }
             catch (BadRequestException e)
@@ -331,7 +331,7 @@ public class ProviderService : IProviderService
                 var email = user == null ? providerUser.Email : user.Email;
                 if (!string.IsNullOrWhiteSpace(email))
                 {
-                    await _mailService.SendProviderUserRemoved(provider.Name, email);
+                    await _mailService.SendProviderUserRemoved(provider.DisplayName(), email);
                 }
 
                 result.Add(Tuple.Create(providerUser, ""));
@@ -586,7 +586,7 @@ public class ProviderService : IProviderService
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
         var token = _dataProtector.Protect(
             $"ProviderUserInvite {providerUser.Id} {providerUser.Email} {nowMillis}");
-        await _mailService.SendProviderInviteEmailAsync(provider.Name, providerUser, token, providerUser.Email);
+        await _mailService.SendProviderInviteEmailAsync(provider.DisplayName(), providerUser, token, providerUser.Email);
     }
 
     private async Task<bool> HasConfirmedProviderAdminExceptAsync(Guid providerId, IEnumerable<Guid> providerUserIds)

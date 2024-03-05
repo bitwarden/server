@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -36,8 +37,8 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
-        Name = org.Name;
-        BusinessName = org.BusinessName;
+        Name = org.DisplayName();
+        BusinessName = org.DisplayBusinessName();
         BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
@@ -184,8 +185,8 @@ public class OrganizationEditModel : OrganizationViewModel
 
     public Organization ToOrganization(Organization existingOrganization)
     {
-        existingOrganization.Name = Name;
-        existingOrganization.BusinessName = BusinessName;
+        existingOrganization.Name = WebUtility.HtmlEncode(Name.Trim());
+        existingOrganization.BusinessName = WebUtility.HtmlEncode(BusinessName.Trim());
         existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
         existingOrganization.PlanType = PlanType.Value;
         existingOrganization.Plan = Plan;

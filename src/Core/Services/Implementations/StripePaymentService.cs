@@ -132,7 +132,7 @@ public class StripePaymentService : IPaymentService
         {
             var customerCreateOptions = new CustomerCreateOptions
             {
-                Description = org.BusinessName,
+                Description = org.DisplayBusinessName(),
                 Email = org.BillingEmail,
                 Source = stipeCustomerSourceToken,
                 PaymentMethod = stipeCustomerPaymentMethodId,
@@ -1770,13 +1770,17 @@ public class StripePaymentService : IPaymentService
     {
         var subscriptionInfo = await GetSubscriptionAsync(organization);
 
-        if (subscriptionInfo.Subscription is not { Status: "active" or "trialing" or "past_due" } ||
-            subscriptionInfo.UpcomingInvoice == null)
+        if (subscriptionInfo.Subscription is not
+            {
+                Status: "active" or "trialing" or "past_due",
+                CollectionMethod: "charge_automatically"
+            }
+            || subscriptionInfo.UpcomingInvoice == null)
         {
             return false;
         }
 
-        var customer = await GetCustomerAsync(organization.GatewayCustomerId);
+        var customer = await GetCustomerAsync(organization.GatewayCustomerId, GetCustomerPaymentOptions());
 
         var paymentSource = await GetBillingPaymentSourceAsync(customer);
 
