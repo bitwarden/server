@@ -10,8 +10,7 @@ param(
   [switch]$mysql,
   [switch]$mssql,
   [switch]$sqlite,
-  [switch]$selfhost,
-  [switch]$pipeline
+  [switch]$selfhost
 )
 
 # Abort on any error
@@ -40,10 +39,6 @@ if ($all -or $mssql) {
 
     Write-Output "Migrating your migrations to use MsSqlMigratorUtility (if needed)"
     ./migrate_migration_record.ps1 -s
-  } elseif ($pipeline) {
-    # pipeline sets this through an environment variable, see test-database.yml
-    $msSqlConnectionString = "$Env:CONN_STR"
-    $envName = "pipeline"
   } else {
     $msSqlConnectionString = $(Get-UserSecrets).'globalSettings:sqlServer:connectionString'
     $envName = "cloud"
