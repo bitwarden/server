@@ -14,7 +14,7 @@
     [CreationDate]          DATETIME2 (7)       NOT NULL,
     CONSTRAINT [PK_Transaction] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Transaction_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Transaction_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_Transaction_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_Transaction_Provider] FOREIGN KEY ([ProviderId]) REFERENCES [dbo].[Provider] ([Id]) ON DELETE CASCADE
 );
 
