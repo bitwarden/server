@@ -338,8 +338,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var result = await base.CreateAsync(user, masterPassword);
         if (result == IdentityResult.Success)
         {
-            await _mailService.SendWelcomeEmailAsync(user);
-
+            var isSecretsManagerTrial = false;
             if (!string.IsNullOrEmpty(user.ReferenceData))
             {
                 var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
@@ -353,11 +352,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                             {
                                 SignupInitiationPath = initiationPath
                             });
+                        isSecretsManagerTrial = initiationPath.Contains("Secrets Manager trial");
 
                         return result;
                     }
                 }
             }
+            await _mailService.SendWelcomeEmailAsync(user, isSecretsManagerTrial);
 
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }

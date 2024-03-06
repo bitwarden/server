@@ -8,7 +8,7 @@ namespace Bit.Core.Services;
 
 public interface IMailService
 {
-    Task SendWelcomeEmailAsync(User user);
+    Task SendWelcomeEmailAsync(User user, bool isSecretsManagerTrial = false);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
@@ -77,6 +77,5 @@ public interface IMailService
     Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier);
-    Task SendTrialInitiationEmailAsync(string email);
 }
 

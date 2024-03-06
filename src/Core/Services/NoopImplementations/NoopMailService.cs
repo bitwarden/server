@@ -68,7 +68,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendWelcomeEmailAsync(User user)
+    public Task SendWelcomeEmailAsync(User user, bool isSecretsManagerTrial = false)
     {
         return Task.FromResult(0);
     }

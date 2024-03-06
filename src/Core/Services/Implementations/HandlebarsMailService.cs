@@ -238,7 +238,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendWelcomeEmailAsync(User user)
+    public async Task SendWelcomeEmailAsync(User user, bool isSecretsManagerTrial = false)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
         var model = new BaseMailModel
@@ -246,20 +246,9 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "Welcome", model);
-        message.Category = "Welcome";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
 
-    public async Task SendTrialInitiationEmailAsync(string userEmail)
-    {
-        var message = CreateDefaultMessage("Welcome to Bitwarden!", userEmail);
-        var model = new BaseMailModel
-        {
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
-        };
-        await AddMessageContentAsync(message, "TrialInitiation", model);
+        var templateName = isSecretsManagerTrial ? "TrialInitiation" : "Welcome";
+        await AddMessageContentAsync(message, templateName, model);
         message.Category = "Welcome";
         await _mailDeliveryService.SendEmailAsync(message);
     }
