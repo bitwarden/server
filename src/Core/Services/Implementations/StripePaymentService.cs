@@ -789,7 +789,8 @@ public class StripePaymentService : IPaymentService
                 SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
             });
 
-            immediatelyInvoice = upcomingInvoiceWithChanges.AmountRemaining >= 50000;
+            var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
+            immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 50000;
 
             subUpdateOptions.BillingCycleAnchor = immediatelyInvoice
                 ? SubscriptionBillingCycleAnchor.Now
