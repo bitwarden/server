@@ -1269,6 +1269,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<byte?>("PaymentMethodType")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool?>("Refunded")
                         .HasColumnType("INTEGER");
 
@@ -1284,6 +1287,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProviderId");
 
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -2199,11 +2204,17 @@ namespace Bit.SqliteMigrations.Migrations
                         .WithMany("Transactions")
                         .HasForeignKey("OrganizationId");
 
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("Transactions")
                         .HasForeignKey("UserId");
 
                     b.Navigation("Organization");
+
+                    b.Navigation("Provider");
 
                     b.Navigation("User");
                 });

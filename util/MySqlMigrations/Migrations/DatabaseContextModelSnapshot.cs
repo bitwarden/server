@@ -1271,6 +1271,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<byte?>("PaymentMethodType")
                         .HasColumnType("tinyint unsigned");
 
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("char(36)");
+
                     b.Property<bool?>("Refunded")
                         .HasColumnType("tinyint(1)");
 
@@ -1286,6 +1289,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProviderId");
 
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -2201,11 +2206,17 @@ namespace Bit.MySqlMigrations.Migrations
                         .WithMany("Transactions")
                         .HasForeignKey("OrganizationId");
 
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("Transactions")
                         .HasForeignKey("UserId");
 
                     b.Navigation("Organization");
+
+                    b.Navigation("Provider");
 
                     b.Navigation("User");
                 });

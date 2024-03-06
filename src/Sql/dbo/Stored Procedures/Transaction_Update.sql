@@ -2,6 +2,7 @@
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
+    @ProviderId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Amount MONEY,
     @Refunded BIT,
@@ -20,6 +21,7 @@ BEGIN
     SET
         [UserId] = @UserId,
         [OrganizationId] = @OrganizationId,
+        [ProviderId] = @ProviderId,
         [Type] = @Type,
         [Amount] = @Amount,
         [Refunded] = @Refunded,

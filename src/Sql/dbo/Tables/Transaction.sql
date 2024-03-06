@@ -2,6 +2,7 @@
     [Id]                    UNIQUEIDENTIFIER    NOT NULL,
     [UserId]                UNIQUEIDENTIFIER    NULL,
     [OrganizationId]        UNIQUEIDENTIFIER    NULL,
+    [ProviderId]            UNIQUEIDENTIFIER    NULL,
     [Type]                  TINYINT             NOT NULL,
     [Amount]                MONEY               NOT NULL,
     [Refunded]              BIT                 NULL,
@@ -14,6 +15,7 @@
     CONSTRAINT [PK_Transaction] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Transaction_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_Transaction_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_Transaction_Provider] FOREIGN KEY ([ProviderId]) REFERENCES [dbo].[Provider] ([Id]) ON DELETE CASCADE
 );
 
 

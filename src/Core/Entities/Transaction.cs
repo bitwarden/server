@@ -9,6 +9,7 @@ public class Transaction : ITableObject<Guid>
     public Guid Id { get; set; }
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
+    public Guid? ProviderId { get; set; }
     public TransactionType Type { get; set; }
     public decimal Amount { get; set; }
     public bool? Refunded { get; set; }
