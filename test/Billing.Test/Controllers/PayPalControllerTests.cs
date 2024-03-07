@@ -487,7 +487,7 @@ public class PayPalControllerTests
     }
 
     [Fact]
-    public async Task PostIpn_Refunded_MissingParentTransaction_BadRequest()
+    public async Task PostIpn_Refunded_MissingParentTransaction_Ok()
     {
         var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
 
@@ -518,9 +518,9 @@ public class PayPalControllerTests
 
         var result = await controller.PostIpn();
 
-        HasStatusCode(result, 400);
+        HasStatusCode(result, 200);
 
-        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): Could not find parent transaction");
+        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Could not find parent transaction");
 
         await _transactionRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<Transaction>());
 
