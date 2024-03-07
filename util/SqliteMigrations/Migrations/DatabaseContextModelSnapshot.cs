@@ -274,6 +274,15 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("GatewayCustomerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GatewaySubscriptionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte?>("GatewayType")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 

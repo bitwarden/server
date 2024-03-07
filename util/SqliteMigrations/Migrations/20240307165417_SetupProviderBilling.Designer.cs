@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240306210806_CreateProviderPlanTable")]
-    partial class CreateProviderPlanTable
+    [Migration("20240307165417_SetupProviderBilling")]
+    partial class SetupProviderBilling
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -275,6 +275,15 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("GatewayCustomerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GatewaySubscriptionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte?>("GatewayType")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")

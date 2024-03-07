@@ -9,15 +9,15 @@
     @BusinessTaxNumber NVARCHAR(30),
     @BillingEmail NVARCHAR(256),
     @BillingPhone NVARCHAR(50) = NULL,
-    @Gateway TINYINT,
-    @GatewayCustomerId VARCHAR(50),
-    @GatewaySubscriptionId VARCHAR(50),
     @Status TINYINT,
     @Type TINYINT = 0,
     @UseEvents BIT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @Gateway TINYINT = 0,
+    @GatewayCustomerId VARCHAR(50) = NULL,
+    @GatewaySubscriptionId VARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -34,15 +34,15 @@ BEGIN
         [BusinessTaxNumber] = @BusinessTaxNumber,
         [BillingEmail] = @BillingEmail,
         [BillingPhone] = @BillingPhone,
-        [Gateway] = @Gateway,
-        [GatewayCustomerId] = @GatewayCustomerId,
-        [GatewaySubscriptionId] = @GatewaySubscriptionId,
         [Status] = @Status,
         [Type] = @Type,
         [UseEvents] = @UseEvents,
         [Enabled] = @Enabled,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [Gateway] = @Gateway,
+        [GatewayCustomerId] = @GatewayCustomerId,
+        [GatewaySubscriptionId] = @GatewaySubscriptionId
     WHERE
         [Id] = @Id
 END

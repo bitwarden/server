@@ -2,7 +2,6 @@
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @ProviderId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Amount MONEY,
     @Refunded BIT,
@@ -11,7 +10,8 @@
     @PaymentMethodType TINYINT,
     @Gateway TINYINT,
     @GatewayId VARCHAR(50),
-    @CreationDate DATETIME2(7)
+    @CreationDate DATETIME2(7),
+    @ProviderId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -21,7 +21,6 @@ BEGIN
     SET
         [UserId] = @UserId,
         [OrganizationId] = @OrganizationId,
-        [ProviderId] = @ProviderId,
         [Type] = @Type,
         [Amount] = @Amount,
         [Refunded] = @Refunded,
@@ -30,7 +29,8 @@ BEGIN
         [PaymentMethodType] = @PaymentMethodType,
         [Gateway] = @Gateway,
         [GatewayId] = @GatewayId,
-        [CreationDate] = @CreationDate
+        [CreationDate] = @CreationDate,
+        [ProviderId] = @ProviderId
     WHERE
         [Id] = @Id
 END
