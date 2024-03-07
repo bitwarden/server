@@ -260,7 +260,7 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "TrialInitiation", model);
-        message.Category = "Welcome";
+        message.Category = "TrialInitiation";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
