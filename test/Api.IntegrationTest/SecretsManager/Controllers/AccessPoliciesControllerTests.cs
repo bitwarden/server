@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.IntegrationTest.SecretsManager.Enums;
+using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
@@ -28,7 +28,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly ClientTestHelper _clientTestHelper;
+    private readonly LoginHelper _loginHelper;
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
 
@@ -40,6 +40,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         _serviceAccountRepository = _factory.GetService<IServiceAccountRepository>();
         _projectRepository = _factory.GetService<IProjectRepository>();
         _groupRepository = _factory.GetService<IGroupRepository>();
+        _loginHelper = new LoginHelper(_factory, _client);
     }
 
     public async Task InitializeAsync()
@@ -66,7 +67,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task CreateProjectAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id);
 
@@ -88,7 +89,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         // Create a new account as a user
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _clientTestHelper.LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id);
         var request = new AccessPoliciesCreateRequest
@@ -110,7 +111,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task CreateProjectAccessPolicies_MismatchedOrgIds_NotFound(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id, true);
         await SetupProjectAndServiceAccountPermissionAsync(permissionType, projectId, serviceAccountId);
@@ -135,7 +136,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task CreateProjectAccessPolicies_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id);
         await SetupProjectAndServiceAccountPermissionAsync(permissionType, projectId, serviceAccountId);
@@ -154,7 +155,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Equal(serviceAccountId, result!.ServiceAccountAccessPolicies.First().ServiceAccountId);
+        Assert.Equal(serviceAccountId, result.ServiceAccountAccessPolicies.First().ServiceAccountId);
         Assert.True(result.ServiceAccountAccessPolicies.First().Read);
         Assert.True(result.ServiceAccountAccessPolicies.First().Write);
         AssertHelper.AssertRecent(result.ServiceAccountAccessPolicies.First().RevisionDate);
@@ -163,7 +164,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var createdAccessPolicy =
             await _accessPolicyRepository.GetByIdAsync(result.ServiceAccountAccessPolicies.First().Id);
         Assert.NotNull(createdAccessPolicy);
-        Assert.Equal(result.ServiceAccountAccessPolicies.First().Read, createdAccessPolicy!.Read);
+        Assert.Equal(result.ServiceAccountAccessPolicies.First().Read, createdAccessPolicy.Read);
         Assert.Equal(result.ServiceAccountAccessPolicies.First().Write, createdAccessPolicy.Write);
         Assert.Equal(result.ServiceAccountAccessPolicies.First().Id, createdAccessPolicy.Id);
         AssertHelper.AssertRecent(createdAccessPolicy.CreationDate);
@@ -181,7 +182,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task UpdateAccessPolicy_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
         const bool expectedRead = true;
@@ -198,7 +199,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         // Create a new account as a user
         await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _clientTestHelper.LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var initData = await SetupAccessPolicyRequest(orgUser.OrganizationId);
 
@@ -217,13 +218,13 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task UpdateAccessPolicy_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             var accessPolicies = new List<BaseAccessPolicy>
             {
                 new UserProjectAccessPolicy
@@ -244,13 +245,13 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountProjectAccessPolicyResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Equal(expectedRead, result!.Read);
+        Assert.Equal(expectedRead, result.Read);
         Assert.Equal(expectedWrite, result.Write);
         AssertHelper.AssertRecent(result.RevisionDate);
 
         var updatedAccessPolicy = await _accessPolicyRepository.GetByIdAsync(result.Id);
         Assert.NotNull(updatedAccessPolicy);
-        Assert.Equal(expectedRead, updatedAccessPolicy!.Read);
+        Assert.Equal(expectedRead, updatedAccessPolicy.Read);
         Assert.Equal(expectedWrite, updatedAccessPolicy.Write);
         AssertHelper.AssertRecent(updatedAccessPolicy.RevisionDate);
     }
@@ -266,7 +267,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task DeleteAccessPolicy_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
         var response = await _client.DeleteAsync($"/access-policies/{initData.AccessPolicyId}");
@@ -279,7 +280,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         // Create a new account as a user
         await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _clientTestHelper.LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var initData = await SetupAccessPolicyRequest(orgUser.OrganizationId);
 
@@ -294,13 +295,13 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task DeleteAccessPolicy_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             var accessPolicies = new List<BaseAccessPolicy>
             {
                 new UserProjectAccessPolicy
@@ -322,7 +323,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetProjectAccessPolicies_ReturnsEmpty()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
@@ -336,7 +337,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Empty(result!.UserAccessPolicies);
+        Assert.Empty(result.UserAccessPolicies);
         Assert.Empty(result.GroupAccessPolicies);
         Assert.Empty(result.ServiceAccountAccessPolicies);
     }
@@ -352,7 +353,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetProjectAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var initData = await SetupAccessPolicyRequest(org.Id);
 
@@ -366,7 +367,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         // Create a new account as a user
         await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _clientTestHelper.LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var initData = await SetupAccessPolicyRequest(orgUser.OrganizationId);
 
@@ -381,13 +382,13 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetProjectAccessPolicies(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             var accessPolicies = new List<BaseAccessPolicy>
             {
                 new UserProjectAccessPolicy
@@ -404,7 +405,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
 
         Assert.NotNull(result?.ServiceAccountAccessPolicies);
-        Assert.Single(result!.ServiceAccountAccessPolicies);
+        Assert.Single(result.ServiceAccountAccessPolicies);
     }
 
     [Theory]
@@ -418,7 +419,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetPeoplePotentialGrantees_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var response =
             await _client.GetAsync(
@@ -432,12 +433,12 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetPeoplePotentialGrantees_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
         }
 
         var response =
@@ -448,7 +449,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
         Assert.NotNull(result?.Data);
-        Assert.NotEmpty(result!.Data);
+        Assert.NotEmpty(result.Data);
     }
 
     [Theory]
@@ -462,7 +463,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetServiceAccountPotentialGrantees_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var response =
             await _client.GetAsync(
@@ -476,7 +477,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         // Create a new account as a user
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _clientTestHelper.LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -493,7 +494,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
         Assert.NotNull(result?.Data);
-        Assert.Empty(result!.Data);
+        Assert.Empty(result.Data);
     }
 
     [Theory]
@@ -502,7 +503,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetServiceAccountsPotentialGrantees_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -513,7 +514,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
 
             await _accessPolicyRepository.CreateManyAsync(
                 new List<BaseAccessPolicy>
@@ -536,7 +537,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
         Assert.NotNull(result?.Data);
-        Assert.NotEmpty(result!.Data);
+        Assert.NotEmpty(result.Data);
         Assert.Equal(serviceAccount.Id, result.Data.First(x => x.Id == serviceAccount.Id).Id);
     }
 
@@ -551,7 +552,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetProjectPotentialGrantees_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var response =
             await _client.GetAsync(
@@ -565,7 +566,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         // Create a new account as a user
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _clientTestHelper.LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = _mockEncryptedString });
 
@@ -578,7 +579,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
         Assert.NotNull(result?.Data);
-        Assert.Empty(result!.Data);
+        Assert.Empty(result.Data);
     }
 
     [Theory]
@@ -587,7 +588,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetProjectPotentialGrantees_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
@@ -598,7 +599,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
 
             await _accessPolicyRepository.CreateManyAsync(
                 new List<BaseAccessPolicy>
@@ -618,7 +619,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
         Assert.NotNull(result?.Data);
-        Assert.NotEmpty(result!.Data);
+        Assert.NotEmpty(result.Data);
         Assert.Equal(project.Id, result.Data.First(x => x.Id == project.Id).Id);
     }
 
@@ -633,7 +634,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task CreateServiceAccountGrantedPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -654,7 +655,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         // Create a new account as a user
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -682,7 +683,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task CreateServiceAccountGrantedPolicies_MismatchedOrgId_NotFound(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id, true);
         await SetupProjectAndServiceAccountPermissionAsync(permissionType, projectId, serviceAccountId);
@@ -702,7 +703,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task CreateServiceAccountGrantedPolicies_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id);
         await SetupProjectAndServiceAccountPermissionAsync(permissionType, projectId, serviceAccountId);
@@ -718,13 +719,13 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             .ReadFromJsonAsync<ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>>();
 
         Assert.NotNull(result);
-        Assert.NotEmpty(result!.Data);
+        Assert.NotEmpty(result.Data);
         Assert.Equal(projectId, result.Data.First().GrantedProjectId);
 
         var createdAccessPolicy =
             await _accessPolicyRepository.GetByIdAsync(result.Data.First().Id);
         Assert.NotNull(createdAccessPolicy);
-        Assert.Equal(result.Data.First().Read, createdAccessPolicy!.Read);
+        Assert.Equal(result.Data.First().Read, createdAccessPolicy.Read);
         Assert.Equal(result.Data.First().Write, createdAccessPolicy.Write);
         Assert.Equal(result.Data.First().Id, createdAccessPolicy.Id);
         AssertHelper.AssertRecent(createdAccessPolicy.CreationDate);
@@ -742,7 +743,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetServiceAccountGrantedPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
         var response = await _client.GetAsync($"/service-accounts/{initData.ServiceAccountId}/granted-policies");
@@ -753,7 +754,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetServiceAccountGrantedPolicies_ReturnsEmpty()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -768,7 +769,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             .ReadFromJsonAsync<ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>>();
 
         Assert.NotNull(result);
-        Assert.Empty(result!.Data);
+        Assert.Empty(result.Data);
     }
 
     [Fact]
@@ -777,7 +778,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         // Create a new account as a user
         await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _clientTestHelper.LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var initData = await SetupAccessPolicyRequest(orgUser.OrganizationId);
 
@@ -787,7 +788,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             .ReadFromJsonAsync<ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>>();
 
         Assert.NotNull(result);
-        Assert.Empty(result!.Data);
+        Assert.Empty(result.Data);
     }
 
     [Theory]
@@ -796,13 +797,13 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetServiceAccountGrantedPolicies(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             var accessPolicies = new List<BaseAccessPolicy>
             {
                 new UserProjectAccessPolicy
@@ -820,7 +821,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             .ReadFromJsonAsync<ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>>();
 
         Assert.NotNull(result?.Data);
-        Assert.NotEmpty(result!.Data);
+        Assert.NotEmpty(result.Data);
         Assert.Equal(initData.ServiceAccountId, result.Data.First().ServiceAccountId);
         Assert.NotNull(result.Data.First().ServiceAccountName);
         Assert.NotNull(result.Data.First().GrantedProjectName);
@@ -837,7 +838,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetProjectPeopleAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
@@ -853,7 +854,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetProjectPeopleAccessPolicies_ReturnsEmpty()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
@@ -867,7 +868,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Empty(result!.UserAccessPolicies);
+        Assert.Empty(result.UserAccessPolicies);
         Assert.Empty(result.GroupAccessPolicies);
     }
 
@@ -876,7 +877,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     {
         await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
@@ -895,7 +896,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetProjectPeopleAccessPolicies_Success(PermissionType permissionType)
     {
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (project, _) = await SetupProjectPeoplePermissionAsync(permissionType, organizationUser);
 
@@ -905,7 +906,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
 
         Assert.NotNull(result?.UserAccessPolicies);
-        Assert.Single(result!.UserAccessPolicies);
+        Assert.Single(result.UserAccessPolicies);
     }
 
     [Theory]
@@ -919,7 +920,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task PutProjectPeopleAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (_, organizationUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (project, request) = await SetupProjectPeopleRequestAsync(PermissionType.RunAsAdmin, organizationUser);
 
@@ -932,7 +933,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, organizationUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
@@ -959,7 +960,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task PutProjectPeopleAccessPolicies_MismatchedOrgIds_NotFound(PermissionType permissionType)
     {
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
         var newOrg = await _organizationHelper.CreateSmOrganizationAsync();
@@ -984,7 +985,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task PutProjectPeopleAccessPolicies_Success(PermissionType permissionType)
     {
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
-        await LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
 
@@ -995,14 +996,14 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         Assert.NotNull(result);
         Assert.Equal(request.UserAccessPolicyRequests.First().GranteeId,
-            result!.UserAccessPolicies.First().OrganizationUserId);
+            result.UserAccessPolicies.First().OrganizationUserId);
         Assert.True(result.UserAccessPolicies.First().Read);
         Assert.True(result.UserAccessPolicies.First().Write);
 
         var createdAccessPolicy =
             await _accessPolicyRepository.GetByIdAsync(result.UserAccessPolicies.First().Id);
         Assert.NotNull(createdAccessPolicy);
-        Assert.Equal(result.UserAccessPolicies.First().Read, createdAccessPolicy!.Read);
+        Assert.Equal(result.UserAccessPolicies.First().Read, createdAccessPolicy.Read);
         Assert.Equal(result.UserAccessPolicies.First().Write, createdAccessPolicy.Write);
         Assert.Equal(result.UserAccessPolicies.First().Id, createdAccessPolicy.Id);
     }
@@ -1018,7 +1019,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetServiceAccountPeopleAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
@@ -1033,7 +1034,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetServiceAccountPeopleAccessPolicies_ReturnsEmpty()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -1047,7 +1048,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountPeopleAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Empty(result!.UserAccessPolicies);
+        Assert.Empty(result.UserAccessPolicies);
         Assert.Empty(result.GroupAccessPolicies);
     }
 
@@ -1056,7 +1057,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -1075,7 +1076,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task GetServiceAccountPeopleAccessPolicies_Success(PermissionType permissionType)
     {
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
-        await LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (serviceAccount, _) = await SetupServiceAccountPeoplePermissionAsync(permissionType, organizationUser);
 
@@ -1085,7 +1086,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountPeopleAccessPoliciesResponseModel>();
 
         Assert.NotNull(result?.UserAccessPolicies);
-        Assert.Single(result!.UserAccessPolicies);
+        Assert.Single(result.UserAccessPolicies);
     }
 
     [Theory]
@@ -1095,7 +1096,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task PutServiceAccountPeopleAccessPolicies_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (_, organizationUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets, true);
-        await LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (serviceAccount, request) = await SetupServiceAccountPeopleRequestAsync(PermissionType.RunAsAdmin, organizationUser);
 
@@ -1108,7 +1109,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, organizationUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _loginHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -1136,7 +1137,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task PutServiceAccountPeopleAccessPolicies_MismatchedOrgIds_NotFound(PermissionType permissionType)
     {
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
-        await LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (serviceAccount, request) = await SetupServiceAccountPeopleRequestAsync(permissionType, organizationUser);
         var newOrg = await _organizationHelper.CreateSmOrganizationAsync();
@@ -1161,7 +1162,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     public async Task PutServiceAccountPeopleAccessPolicies_Success(PermissionType permissionType)
     {
         var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
-        await LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var (serviceAccount, request) = await SetupServiceAccountPeopleRequestAsync(permissionType, organizationUser);
 
@@ -1172,14 +1173,14 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         Assert.NotNull(result);
         Assert.Equal(request.UserAccessPolicyRequests.First().GranteeId,
-            result!.UserAccessPolicies.First().OrganizationUserId);
+            result.UserAccessPolicies.First().OrganizationUserId);
         Assert.True(result.UserAccessPolicies.First().Read);
         Assert.True(result.UserAccessPolicies.First().Write);
 
         var createdAccessPolicy =
             await _accessPolicyRepository.GetByIdAsync(result.UserAccessPolicies.First().Id);
         Assert.NotNull(createdAccessPolicy);
-        Assert.Equal(result.UserAccessPolicies.First().Read, createdAccessPolicy!.Read);
+        Assert.Equal(result.UserAccessPolicies.First().Read, createdAccessPolicy.Read);
         Assert.Equal(result.UserAccessPolicies.First().Write, createdAccessPolicy.Write);
         Assert.Equal(result.UserAccessPolicies.First().Id, createdAccessPolicy.Id);
     }
@@ -1228,7 +1229,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             organizationUser = orgUser;
         }
 
@@ -1260,7 +1261,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             organizationUser = orgUser;
         }
 
@@ -1337,7 +1338,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             var accessPolicies = new List<BaseAccessPolicy>
             {
                 new UserProjectAccessPolicy
@@ -1354,35 +1355,6 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
-    }
-
-    private async Task<AccessPoliciesCreateRequest> SetupUserServiceAccountAccessPolicyRequestAsync(
-        PermissionType permissionType, Guid userId, Guid serviceAccountId)
-    {
-        if (permissionType == PermissionType.RunAsUserWithPermission)
-        {
-            var (email, newOrgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _clientTestHelper.LoginAsync(email);
-            var accessPolicies = new List<BaseAccessPolicy>
-            {
-                new UserServiceAccountAccessPolicy
-                {
-                    GrantedServiceAccountId = serviceAccountId,
-                    OrganizationUserId = newOrgUser.Id,
-                    Read = true,
-                    Write = true,
-                },
-            };
-            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-        }
-
-        return new AccessPoliciesCreateRequest
-        {
-            UserAccessPolicyRequests = new List<AccessPolicyRequest>
-            {
-                new() { GranteeId = userId, Read = true, Write = true },
-            },
-        };
     }
 
     private class RequestSetupData

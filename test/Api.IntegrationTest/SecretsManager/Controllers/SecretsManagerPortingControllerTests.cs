@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.SecretsManager.Models.Request;
 using Xunit;
 
@@ -10,7 +10,7 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
-    private readonly ClientTestHelper _clientTestHelper;
+    private readonly LoginHelper _loginHelper;
 
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
@@ -19,7 +19,7 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
     {
         _factory = factory;
         _client = _factory.CreateClient();
-        _clientTestHelper = new ClientTestHelper(_factory, _client);
+        _loginHelper = new LoginHelper(_factory, _client);
     }
 
     public async Task InitializeAsync()
@@ -46,7 +46,7 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
     public async Task Import_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var projectsList = new List<SMImportRequestModel.InnerProjectImportRequestModel>();
         var secretsList = new List<SMImportRequestModel.InnerSecretImportRequestModel>();
@@ -67,7 +67,7 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
     public async Task Export_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _clientTestHelper.LoginAsync(_email);
+        await _loginHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"sm/{org.Id}/export");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

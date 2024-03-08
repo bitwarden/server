@@ -9,7 +9,7 @@ using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 
-namespace Bit.Api.IntegrationTest.SecretsManager;
+namespace Bit.Api.IntegrationTest.SecretsManager.Helpers;
 
 public class SecretsManagerOrganizationHelper
 {
@@ -20,8 +20,8 @@ public class SecretsManagerOrganizationHelper
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
 
-    public Organization _organization = null!;
-    public OrganizationUser _owner = null!;
+    private Organization _organization = null!;
+    private OrganizationUser _owner = null!;
 
     public SecretsManagerOrganizationHelper(ApiApplicationFactory factory, string ownerEmail)
     {
@@ -65,8 +65,7 @@ public class SecretsManagerOrganizationHelper
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
-        var (organization, owner) =
-            await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: email, billingEmail: email);
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: email, billingEmail: email);
         return organization;
     }
 

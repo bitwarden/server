@@ -66,7 +66,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     }
 
     /// <summary>
-    /// Helper for logging via client secret.
+    /// Helper for logging in via client secret.
     /// Currently used for Secrets Manager service accounts
     /// </summary>
     public async Task<string> LoginWithClientSecretAsync(Guid clientId, string clientSecret)
