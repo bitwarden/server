@@ -1,21 +1,41 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using LaunchDarkly.Logging;
 using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Integrations;
+using LaunchDarkly.Sdk.Server.Interfaces;
 
 namespace Bit.Core.Services;
 
-public class LaunchDarklyFeatureService : IFeatureService, IDisposable
+public class LaunchDarklyFeatureService : IFeatureService
 {
-    private readonly LdClient _client;
+    private readonly ILdClient _client;
+    private readonly ICurrentContext _currentContext;
     private const string _anonymousUser = "25a15cac-58cf-4ac0-ad0f-b17c4bd92294";
 
     public LaunchDarklyFeatureService(
-        IGlobalSettings globalSettings)
+        ILdClient client,
+        ICurrentContext currentContext)
+    {
+        _client = client;
+        _currentContext = currentContext;
+    }
+
+    public static Configuration GetConfiguredClient(GlobalSettings globalSettings)
     {
         var ldConfig = Configuration.Builder(globalSettings.LaunchDarkly?.SdkKey);
         ldConfig.Logging(Components.Logging().Level(LogLevel.Error));
+
+        if (!string.IsNullOrEmpty(globalSettings.ProjectName))
+        {
+            ldConfig.ApplicationInfo(Components.ApplicationInfo()
+                .ApplicationId(globalSettings.ProjectName)
+                .ApplicationName(globalSettings.ProjectName)
+                .ApplicationVersion(AssemblyHelpers.GetGitHash() ?? $"v{AssemblyHelpers.GetVersion()}")
+                .ApplicationVersionName(AssemblyHelpers.GetVersion())
+            );
+        }
 
         if (string.IsNullOrEmpty(globalSettings.LaunchDarkly?.SdkKey))
         {
@@ -53,7 +73,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
             ldConfig.Offline(true);
         }
 
-        _client = new LdClient(ldConfig.Build());
+        return ldConfig.Build();
     }
 
     public bool IsOnline()
@@ -61,28 +81,28 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         return _client.Initialized && !_client.IsOffline();
     }
 
-    public bool IsEnabled(string key, ICurrentContext currentContext, bool defaultValue = false)
+    public bool IsEnabled(string key, bool defaultValue = false)
     {
-        return _client.BoolVariation(key, BuildContext(currentContext), defaultValue);
+        return _client.BoolVariation(key, BuildContext(), defaultValue);
     }
 
-    public int GetIntVariation(string key, ICurrentContext currentContext, int defaultValue = 0)
+    public int GetIntVariation(string key, int defaultValue = 0)
     {
-        return _client.IntVariation(key, BuildContext(currentContext), defaultValue);
+        return _client.IntVariation(key, BuildContext(), defaultValue);
     }
 
-    public string GetStringVariation(string key, ICurrentContext currentContext, string defaultValue = null)
+    public string GetStringVariation(string key, string defaultValue = null)
     {
-        return _client.StringVariation(key, BuildContext(currentContext), defaultValue);
+        return _client.StringVariation(key, BuildContext(), defaultValue);
     }
 
-    public Dictionary<string, object> GetAll(ICurrentContext currentContext)
+    public Dictionary<string, object> GetAll()
     {
         var results = new Dictionary<string, object>();
 
         var keys = FeatureFlagKeys.GetAllKeys();
 
-        var values = _client.AllFlagsState(BuildContext(currentContext));
+        var values = _client.AllFlagsState(BuildContext());
         if (values.Valid)
         {
             foreach (var key in keys)
@@ -108,23 +128,18 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         return results;
     }
 
-    public void Dispose()
-    {
-        _client?.Dispose();
-    }
-
-    private LaunchDarkly.Sdk.Context BuildContext(ICurrentContext currentContext)
+    private LaunchDarkly.Sdk.Context BuildContext()
     {
         var builder = LaunchDarkly.Sdk.Context.MultiBuilder();
 
-        switch (currentContext.ClientType)
+        switch (_currentContext.ClientType)
         {
             case Identity.ClientType.User:
                 {
                     LaunchDarkly.Sdk.ContextBuilder ldUser;
-                    if (currentContext.UserId.HasValue)
+                    if (_currentContext.UserId.HasValue)
                     {
-                        ldUser = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                        ldUser = LaunchDarkly.Sdk.Context.Builder(_currentContext.UserId.Value.ToString());
                     }
                     else
                     {
@@ -135,9 +150,9 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
 
                     ldUser.Kind(LaunchDarkly.Sdk.ContextKind.Default);
 
-                    if (currentContext.Organizations?.Any() ?? false)
+                    if (_currentContext.Organizations?.Any() ?? false)
                     {
-                        var ldOrgs = currentContext.Organizations.Select(o => LaunchDarkly.Sdk.LdValue.Of(o.Id.ToString()));
+                        var ldOrgs = _currentContext.Organizations.Select(o => LaunchDarkly.Sdk.LdValue.Of(o.Id.ToString()));
                         ldUser.Set("organizations", LaunchDarkly.Sdk.LdValue.ArrayFrom(ldOrgs));
                     }
 
@@ -147,9 +162,9 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
 
             case Identity.ClientType.Organization:
                 {
-                    if (currentContext.OrganizationId.HasValue)
+                    if (_currentContext.OrganizationId.HasValue)
                     {
-                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(_currentContext.OrganizationId.Value.ToString());
                         ldOrg.Kind("organization");
                         builder.Add(ldOrg.Build());
                     }
@@ -158,16 +173,16 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
 
             case Identity.ClientType.ServiceAccount:
                 {
-                    if (currentContext.UserId.HasValue)
+                    if (_currentContext.UserId.HasValue)
                     {
-                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(_currentContext.UserId.Value.ToString());
                         ldServiceAccount.Kind("service-account");
                         builder.Add(ldServiceAccount.Build());
                     }
 
-                    if (currentContext.OrganizationId.HasValue)
+                    if (_currentContext.OrganizationId.HasValue)
                     {
-                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(_currentContext.OrganizationId.Value.ToString());
                         ldOrg.Kind("organization");
                         builder.Add(ldOrg.Build());
                     }
@@ -178,7 +193,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         return builder.Build();
     }
 
-    private TestData BuildDataSource(Dictionary<string, string> values)
+    private static TestData BuildDataSource(Dictionary<string, string> values)
     {
         var source = TestData.DataSource();
         foreach (var kvp in values)

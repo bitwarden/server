@@ -5,13 +5,16 @@ using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
+using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
+using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -27,14 +30,16 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using DnsClient;
 using IdentityModel;
-using IdentityServer4.AccessTokenValidation;
-using IdentityServer4.Configuration;
+using LaunchDarkly.Sdk.Server;
+using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -43,8 +48,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -111,13 +117,12 @@ public static class ServiceCollectionExtensions
         if (globalSettings.SelfHosted)
         {
             services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
-            services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
         }
         else
         {
             services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
             services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
-            services.AddSingleton<IMetaDataRepository, TableStorageRepos.MetaDataRepository>();
+            services.AddKeyedSingleton<IGrantRepository, Core.Auth.Repositories.Cosmos.GrantRepository>("cosmos");
         }
 
         return provider;
@@ -126,7 +131,7 @@ public static class ServiceCollectionExtensions
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<ICipherService, CipherService>();
-        services.AddScoped<IUserService, UserService>();
+        services.AddUserServices(globalSettings);
         services.AddOrganizationServices(globalSettings);
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();
@@ -134,12 +139,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
-        services.AddSingleton<IAppleIapService, AppleIapService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
+        services.AddVaultServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -151,6 +156,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<EmergencyAccessInviteTokenable>>>())
         );
+
         services.AddSingleton<IDataProtectorTokenFactory<HCaptchaTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<HCaptchaTokenable>(
                 HCaptchaTokenable.ClearTextPrefix,
@@ -158,18 +164,45 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<HCaptchaTokenable>>>())
         );
+
         services.AddSingleton<IDataProtectorTokenFactory<SsoTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<SsoTokenable>(
                 SsoTokenable.ClearTextPrefix,
                 SsoTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>(
+                WebAuthnCredentialCreateOptionsTokenable.ClearTextPrefix,
+                WebAuthnCredentialCreateOptionsTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>(
+                WebAuthnLoginAssertionOptionsTokenable.ClearTextPrefix,
+                WebAuthnLoginAssertionOptionsTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>>()));
         services.AddSingleton<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<SsoEmail2faSessionTokenable>(
                 SsoEmail2faSessionTokenable.ClearTextPrefix,
                 SsoEmail2faSessionTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoEmail2faSessionTokenable>>>()));
+
+        services.AddSingleton<IOrgUserInviteTokenableFactory, OrgUserInviteTokenableFactory>();
+        services.AddSingleton<IDataProtectorTokenFactory<OrgUserInviteTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<OrgUserInviteTokenable>(
+                OrgUserInviteTokenable.ClearTextPrefix,
+                OrgUserInviteTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<OrgUserInviteTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<DuoUserStateTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<DuoUserStateTokenable>(
+                DuoUserStateTokenable.ClearTextPrefix,
+                DuoUserStateTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<DuoUserStateTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -191,7 +224,7 @@ public static class ServiceCollectionExtensions
                 PrivateKey = globalSettings.Braintree.PrivateKey
             };
         });
-        services.AddSingleton<IPaymentService, StripePaymentService>();
+        services.AddScoped<IPaymentService, StripePaymentService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
@@ -201,7 +234,7 @@ public static class ServiceCollectionExtensions
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
-        services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
+        services.AddOptionality();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
@@ -247,19 +280,6 @@ public static class ServiceCollectionExtensions
         else
         {
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
-        }
-
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
-        {
-            services.AddSingleton<IBlockIpService, AzureQueueBlockIpService>();
-        }
-        else if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
-        {
-            services.AddSingleton<IBlockIpService, AmazonSqsBlockIpService>();
-        }
-        else
-        {
-            services.AddSingleton<IBlockIpService, NoopBlockIpService>();
         }
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
@@ -343,7 +363,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMailService, NoopMailService>();
         services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
-        services.AddSingleton<IBlockIpService, NoopBlockIpService>();
         services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
         services.AddSingleton<ILicensingService, NoopLicensingService>();
@@ -353,7 +372,8 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
-        services.AddSingleton<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
+        services.AddScoped<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
+        services.AddScoped<ITemporaryDuoWebV4SDKService, TemporaryDuoWebV4SDKService>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
@@ -405,22 +425,28 @@ public static class ServiceCollectionExtensions
         return identityBuilder;
     }
 
-
-
     public static void AddIdentityAuthenticationServices(
         this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment,
         Action<AuthorizationOptions> addAuthorization)
     {
-        services
-            .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
-            .AddIdentityServerAuthentication(options =>
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
             {
+                options.MapInboundClaims = false;
                 options.Authority = globalSettings.BaseServiceUri.InternalIdentity;
                 options.RequireHttpsMetadata = !environment.IsDevelopment() &&
                     globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
-                options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
-                options.NameClaimType = ClaimTypes.Email;
-                options.SupportedTokens = SupportedTokens.Jwt;
+                options.TokenValidationParameters.ValidateAudience = false;
+                options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
+                options.TokenValidationParameters.NameClaimType = ClaimTypes.Email;
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = (context) =>
+                    {
+                        context.Token = TokenRetrieval.FromAuthorizationHeaderOrQueryString()(context.Request);
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         if (addAuthorization != null)
@@ -478,6 +504,11 @@ public static class ServiceCollectionExtensions
         if (certificate != null)
         {
             identityServerBuilder.AddSigningCredential(certificate);
+        }
+        else if (env.IsDevelopment() && !string.IsNullOrEmpty(globalSettings.DevelopmentDirectory))
+        {
+            var developerSigningKeyPath = Path.Combine(globalSettings.DevelopmentDirectory, "signingkey.jwk");
+            identityServerBuilder.AddDeveloperSigningCredential(true, developerSigningKeyPath);
         }
         else if (env.IsDevelopment())
         {
@@ -606,18 +637,13 @@ public static class ServiceCollectionExtensions
                 });
     }
 
-    public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services, GlobalSettings globalSettings)
+    public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services)
     {
         services.AddOidcStateDataFormatterCache();
         services.AddSession();
         services.ConfigureApplicationCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
         services.ConfigureExternalCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
-        services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>>(
-            svcs => new ConfigureOpenIdConnectDistributedOptions(
-                svcs.GetRequiredService<IHttpContextAccessor>(),
-                globalSettings,
-                svcs.GetRequiredService<IdentityServerOptions>())
-        );
+        services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>, ConfigureOpenIdConnectDistributedOptions>();
 
         return services;
     }
@@ -644,7 +670,8 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<IpRateLimitSeedStartupService>();
         services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-        if (!globalSettings.DistributedIpRateLimiting.Enabled || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+        if (!globalSettings.DistributedIpRateLimiting.Enabled ||
+            string.IsNullOrEmpty(globalSettings.DistributedIpRateLimiting.RedisConnectionString))
         {
             services.AddInMemoryRateLimiting();
         }
@@ -656,7 +683,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IClientPolicyStore, MemoryCacheClientPolicyStore>();
 
             // Use a custom Redis processing strategy that skips Ip limiting if Redis is down
-            // Requires a registered IConnectionMultiplexer
+            services.AddKeyedSingleton<IConnectionMultiplexer>("rate-limiter", (_, provider) =>
+                ConnectionMultiplexer.Connect(globalSettings.DistributedIpRateLimiting.RedisConnectionString));
             services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>();
         }
     }
@@ -669,28 +697,45 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         GlobalSettings globalSettings)
     {
-        if (globalSettings.SelfHosted || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+        if (!string.IsNullOrEmpty(globalSettings.DistributedCache?.Redis?.ConnectionString))
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = globalSettings.DistributedCache.Redis.ConnectionString;
+            });
+        }
+        else
         {
             services.AddDistributedMemoryCache();
-            return;
         }
 
-        // Register the IConnectionMultiplexer explicitly so it can be accessed via DI
-        // (e.g. for the IP rate limiting store)
-        services.AddSingleton<IConnectionMultiplexer>(
-            _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
-
-        // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer
-        // to reduce the number of redundant connections to the Redis instance
-        services.AddSingleton<IDistributedCache>(s =>
+        if (!string.IsNullOrEmpty(globalSettings.DistributedCache?.Cosmos?.ConnectionString))
         {
-            return new RedisCache(new RedisCacheOptions
-            {
-                // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
-                InstanceName = $"{globalSettings.ProjectName}:",
-                ConnectionMultiplexerFactory = () =>
-                    Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
-            });
+            services.AddKeyedSingleton<IDistributedCache>("persistent", (s, _) =>
+                new CosmosCache(new CosmosCacheOptions
+                {
+                    DatabaseName = "cache",
+                    ContainerName = "default",
+                    CreateIfNotExists = false,
+                    ClientBuilder = new CosmosClientBuilder(globalSettings.DistributedCache?.Cosmos?.ConnectionString)
+                }));
+        }
+        else
+        {
+            services.AddKeyedSingleton<IDistributedCache, MemoryDistributedCache>("persistent");
+        }
+    }
+
+    public static IServiceCollection AddOptionality(this IServiceCollection services)
+    {
+        services.AddSingleton<ILdClient>(s =>
+        {
+            return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(
+                s.GetRequiredService<GlobalSettings>()));
         });
+
+        services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
+
+        return services;
     }
 }

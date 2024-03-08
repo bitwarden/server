@@ -1,4 +1,8 @@
 ﻿using System.Text.Json;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -64,7 +68,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
-        Assert.Equal(5000, kdfIterations);
+        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
         AssertUserDecryptionOptions(root);
     }
 
@@ -102,7 +106,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHash = "master_password_hash",
         });
 
-        var context = await PostLoginAsync(_factory.Server, username, deviceId, context => context.Request.Headers.Add("Auth-Email", "bad_value"));
+        var context = await PostLoginAsync(_factory.Server, username, deviceId, context => context.Request.Headers.Append("Auth-Email", "bad_value"));
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
@@ -328,7 +332,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
-    public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Bit.Core.Entities.Organization organization, Bit.Core.Entities.OrganizationApiKey organizationApiKey)
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization, Bit.Core.Entities.OrganizationApiKey organizationApiKey)
     {
         var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
         organization.Enabled = true;
@@ -556,7 +560,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var organizationUserRepository = _factory.Services.GetService<IOrganizationUserRepository>();
         var policyRepository = _factory.Services.GetService<IPolicyRepository>();
 
-        var organization = new Bit.Core.Entities.Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled, UsePolicies = true };
+        var organization = new Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled, UsePolicies = true };
         await organizationRepository.CreateAsync(organization);
 
         var user = await userRepository.GetByEmailAsync(username);
@@ -569,7 +573,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         };
         await organizationUserRepository.CreateAsync(organizationUser);
 
-        var ssoPolicy = new Bit.Core.Entities.Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
+        var ssoPolicy = new Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
         await policyRepository.CreateAsync(ssoPolicy);
     }
 

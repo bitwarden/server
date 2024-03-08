@@ -7,7 +7,6 @@ public class SubscriptionInfo
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingUpcomingInvoice UpcomingInvoice { get; set; }
-    public bool UsingInAppPurchase { get; set; }
 
     public class BillingCustomerDiscount
     {
@@ -18,11 +17,13 @@ public class SubscriptionInfo
             Id = discount.Id;
             Active = discount.Start != null && discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
+            AppliesTo = discount.Coupon?.AppliesTo?.Products ?? new List<string>();
         }
 
         public string Id { get; }
         public bool Active { get; }
         public decimal? PercentOff { get; }
+        public List<string> AppliesTo { get; }
     }
 
     public class BillingSubscription
@@ -41,6 +42,7 @@ public class SubscriptionInfo
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
             }
+            CollectionMethod = sub.CollectionMethod;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -53,6 +55,7 @@ public class SubscriptionInfo
         public string Status { get; set; }
         public bool Cancelled { get; set; }
         public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
+        public string CollectionMethod { get; set; }
 
         public class BillingSubscriptionItem
         {
@@ -60,6 +63,7 @@ public class SubscriptionInfo
             {
                 if (item.Plan != null)
                 {
+                    ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
                     Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                     Interval = item.Plan.Interval;
@@ -73,6 +77,7 @@ public class SubscriptionInfo
 
             public bool AddonSubscriptionItem { get; set; }
 
+            public string ProductId { get; set; }
             public string Name { get; set; }
             public decimal Amount { get; set; }
             public int Quantity { get; set; }

@@ -9,6 +9,3 @@ $params = @{
 
 $params['Subject'] = 'CN=Bitwarden Identity Server Dev';
 New-SelfSignedCertificate @params;
-
-$params['Subject'] = 'CN=Bitwarden Data Protection Dev';
-New-SelfSignedCertificate @params;

@@ -1,5 +1,6 @@
-﻿using Bit.Api.Models.Response;
-using Bit.Core.Entities;
+﻿using System.Text.Json.Serialization;
+using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
@@ -54,10 +55,15 @@ public class OrganizationResponseModel : ResponseModel
         SmServiceAccounts = organization.SmServiceAccounts;
         MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
+        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        FlexibleCollections = organization.FlexibleCollections;
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     public string BusinessAddress1 { get; set; }
     public string BusinessAddress2 { get; set; }
@@ -93,6 +99,9 @@ public class OrganizationResponseModel : ResponseModel
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool FlexibleCollections { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
@@ -104,7 +113,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
-        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
@@ -121,8 +129,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             Subscription.Items = null;
             UpcomingInvoice.Amount = null;
         }
-
-        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
@@ -137,8 +143,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
                                              license.Expires?.AddDays(-Constants
                                                  .OrganizationSelfHostSubscriptionGracePeriodDays);
         }
-
-        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public string StorageName { get; set; }
@@ -156,6 +160,4 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Date when a self-hosted organization expires (includes grace period).
     /// </summary>
     public DateTime? Expiration { get; set; }
-
-    public bool SecretsManagerBeta { get; set; }
 }

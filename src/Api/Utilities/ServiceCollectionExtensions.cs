@@ -1,7 +1,12 @@
-﻿using Bit.Core.IdentityServer;
+﻿using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Api.Vault.AuthorizationHandlers.Groups;
+using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
+using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Health;
+using Bit.SharedWeb.Swagger;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 
 namespace Bit.Api.Utilities;
@@ -65,6 +70,8 @@ public static class ServiceCollectionExtensions
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
 
+            config.SchemaFilter<EnumSchemaFilter>();
+
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);
             var coreFilePath = Path.Combine(AppContext.BaseDirectory, "Core.xml");
@@ -85,34 +92,14 @@ public static class ServiceCollectionExtensions
             {
                 builder.AddSqlServer(globalSettings.SqlServer.ConnectionString);
             }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Redis.ConnectionString))
-            {
-                builder.AddRedis(globalSettings.Redis.ConnectionString);
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
-            {
-                builder.AddAzureQueueStorage(globalSettings.Storage.ConnectionString, name: "storage_queue")
-                    .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue");
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications.ConnectionString))
-            {
-                builder.AddAzureQueueStorage(globalSettings.Notifications.ConnectionString,
-                    name: "notifications_queue");
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString))
-            {
-                builder.AddAzureServiceBusTopic(_ => globalSettings.ServiceBus.ConnectionString,
-                    _ => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "service_bus");
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
-            {
-                builder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
-            }
         });
+    }
+
+    public static void AddAuthorizationHandlers(this IServiceCollection services)
+    {
+        services.AddScoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, OrganizationUserAuthorizationHandler>();
     }
 }

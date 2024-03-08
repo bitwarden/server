@@ -5,7 +5,7 @@ using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -244,7 +244,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         AssertHelper.AssertRecent(createdServiceAccount.CreationDate);
 
         // Check permissions have been bootstrapped.
-        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(createdServiceAccount.Id, currentUserId);
+        var accessPolicies = await _accessPolicyRepository.GetPeoplePoliciesByGrantedServiceAccountIdAsync(createdServiceAccount.Id, currentUserId);
         Assert.NotNull(accessPolicies);
         var ap = (UserServiceAccountAccessPolicy)accessPolicies.First();
         Assert.Equal(createdServiceAccount.Id, ap.GrantedServiceAccountId);
@@ -700,14 +700,14 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
-            Name = _mockEncryptedString,
+            Name = _mockEncryptedString
         });
 
         var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
         {
-            ServiceAccountId = org.Id,
+            ServiceAccountId = serviceAccount.Id,
             Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30),
+            ExpireAt = DateTime.UtcNow.AddDays(30)
         });
 
         var request = new RevokeAccessTokensRequest
@@ -749,9 +749,9 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
         var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
         {
-            ServiceAccountId = org.Id,
+            ServiceAccountId = serviceAccount.Id,
             Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30),
+            ExpireAt = DateTime.UtcNow.AddDays(30)
         });
 
         var request = new RevokeAccessTokensRequest

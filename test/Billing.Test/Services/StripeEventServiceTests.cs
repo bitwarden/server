@@ -3,6 +3,7 @@ using Bit.Billing.Services.Implementations;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.Settings;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -21,7 +22,7 @@ public class StripeEventServiceTests
         globalSettings.BaseServiceUri = baseServiceUriSettings;
 
         _stripeFacade = Substitute.For<IStripeFacade>();
-        _stripeEventService = new StripeEventService(globalSettings, _stripeFacade);
+        _stripeEventService = new StripeEventService(globalSettings, Substitute.For<ILogger<StripeEventService>>(), _stripeFacade);
     }
 
     #region GetCharge
@@ -465,12 +466,10 @@ public class StripeEventServiceTests
 
         var customer = await GetCustomerAsync();
 
-        invoice.Customer = customer;
-
-        _stripeFacade.GetInvoice(
-                invoice.Id,
-                Arg.Any<InvoiceGetOptions>())
-            .Returns(invoice);
+        _stripeFacade.GetCustomer(
+                invoice.CustomerId,
+                Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
@@ -478,9 +477,9 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetInvoice(
-            invoice.Id,
-            Arg.Any<InvoiceGetOptions>(),
+        await _stripeFacade.Received(1).GetCustomer(
+            invoice.CustomerId,
+            Arg.Any<CustomerGetOptions>(),
             Arg.Any<RequestOptions>(),
             Arg.Any<CancellationToken>());
     }

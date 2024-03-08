@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -33,7 +32,7 @@ public class GroupsControllerTests
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
                 g.AccessAll == groupRequestModel.AccessAll),
             organization,
-            Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+            Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
@@ -58,7 +57,7 @@ public class GroupsControllerTests
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
                 g.AccessAll == groupRequestModel.AccessAll),
             Arg.Is<Organization>(o => o.Id == organization.Id),
-            Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+            Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);

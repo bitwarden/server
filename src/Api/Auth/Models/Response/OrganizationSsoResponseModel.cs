@@ -1,6 +1,6 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 
@@ -33,7 +33,8 @@ public class SsoUrls
     {
         CallbackPath = SsoConfigurationData.BuildCallbackPath(globalSettings.BaseServiceUri.Sso);
         SignedOutCallbackPath = SsoConfigurationData.BuildSignedOutCallbackPath(globalSettings.BaseServiceUri.Sso);
-        SpEntityId = SsoConfigurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
+        SpEntityIdStatic = SsoConfigurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
+        SpEntityId = SsoConfigurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso, organizationId);
         SpMetadataUrl = SsoConfigurationData.BuildSaml2MetadataUrl(globalSettings.BaseServiceUri.Sso, organizationId);
         SpAcsUrl = SsoConfigurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso, organizationId);
     }
@@ -41,6 +42,7 @@ public class SsoUrls
     public string CallbackPath { get; set; }
     public string SignedOutCallbackPath { get; set; }
     public string SpEntityId { get; set; }
+    public string SpEntityIdStatic { get; set; }
     public string SpMetadataUrl { get; set; }
     public string SpAcsUrl { get; set; }
 }

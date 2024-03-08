@@ -1,5 +1,6 @@
 ﻿using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -58,6 +59,15 @@ public class SecretsManagerOrganizationHelper
         }
 
         return (_organization, _owner);
+    }
+
+    public async Task<Organization> CreateSmOrganizationAsync()
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var (organization, owner) =
+            await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: email, billingEmail: email);
+        return organization;
     }
 
     public async Task<(string email, OrganizationUser orgUser)> CreateNewUser(OrganizationUserType userType, bool accessSecrets)

@@ -16,13 +16,51 @@ public record Teams2019Plan : Models.StaticStore.Plan
 
         TrialPeriodDays = 7;
 
+        HasGroups = true;
+        HasDirectory = true;
+        HasEvents = true;
         HasTotp = true;
+        Has2fa = true;
+        HasApi = true;
+        UsersGetPremium = true;
 
-        UpgradeSortOrder = 2;
-        DisplaySortOrder = 2;
+        UpgradeSortOrder = 3;
+        DisplaySortOrder = 3;
         LegacyYear = 2020;
 
+        SecretsManager = new Teams2019SecretsManagerFeatures(isAnnual);
         PasswordManager = new Teams2019PasswordManagerFeatures(isAnnual);
+    }
+
+    private record Teams2019SecretsManagerFeatures : SecretsManagerPlanFeatures
+    {
+        public Teams2019SecretsManagerFeatures(bool isAnnual)
+        {
+            BaseSeats = 0;
+            BasePrice = 0;
+            BaseServiceAccount = 50;
+
+            HasAdditionalSeatsOption = true;
+            HasAdditionalServiceAccountOption = true;
+
+            AllowSeatAutoscale = true;
+            AllowServiceAccountsAutoscale = true;
+
+            if (isAnnual)
+            {
+                StripeSeatPlanId = "secrets-manager-teams-seat-annually";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-annually";
+                SeatPrice = 72;
+                AdditionalPricePerServiceAccount = 6;
+            }
+            else
+            {
+                StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
+                SeatPrice = 7;
+                AdditionalPricePerServiceAccount = 0.5M;
+            }
+        }
     }
 
     private record Teams2019PasswordManagerFeatures : PasswordManagerPlanFeatures

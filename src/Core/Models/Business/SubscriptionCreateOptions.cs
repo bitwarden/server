@@ -1,13 +1,21 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Stripe;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Models.Business;
 
-public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
+public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
 {
-    public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats,
-        int additionalStorageGb, bool premiumAccessAddon, int additionalSmSeats, int additionalServiceAccounts)
+    public OrganizationSubscriptionOptionsBase(
+        Organization org,
+        Plan plan,
+        TaxInfo taxInfo,
+        int additionalSeats,
+        int additionalStorageGb,
+        bool premiumAccessAddon,
+        bool useSecretsManager,
+        int additionalSmSeats,
+        int additionalServiceAccounts)
     {
         Items = new List<SubscriptionItemOptions>();
         Metadata = new Dictionary<string, string>
@@ -17,7 +25,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
 
         AddPlanIdToSubscription(plan);
 
-        if (org.UseSecretsManager)
+        if (useSecretsManager)
         {
             AddSecretsManagerSeat(plan, additionalSmSeats);
             AddServiceAccount(plan, additionalServiceAccounts);
@@ -38,7 +46,10 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         if (additionalSmSeats > 0 && plan.SecretsManager.StripeSeatPlanId != null)
         {
             Items.Add(new SubscriptionItemOptions
-            { Plan = plan.SecretsManager.StripeSeatPlanId, Quantity = additionalSmSeats });
+            {
+                Plan = plan.SecretsManager.StripeSeatPlanId,
+                Quantity = additionalSmSeats
+            });
         }
     }
 
@@ -47,11 +58,14 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         if (additionalSeats > 0 && plan.PasswordManager.StripeSeatPlanId != null)
         {
             Items.Add(new SubscriptionItemOptions
-            { Plan = plan.PasswordManager.StripeSeatPlanId, Quantity = additionalSeats });
+            {
+                Plan = plan.PasswordManager.StripeSeatPlanId,
+                Quantity = additionalSeats
+            });
         }
     }
 
-    private void AddServiceAccount(StaticStore.Plan plan, int additionalServiceAccounts)
+    private void AddServiceAccount(Plan plan, int additionalServiceAccounts)
     {
         if (additionalServiceAccounts > 0 && plan.SecretsManager.StripeServiceAccountPlanId != null)
         {
@@ -63,7 +77,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         }
     }
 
-    private void AddAdditionalStorage(StaticStore.Plan plan, int additionalStorageGb)
+    private void AddAdditionalStorage(Plan plan, int additionalStorageGb)
     {
         if (additionalStorageGb > 0)
         {
@@ -75,19 +89,27 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         }
     }
 
-    private void AddPremiumAccessAddon(StaticStore.Plan plan, bool premiumAccessAddon)
+    private void AddPremiumAccessAddon(Plan plan, bool premiumAccessAddon)
     {
         if (premiumAccessAddon && plan.PasswordManager.StripePremiumAccessPlanId != null)
         {
-            Items.Add(new SubscriptionItemOptions { Plan = plan.PasswordManager.StripePremiumAccessPlanId, Quantity = 1 });
+            Items.Add(new SubscriptionItemOptions
+            {
+                Plan = plan.PasswordManager.StripePremiumAccessPlanId,
+                Quantity = 1
+            });
         }
     }
 
-    private void AddPlanIdToSubscription(StaticStore.Plan plan)
+    private void AddPlanIdToSubscription(Plan plan)
     {
         if (plan.PasswordManager.StripePlanId != null)
         {
-            Items.Add(new SubscriptionItemOptions { Plan = plan.PasswordManager.StripePlanId, Quantity = 1 });
+            Items.Add(new SubscriptionItemOptions
+            {
+                Plan = plan.PasswordManager.StripePlanId,
+                Quantity = 1
+            });
         }
     }
 }
@@ -95,11 +117,18 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
 public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionOptionsBase
 {
     public OrganizationPurchaseSubscriptionOptions(
-        Organization org, StaticStore.Plan plan,
-        TaxInfo taxInfo, int additionalSeats,
-        int additionalStorageGb, bool premiumAccessAddon,
-        int additionalSmSeats, int additionalServiceAccounts) :
-        base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon, additionalSmSeats, additionalServiceAccounts)
+        Organization org,
+        Plan plan,
+        TaxInfo taxInfo,
+        int additionalSeats,
+        int additionalStorageGb,
+        bool premiumAccessAddon,
+        int additionalSmSeats,
+        int additionalServiceAccounts) :
+        base(org, plan, taxInfo, additionalSeats,
+            additionalStorageGb, premiumAccessAddon,
+            org.UseSecretsManager, additionalSmSeats,
+            additionalServiceAccounts)
     {
         OffSession = true;
         TrialPeriodDays = plan.TrialPeriodDays;
@@ -109,11 +138,14 @@ public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionO
 public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOptionsBase
 {
     public OrganizationUpgradeSubscriptionOptions(
-        string customerId, Organization org,
-        StaticStore.Plan plan, OrganizationUpgrade upgrade) :
-        base(org, plan, upgrade.TaxInfo, upgrade.AdditionalSeats, upgrade.AdditionalStorageGb,
-        upgrade.PremiumAccessAddon, upgrade.AdditionalSmSeats.GetValueOrDefault(),
-        upgrade.AdditionalServiceAccounts.GetValueOrDefault())
+        string customerId,
+        Organization org,
+        Plan plan,
+        OrganizationUpgrade upgrade) :
+        base(org, plan, upgrade.TaxInfo, upgrade.AdditionalSeats,
+            upgrade.AdditionalStorageGb, upgrade.PremiumAccessAddon,
+            upgrade.UseSecretsManager, upgrade.AdditionalSmSeats.GetValueOrDefault(),
+            upgrade.AdditionalServiceAccounts.GetValueOrDefault())
     {
         Customer = customerId;
     }

@@ -95,7 +95,7 @@ public class FreshsalesController : Controller
 
             foreach (var org in orgs)
             {
-                noteItems.Add($"Org, {org.Name}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
+                noteItems.Add($"Org, {org.DisplayName()}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
                 if (TryGetPlanName(org.PlanType, out var planName))
                 {
                     newTags.Add($"Org: {planName}");
@@ -159,14 +159,19 @@ public class FreshsalesController : Controller
                 planName = "Families";
                 return true;
             case PlanType.TeamsAnnually:
+            case PlanType.TeamsAnnually2020:
             case PlanType.TeamsAnnually2019:
             case PlanType.TeamsMonthly:
+            case PlanType.TeamsMonthly2020:
             case PlanType.TeamsMonthly2019:
+            case PlanType.TeamsStarter:
                 planName = "Teams";
                 return true;
             case PlanType.EnterpriseAnnually:
+            case PlanType.EnterpriseAnnually2020:
             case PlanType.EnterpriseAnnually2019:
             case PlanType.EnterpriseMonthly:
+            case PlanType.EnterpriseMonthly2020:
             case PlanType.EnterpriseMonthly2019:
                 planName = "Enterprise";
                 return true;

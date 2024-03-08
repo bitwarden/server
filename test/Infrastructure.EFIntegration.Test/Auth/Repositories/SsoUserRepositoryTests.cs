@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.Auth.AutoFixture;
@@ -13,7 +14,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Auth.Repositories;
 public class SsoUserRepositoryTests
 {
     [CiSkippedTheory, EfSsoUserAutoData]
-    public async void CreateAsync_Works_DataMatches(SsoUser ssoUser, User user, Organization org,
+    public async Task CreateAsync_Works_DataMatches(SsoUser ssoUser, User user, Organization org,
         SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
         List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
         SqlAuthRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo,
@@ -51,7 +52,7 @@ public class SsoUserRepositoryTests
     }
 
     [CiSkippedTheory, EfSsoUserAutoData]
-    public async void ReplaceAsync_Works_DataMatches(SsoUser postSsoUser, SsoUser replaceSsoUser,
+    public async Task ReplaceAsync_Works_DataMatches(SsoUser postSsoUser, SsoUser replaceSsoUser,
         Organization org, User user, SsoUserCompare equalityComparer,
         List<EfRepo.SsoUserRepository> suts, List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos, SqlAuthRepo.SsoUserRepository sqlSsoUserRepo,
@@ -100,7 +101,7 @@ public class SsoUserRepositoryTests
     }
 
     [CiSkippedTheory, EfSsoUserAutoData]
-    public async void DeleteAsync_Works_DataMatches(SsoUser ssoUser, Organization org, User user, List<EfRepo.SsoUserRepository> suts,
+    public async Task DeleteAsync_Works_DataMatches(SsoUser ssoUser, Organization org, User user, List<EfRepo.SsoUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlAuthRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -142,7 +143,7 @@ public class SsoUserRepositoryTests
     }
 
     [CiSkippedTheory, EfSsoUserAutoData]
-    public async void DeleteAsync_UserIdOrganizationId_Works_DataMatches(SsoUser ssoUser,
+    public async Task DeleteAsync_UserIdOrganizationId_Works_DataMatches(SsoUser ssoUser,
         User user, Organization org, List<EfRepo.SsoUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlAuthRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo

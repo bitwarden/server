@@ -35,7 +35,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "grant_type", "password" },
             { "username", username },
             { "password", password },
-        }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
 
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;

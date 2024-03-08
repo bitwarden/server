@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -87,7 +88,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             }
             catch (Exception e)
             {
-                _logger.LogError("Error sending Family sponsorship removed email.", e);
+                _logger.LogError(e, "Error sending Family sponsorship removed email.");
             }
         }
         await base.DeleteSponsorshipAsync(sponsorship);

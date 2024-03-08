@@ -1,23 +1,24 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
@@ -382,34 +383,72 @@ public class IdentityServerSsoTests
 
     }
 
-
     [Fact]
-    public async Task SsoLogin_TrustedDeviceEncryption_FlagTurnedOff_DoesNotReturnOption()
+    public async Task SsoLogin_TrustedDeviceEncryption_ProviderUserHasManageResetPassword_ReturnsCorrectOptions()
     {
-        // This creates SsoConfig that HAS enabled trusted device encryption which should have only been
-        // done with the feature flag turned on but we are testing that even if they have done that, this will turn off
-        // if returning as an option if the flag has later been turned off.  We should be very careful turning the flag
-        // back off.
-        using var responseBody = await RunSuccessTestAsync(async factory =>
-        {
-            await UpdateUserAsync(factory, user => user.MasterPassword = null);
-        }, MemberDecryptionType.TrustedDeviceEncryption, trustedDeviceEnabled: false);
+        var challenge = new string('c', 50);
 
-        // Assert
-        // If the organization has selected TrustedDeviceEncryption but the user still has their master password
-        // they can decrypt with either option
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+        }, challenge);
+
+        var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
+        var providerRepository = factory.Services.GetRequiredService<IProviderRepository>();
+        var provider = await providerRepository.CreateAsync(new Provider
+        {
+            Name = "Test Provider",
+        });
+
+        var providerUserRepository = factory.Services.GetRequiredService<IProviderUserRepository>();
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = user.Id,
+            Status = ProviderUserStatusType.Confirmed,
+            Permissions = CoreHelpers.ClassToJsonData(new Permissions
+            {
+                ManageResetPassword = true,
+            }),
+        });
+
+        var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var organizationUser = (await organizationUserRepository.GetManyByUserAsync(user.Id)).Single();
+
+        var providerOrganizationRepository = factory.Services.GetRequiredService<IProviderOrganizationRepository>();
+        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organizationUser.OrganizationId,
+        });
+
+        // Act
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "10" },
+            { "deviceIdentifier", "test_id" },
+            { "deviceName", "firefox" },
+            { "twoFactorToken", "TEST"},
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }));
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+
         var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
 
-        // Expected to look like:
-        // "UserDecryptionOptions": {
-        //   "Object": "userDecryptionOptions"
-        //   "HasMasterPassword": false
-        // }
-
-        // Should only have 2 properties
-        Assert.Equal(2, userDecryptionOptions.EnumerateObject().Count());
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.True);
     }
 
     [Fact]
@@ -510,12 +549,6 @@ public class IdentityServerSsoTests
                 .Returns(authorizationCode);
         });
 
-        factory.SubstitueService<IFeatureService>(service =>
-        {
-            service.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, Arg.Any<ICurrentContext>())
-                .Returns(trustedDeviceEnabled);
-        });
-
         // This starts the server and finalizes services
         var registerResponse = await factory.RegisterAsync(new RegisterRequestModel
         {
@@ -564,7 +597,7 @@ public class IdentityServerSsoTests
             new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
             new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
             new Claim(JwtClaimTypes.AuthenticationTime, DateTime.UtcNow.AddMinutes(-1).ToEpochTime().ToString())
-        }, "IdentityServer4", JwtClaimTypes.Name, JwtClaimTypes.Role));
+        }, "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role));
 
         authorizationCode.Subject = subject;
 

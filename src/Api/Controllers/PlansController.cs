@@ -11,17 +11,14 @@ namespace Bit.Api.Controllers;
 public class PlansController : Controller
 {
     private readonly ITaxRateRepository _taxRateRepository;
-    public PlansController(ITaxRateRepository taxRateRepository)
-    {
-        _taxRateRepository = taxRateRepository;
-    }
+
+    public PlansController(ITaxRateRepository taxRateRepository) => _taxRateRepository = taxRateRepository;
 
     [HttpGet("")]
     [AllowAnonymous]
     public ListResponseModel<PlanResponseModel> Get()
     {
-        var data = StaticStore.Plans;
-        var responses = data.Select(plan => new PlanResponseModel(plan));
+        var responses = StaticStore.Plans.Select(plan => new PlanResponseModel(plan));
         return new ListResponseModel<PlanResponseModel>(responses);
     }
 

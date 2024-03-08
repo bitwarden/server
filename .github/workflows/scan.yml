@@ -1,0 +1,61 @@
+name: Scan
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+      - "rc"
+      - "hotfix-rc"
+  pull_request:
+
+permissions: read-all
+
+jobs:
+  sast:
+    name: SAST scan
+    runs-on: ubuntu-22.04
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Scan with Checkmarx
+        uses: checkmarx/ast-github-action@749fec53e0db0f6404a97e2e0807c3e80e3583a7 #2.0.23
+        env:
+          INCREMENTAL: "${{ github.event_name == 'pull_request' && '--sast-incremental' || '' }}"
+        with:
+          project_name: ${{ github.repository }}
+          cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
+          base_uri: https://ast.checkmarx.net/
+          cx_client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
+          cx_client_secret: ${{ secrets.CHECKMARX_SECRET }}
+          additional_params: --report-format sarif --output-path . ${{ env.INCREMENTAL }}
+
+      - name: Upload Checkmarx results to GitHub
+        uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+        with:
+          sarif_file: cx_result.sarif
+
+  quality:
+    name: Quality scan
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Scan with SonarCloud
+        uses: sonarsource/sonarcloud-github-action@49e6cd3b187936a73b8280d59ffd9da69df63ec9 # v2.1.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ github.repository_owner }}
+            -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
+            -Dsonar.tests=test/

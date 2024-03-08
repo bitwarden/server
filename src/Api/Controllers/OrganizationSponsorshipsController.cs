@@ -1,11 +1,11 @@
 ﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
-using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -132,7 +132,7 @@ public class OrganizationSponsorshipsController : Controller
         }
 
         var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
-        await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, offersToSend);
+        await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.DisplayName(), offersToSend);
         return new OrganizationSponsorshipSyncResponseModel(syncResponseData);
     }
 

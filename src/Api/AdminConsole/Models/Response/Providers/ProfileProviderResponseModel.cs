@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
@@ -22,6 +24,7 @@ public class ProfileProviderResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public string Key { get; set; }
     public ProviderUserStatusType Status { get; set; }

@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -16,14 +18,16 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Extensions;
+using Duende.IdentityServer.Services;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4;
-using IdentityServer4.Extensions;
-using IdentityServer4.Services;
-using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using DIM = Duende.IdentityServer.Models;
 
 namespace Bit.Sso.Controllers;
 
@@ -206,6 +210,8 @@ public class AccountController : Controller
             returnUrl = "~/";
         }
 
+        // Clean the returnUrl
+        returnUrl = CoreHelpers.ReplaceWhiteSpace(returnUrl, string.Empty);
         if (!Url.IsLocalUrl(returnUrl) && !_interaction.IsValidReturnUrl(returnUrl))
         {
             throw new Exception(_i18nService.T("InvalidReturnUrl"));
@@ -478,7 +484,7 @@ public class AccountController : Controller
             if (orgUser.Status == OrganizationUserStatusType.Invited)
             {
                 // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name));
+                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.DisplayName()));
             }
 
             // Accepted or Confirmed - create SSO link and return;
@@ -511,7 +517,7 @@ public class AccountController : Controller
                         await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
                     }
                     _logger.LogInformation(e, "SSO auto provisioning failed");
-                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
+                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
                 }
             }
         }
@@ -717,7 +723,7 @@ public class AccountController : Controller
         return (logoutId, logout?.PostLogoutRedirectUri, externalAuthenticationScheme);
     }
 
-    public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+    public bool IsNativeClient(DIM.AuthorizationRequest context)
     {
         return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
            && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);

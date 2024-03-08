@@ -7,95 +7,252 @@
         {
             "name": "Min Server",
             "configurations": [
-                "Identity",
-                "API"
+                "run-Identity",
+                "run-API"
             ],
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
                 "order": 1
             },
+            "preLaunchTask": "buildIdentityApi",
             "stopAll": true
         },
         {
             "name": "Admin, API, Identity",
             "configurations": [
-                "Admin",
-                "API",
-                "Identity"
+                "run-Admin",
+                "run-API",
+                "run-Identity"
             ],
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
                 "order": 3
             },
+            "preLaunchTask": "buildIdentityApiAdmin",
             "stopAll": true
         },
         {
             "name": "Full Server",
             "configurations": [
-                "Admin",
-                "API",
-                "EventsProcessor",
-                "Identity",
-                "Sso",
-                "Icons",
-                "Billing",
-                "Notifications"
+                "run-Admin",
+                "run-API",
+                "run-EventsProcessor",
+                "run-Identity",
+                "run-Sso",
+                "run-Icons",
+                "run-Billing",
+                "run-Notifications"
             ],
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
                 "order": 4
             },
+            "preLaunchTask": "buildFullServer",
             "stopAll": true
         },
         {
             "name": "Self Host: Bit",
             "configurations": [
-                "Admin-SelfHost",
-                "API-SelfHost",
-                "EventsProcessor-SelfHost",
-                "Identity-SelfHost",
-                "Sso-SelfHost",
-                "Notifications-SelfHost"
+                "run-Admin-SelfHost",
+                "run-API-SelfHost",
+                "run-EventsProcessor-SelfHost",
+                "run-Identity-SelfHost",
+                "run-Sso-SelfHost",
+                "run-Notifications-SelfHost"
             ],
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
                 "order": 2
             },
+            "preLaunchTask": "buildSelfHostBit",
             "stopAll": true
         },
         {
             "name": "Self Host: OSS",
             "configurations": [
-                "Admin-SelfHost",
-                "API-SelfHost",
-                "EventsProcessor-SelfHost",
-                "Identity-SelfHost",
+                "run-Admin-SelfHost",
+                "run-API-SelfHost",
+                "run-EventsProcessor-SelfHost",
+                "run-Identity-SelfHost",
             ],
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
                 "order": 99
             },
+            "preLaunchTask": "buildSelfHostOss",
             "stopAll": true
-        }
-    ],
-    "configurations": [
+        },
         {
-            "name": "Identity",
+            "name": "Admin",
+            "configurations": [
+                "run-Admin"
+            ],
             "presentation": {
                 "hidden": false,
                 "group": "cloud",
-                "order": 10
+            },
+            "preLaunchTask": "buildAdmin",
+        },
+        {
+            "name": "API",
+            "configurations": [
+                "run-API"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildAPI",
+        },
+        {
+            "name": "Billing",
+            "configurations": [
+                "run-Billing"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildBilling",
+        },
+        {
+            "name": "Events Processor",
+            "configurations": [
+                "run-EventsProcessor"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildEventsProcessor",
+        },
+        {
+            "name": "Icons",
+            "configurations": [
+                "run-Icons"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildIcons",
+        },
+        {
+            "name": "Identity",
+            "configurations": [
+                "run-Identity"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildIdentity",
+        },
+        {
+            "name": "Notifications",
+            "configurations": [
+                "run-Notifications"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildNotifications",
+        },
+        {
+            "name": "SSO",
+            "configurations": [
+                "run-Sso"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildSso",
+        },
+        {
+            "name": "Admin Self Host",
+            "configurations": [
+                "run-Admin-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildAdmin",
+        },
+        {
+            "name": "API Self Host",
+            "configurations": [
+                "run-API-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildAPI",
+        },
+        {
+            "name": "Events Processor Self Host",
+            "configurations": [
+                "run-EventsProcessor-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildEventsProcessor",
+        },
+        {
+            "name": "Identity Self Host",
+            "configurations": [
+                "run-Identity-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildIdentity",
+        },
+        {
+            "name": "Notifications Self Host",
+            "configurations": [
+                "run-Notifications-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildNotifications",
+        },
+        {
+            "name": "SSO Self Host",
+            "configurations": [
+                "run-Sso-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildSso",
+        },
+    ],
+    "configurations": [
+        // Configurations represent run-only scenarios so that they can be used in multiple compounds
+        {
+            "name": "run-Identity",
+            "presentation": {
+                "hidden": true,
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildIdentity",
-            "program": "${workspaceFolder}/src/Identity/bin/Debug/net6.0/Identity.dll",
+            "program": "${workspaceFolder}/src/Identity/bin/Debug/net8.0/Identity.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Identity",
             "stopAtEntry": false,
@@ -107,17 +264,14 @@
             }
         },
         {
-            "name": "API",
+            "name": "run-API",
             "presentation": {
-                "hidden": false,
-                "group": "cloud",
-                "order": 10
+                "hidden": true,
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildAPI",
-            "program": "${workspaceFolder}/src/Api/bin/Debug/net6.0/Api.dll",
+            "program": "${workspaceFolder}/src/Api/bin/Debug/net8.0/Api.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Api",
             "stopAtEntry": false,
@@ -129,17 +283,14 @@
             }
         },
         {
-            "name": "Billing",
+            "name": "run-Billing",
             "presentation": {
-                "hidden": false,
-                "group": "cloud",
-                "order": 10
+                "hidden": true,
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildBilling",
-            "program": "${workspaceFolder}/src/Billing/bin/Debug/net6.0/Billing.dll",
+            "program": "${workspaceFolder}/src/Billing/bin/Debug/net8.0/Billing.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Billing",
             "stopAtEntry": false,
@@ -151,18 +302,15 @@
             }
         },
         {
-            "name": "Admin",
+            "name": "run-Admin",
             "presentation": {
-                "hidden": false,
-                "group": "cloud",
-                "order": 20
+                "hidden": true,
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildAdmin",
             "OS-COMMENT4": "If you have changed target frameworks, make sure to update the program path.",
-            "program": "${workspaceFolder}/src/Admin/bin/Debug/net6.0/Admin.dll",
+            "program": "${workspaceFolder}/src/Admin/bin/Debug/net8.0/Admin.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Admin",
             "stopAtEntry": false,
@@ -175,17 +323,14 @@
             }
         },
         {
-            "name": "Sso",
+            "name": "run-Sso",
             "presentation": {
-                "hidden": false,
-                "group": "cloud",
-                "order": 50
+                "hidden": true,
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildSso",
-            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net6.0/Sso.dll",
+            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net8.0/Sso.dll",
             "args": [],
             "cwd": "${workspaceFolder}/bitwarden_license/src/Sso",
             "stopAtEntry": false,
@@ -197,17 +342,14 @@
             }
         },
         {
-            "name": "EventsProcessor",
+            "name": "run-EventsProcessor",
             "presentation": {
-                "hidden": false,
-                "group": "cloud",
-                "order": 90
+                "hidden": true,
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildEventsProcessor",
-            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net6.0/EventsProcessor.dll",
+            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net8.0/EventsProcessor.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/EventsProcessor",
             "stopAtEntry": false,
@@ -219,17 +361,14 @@
             }
         },
         {
-            "name": "Icons",
+            "name": "run-Icons",
             "presentation": {
-                "hidden": false,
-                "group": "cloud",
-                "order": 90
+                "hidden": true,
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildIcons",
-            "program": "${workspaceFolder}/src/Icons/bin/Debug/net6.0/Icons.dll",
+            "program": "${workspaceFolder}/src/Icons/bin/Debug/net8.0/Icons.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Icons",
             "stopAtEntry": false,
@@ -241,17 +380,14 @@
             }
         },
         {
-            "name": "Notifications",
+            "name": "run-Notifications",
             "presentation": {
                 "hidden": true,
-                "group": "cloud",
-                "order": 100
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildNotifications",
-            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net6.0/Notifications.dll",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net8.0/Notifications.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Notifications",
             "stopAtEntry": false,
@@ -263,17 +399,14 @@
             }
         },
         {
-            "name": "Identity-SelfHost",
+            "name": "run-Identity-SelfHost",
             "presentation": {
                 "hidden": true,
-                "group": "self-host",
-                "order": 999
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildIdentity",
-            "program": "${workspaceFolder}/src/Identity/bin/Debug/net6.0/Identity.dll",
+            "program": "${workspaceFolder}/src/Identity/bin/Debug/net8.0/Identity.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Identity",
             "stopAtEntry": false,
@@ -287,17 +420,14 @@
             }
         },
         {
-            "name": "API-SelfHost",
+            "name": "run-API-SelfHost",
             "presentation": {
                 "hidden": true,
-                "group": "self-host",
-                "order": 999
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildAPI",
-            "program": "${workspaceFolder}/src/Api/bin/Debug/net6.0/Api.dll",
+            "program": "${workspaceFolder}/src/Api/bin/Debug/net8.0/Api.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Api",
             "stopAtEntry": false,
@@ -311,18 +441,15 @@
             }
         },
         {
-            "name": "Admin-SelfHost",
+            "name": "run-Admin-SelfHost",
             "presentation": {
                 "hidden": true,
-                "group": "self-host",
-                "order": 999
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildAdmin",
             "OS-COMMENT4": "If you have changed target frameworks, make sure to update the program path.",
-            "program": "${workspaceFolder}/src/Admin/bin/Debug/net6.0/Admin.dll",
+            "program": "${workspaceFolder}/src/Admin/bin/Debug/net8.0/Admin.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Admin",
             "stopAtEntry": false,
@@ -337,17 +464,14 @@
             }
         },
         {
-            "name": "Sso-SelfHost",
+            "name": "run-Sso-SelfHost",
             "presentation": {
                 "hidden": true,
-                "group": "self-host",
-                "order": 999
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildSso",
-            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net6.0/Sso.dll",
+            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net8.0/Sso.dll",
             "args": [],
             "cwd": "${workspaceFolder}/bitwarden_license/src/Sso",
             "stopAtEntry": false,
@@ -361,17 +485,14 @@
             }
         },
         {
-            "name": "Notifications-SelfHost",
+            "name": "run-Notifications-SelfHost",
             "presentation": {
                 "hidden": true,
-                "group": "self-host",
-                "order": 999
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildNotifications",
-            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net6.0/Notifications.dll",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net8.0/Notifications.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Notifications",
             "stopAtEntry": false,
@@ -385,17 +506,14 @@
             }
         },
         {
-            "name": "EventsProcessor-SelfHost",
+            "name": "run-EventsProcessor-SelfHost",
             "presentation": {
                 "hidden": true,
-                "group": "self-host",
-                "order": 999
             },
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "buildEventsProcessor",
-            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net6.0/EventsProcessor.dll",
+            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net8.0/EventsProcessor.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/EventsProcessor",
             "stopAtEntry": false,

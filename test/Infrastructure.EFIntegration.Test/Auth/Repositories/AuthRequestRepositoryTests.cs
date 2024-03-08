@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.Auth.AutoFixture;
@@ -14,7 +15,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Auth.Repositories;
 public class AuthRequestRepositoryTests
 {
     [CiSkippedTheory, EfAuthRequestAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         AuthRequest authRequest,
         AuthRequestCompare equalityComparer,
         List<EfAuthRepo.AuthRequestRepository> suts,
