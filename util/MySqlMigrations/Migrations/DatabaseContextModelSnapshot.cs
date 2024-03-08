@@ -697,6 +697,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("ProviderId");
 
+                    b.HasIndex("Id", "PlanType")
+                        .IsUnique();
+
                     b.ToTable("ProviderPlan", (string)null);
                 });
 

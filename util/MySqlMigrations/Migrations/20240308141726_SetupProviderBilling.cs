@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class SetupProviderBilling : Migration
@@ -13,37 +13,40 @@ public partial class SetupProviderBilling : Migration
         migrationBuilder.AddColumn<Guid>(
             name: "ProviderId",
             table: "Transaction",
-            type: "uuid",
-            nullable: true);
+            type: "char(36)",
+            nullable: true,
+            collation: "ascii_general_ci");
 
         migrationBuilder.AddColumn<string>(
             name: "GatewayCustomerId",
             table: "Provider",
-            type: "text",
-            nullable: true);
+            type: "longtext",
+            nullable: true)
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.AddColumn<string>(
             name: "GatewaySubscriptionId",
             table: "Provider",
-            type: "text",
-            nullable: true);
+            type: "longtext",
+            nullable: true)
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.AddColumn<byte>(
             name: "GatewayType",
             table: "Provider",
-            type: "smallint",
+            type: "tinyint unsigned",
             nullable: true);
 
         migrationBuilder.CreateTable(
             name: "ProviderPlan",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "uuid", nullable: false),
-                ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
-                PlanType = table.Column<byte>(type: "smallint", nullable: false),
-                SeatMinimum = table.Column<int>(type: "integer", nullable: true),
-                PurchasedSeats = table.Column<int>(type: "integer", nullable: true),
-                AllocatedSeats = table.Column<int>(type: "integer", nullable: true)
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                ProviderId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                PlanType = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                SeatMinimum = table.Column<int>(type: "int", nullable: true),
+                PurchasedSeats = table.Column<int>(type: "int", nullable: true),
+                AllocatedSeats = table.Column<int>(type: "int", nullable: true)
             },
             constraints: table =>
             {
@@ -54,12 +57,19 @@ public partial class SetupProviderBilling : Migration
                     principalTable: "Provider",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateIndex(
             name: "IX_Transaction_ProviderId",
             table: "Transaction",
             column: "ProviderId");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_ProviderPlan_Id_PlanType",
+            table: "ProviderPlan",
+            columns: new[] { "Id", "PlanType" },
+            unique: true);
 
         migrationBuilder.CreateIndex(
             name: "IX_ProviderPlan_ProviderId",

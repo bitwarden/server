@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240307165417_SetupProviderBilling")]
+    [Migration("20240308141731_SetupProviderBilling")]
     partial class SetupProviderBilling
     {
         /// <inheritdoc />
@@ -697,6 +697,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProviderId");
+
+                    b.HasIndex("Id", "PlanType")
+                        .IsUnique();
 
                     b.ToTable("ProviderPlan", (string)null);
                 });

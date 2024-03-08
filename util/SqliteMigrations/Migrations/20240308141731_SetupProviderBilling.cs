@@ -62,6 +62,12 @@ public partial class SetupProviderBilling : Migration
             column: "ProviderId");
 
         migrationBuilder.CreateIndex(
+            name: "IX_ProviderPlan_Id_PlanType",
+            table: "ProviderPlan",
+            columns: new[] { "Id", "PlanType" },
+            unique: true);
+
+        migrationBuilder.CreateIndex(
             name: "IX_ProviderPlan_ProviderId",
             table: "ProviderPlan",
             column: "ProviderId");
