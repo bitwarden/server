@@ -298,26 +298,6 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 
-    private static readonly Dictionary<ProductType, string> _upgradePath = new()
-    {
-        [ProductType.Free] = "2-person org",
-        [ProductType.Families] = "Families",
-        [ProductType.TeamsStarter] = "Teams Starter",
-        [ProductType.Teams] = "Teams",
-        [ProductType.Enterprise] = "Enterprise"
-    };
-
-    private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
-    {
-        if (_upgradePath.TryGetValue(oldProductType, out var oldDescription) &&
-            _upgradePath.TryGetValue(newProductType, out var newDescription))
-        {
-            return $"{oldDescription} → {newDescription}";
-        }
-
-        return null;
-    }
-
     private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,
         Models.StaticStore.Plan newSecretsManagerPlan)
     {
@@ -361,4 +341,24 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     {
         return await _organizationRepository.GetByIdAsync(id);
     }
+
+    private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
+    {
+        if (_upgradePath.TryGetValue(oldProductType, out var oldDescription) &&
+            _upgradePath.TryGetValue(newProductType, out var newDescription))
+        {
+            return $"{oldDescription} → {newDescription}";
+        }
+
+        return null;
+    }
+
+    private static readonly Dictionary<ProductType, string> _upgradePath = new()
+    {
+        [ProductType.Free] = "2-person org",
+        [ProductType.Families] = "Families",
+        [ProductType.TeamsStarter] = "Teams Starter",
+        [ProductType.Teams] = "Teams",
+        [ProductType.Enterprise] = "Enterprise"
+    };
 }
