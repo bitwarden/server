@@ -342,10 +342,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can always edit ciphers in V1 (to change in AC-1707)
+        // Provider users can only edit if the RestrictProviderAccess feature flag is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
