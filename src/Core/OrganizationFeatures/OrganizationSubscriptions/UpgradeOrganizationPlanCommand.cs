@@ -298,23 +298,24 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 
+    private static readonly Dictionary<ProductType, string> _upgradePath = new()
+    {
+        [ProductType.Free] = "2-person org",
+        [ProductType.Families] = "Families",
+        [ProductType.TeamsStarter] = "Teams Starter",
+        [ProductType.Teams] = "Teams",
+        [ProductType.Enterprise] = "Enterprise"
+    };
+
     private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
     {
-        var upgradePaths = new Dictionary<(ProductType, ProductType), string>
+        if (_upgradePath.TryGetValue(oldProductType, out var oldDescription) &&
+            _upgradePath.TryGetValue(newProductType, out var newDescription))
         {
-            [(ProductType.Free, ProductType.Families)] = "2-person org → Families",
-            [(ProductType.Free, ProductType.TeamsStarter)] = "2-person org → Teams Starter",
-            [(ProductType.Free, ProductType.Teams)] = "2-person org → Teams",
-            [(ProductType.Free, ProductType.Enterprise)] = "2-person org → Enterprise",
-            [(ProductType.Families, ProductType.TeamsStarter)] = "Families → Teams Starter",
-            [(ProductType.Families, ProductType.Teams)] = "Families → Teams",
-            [(ProductType.Families, ProductType.Enterprise)] = "Families → Enterprise",
-            [(ProductType.TeamsStarter, ProductType.Teams)] = "Teams Starter → Teams",
-            [(ProductType.TeamsStarter, ProductType.Enterprise)] = "Teams Starter → Enterprise",
-            [(ProductType.Teams, ProductType.Enterprise)] = "Teams → Enterprise"
-        };
+            return $"{oldDescription} → {newDescription}";
+        }
 
-        return upgradePaths.TryGetValue((oldProductType, newProductType), out var upgradePath) ? upgradePath : null;
+        return null;
     }
 
     private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,

@@ -248,7 +248,8 @@ public class ReferenceEvent
     /// The will hold the details around the plan cusomer is and the plan they are migrating to. For example, "Teams Starter → Teams, Enterprise".
     /// </summary>
     /// <value>
-    /// <see langword="null"/> when the event was not originated by an application.
+    /// <see langword="null"/> when the event was not originated by an application,
+    /// or when a downgrade occurred.
     /// </value>
     public string PlanUpgradePath { get; set; }
 }
