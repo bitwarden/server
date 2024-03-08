@@ -245,7 +245,9 @@ public class ReferenceEvent
     public string SignupInitiationPath { get; set; }
 
     /// <summary>
-    /// The will hold the details around the plan cusomer is and the plan they are migrating to. For example, "Teams Starter → Teams, Enterprise".
+    /// The upgrade applied to an account. The current plan is listed first,
+    /// followed by the plan they are migrating to. For example,
+    /// "Teams Starter → Teams, Enterprise".
     /// </summary>
     /// <value>
     /// <see langword="null"/> when the event was not originated by an application,
