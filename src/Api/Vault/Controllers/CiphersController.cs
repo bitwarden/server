@@ -342,7 +342,7 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can always edit ciphers in V1 (to change later)
+        // Provider users can always edit ciphers in V1 (to change in AC-1707)
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
             return true;
