@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Enums;
@@ -103,6 +104,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
@@ -135,6 +137,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public Guid? UserId { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
     public Guid? ProviderId { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
