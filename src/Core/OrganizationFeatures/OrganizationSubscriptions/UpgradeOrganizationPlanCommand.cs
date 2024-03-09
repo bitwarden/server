@@ -344,13 +344,15 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
     private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
     {
-        if (_upgradePath.TryGetValue(oldProductType, out var oldDescription) &&
-            _upgradePath.TryGetValue(newProductType, out var newDescription))
-        {
-            return $"{oldDescription} → {newDescription}";
-        }
+        var oldDescription = _upgradePath.TryGetValue(oldProductType, out var description)
+            ? description
+            : $"{oldProductType:G}";
 
-        return null;
+        var newDescription = _upgradePath.TryGetValue(newProductType, out description)
+            ? description
+            : $"{newProductType:G}";
+
+        return $"{oldDescription} → {newDescription}";
     }
 
     private static readonly Dictionary<ProductType, string> _upgradePath = new()
