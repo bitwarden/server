@@ -346,6 +346,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 if (referenceData.TryGetValue("initiationPath", out var value))
                 {
                     var initiationPath = value.ToString();
+                    await SendAppropriateWelcomeEmailAsync(user, initiationPath);
                     if (!string.IsNullOrEmpty(initiationPath))
                     {
                         await _referenceEventService.RaiseEventAsync(
@@ -1452,5 +1453,19 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return isVerified;
+    }
+
+    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)
+    {
+        var isFromMarketingWebsite = initiationPath.Contains("Secrets Manager trial");
+
+        if (isFromMarketingWebsite)
+        {
+            await _mailService.SendTrialInitiationEmailAsync(user.Email);
+        }
+        else
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+        }
     }
 }
