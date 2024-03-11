@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -304,8 +305,11 @@ public class UserServiceTests
             });
 
         var organizationUser = new OrganizationUser();
-        var organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        organizationUserRepository.GetByIdAsync(orgUserId).Returns(organizationUser);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId).Returns(organizationUser);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(new Policy { Enabled = true });
 
         var sut = new UserService(
             sutProvider.GetDependency<IUserRepository>(),
