@@ -23,6 +23,7 @@
     <PackageReference Include="AspNetCoreRateLimit.Redis" Version="2.0.0" />
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.300.55" />
     <PackageReference Include="AWSSDK.SQS" Version="3.7.300.55" />
+    <PackageReference Include="Azure.Data.Tables" Version="12.8.3" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.3.2" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.15.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
@@ -35,7 +36,6 @@
     <PackageReference Include="MailKit" Version="4.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.25" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.38.0" />
-    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.1.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.5" />
     <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="1.6.0" />

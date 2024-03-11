@@ -1,10 +1,11 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using Microsoft.Azure.Cosmos.Table;
+using Azure.Data.Tables;
+using Azure;
 
 namespace Bit.Core.Models.Data;
 
-public class EventTableEntity : TableEntity, IEvent
+public class EventTableEntity : ITableEntity, IEvent
 {
     public EventTableEntity() { }
 
@@ -32,6 +33,11 @@ public class EventTableEntity : TableEntity, IEvent
         ServiceAccountId = e.ServiceAccountId;
     }
 
+    public string PartitionKey { get; set; }
+    public string RowKey { get; set; }
+    public DateTimeOffset? Timestamp { get; set; }
+    public ETag ETag { get; set; }
+
     public DateTime Date { get; set; }
     public EventType Type { get; set; }
     public Guid? UserId { get; set; }
@@ -52,67 +58,6 @@ public class EventTableEntity : TableEntity, IEvent
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ServiceAccountId { get; set; }
-
-    public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
-    {
-        var result = base.WriteEntity(operationContext);
-
-        var typeName = nameof(Type);
-        if (result.ContainsKey(typeName))
-        {
-            result[typeName] = new EntityProperty((int)Type);
-        }
-        else
-        {
-            result.Add(typeName, new EntityProperty((int)Type));
-        }
-
-        var deviceTypeName = nameof(DeviceType);
-        if (result.ContainsKey(deviceTypeName))
-        {
-            result[deviceTypeName] = new EntityProperty((int?)DeviceType);
-        }
-        else
-        {
-            result.Add(deviceTypeName, new EntityProperty((int?)DeviceType));
-        }
-
-        var systemUserTypeName = nameof(SystemUser);
-        if (result.ContainsKey(systemUserTypeName))
-        {
-            result[systemUserTypeName] = new EntityProperty((int?)SystemUser);
-        }
-        else
-        {
-            result.Add(systemUserTypeName, new EntityProperty((int?)SystemUser));
-        }
-
-        return result;
-    }
-
-    public override void ReadEntity(IDictionary<string, EntityProperty> properties,
-        OperationContext operationContext)
-    {
-        base.ReadEntity(properties, operationContext);
-
-        var typeName = nameof(Type);
-        if (properties.ContainsKey(typeName) && properties[typeName].Int32Value.HasValue)
-        {
-            Type = (EventType)properties[typeName].Int32Value.Value;
-        }
-
-        var deviceTypeName = nameof(DeviceType);
-        if (properties.ContainsKey(deviceTypeName) && properties[deviceTypeName].Int32Value.HasValue)
-        {
-            DeviceType = (DeviceType)properties[deviceTypeName].Int32Value.Value;
-        }
-
-        var systemUserTypeName = nameof(SystemUser);
-        if (properties.ContainsKey(systemUserTypeName) && properties[systemUserTypeName].Int32Value.HasValue)
-        {
-            SystemUser = (EventSystemUser)properties[systemUserTypeName].Int32Value.Value;
-        }
-    }
 
     public static List<EventTableEntity> IndexEvent(EventMessage e)
     {

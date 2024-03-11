@@ -53,7 +53,6 @@
         "Fido2.AspNet",
         "Duende.IdentityServer",
         "Microsoft.Azure.Cosmos",
-        "Microsoft.Azure.Cosmos.Table",
         "Microsoft.Extensions.Caching.StackExchangeRedis",
         "Microsoft.Extensions.Identity.Stores",
         "Otp.NET",
