@@ -275,19 +275,6 @@ public class UserServiceTests
             .VerifyHashedPassword(user, "hashed_test_password", secret);
     }
 
-    protected static UserManager<User> SubstituteUserManager()
-    {
-        return new UserManager<User>(Substitute.For<IUserStore<User>>(),
-            Substitute.For<IOptions<IdentityOptions>>(),
-            Substitute.For<IPasswordHasher<User>>(),
-            Enumerable.Empty<IUserValidator<User>>(),
-            Enumerable.Empty<IPasswordValidator<User>>(),
-            Substitute.For<ILookupNormalizer>(),
-            Substitute.For<IdentityErrorDescriber>(),
-            Substitute.For<IServiceProvider>(),
-            Substitute.For<ILogger<UserManager<User>>>());
-    }
-
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
