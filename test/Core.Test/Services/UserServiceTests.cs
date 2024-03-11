@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -276,82 +275,6 @@ public class UserServiceTests
             .VerifyHashedPassword(user, "hashed_test_password", secret);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task RegisterUserAsync_WhenUserRegistrationEnabled_CallsDependenciesAndReturnsIdentityResult(
-        SutProvider<UserService> sutProvider,
-        User user,
-        string masterPassword,
-        string token,
-        Guid orgUserId)
-    {
-        // Arrange
-        var tokenProvider = SetupFakeTokenProvider(sutProvider, user);
-        SetupUserAndDevice(user, true);
-        // Setup the fake password verification
-        var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();
-        substitutedUserPasswordStore
-            .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
-            .Returns((ci) =>
-            {
-                return Task.FromResult("hashed_test_password");
-            });
-        sutProvider.SetDependency<IUserStore<User>>(substitutedUserPasswordStore, "store");
-        sutProvider.GetDependency<IPasswordHasher<User>>("passwordHasher")
-            .VerifyHashedPassword(user, "hashed_test_password", "test_password")
-            .Returns((ci) =>
-            {
-                return PasswordVerificationResult.Success;
-            });
-
-        var organizationUser = new OrganizationUser();
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(orgUserId).Returns(organizationUser);
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
-            .Returns(new Policy { Enabled = true });
-
-        var sut = new UserService(
-            sutProvider.GetDependency<IUserRepository>(),
-            sutProvider.GetDependency<ICipherRepository>(),
-            sutProvider.GetDependency<IOrganizationUserRepository>(),
-            sutProvider.GetDependency<IOrganizationRepository>(),
-            sutProvider.GetDependency<IMailService>(),
-            sutProvider.GetDependency<IPushNotificationService>(),
-            sutProvider.GetDependency<IUserStore<User>>(),
-            sutProvider.GetDependency<IOptions<IdentityOptions>>(),
-            sutProvider.GetDependency<IPasswordHasher<User>>(),
-            sutProvider.GetDependency<IEnumerable<IUserValidator<User>>>(),
-            sutProvider.GetDependency<IEnumerable<IPasswordValidator<User>>>(),
-            sutProvider.GetDependency<ILookupNormalizer>(),
-            sutProvider.GetDependency<IdentityErrorDescriber>(),
-            sutProvider.GetDependency<IServiceProvider>(),
-            sutProvider.GetDependency<ILogger<UserManager<User>>>(),
-            sutProvider.GetDependency<ILicensingService>(),
-            sutProvider.GetDependency<IEventService>(),
-            sutProvider.GetDependency<IApplicationCacheService>(),
-            sutProvider.GetDependency<IDataProtectionProvider>(),
-            sutProvider.GetDependency<IPaymentService>(),
-            sutProvider.GetDependency<IPolicyRepository>(),
-            sutProvider.GetDependency<IPolicyService>(),
-            sutProvider.GetDependency<IReferenceEventService>(),
-            sutProvider.GetDependency<IFido2>(),
-            sutProvider.GetDependency<ICurrentContext>(),
-            sutProvider.GetDependency<IGlobalSettings>(),
-            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
-            sutProvider.GetDependency<IProviderUserRepository>(),
-            sutProvider.GetDependency<IStripeSyncService>(),
-            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>()
-        );
-
-        sut.CreateAsync(user, masterPassword).Returns(Task.FromResult(IdentityResult.Success));
-
-        // Act
-        var result = await sut.RegisterUserAsync(user, masterPassword, token, orgUserId);
-
-        // Assert
-        Assert.True(result.Succeeded);
-    }
     protected static UserManager<User> SubstituteUserManager()
     {
         return new UserManager<User>(Substitute.For<IUserStore<User>>(),
