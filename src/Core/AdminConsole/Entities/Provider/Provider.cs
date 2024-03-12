@@ -30,7 +30,7 @@ public class Provider : ITableObject<Guid>
     public bool Enabled { get; set; } = true;
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
-    public GatewayType? GatewayType { get; set; }
+    public GatewayType? Gateway { get; set; }
     public string GatewayCustomerId { get; set; }
     public string GatewaySubscriptionId { get; set; }
 
