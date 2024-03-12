@@ -338,6 +338,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var result = await base.CreateAsync(user, masterPassword);
         if (result == IdentityResult.Success)
         {
+            await _mailService.SendWelcomeEmailAsync(user);
+
             if (!string.IsNullOrEmpty(user.ReferenceData))
             {
                 var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
