@@ -132,13 +132,13 @@ public class LicensingService : ILicensingService
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, null,
             "Organization {0} ({1}) has an invalid license and is being disabled. Reason: {2}",
-            org.Id, org.Name, reason);
+            org.Id, org.DisplayName(), reason);
         org.Enabled = false;
         org.ExpirationDate = license?.Expires ?? DateTime.UtcNow;
         org.RevisionDate = DateTime.UtcNow;
         await _organizationRepository.ReplaceAsync(org);
 
-        await _mailService.SendLicenseExpiredAsync(new List<string> { org.BillingEmail }, org.Name);
+        await _mailService.SendLicenseExpiredAsync(new List<string> { org.BillingEmail }, org.DisplayName());
     }
 
     public async Task ValidateUsersAsync()
