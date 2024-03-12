@@ -160,7 +160,8 @@ jobs:
         run: git push -u origin $PR_BRANCH
 
       - name: Create version PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        #if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        if: false #TODO: Remove after testing, before merge.
         id: create-pr
         env:
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
@@ -185,14 +186,16 @@ jobs:
           echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
 
       - name: Approve PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        #if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        if: false #TODO: Remove after testing, before merge.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr review $PR_NUMBER --approve
 
       - name: Merge PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        #if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        if: false #TODO: Remove after testing, before merge.
         env:
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
@@ -201,7 +204,8 @@ jobs:
 
   cut_rc:
     name: Cut RC branch
-    if: ${{ inputs.cut_rc_branch == true }}
+    #if: ${{ inputs.cut_rc_branch == true }}
+    if: false #TODO: Remove after testing, before merge.
     needs: bump_version
     runs-on: ubuntu-22.04
     steps:
