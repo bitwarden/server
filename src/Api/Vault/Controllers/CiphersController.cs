@@ -749,7 +749,7 @@ public class CiphersController : Controller
         else
         {
             var orgId = new Guid(organizationId);
-            if (!await CanEditAnyCipherAsAdminAsync(orgId))
+            if (!await _currentContext.EditAnyCollection(orgId))
             {
                 throw new NotFoundException();
             }
