@@ -1,6 +1,6 @@
-﻿using Bit.Core.Models.Data;
+﻿using Azure.Data.Tables;
+using Bit.Core.Models.Data;
 using Bit.Core.Settings;
-using Azure.Data.Tables;
 
 namespace Bit.Core.Repositories.TableStorage;
 

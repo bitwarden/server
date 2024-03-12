@@ -1,7 +1,7 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Utilities;
+﻿using Azure;
 using Azure.Data.Tables;
-using Azure;
+using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data;
 
