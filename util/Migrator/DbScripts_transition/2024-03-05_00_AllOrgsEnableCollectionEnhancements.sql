@@ -9,12 +9,14 @@ FROM (
     SELECT [Id], [PlanType], ROW_NUMBER() OVER(PARTITION BY [PlanType] ORDER BY NEWID()) AS RowNum
     FROM [dbo].[Organization]
     WHERE [FlexibleCollections] = 0
+        AND [PlanType] != 0
     ) AS Subquery
 WHERE Subquery.RowNum <= (
     SELECT ROUND(@Percentage * COUNT(*), 0)
     FROM [dbo].[Organization]
     WHERE [PlanType] = Subquery.[PlanType]
         AND [FlexibleCollections] = 0
+        AND [PlanType] != 0
     );
 
 -- Step 2: Execute the stored procedure for each OrganizationId
