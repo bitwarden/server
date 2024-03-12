@@ -133,10 +133,10 @@ jobs:
       - name: Set final version output
         id: set-final-version-output
         run: |
-          if [[ "${{ steps.bump-version-override.outcome }}" == "success" ]]; then
-            echo "version=${{ steps.bump-version-override.outputs.version }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ steps.bump-version-automatic.outcome }}" == "success" ]]; then
-            echo "version=${{ steps.bump-version-automatic.outputs.version }}" >> $GITHUB_OUTPUT
+          if [[ "${{ steps.bump-version-override.outcome }}" = "success" ]]; then
+            echo "version=${{ inputs.version_number_override }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.bump-version-automatic.outcome }}" = "success" ]]; then
+            echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Check if version changed
