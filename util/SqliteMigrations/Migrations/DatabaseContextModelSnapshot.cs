@@ -1155,6 +1155,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("CipherId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 

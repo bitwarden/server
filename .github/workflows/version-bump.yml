@@ -1,13 +1,12 @@
 ---
-name: Bump version
-run-name: Bump version to ${{ inputs.version_number }}
+name: Version Bump
 
 on:
   workflow_dispatch:
     inputs:
-      version_number:
-        description: "New version (example: '2024.1.0')"
-        required: true
+      version_number_override:
+        description: "New version override (leave blank for automatic calculation, example: '2024.1.0')"
+        required: false
         type: string
       cut_rc_branch:
         description: "Cut RC branch?"
@@ -16,9 +15,17 @@ on:
 
 jobs:
   bump_version:
-    name: Bump
+    name: Bump Version
     runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.set-job-output.outputs.version }}
     steps:
+      - name: Input validation
+        if: ${{ inputs.version_number_override != '' }}
+        uses: bitwarden/gh-actions/version-check@main
+        with:
+          version: ${{ inputs.version_number_override }}
+
       - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
@@ -59,16 +66,19 @@ jobs:
       - name: Create version branch
         id: create-branch
         run: |
-          NAME=version_bump_${{ github.ref_name }}_${{ inputs.version_number }}
+          NAME=version_bump_${{ github.ref_name }}_$(date +"%Y-%m-%d")
           git switch -c $NAME
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Install xmllint
-        run: sudo apt install -y libxml2-utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
 
       - name: Verify input version
+        if: ${{ inputs.version_number_override != '' }}
         env:
-          NEW_VERSION: ${{ inputs.version_number }}
+          NEW_VERSION: ${{ inputs.version_number_override }}
         run: |
           CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
 
@@ -87,11 +97,29 @@ jobs:
             exit 1
           fi
 
-      - name: Bump version props
+      - name: Bump version props - Version Override
+        if: ${{ inputs.version_number_override != '' }}
+        id: bump-version-override
         uses: bitwarden/gh-actions/version-bump@main
         with:
-          version: ${{ inputs.version_number }}
           file_path: "Directory.Build.props"
+          version: ${{ inputs.version_number_override }}
+
+      - name: Bump version props - Automatic Calculation
+        if: ${{ inputs.version_number_override == '' }}
+        id: bump-version-automatic
+        uses: bitwarden/gh-actions/version-bump@main
+        with:
+          file_path: "Directory.Build.props"
+
+      - name: Set Job output
+        id: set-job-output
+        run: |
+          if [[ "${{ steps.bump-version-override.outcome }}" == "success" ]]; then
+            echo "version=${{ steps.bump-version-override.outputs.version }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.bump-version-automatic.outcome }}" == "success" ]]; then
+            echo "version=${{ steps.bump-version-automatic.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Git
         run: |
@@ -110,7 +138,7 @@ jobs:
 
       - name: Commit files
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-        run: git commit -m "Bumped version to ${{ inputs.version_number }}" -a
+        run: git commit -m "Bumped version to ${{ steps.set-job-output.outputs.version }}" -a
 
       - name: Push changes
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
@@ -124,7 +152,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           PR_BRANCH: ${{ steps.create-branch.outputs.name }}
-          TITLE: "Bump version to ${{ inputs.version_number }}"
+          TITLE: "Bump version to ${{ steps.set-job-output.outputs.version }}"
         run: |
           PR_URL=$(gh pr create --title "$TITLE" \
             --base "main" \
@@ -140,38 +168,43 @@ jobs:
               - [X] Other
 
               ## Objective
-              Automated version bump to ${{ inputs.version_number }}")
+              Automated version bump to ${{ steps.set-job-output.outputs.version }}")
           echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
 
       - name: Approve PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr review $PR_NUMBER --approve
 
       - name: Merge PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
 
+
   cut_rc:
     name: Cut RC branch
-    needs: bump_version
     if: ${{ inputs.cut_rc_branch == true }}
+    needs: bump_version
     runs-on: ubuntu-22.04
     steps:
       - name: Check out branch
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: main
-      
+
       - name: Install xmllint
-        run: sudo apt install -y libxml2-utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
 
       - name: Verify version has been updated
         env:
-          NEW_VERSION: ${{ inputs.version_number }}
+          NEW_VERSION: ${{ needs.bump_version.outputs.version }}
         run: |
           # Wait for version to change.
           while : ; do
