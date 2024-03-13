@@ -339,26 +339,6 @@ public class OrganizationUsersController : Controller
             model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), groups);
     }
 
-    [HttpPut("{id}/groups")]
-    [HttpPost("{id}/groups")]
-    public async Task PutGroups(string orgId, string id, [FromBody] OrganizationUserUpdateGroupsRequestModel model)
-    {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
-        {
-            throw new NotFoundException();
-        }
-
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || organizationUser.OrganizationId != orgGuidId)
-        {
-            throw new NotFoundException();
-        }
-
-        var loggedInUserId = _userService.GetProperUserId(User);
-        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
-    }
-
     [HttpPut("{userId}/reset-password-enrollment")]
     public async Task PutResetPasswordEnrollment(Guid orgId, Guid userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
     {
