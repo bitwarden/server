@@ -309,14 +309,14 @@ public class OrganizationUsersController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
-    public async Task Put(Guid orgId, string id, [FromBody] OrganizationUserUpdateRequestModel model)
+    public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
