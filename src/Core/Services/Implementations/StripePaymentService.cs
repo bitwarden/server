@@ -788,7 +788,7 @@ public class StripePaymentService : IPaymentService
             ProrationDate = prorationDate,
         };
         var immediatelyInvoice = false;
-        if (!invoiceNow && isPm5864DollarThresholdEnabled)
+        if (!invoiceNow && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
         {
             var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
             {
