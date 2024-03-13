@@ -181,9 +181,7 @@ public class HandlebarsMailService : IMailService
             OrganizationId = organization.Id,
             OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false),
             UserIdentifier = userIdentifier,
-            WebVaultUrl = hasAccessSecretsManager
-                ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
-                : _globalSettings.BaseServiceUri.VaultWithHash,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "OrganizationUserAccepted", model);
@@ -200,10 +198,9 @@ public class HandlebarsMailService : IMailService
             TitleSecondBold = CoreHelpers.SanitizeForEmail(organizationName, false),
             TitleThird = "!",
             OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-            WebVaultUrl =
-                hasAccessSecretsManager
-                    ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
-                    : _globalSettings.BaseServiceUri.VaultWithHash,
+            WebVaultUrl = hasAccessSecretsManager
+                ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
+                : _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "OrganizationUserConfirmed", model);
