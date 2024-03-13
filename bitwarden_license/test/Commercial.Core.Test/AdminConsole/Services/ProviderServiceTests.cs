@@ -458,9 +458,42 @@ public class ProviderServiceTests
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
+
+        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+
+        await organizationRepository.Received(1)
+            .ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == provider.BillingEmail));
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(
+            organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.Email == provider.BillingEmail));
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+                EventType.ProviderOrganization_Added);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganization_CreateAfterNov62023_PlanTypeDoesNotUpdated(Provider provider, Organization organization, string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var expectedPlanType = PlanType.EnterpriseAnnually;
+        organization.PlanType = PlanType.EnterpriseAnnually;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
@@ -469,6 +502,44 @@ public class ProviderServiceTests
         await sutProvider.GetDependency<IEventService>()
             .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
                 EventType.ProviderOrganization_Added);
+        Assert.Equal(organization.PlanType, expectedPlanType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganization_CreateBeforeNov62023_PlanTypeUpdated(Provider provider, Organization organization, string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        var newCreationDate = new DateTime(2023, 11, 5);
+        BackdateProviderCreationDate(provider, newCreationDate);
+        provider.Type = ProviderType.Msp;
+
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.Plan = "Enterprise (Annually)";
+
+        var expectedPlanType = PlanType.EnterpriseAnnually2020;
+
+        var expectedPlanId = "2020-enterprise-org-seat-annually";
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        var subscriptionItem = GetSubscription(organization.GatewaySubscriptionId);
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .Returns(GetSubscription(organization.GatewaySubscriptionId));
+        await sutProvider.GetDependency<IStripeAdapter>().SubscriptionUpdateAsync(
+            organization.GatewaySubscriptionId, SubscriptionUpdateRequest(expectedPlanId, subscriptionItem));
+
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
+
+        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IEventService>()
+            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+                EventType.ProviderOrganization_Added);
+
+        Assert.Equal(organization.PlanType, expectedPlanType);
     }
 
     [Theory, BitAutoData]
@@ -574,65 +645,6 @@ public class ProviderServiceTests
                 !t.First().Item1.Collections.Single().ReadOnly &&
                 t.First().Item1.Collections.Single().Manage &&
                 t.First().Item2 == null));
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddOrganization_CreateAfterNov62023_PlanTypeDoesNotUpdated(Provider provider, Organization organization, string key,
-        SutProvider<ProviderService> sutProvider)
-    {
-        provider.Type = ProviderType.Msp;
-
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var expectedPlanType = PlanType.EnterpriseAnnually;
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
-        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
-
-        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IEventService>()
-            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
-                EventType.ProviderOrganization_Added);
-        Assert.Equal(organization.PlanType, expectedPlanType);
-    }
-
-    [Theory, BitAutoData]
-    public async Task AddOrganization_CreateBeforeNov62023_PlanTypeUpdated(Provider provider, Organization organization, string key,
-        SutProvider<ProviderService> sutProvider)
-    {
-        var newCreationDate = new DateTime(2023, 11, 5);
-        BackdateProviderCreationDate(provider, newCreationDate);
-        provider.Type = ProviderType.Msp;
-
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.Plan = "Enterprise (Annually)";
-
-        var expectedPlanType = PlanType.EnterpriseAnnually2020;
-
-        var expectedPlanId = "2020-enterprise-org-seat-annually";
-
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        var subscriptionItem = GetSubscription(organization.GatewaySubscriptionId);
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .Returns(GetSubscription(organization.GatewaySubscriptionId));
-        await sutProvider.GetDependency<IStripeAdapter>().SubscriptionUpdateAsync(
-            organization.GatewaySubscriptionId, SubscriptionUpdateRequest(expectedPlanId, subscriptionItem));
-
-        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
-
-        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IEventService>()
-            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
-                EventType.ProviderOrganization_Added);
-
-        Assert.Equal(organization.PlanType, expectedPlanType);
     }
 
     private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
