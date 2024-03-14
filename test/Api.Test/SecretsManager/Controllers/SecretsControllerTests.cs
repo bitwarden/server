@@ -28,7 +28,7 @@ public class SecretsControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByOrganization_ReturnsEmptyList(SutProvider<SecretsController> sutProvider, Guid id, Guid organizationId, Guid userId, AccessClientType accessType)
+    public async Task GetSecretsByOrganization_ReturnsEmptyList(SutProvider<SecretsController> sutProvider, Guid id, Guid organizationId, Guid userId, AccessClientType accessType)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
@@ -45,7 +45,7 @@ public class SecretsControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetSecretsByOrganization_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Core.SecretsManager.Entities.Secret resultSecret, Guid organizationId, Guid userId, Core.SecretsManager.Entities.Project mockProject, AccessClientType accessType)
+    public async Task GetSecretsByOrganization_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Core.SecretsManager.Entities.Secret resultSecret, Guid organizationId, Guid userId, Core.SecretsManager.Entities.Project mockProject, AccessClientType accessType)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyByOrganizationIdAsync(default, default, default)
@@ -76,7 +76,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByOrganization_AccessDenied_Throws(SutProvider<SecretsController> sutProvider, Core.SecretsManager.Entities.Secret resultSecret)
+    public async Task GetSecretsByOrganization_AccessDenied_Throws(SutProvider<SecretsController> sutProvider, Core.SecretsManager.Entities.Secret resultSecret)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
 
@@ -86,7 +86,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecret_NotFound(SutProvider<SecretsController> sutProvider)
+    public async Task GetSecret_NotFound(SutProvider<SecretsController> sutProvider)
     {
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(Guid.NewGuid()));
     }
@@ -94,7 +94,7 @@ public class SecretsControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void GetSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Secret resultSecret, Guid userId, Guid organizationId, Project mockProject)
+    public async Task GetSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Secret resultSecret, Guid userId, Guid organizationId, Project mockProject)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
@@ -128,7 +128,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateSecret_NoAccess_Throws(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Guid userId)
+    public async Task CreateSecret_NoAccess_Throws(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Guid userId)
     {
         // We currently only allow a secret to be in one project at a time
         if (data.ProjectIds != null && data.ProjectIds.Length > 1)
@@ -152,7 +152,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Guid userId)
+    public async Task CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Guid userId)
     {
         // We currently only allow a secret to be in one project at a time
         if (data.ProjectIds != null && data.ProjectIds.Length > 1)
@@ -177,7 +177,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateSecret_NoAccess_Throws(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId, Secret mockSecret)
+    public async Task UpdateSecret_NoAccess_Throws(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId, Secret mockSecret)
     {
         // We currently only allow a secret to be in one project at a time
         if (data.ProjectIds != null && data.ProjectIds.Length > 1)
@@ -200,7 +200,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateSecret_SecretDoesNotExist_Throws(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId)
+    public async Task UpdateSecret_SecretDoesNotExist_Throws(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId)
     {
         // We currently only allow a secret to be in one project at a time
         if (data.ProjectIds != null && data.ProjectIds.Length > 1)
@@ -222,7 +222,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateSecret_Success(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId, Secret mockSecret)
+    public async Task UpdateSecret_Success(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId, Secret mockSecret)
     {
         // We currently only allow a secret to be in one project at a time
         if (data.ProjectIds != null && data.ProjectIds.Length > 1)
@@ -245,7 +245,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_NoSecretsFound_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    public async Task BulkDelete_NoSecretsFound_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var ids = data.Select(s => s.Id).ToList();
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<Secret>());
@@ -255,7 +255,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_SecretsFoundMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data, Secret mockSecret)
+    public async Task BulkDelete_SecretsFoundMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data, Secret mockSecret)
     {
         data.Add(mockSecret);
         var ids = data.Select(s => s.Id).ToList();
@@ -266,7 +266,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_OrganizationMistMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    public async Task BulkDelete_OrganizationMistMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var ids = data.Select(s => s.Id).ToList();
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
@@ -276,7 +276,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_NoAccessToSecretsManager_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    public async Task BulkDelete_NoAccessToSecretsManager_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var ids = data.Select(s => s.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -292,7 +292,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_ReturnsAccessDeniedForSecretsWithoutAccess_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    public async Task BulkDelete_ReturnsAccessDeniedForSecretsWithoutAccess_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var ids = data.Select(s => s.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -321,7 +321,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    public async Task BulkDelete_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -349,7 +349,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByIds_NoSecretsFound_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
+    public async Task GetSecretsByIds_NoSecretsFound_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
         List<Secret> data)
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
@@ -359,7 +359,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByIds_SecretsFoundMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
+    public async Task GetSecretsByIds_SecretsFoundMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
         List<Secret> data, Secret mockSecret)
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
@@ -371,7 +371,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByIds_OrganizationMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
+    public async Task GetSecretsByIds_OrganizationMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
         List<Secret> data)
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
@@ -381,7 +381,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByIds_NoAccessToSecretsManager_ThrowsNotFound(
+    public async Task GetSecretsByIds_NoAccessToSecretsManager_ThrowsNotFound(
         SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
@@ -395,7 +395,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByIds_AccessDenied_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
+    public async Task GetSecretsByIds_AccessDenied_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
         List<Secret> data)
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
@@ -413,7 +413,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByIds_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    public async Task GetSecretsByIds_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
         var organizationId = SetOrganizations(ref data);

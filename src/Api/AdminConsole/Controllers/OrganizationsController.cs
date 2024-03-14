@@ -261,19 +261,19 @@ public class OrganizationsController : Controller
         return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
     }
 
-    [HttpGet("{id}/risks-subscription-failure")]
-    public async Task<OrganizationRisksSubscriptionFailureResponseModel> RisksSubscriptionFailure(Guid id)
+    [HttpGet("{id}/billing-status")]
+    public async Task<OrganizationBillingStatusResponseModel> GetBillingStatus(Guid id)
     {
         if (!await _currentContext.EditPaymentMethods(id))
         {
-            return new OrganizationRisksSubscriptionFailureResponseModel(id, false);
+            throw new NotFoundException();
         }
 
         var organization = await _organizationRepository.GetByIdAsync(id);
 
         var risksSubscriptionFailure = await _paymentService.RisksSubscriptionFailure(organization);
 
-        return new OrganizationRisksSubscriptionFailureResponseModel(id, risksSubscriptionFailure);
+        return new OrganizationBillingStatusResponseModel(organization, risksSubscriptionFailure);
     }
 
     [HttpPost("")]
@@ -303,7 +303,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
+        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.DisplayBusinessName() ||
                                                             model.BillingEmail != organization.BillingEmail);
 
         var hasRequiredPermissions = updateBilling
@@ -464,50 +464,52 @@ public class OrganizationsController : Controller
         await _organizationService.VerifyBankAsync(orgIdGuid, model.Amount1.Value, model.Amount2.Value);
     }
 
-    [HttpPost("{id}/cancel")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
+    [HttpPost("{id}/churn")]
+    public async Task PostChurn(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
     {
         if (!await _currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        var presentUserWithOffboardingSurvey =
-            _featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey);
+        var organization = await _organizationRepository.GetByIdAsync(id);
 
-        if (presentUserWithOffboardingSurvey)
+        if (organization == null)
         {
-            var organization = await _organizationRepository.GetByIdAsync(id);
-
-            if (organization == null)
-            {
-                throw new NotFoundException();
-            }
-
-            var subscription = await _getSubscriptionQuery.GetSubscription(organization);
-
-            await _cancelSubscriptionCommand.CancelSubscription(subscription,
-                new OffboardingSurveyResponse
-                {
-                    UserId = _currentContext.UserId!.Value,
-                    Reason = request.Reason,
-                    Feedback = request.Feedback
-                },
-                organization.IsExpired());
-
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
-                ReferenceEventType.CancelSubscription,
-                organization,
-                _currentContext)
-            {
-                EndOfPeriod = organization.IsExpired()
-            });
+            throw new NotFoundException();
         }
-        else
+
+        var subscription = await _getSubscriptionQuery.GetSubscription(organization);
+
+        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+            new OffboardingSurveyResponse
+            {
+                UserId = _currentContext.UserId!.Value,
+                Reason = request.Reason,
+                Feedback = request.Feedback
+            },
+            organization.IsExpired());
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+            ReferenceEventType.CancelSubscription,
+            organization,
+            _currentContext)
         {
-            await _organizationService.CancelSubscriptionAsync(id);
+            EndOfPeriod = organization.IsExpired()
+        });
+    }
+
+    [HttpPost("{id}/cancel")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostCancel(string id)
+    {
+        var orgIdGuid = new Guid(id);
+        if (!await _currentContext.EditSubscription(orgIdGuid))
+        {
+            throw new NotFoundException();
         }
+
+        await _organizationService.CancelSubscriptionAsync(orgIdGuid);
     }
 
     [HttpPost("{id}/reinstate")]

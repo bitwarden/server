@@ -132,6 +132,8 @@ public static class FeatureFlagKeys
     public const string AC1607_PresentUsersWithOffboardingSurvey = "AC-1607_present-user-offboarding-survey";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
+    public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
+    public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
 
     public static List<string> GetAllKeys()
     {
@@ -147,7 +149,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" }
+            { Fido2VaultCredentials, "true" },
+            { DuoRedirect, "true" }
         };
     }
 }

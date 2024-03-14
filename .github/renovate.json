@@ -49,6 +49,7 @@
         "Azure.Messaging.ServiceBus",
         "Azure.Storage.Blobs",
         "Azure.Storage.Queues",
+        "DuoUniversal",
         "Fido2.AspNet",
         "Duende.IdentityServer",
         "Microsoft.Azure.Cosmos",

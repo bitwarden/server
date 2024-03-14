@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -17,8 +18,14 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public Guid Id { get; set; }
     [MaxLength(50)]
     public string Identifier { get; set; }
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
+    /// </summary>
     [MaxLength(50)]
     public string Name { get; set; }
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
+    /// </summary>
     [MaxLength(50)]
     public string BusinessName { get; set; }
     [MaxLength(50)]
@@ -104,6 +111,22 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         }
     }
 
+    /// <summary>
+    /// Returns the name of the organization, HTML decoded ready for display.
+    /// </summary>
+    public string DisplayName()
+    {
+        return WebUtility.HtmlDecode(Name);
+    }
+
+    /// <summary>
+    /// Returns the business name of the organization, HTML decoded ready for display.
+    /// </summary>
+    public string DisplayBusinessName()
+    {
+        return WebUtility.HtmlDecode(BusinessName);
+    }
+
     public string BillingEmailAddress()
     {
         return BillingEmail?.ToLowerInvariant()?.Trim();
@@ -111,12 +134,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
 
     public string BillingName()
     {
-        return BusinessName;
+        return DisplayBusinessName();
     }
 
     public string SubscriberName()
     {
-        return Name;
+        return DisplayName();
     }
 
     public string BraintreeCustomerIdPrefix()

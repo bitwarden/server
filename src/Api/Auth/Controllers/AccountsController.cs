@@ -821,9 +821,8 @@ public class AccountsController : Controller
         await _userService.UpdateLicenseAsync(user, license);
     }
 
-    [HttpPost("cancel-premium")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel([FromBody] SubscriptionCancellationRequestModel request)
+    [HttpPost("churn-premium")]
+    public async Task PostChurn([FromBody] SubscriptionCancellationRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
@@ -832,34 +831,37 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var presentUserWithOffboardingSurvey =
-            _featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey);
+        var subscription = await _getSubscriptionQuery.GetSubscription(user);
 
-        if (presentUserWithOffboardingSurvey)
-        {
-            var subscription = await _getSubscriptionQuery.GetSubscription(user);
-
-            await _cancelSubscriptionCommand.CancelSubscription(subscription,
-                new OffboardingSurveyResponse
-                {
-                    UserId = user.Id,
-                    Reason = request.Reason,
-                    Feedback = request.Feedback
-                },
-                user.IsExpired());
-
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
-                ReferenceEventType.CancelSubscription,
-                user,
-                _currentContext)
+        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+            new OffboardingSurveyResponse
             {
-                EndOfPeriod = user.IsExpired()
-            });
-        }
-        else
+                UserId = user.Id,
+                Reason = request.Reason,
+                Feedback = request.Feedback
+            },
+            user.IsExpired());
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+            ReferenceEventType.CancelSubscription,
+            user,
+            _currentContext)
         {
-            await _userService.CancelPremiumAsync(user);
+            EndOfPeriod = user.IsExpired()
+        });
+    }
+
+    [HttpPost("cancel-premium")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostCancel()
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
         }
+
+        await _userService.CancelPremiumAsync(user);
     }
 
     [HttpPost("reinstate-premium")]
