@@ -801,7 +801,7 @@ public class StripePaymentService : IPaymentService
             });
 
             var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
-            immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 30000;
+            immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 5000;
 
             subUpdateOptions.BillingCycleAnchor = immediatelyInvoice
                 ? SubscriptionBillingCycleAnchor.Now
