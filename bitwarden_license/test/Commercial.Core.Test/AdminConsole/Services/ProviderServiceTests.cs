@@ -469,7 +469,11 @@ public class ProviderServiceTests
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
 
-        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+        await providerOrganizationRepository.Received(1)
+            .CreateAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                providerOrganization.ProviderId == provider.Id &&
+                providerOrganization.OrganizationId == organization.Id &&
+                providerOrganization.Key == key));
 
         await organizationRepository.Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == provider.BillingEmail));
@@ -479,7 +483,10 @@ public class ProviderServiceTests
             Arg.Is<CustomerUpdateOptions>(options => options.Email == provider.BillingEmail));
 
         await sutProvider.GetDependency<IEventService>()
-            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+            .Received().LogProviderOrganizationEventAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                    providerOrganization.ProviderId == provider.Id &&
+                    providerOrganization.OrganizationId == organization.Id &&
+                    providerOrganization.Key == key),
                 EventType.ProviderOrganization_Added);
     }
 
@@ -498,10 +505,19 @@ public class ProviderServiceTests
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
 
-        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+        await providerOrganizationRepository.Received(1)
+            .CreateAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                providerOrganization.ProviderId == provider.Id &&
+                providerOrganization.OrganizationId == organization.Id &&
+                providerOrganization.Key == key));
+
         await sutProvider.GetDependency<IEventService>()
-            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+            .Received().LogProviderOrganizationEventAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                    providerOrganization.ProviderId == provider.Id &&
+                    providerOrganization.OrganizationId == organization.Id &&
+                    providerOrganization.Key == key),
                 EventType.ProviderOrganization_Added);
+
         Assert.Equal(organization.PlanType, expectedPlanType);
     }
 
@@ -534,9 +550,17 @@ public class ProviderServiceTests
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
 
-        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+        await providerOrganizationRepository.Received(1)
+            .CreateAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                providerOrganization.ProviderId == provider.Id &&
+                providerOrganization.OrganizationId == organization.Id &&
+                providerOrganization.Key == key));
+
         await sutProvider.GetDependency<IEventService>()
-            .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+            .Received().LogProviderOrganizationEventAsync(Arg.Is<ProviderOrganization>(providerOrganization =>
+                    providerOrganization.ProviderId == provider.Id &&
+                    providerOrganization.OrganizationId == organization.Id &&
+                    providerOrganization.Key == key),
                 EventType.ProviderOrganization_Added);
 
         Assert.Equal(organization.PlanType, expectedPlanType);
