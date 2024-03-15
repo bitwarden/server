@@ -11,6 +11,31 @@ public class SubscriberQueries(
     ILogger<SubscriberQueries> logger,
     IStripeAdapter stripeAdapter) : ISubscriberQueries
 {
+    public async Task<Subscription> GetSubscription(
+        ISubscriber subscriber,
+        SubscriptionGetOptions subscriptionGetOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            logger.LogError("Cannot cancel subscription for subscriber ({ID}) with no GatewaySubscriptionId.", subscriber.Id);
+
+            return null;
+        }
+
+        var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
+
+        if (subscription != null)
+        {
+            return subscription;
+        }
+
+        logger.LogError("Could not find Stripe subscription ({ID}) to cancel.", subscriber.GatewaySubscriptionId);
+
+        return null;
+    }
+
     public async Task<Subscription> GetSubscriptionOrThrow(ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
