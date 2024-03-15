@@ -7,11 +7,11 @@ using static Bit.Core.Billing.Utilities;
 
 namespace Bit.Core.Billing.Queries.Implementations;
 
-public class GetSubscriptionQuery(
-    ILogger<GetSubscriptionQuery> logger,
-    IStripeAdapter stripeAdapter) : IGetSubscriptionQuery
+public class SubscriberQueries(
+    ILogger<SubscriberQueries> logger,
+    IStripeAdapter stripeAdapter) : ISubscriberQueries
 {
-    public async Task<Subscription> GetSubscription(ISubscriber subscriber)
+    public async Task<Subscription> GetSubscriptionOrThrow(ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
 

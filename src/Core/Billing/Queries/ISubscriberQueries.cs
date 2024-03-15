@@ -4,7 +4,7 @@ using Stripe;
 
 namespace Bit.Core.Billing.Queries;
 
-public interface IGetSubscriptionQuery
+public interface ISubscriberQueries
 {
     /// <summary>
     /// Retrieves a Stripe <see cref="Subscription"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> property.
@@ -14,5 +14,5 @@ public interface IGetSubscriptionQuery
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
     /// <exception cref="GatewayException">Thrown when the subscriber's <see cref="ISubscriber.GatewaySubscriptionId"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="GatewayException">Thrown when the <see cref="Subscription"/> returned from Stripe's API is null.</exception>
-    Task<Subscription> GetSubscription(ISubscriber subscriber);
+    Task<Subscription> GetSubscriptionOrThrow(ISubscriber subscriber);
 }
