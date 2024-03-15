@@ -6,7 +6,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Entities.Provider;
 
-public class Provider : ITableObject<Guid>
+public class Provider : ITableObject<Guid>, ISubscriber
 {
     public Guid Id { get; set; }
     /// <summary>
@@ -33,6 +33,26 @@ public class Provider : ITableObject<Guid>
     public GatewayType? Gateway { get; set; }
     public string GatewayCustomerId { get; set; }
     public string GatewaySubscriptionId { get; set; }
+
+    public string BillingEmailAddress() => BillingEmail?.ToLowerInvariant().Trim();
+
+    public string BillingName() => DisplayBusinessName();
+
+    public string SubscriberName() => DisplayName();
+
+    public string BraintreeCustomerIdPrefix() => "p";
+
+    public string BraintreeIdField() => "provider_id";
+
+    public string BraintreeCloudRegionField() => "region";
+
+    public bool IsOrganization() => false;
+
+    public bool IsUser() => false;
+
+    public string SubscriberType() => "Provider";
+
+    public bool IsExpired() => false;
 
     public void SetNewId()
     {
