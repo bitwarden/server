@@ -16,7 +16,7 @@ public class AssociationWithPermissionsRequestModel : AssociationWithPermissions
         };
 
         // Throws if the org has not migrated to use FC but has passed in a Manage value in the request
-        if (!migratedToFlexibleCollections && Manage.HasValue)
+        if (!migratedToFlexibleCollections && Manage.GetValueOrDefault())
         {
             throw new BadRequestException(
                 "Your organization must be using the latest collection enhancements to use the Manage property.");
