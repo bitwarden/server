@@ -37,7 +37,7 @@ public class SecretsControllerTests
         var result = await sutProvider.Sut.ListByOrganizationAsync(id);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
-                     .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), userId, accessType);
+                     .GetManyDetailsByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), userId, accessType);
 
         Assert.Empty(result.Secrets);
     }
@@ -48,7 +48,7 @@ public class SecretsControllerTests
     public async Task GetSecretsByOrganization_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Core.SecretsManager.Entities.Secret resultSecret, Guid organizationId, Guid userId, Core.SecretsManager.Entities.Project mockProject, AccessClientType accessType)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<ISecretRepository>().GetManyByOrganizationIdAsync(default, default, default)
+        sutProvider.GetDependency<ISecretRepository>().GetManyDetailsByOrganizationIdAsync(default, default, default)
             .ReturnsForAnyArgs(new List<SecretPermissionDetails>
             {
                 new() { Secret = resultSecret, Read = true, Write = true },
@@ -71,7 +71,7 @@ public class SecretsControllerTests
         var result = await sutProvider.Sut.ListByOrganizationAsync(resultSecret.OrganizationId);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultSecret.OrganizationId)), userId, accessType);
+            .GetManyDetailsByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultSecret.OrganizationId)), userId, accessType);
     }
 
     [Theory]

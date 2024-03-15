@@ -292,7 +292,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         secretResponse.EnsureSuccessStatusCode();
         var secretResult = await secretResponse.Content.ReadFromJsonAsync<SecretResponseModel>();
 
-        var result = (await _secretRepository.GetManyByProjectIdAsync(project.Id, orgUserId, accessType)).First();
+        var result = (await _secretRepository.GetManyDetailsByProjectIdAsync(project.Id, orgUserId, accessType)).First();
         var secret = result.Secret;
 
         Assert.NotNull(secretResult);
