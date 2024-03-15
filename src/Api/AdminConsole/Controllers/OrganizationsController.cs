@@ -66,7 +66,7 @@ public class OrganizationsController : Controller
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly ISubscriberQueries _subscriberQueries;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
@@ -93,7 +93,7 @@ public class OrganizationsController : Controller
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
         IPushNotificationService pushNotificationService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
-        IGetSubscriptionQuery getSubscriptionQuery,
+        ISubscriberQueries subscriberQueries,
         IReferenceEventService referenceEventService,
         IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand)
     {
@@ -119,7 +119,7 @@ public class OrganizationsController : Controller
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
         _pushNotificationService = pushNotificationService;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
-        _getSubscriptionQuery = getSubscriptionQuery;
+        _subscriberQueries = subscriberQueries;
         _referenceEventService = referenceEventService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
     }
@@ -479,7 +479,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var subscription = await _getSubscriptionQuery.GetSubscription(organization);
+        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(organization);
 
         await _cancelSubscriptionCommand.CancelSubscription(subscription,
             new OffboardingSurveyResponse

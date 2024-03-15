@@ -17,6 +17,6 @@ public static class ServiceCollectionExtensions
 
     public static void AddBillingQueries(this IServiceCollection services)
     {
-        services.AddSingleton<IGetSubscriptionQuery, GetSubscriptionQuery>();
+        services.AddSingleton<ISubscriberQueries, SubscriberQueries>();
     }
 }
