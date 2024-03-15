@@ -1,4 +1,4 @@
-﻿@using Bit.Admin.Enums;
+@using Bit.Admin.Enums;
 @using Bit.Admin.Models
 @using Bit.Core.Enums
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
@@ -35,6 +35,15 @@
                 setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
                 togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
                 document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
+            });
+
+            document.getElementById('initiate-delete-form').addEventListener('submit', (e) => {
+                const email = prompt('Enter the email address of the owner/admin that your want to ' +
+                    'initiate the organization delete verification process with.');
+                document.getElementById('AdminEmail').value = email;
+                if (email == null || email === '') {
+                    e.preventDefault();
+                }
             });
 
             function setTrialDefaults(planType) {
@@ -76,7 +85,7 @@
 {
     <h2>Billing Information</h2>
     @await Html.PartialAsync("_BillingInformation",
-        new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
+                new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
 }
 
 @await Html.PartialAsync("~/AdminConsole/Views/Shared/_OrganizationForm.cshtml", Model)
@@ -95,18 +104,20 @@
         }
         @if (canUnlinkFromProvider && Model.Provider is not null)
         {
-            <button
-                class="btn btn-outline-danger mr-2"
-                onclick="return unlinkProvider('@Model.Organization.Id');"
-            >
+            <button class="btn btn-outline-danger mr-2"
+                    onclick="return unlinkProvider('@Model.Organization.Id');">
                 Unlink provider
             </button>
         }
         @if (canDelete)
         {
+            <form asp-action="DeleteInitiation" asp-route-id="@Model.Organization.Id" id="initiate-delete-form">
+                <input type="hidden" name="AdminEmail" id="AdminEmail" />
+                <button class="btn btn-danger mr-2" type="submit">Initiate Delete</button>
+            </form>
             <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
-                onsubmit="return confirm('Are you sure you want to delete this organization?')">
-                <button class="btn btn-danger" type="submit">Delete</button>
+                  onsubmit="return confirm('Are you sure you want to hard delete this organization?')">
+                <button class="btn btn-danger" type="submit">Hard Delete</button>
             </form>
         }
     </div>

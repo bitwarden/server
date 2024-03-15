@@ -60,6 +60,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IProviderRepository _providerRepository;
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
@@ -94,6 +95,7 @@ public class OrganizationService : IOrganizationService
         IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
         IFeatureService featureService)
     {
@@ -123,6 +125,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _providerRepository = providerRepository;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
@@ -726,6 +729,32 @@ public class OrganizationService : IOrganizationService
 
             throw;
         }
+    }
+
+    public async Task InitiateDeleteAsync(Organization organization, string orgAdminEmail)
+    {
+        var orgAdmin = await _userRepository.GetByEmailAsync(orgAdminEmail);
+        if (orgAdmin == null)
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+        var orgAdminOrgUser = await _organizationUserRepository.GetDetailsByUserAsync(orgAdmin.Id, organization.Id);
+        if (orgAdminOrgUser == null || orgAdminOrgUser.Status != OrganizationUserStatusType.Confirmed ||
+            (orgAdminOrgUser.Type != OrganizationUserType.Admin && orgAdminOrgUser.Type != OrganizationUserType.Owner))
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, 1));
+        await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
+    }
+
+    public async Task DeleteAsync(Organization organization, string token)
+    {
+        if (!_orgDeleteTokenDataFactory.TryUnprotect(token, out var data) && data.IsValid(organization))
+        {
+            throw new BadRequestException("Invalid token.");
+        }
+        await DeleteAsync(organization);
     }
 
     public async Task DeleteAsync(Organization organization)

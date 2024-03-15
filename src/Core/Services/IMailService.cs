@@ -78,5 +78,6 @@ public interface IMailService
     Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier);
     Task SendTrialInitiationEmailAsync(string email);
+    Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
 }
 

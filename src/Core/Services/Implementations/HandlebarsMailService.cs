@@ -977,6 +977,29 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
+    {
+        var message = CreateDefaultMessage("Delete Your Organization", email);
+        var model = new OrgInitiateDeleteModel
+        {
+            Token = WebUtility.UrlEncode(token),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            OrganizationId = organization.Id,
+            OrganizationName = organization.Name,
+            OrganizationBillingEmail = organization.BillingEmail,
+            OrganizationPlan = organization.Plan,
+            OrganizationSeats = organization.Seats.ToString(),
+            OrganizationCreationDate = organization.CreationDate.ToLongDateString(),
+            OrganizationCreationTime = organization.CreationDate.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+        };
+        await AddMessageContentAsync(message, "InitiateDeleteOrganzation", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "InitiateDeleteOrganzation";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     private static string GetUserIdentifier(string email, string userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
