@@ -25,7 +25,10 @@ public class PayPalIPNTransactionModel
 
         var data = queryString
             .AllKeys
-            .ToDictionary(key => key, key => queryString[key]);
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .ToDictionary(key =>
+                key.Trim('\r'),
+                key => queryString[key]?.Trim('\r'));
 
         TransactionId = Extract(data, "txn_id");
         TransactionType = Extract(data, "txn_type");

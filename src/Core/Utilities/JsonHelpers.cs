@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NS = Newtonsoft.Json;
@@ -190,5 +191,35 @@ public class PermissiveStringEnumerableConverter : JsonConverter<IEnumerable<str
         }
 
         writer.WriteEndArray();
+    }
+}
+
+/// <summary>
+/// Encodes incoming strings using HTML encoding
+/// and decodes outgoing strings using HTML decoding.
+/// </summary>
+public class HtmlEncodingStringConverter : JsonConverter<string>
+{
+    public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            var originalValue = reader.GetString();
+            return WebUtility.HtmlEncode(originalValue);
+        }
+        return reader.GetString();
+    }
+
+    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+    {
+        if (!string.IsNullOrEmpty(value))
+        {
+            var encodedValue = WebUtility.HtmlDecode(value);
+            writer.WriteStringValue(encodedValue);
+        }
+        else
+        {
+            writer.WriteNullValue();
+        }
     }
 }

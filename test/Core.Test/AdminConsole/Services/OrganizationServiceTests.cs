@@ -15,7 +15,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.StaticStore;
@@ -1371,7 +1370,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory, BitAutoData]
     public async Task SaveUser_WithFlexibleCollections_WhenUpgradingToManager_Throws(
-        OrganizationAbility organizationAbility,
+        Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Manager)] OrganizationUser newUserData,
         [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
@@ -1379,18 +1378,18 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         IEnumerable<Guid> groups,
         SutProvider<OrganizationService> sutProvider)
     {
-        organizationAbility.FlexibleCollections = true;
+        organization.FlexibleCollections = true;
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = oldUserData.OrganizationId = savingUser.OrganizationId = organizationAbility.Id;
+        newUserData.OrganizationId = oldUserData.OrganizationId = savingUser.OrganizationId = organization.Id;
         newUserData.Permissions = CoreHelpers.ClassToJsonData(new Permissions());
 
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
 
         sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organizationAbility.Id)
+            .ManageUsers(organization.Id)
             .Returns(true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -1398,7 +1397,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(oldUserData);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(organizationAbility.Id, OrganizationUserType.Owner)
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -1409,7 +1408,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory, BitAutoData]
     public async Task SaveUser_WithFlexibleCollections_WithAccessAll_Throws(
-        OrganizationAbility organizationAbility,
+        Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser newUserData,
         [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
@@ -1417,19 +1416,19 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         IEnumerable<Guid> groups,
         SutProvider<OrganizationService> sutProvider)
     {
-        organizationAbility.FlexibleCollections = true;
+        organization.FlexibleCollections = true;
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = oldUserData.OrganizationId = savingUser.OrganizationId = organizationAbility.Id;
+        newUserData.OrganizationId = oldUserData.OrganizationId = savingUser.OrganizationId = organization.Id;
         newUserData.Permissions = CoreHelpers.ClassToJsonData(new Permissions());
         newUserData.AccessAll = true;
 
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
 
         sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organizationAbility.Id)
+            .ManageUsers(organization.Id)
             .Returns(true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -1437,7 +1436,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(oldUserData);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(organizationAbility.Id, OrganizationUserType.Owner)
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -1744,7 +1743,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 
@@ -2361,55 +2360,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, invitePermissions));
 
         Assert.Contains("custom users can only grant the same custom permissions that they have.", exception.Message.ToLowerInvariant());
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
-    [BitAutoData(PlanType.EnterpriseMonthly)]
-    [BitAutoData(PlanType.TeamsAnnually)]
-    [BitAutoData(PlanType.TeamsMonthly)]
-    public async Task SignUp_EmailSent_When_FromSecretsManagerTrial(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
-    {
-        signup.Plan = planType;
-
-        var plan = StaticStore.GetPlan(signup.Plan);
-
-        signup.UseSecretsManager = true;
-        signup.AdditionalSeats = 15;
-        signup.AdditionalSmSeats = 10;
-        signup.AdditionalServiceAccounts = 20;
-        signup.PaymentMethodType = PaymentMethodType.Card;
-        signup.PremiumAccessAddon = false;
-        signup.IsFromSecretsManagerTrial = true;
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AC2101UpdateTrialInitiationEmail).Returns(true);
-
-        await sutProvider.Sut.SignUpAsync(signup);
-
-        await sutProvider.GetDependency<IMailService>().Received(1).SendTrialInitiationEmailAsync(signup.BillingEmail);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
-    [BitAutoData(PlanType.EnterpriseMonthly)]
-    [BitAutoData(PlanType.TeamsAnnually)]
-    [BitAutoData(PlanType.TeamsMonthly)]
-    public async Task SignUp_NoEmailSent_When_NotFromSecretsManagerTrial(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
-    {
-        signup.Plan = planType;
-
-        var plan = StaticStore.GetPlan(signup.Plan);
-
-        signup.UseSecretsManager = true;
-        signup.AdditionalSeats = 15;
-        signup.AdditionalSmSeats = 10;
-        signup.AdditionalServiceAccounts = 20;
-        signup.PaymentMethodType = PaymentMethodType.Card;
-        signup.PremiumAccessAddon = false;
-        signup.IsFromSecretsManagerTrial = false;
-
-        await sutProvider.Sut.SignUpAsync(signup);
-
-        await sutProvider.GetDependency<IMailService>().Received(0).SendTrialInitiationEmailAsync(signup.BillingEmail);
     }
 
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions

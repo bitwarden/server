@@ -7,25 +7,33 @@ on:
       - "main"
       - "rc"
       - "hotfix-rc"
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize]
 
 permissions: read-all
 
 jobs:
+  check-run:
+    name: Check PR run
+    uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
+
   sast:
     name: SAST scan
     runs-on: ubuntu-22.04
+    needs: check-run
     permissions:
       security-events: write
 
     steps:
       - name: Check out repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{  github.event.pull_request.head.sha }}
 
       - name: Scan with Checkmarx
         uses: checkmarx/ast-github-action@749fec53e0db0f6404a97e2e0807c3e80e3583a7 #2.0.23
         env:
-          INCREMENTAL: "${{ github.event_name == 'pull_request' && '--sast-incremental' || '' }}"
+          INCREMENTAL: "${{ contains(github.event_name, 'pull_request') && '--sast-incremental' || '' }}"
         with:
           project_name: ${{ github.repository }}
           cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
@@ -35,13 +43,14 @@ jobs:
           additional_params: --report-format sarif --output-path . ${{ env.INCREMENTAL }}
 
       - name: Upload Checkmarx results to GitHub
-        uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+        uses: github/codeql-action/upload-sarif@8a470fddafa5cbb6266ee11b37ef4d8aae19c571 # v3.24.6
         with:
           sarif_file: cx_result.sarif
 
   quality:
     name: Quality scan
     runs-on: ubuntu-22.04
+    needs: check-run
 
     steps:
       - name: Set up JDK 17
@@ -54,6 +63,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
+          ref: ${{  github.event.pull_request.head.sha }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
