@@ -1,4 +1,5 @@
-﻿using Bit.Admin.AdminConsole.Models;
+﻿using System.Net;
+using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core;
@@ -188,8 +189,9 @@ public class ProvidersController : Controller
             count = 1;
         }
 
+        var encodedName = WebUtility.HtmlEncode(name);
         var skip = (page - 1) * count;
-        var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(name, ownerEmail, skip, count);
+        var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(encodedName, ownerEmail, skip, count);
         var viewModel = new OrganizationUnassignedToProviderSearchViewModel
         {
             OrganizationName = string.IsNullOrWhiteSpace(name) ? null : name,
@@ -199,7 +201,7 @@ public class ProvidersController : Controller
             Items = unassignedOrganizations.Select(uo => new OrganizationSelectableViewModel
             {
                 Id = uo.Id,
-                Name = uo.Name,
+                Name = uo.DisplayName(),
                 PlanType = uo.PlanType
             }).ToList()
         };
