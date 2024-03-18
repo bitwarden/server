@@ -51,7 +51,7 @@ public class DbMigrator
         return false;
     }
 
-    public void PrepareDatabase(CancellationToken cancellationToken = default)
+    private void PrepareDatabase(CancellationToken cancellationToken = default)
     {
         var masterConnectionString = new SqlConnectionStringBuilder(_connectionString)
         {
@@ -96,7 +96,7 @@ public class DbMigrator
         cancellationToken.ThrowIfCancellationRequested();
     }
 
-    public bool MigrateDatabase(bool enableLogging = true,
+    private bool MigrateDatabase(bool enableLogging = true,
         bool repeatable = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         CancellationToken cancellationToken = default)
@@ -149,7 +149,7 @@ public class DbMigrator
         return result.Successful;
     }
 
-    private static ILogger<DbMigrator> CreateLogger()
+    private ILogger<DbMigrator> CreateLogger()
     {
         var loggerFactory = LoggerFactory.Create(builder =>
         {
