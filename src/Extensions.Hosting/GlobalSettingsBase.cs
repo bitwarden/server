@@ -2,5 +2,5 @@
 
 public class GlobalSettingsBase
 {
-    public bool SelfHosted { get; set; }
+    public bool IsSelfHosted { get; set; }
 }

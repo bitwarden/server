@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,7 +30,7 @@ public static class HostBuilderExtensions
             services.AddOptions<GlobalSettingsBase>()
                 .Configure<IConfiguration>((options, config) =>
                 {
-                    options.SelfHosted = config.GetValue("globalSettings:selfHosted", false);
+                    options.IsSelfHosted = config.GetValue("globalSettings:selfHosted", false);
                 });
         });
 
@@ -78,8 +79,16 @@ public static class HostBuilderExtensions
                 {
                     Path = "appsettings.SelfHosted.json",
                     Optional = true,
-                    ReloadOnChange = true,
+                    ReloadOnChange = true
                 });
+
+                if (context.HostingEnvironment.IsDevelopment())
+                {
+                    var appAssembly = Assembly.Load(new AssemblyName(context.HostingEnvironment.ApplicationName));
+                    builder.AddUserSecrets(appAssembly, optional: true);
+                }
+
+                builder.AddEnvironmentVariables();
             }
         });
 
