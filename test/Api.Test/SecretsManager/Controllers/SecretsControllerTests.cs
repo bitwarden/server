@@ -8,6 +8,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.Interfaces;
+using Bit.Core.SecretsManager.Queries.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
@@ -45,7 +47,7 @@ public class SecretsControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async Task GetSecretsByOrganization_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Core.SecretsManager.Entities.Secret resultSecret, Guid organizationId, Guid userId, Core.SecretsManager.Entities.Project mockProject, AccessClientType accessType)
+    public async Task GetSecretsByOrganization_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Secret resultSecret, Guid organizationId, Guid userId, Project mockProject, AccessClientType accessType)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyDetailsByOrganizationIdAsync(default, default, default)
@@ -61,14 +63,14 @@ public class SecretsControllerTests
         }
         else
         {
-            resultSecret.Projects = new List<Core.SecretsManager.Entities.Project>() { mockProject };
+            resultSecret.Projects = new List<Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
             sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
                 .Returns((true, true));
         }
 
 
-        var result = await sutProvider.Sut.ListByOrganizationAsync(resultSecret.OrganizationId);
+        await sutProvider.Sut.ListByOrganizationAsync(resultSecret.OrganizationId);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
             .GetManyDetailsByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultSecret.OrganizationId)), userId, accessType);
@@ -76,7 +78,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetSecretsByOrganization_AccessDenied_Throws(SutProvider<SecretsController> sutProvider, Core.SecretsManager.Entities.Secret resultSecret)
+    public async Task GetSecretsByOrganization_AccessDenied_Throws(SutProvider<SecretsController> sutProvider, Secret resultSecret)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
 
@@ -427,6 +429,80 @@ public class SecretsControllerTests
 
         var results = await sutProvider.Sut.GetSecretsByIdsAsync(request);
         Assert.Equal(data.Count, results.Data.Count());
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task GetSecretsSyncAsync_AccessSecretsManagerFalse_ThrowsNotFound(
+        bool nullLastSyncedDate,
+        DateTime? lastSyncedDate,
+        SutProvider<SecretsController> sutProvider, Guid organizationId)
+    {
+        if (nullLastSyncedDate)
+        {
+            lastSyncedDate = null;
+        }
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+            .ReturnsForAnyArgs(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetSecretsSyncAsync(organizationId, lastSyncedDate));
+    }
+
+    [Theory]
+    [BitAutoData(true, AccessClientType.NoAccessCheck)]
+    [BitAutoData(true, AccessClientType.User)]
+    [BitAutoData(true, AccessClientType.Organization)]
+    [BitAutoData(false, AccessClientType.NoAccessCheck)]
+    [BitAutoData(false, AccessClientType.User)]
+    [BitAutoData(false, AccessClientType.Organization)]
+    public async Task GetSecretsSyncAsync_AccessClientIsNotAServiceAccount_ThrowsBadRequest(
+        bool nullLastSyncedDate,
+        AccessClientType accessClientType,
+        DateTime? lastSyncedDate,
+        SutProvider<SecretsController> sutProvider, Guid organizationId)
+    {
+        if (nullLastSyncedDate)
+        {
+            lastSyncedDate = null;
+        }
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+            .ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
+            .Returns((accessClientType, new Guid()));
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetSecretsSyncAsync(organizationId, lastSyncedDate));
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task GetSecretsSyncAsync_AccessClientIsAServiceAccount_Success(
+        bool nullLastSyncedDate,
+        DateTime? lastSyncedDate,
+        List<Secret> secrets,
+        SutProvider<SecretsController> sutProvider, Guid organizationId)
+    {
+        if (nullLastSyncedDate)
+        {
+            lastSyncedDate = null;
+        }
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+            .ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
+            .Returns((AccessClientType.ServiceAccount, new Guid()));
+        sutProvider.GetDependency<ISecretsSyncQuery>().GetAsync(Arg.Any<SecretsSyncRequest>())
+            .Returns((true, secrets));
+
+        var result = await sutProvider.Sut.GetSecretsSyncAsync(organizationId, lastSyncedDate);
+        Assert.True(result.HasChanges);
+        Assert.NotNull(result.Secrets);
+        Assert.NotEmpty(result.Secrets.Data);
     }
 
     private static (List<Guid> Ids, GetSecretsRequestModel request) BuildGetSecretsRequestModel(
