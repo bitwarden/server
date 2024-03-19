@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server:2022-CU11-ubuntu-22.04
+FROM mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04
 
 LABEL com.bitwarden.product="bitwarden"
 
