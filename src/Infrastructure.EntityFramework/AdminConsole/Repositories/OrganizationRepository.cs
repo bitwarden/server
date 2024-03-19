@@ -299,16 +299,16 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 });
 
             // Insert new rows into CollectionGroup
-            foreach (var group in groupIdsWithAccessAll)
+            foreach (var groupId in groupIdsWithAccessAll)
             {
                 var newCollectionGroups = dbContext.Collections
                     .Where(c =>
                         c.OrganizationId == organizationId &&
-                        !dbContext.CollectionGroups.Any(cg => cg.CollectionId == c.Id && cg.GroupId == group))
+                        c.CollectionGroups.All(cg => cg.GroupId != groupId))
                     .Select(c => new CollectionGroup
                     {
                         CollectionId = c.Id,
-                        GroupId = group,
+                        GroupId = groupId,
                         ReadOnly = false,
                         HidePasswords = false,
                         Manage = false
