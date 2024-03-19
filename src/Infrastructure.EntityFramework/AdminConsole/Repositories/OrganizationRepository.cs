@@ -440,19 +440,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .Distinct()
                 .ToList();
 
-            foreach (var organizationUserId in orgUsersToBump)
-            {
-                var userToUpdate = dbContext.Users
-                    .FirstOrDefault(u => dbContext.OrganizationUsers.Any(ou =>
-                        ou.UserId == u.Id &&
-                        ou.Id == organizationUserId &&
-                        ou.Status == OrganizationUserStatusType.Confirmed));
-
-                if (userToUpdate != null)
-                {
-                    userToUpdate.AccountRevisionDate = DateTime.UtcNow;
-                }
-            }
+            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(orgUsersToBump);
 
             // Save changes for Step 4
             await dbContext.SaveChangesAsync();
