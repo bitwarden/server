@@ -137,7 +137,7 @@ public class DbMigrator
         if (dryRun)
         {
             var scriptsToExec = upgrader.GetScriptsToExecute();
-            var stringBuilder = new StringBuilder();
+            var stringBuilder = new StringBuilder("Scripts that will be applied:");
             foreach (var script in scriptsToExec)
             {
                 stringBuilder.AppendLine(script.Name);
