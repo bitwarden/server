@@ -7,11 +7,22 @@ using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 
 namespace Bit.Extensions.Hosting;
 
 public static class HostBuilderExtensions
 {
+    public static ILogger GetBootstrapLogger()
+    {
+        return new LoggerConfiguration()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+            .CreateBootstrapLogger();
+    }
+
     /// <summary>
     ///
     /// </summary>
@@ -94,12 +105,13 @@ public static class HostBuilderExtensions
 
         if (bitwardenHostOptions.IncludeLogging)
         {
-            hostBuilder.UseSerilog((context, builder) =>
+            hostBuilder.UseSerilog((context, services, configuration) =>
             {
-                builder.Enrich.WithProperty("Project", context.HostingEnvironment.ApplicationName);
-                // We should still default to using logger.BeginScope();
-                builder.Enrich.FromLogContext();
-                builder.ReadFrom.Configuration(context.Configuration);
+                configuration.ReadFrom.Configuration(context.Configuration)
+                    .ReadFrom.Services(services)
+                    .Enrich.WithProperty("Project", context.HostingEnvironment.ApplicationName)
+                    .Enrich.FromLogContext()
+                    .WriteTo.Console(new RenderedCompactJsonFormatter());
             });
         }
 
