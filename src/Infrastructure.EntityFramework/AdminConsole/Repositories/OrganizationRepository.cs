@@ -374,11 +374,13 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             // Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission
             // update their existing CollectionUser rows and insert new rows with [Manage] = 1
             // and finally update all OrganizationUsers with Manager role to User role
-            var managerOrgUsersIds = dbContext.OrganizationUsers
+            var managerOrgUsers = dbContext.OrganizationUsers
                 .Where(ou =>
                     ou.OrganizationId == organizationId &&
                     (ou.Type == OrganizationUserType.Manager ||
                      (ou.Permissions != null && EF.Functions.Like(ou.Permissions, "%\"editAssignedCollections\":true%"))))
+                .ToList();
+            var managerOrgUsersIds = managerOrgUsers
                 .Select(ou => ou.Id)
                 .ToList();
 
@@ -394,32 +396,30 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 });
 
             // Insert rows into CollectionUser with Manage = true
-            foreach (var manager in managerOrgUsersIds)
+            foreach (var manager in managerOrgUsers)
             {
                 var newCollectionUsersWithManage = (from cg in dbContext.CollectionGroups
                                                     join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
-                                                    where gu.OrganizationUserId == manager &&
+                                                    where gu.OrganizationUserId == manager.Id &&
                                                           !dbContext.CollectionUsers.Any(cu =>
                                                               cu.CollectionId == cg.CollectionId &&
-                                                              cu.OrganizationUserId == manager)
+                                                              cu.OrganizationUserId == manager.Id)
                                                     select new CollectionUser
                                                     {
                                                         CollectionId = cg.CollectionId,
-                                                        OrganizationUserId = manager,
+                                                        OrganizationUserId = manager.Id,
                                                         ReadOnly = false,
                                                         HidePasswords = false,
                                                         Manage = true
                                                     }).Distinct().ToList();
                 dbContext.CollectionUsers.AddRange(newCollectionUsersWithManage);
-            }
 
-            // Update OrganizationUser to migrate Managers to User role
-            dbContext.OrganizationUsers
-                .Where(ou =>
-                    managerOrgUsersIds.Contains(ou.Id) &&
-                    ou.Type == OrganizationUserType.Manager)
-                .ToList()
-                .ForEach(ou => ou.Type = OrganizationUserType.User);
+                // Update OrganizationUser to migrate Managers to User role
+                if (manager.Type == OrganizationUserType.Manager)
+                {
+                    manager.Type = OrganizationUserType.User;
+                }
+            }
 
             // Save changes for Step 3
             await dbContext.SaveChangesAsync();
