@@ -315,7 +315,7 @@ public class PolicyServiceTests
             Email = "admin@bitwarden.com",
             Name = "ADMIN",
             UserId = Guid.NewGuid(),
-            HasMasterPassword = true
+            HasMasterPassword = false
         };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -332,7 +332,7 @@ public class PolicyServiceTests
         userService.TwoFactorIsEnabledAsync(orgUserDetailUser)
             .Returns(false);
         userService.TwoFactorIsEnabledAsync(orgUserDetailAdmin)
-            .Returns(true);
+            .Returns(false);
 
         var utcNow = DateTime.UtcNow;
 

@@ -124,11 +124,7 @@ public class PolicyService : IPolicyService
                 switch (policy.Type)
                 {
                     case PolicyType.TwoFactorAuthentication:
-                        var orgUsersToCheck = orgUsers.Where(ou =>
-                            ou.Status != OrganizationUserStatusType.Invited &&
-                            ou.Status != OrganizationUserStatusType.Revoked)
-                            .OrderBy(ou => !ou.HasMasterPassword);
-                        foreach (var orgUser in orgUsersToCheck)
+                        foreach (var orgUser in removableOrgUsers.OrderBy(ou => !ou.HasMasterPassword))
                         {
                             if (!await userService.TwoFactorIsEnabledAsync(orgUser))
                             {
