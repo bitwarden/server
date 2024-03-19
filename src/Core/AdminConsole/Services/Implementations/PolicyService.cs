@@ -124,14 +124,15 @@ public class PolicyService : IPolicyService
                 switch (policy.Type)
                 {
                     case PolicyType.TwoFactorAuthentication:
-                        foreach (var orgUser in removableOrgUsers)
+                        var orgUsersWithoutMasterPassword = orgUsers.Where(ou =>
+                            ou.Status != OrganizationUserStatusType.Invited &&
+                            ou.Status != OrganizationUserStatusType.Revoked &&
+                            !ou.HasMasterPassword);
+                        foreach (var orgUser in orgUsersWithoutMasterPassword)
                         {
                             if (!await userService.TwoFactorIsEnabledAsync(orgUser))
                             {
-                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                    savingUserId);
-                                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                    org.DisplayName(), orgUser.Email);
+                                throw new BadRequestException("Policy could not be enabled. Members of your organization would lose access to their accounts if this policy were enabled.");
                             }
                         }
                         break;
