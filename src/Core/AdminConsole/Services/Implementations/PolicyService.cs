@@ -134,15 +134,10 @@ public class PolicyService : IPolicyService
                                         "Policy could not be enabled. Members of your organization would lose access to their accounts if this policy were enabled.");
                                 }
 
-                                if (orgUser.Type != OrganizationUserType.Owner &&
-                                    orgUser.Type != OrganizationUserType.Admin &&
-                                    orgUser.UserId != savingUserId)
-                                {
-                                    await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                        savingUserId);
-                                    await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                        org.DisplayName(), orgUser.Email);
-                                }
+                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                    savingUserId);
+                                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                                    org.DisplayName(), orgUser.Email);
                             }
                         }
                         break;
