@@ -280,8 +280,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         try
         {
             // Step 1: AccessAll migration for Groups
-            var groupIdsWithAccessAll = dbContext.Groups
+            var groupsWithAccessAll = dbContext.Groups
                 .Where(g => g.OrganizationId == organizationId && g.AccessAll == true)
+                .ToList();
+            var groupIdsWithAccessAll = groupsWithAccessAll
                 .Select(g => g.Id)
                 .ToList();
 
@@ -299,29 +301,26 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 });
 
             // Insert new rows into CollectionGroup
-            foreach (var groupId in groupIdsWithAccessAll)
+            foreach (var group in groupsWithAccessAll)
             {
                 var newCollectionGroups = dbContext.Collections
                     .Where(c =>
                         c.OrganizationId == organizationId &&
-                        c.CollectionGroups.All(cg => cg.GroupId != groupId))
+                        c.CollectionGroups.All(cg => cg.GroupId != group.Id))
                     .Select(c => new CollectionGroup
                     {
                         CollectionId = c.Id,
-                        GroupId = groupId,
+                        GroupId = group.Id,
                         ReadOnly = false,
                         HidePasswords = false,
                         Manage = false
                     })
                     .ToList();
                 dbContext.CollectionGroups.AddRange(newCollectionGroups);
-            }
 
-            // Update Group to clear AccessAll flag
-            dbContext.Groups
-                .Where(g => groupIdsWithAccessAll.Contains(g.Id))
-                .ToList()
-                .ForEach(g => g.AccessAll = false);
+                // Update Group to clear AccessAll flag
+                group.AccessAll = false;
+            }
 
             // Save changes for Step 1
             await dbContext.SaveChangesAsync();
