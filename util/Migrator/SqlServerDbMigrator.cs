@@ -9,7 +9,8 @@ public class SqlServerDbMigrator : IDbMigrator
 
     public SqlServerDbMigrator(GlobalSettings globalSettings)
     {
-        _migrator = new DbMigrator(globalSettings.SqlServer.ConnectionString);
+        _migrator = new DbMigrator(globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.SkipDatabasePreparation);
     }
 
     public bool MigrateDatabase(bool enableLogging = true,

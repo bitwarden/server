@@ -11,11 +11,13 @@ namespace Bit.Migrator;
 public class DbMigrator
 {
     private readonly string _connectionString;
+    private bool _skipDatabasePreparation;
     private readonly ILogger<DbMigrator> _logger;
 
-    public DbMigrator(string connectionString)
+    public DbMigrator(string connectionString, bool skipDatabasePreparation = false)
     {
         _connectionString = connectionString;
+        _skipDatabasePreparation = skipDatabasePreparation;
         _logger = CreateLogger();
     }
 
@@ -29,7 +31,10 @@ public class DbMigrator
         {
             try
             {
-                PrepareDatabase(cancellationToken);
+                if (!_skipDatabasePreparation)
+                {
+                    PrepareDatabase(cancellationToken);
+                }
 
                 var success = MigrateDatabase(enableLogging, repeatable, folderName, cancellationToken);
                 return success;
