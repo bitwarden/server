@@ -124,15 +124,29 @@ public class PolicyService : IPolicyService
                 switch (policy.Type)
                 {
                     case PolicyType.TwoFactorAuthentication:
-                        var orgUsersWithoutMasterPassword = orgUsers.Where(ou =>
+                        var orgUsersToCheck = orgUsers.Where(ou =>
                             ou.Status != OrganizationUserStatusType.Invited &&
-                            ou.Status != OrganizationUserStatusType.Revoked &&
-                            !ou.HasMasterPassword);
-                        foreach (var orgUser in orgUsersWithoutMasterPassword)
+                            ou.Status != OrganizationUserStatusType.Revoked)
+                            .OrderBy(ou => !ou.HasMasterPassword);
+                        foreach (var orgUser in orgUsersToCheck)
                         {
                             if (!await userService.TwoFactorIsEnabledAsync(orgUser))
                             {
-                                throw new BadRequestException("Policy could not be enabled. Members of your organization would lose access to their accounts if this policy were enabled.");
+                                if (!orgUser.HasMasterPassword)
+                                {
+                                    throw new BadRequestException(
+                                        "Policy could not be enabled. Members of your organization would lose access to their accounts if this policy were enabled.");
+                                }
+
+                                if (orgUser.Type != OrganizationUserType.Owner &&
+                                    orgUser.Type != OrganizationUserType.Admin &&
+                                    orgUser.UserId != savingUserId)
+                                {
+                                    await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                        savingUserId);
+                                    await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                                        org.DisplayName(), orgUser.Email);
+                                }
                             }
                         }
                         break;
