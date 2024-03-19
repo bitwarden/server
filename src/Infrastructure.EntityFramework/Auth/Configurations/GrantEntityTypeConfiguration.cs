@@ -14,10 +14,6 @@ public class GrantEntityTypeConfiguration : IEntityTypeConfiguration<Grant>
             .IsClustered();
 
         builder
-            .Property(s => s.Id)
-            .UseIdentityColumn();
-
-        builder
             .HasIndex(s => s.Key)
             .IsUnique(true);
 
