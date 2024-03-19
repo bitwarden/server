@@ -326,8 +326,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.SaveChangesAsync();
 
             // Step 2: AccessAll migration for OrganizationUsers
-            var orgUserIdsWithAccessAll = dbContext.OrganizationUsers
+            var orgUsersWithAccessAll = dbContext.OrganizationUsers
                 .Where(ou => ou.OrganizationId == organizationId && ou.AccessAll == true)
+                .ToList();
+            var orgUserIdsWithAccessAll = orgUsersWithAccessAll
                 .Select(ou => ou.Id)
                 .ToList();
 
@@ -345,29 +347,26 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 });
 
             // Insert new rows into CollectionUser
-            foreach (var organizationUser in orgUserIdsWithAccessAll)
+            foreach (var organizationUser in orgUsersWithAccessAll)
             {
                 var newCollectionUsers = dbContext.Collections
                     .Where(c =>
                         c.OrganizationId == organizationId &&
-                        c.CollectionUsers.All(cu => cu.OrganizationUserId != organizationUser))
+                        c.CollectionUsers.All(cu => cu.OrganizationUserId != organizationUser.Id))
                     .Select(c => new CollectionUser
                     {
                         CollectionId = c.Id,
-                        OrganizationUserId = organizationUser,
+                        OrganizationUserId = organizationUser.Id,
                         ReadOnly = false,
                         HidePasswords = false,
                         Manage = false
                     })
                     .ToList();
                 dbContext.CollectionUsers.AddRange(newCollectionUsers);
-            }
 
-            // Update OrganizationUser to clear AccessAll flag
-            dbContext.OrganizationUsers
-                .Where(ou => orgUserIdsWithAccessAll.Contains(ou.Id))
-                .ToList()
-                .ForEach(ou => ou.AccessAll = false);
+                // Update OrganizationUser to clear AccessAll flag
+                organizationUser.AccessAll = false;
+            }
 
             // Save changes for Step 2
             await dbContext.SaveChangesAsync();
