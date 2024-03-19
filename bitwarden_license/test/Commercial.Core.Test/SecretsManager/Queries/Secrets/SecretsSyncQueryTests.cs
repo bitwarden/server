@@ -15,8 +15,7 @@ namespace Bit.Commercial.Core.Test.SecretsManager.Queries.Secrets;
 [SutProviderCustomize]
 public class SecretsSyncQueryTests
 {
-    [Theory]
-    [BitAutoData]
+    [Theory, BitAutoData]
     public async Task GetAsync_NullLastSyncedDate_ReturnsHasChanges(
         SutProvider<SecretsSyncQuery> sutProvider,
         SecretsSyncRequest data)
@@ -32,8 +31,7 @@ public class SecretsSyncQueryTests
                 Arg.Is(data.AccessClientType));
     }
 
-    [Theory]
-    [BitAutoData]
+    [Theory, BitAutoData]
     public async Task GetAsync_HasLastSyncedDateServiceAccountNotFound_Throws(
         SutProvider<SecretsSyncQuery> sutProvider,
         SecretsSyncRequest data)
@@ -50,15 +48,17 @@ public class SecretsSyncQueryTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task GetAsync_HasLastSyncedDateServiceAccountWithLaterRevisionDate_ReturnsChanges(
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task GetAsync_HasLastSyncedDateServiceAccountWithLaterOrEqualRevisionDate_ReturnsChanges(
+        bool datesEqual,
         SutProvider<SecretsSyncQuery> sutProvider,
         SecretsSyncRequest data,
         ServiceAccount serviceAccount)
     {
         data.LastSyncedDate = DateTime.UtcNow.AddDays(-1);
         serviceAccount.Id = data.ServiceAccountId;
-        serviceAccount.RevisionDate = data.LastSyncedDate.Value.AddSeconds(600);
+        serviceAccount.RevisionDate = datesEqual ? data.LastSyncedDate.Value : data.LastSyncedDate.Value.AddSeconds(600);
 
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.ServiceAccountId)
             .Returns(serviceAccount);
@@ -72,8 +72,7 @@ public class SecretsSyncQueryTests
                 Arg.Is(data.AccessClientType));
     }
 
-    [Theory]
-    [BitAutoData]
+    [Theory, BitAutoData]
     public async Task GetAsync_HasLastSyncedDateServiceAccountWithEarlierRevisionDate_ReturnsNoChanges(
         SutProvider<SecretsSyncQuery> sutProvider,
         SecretsSyncRequest data,
