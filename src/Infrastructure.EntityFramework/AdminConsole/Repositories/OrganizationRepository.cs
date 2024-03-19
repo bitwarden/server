@@ -350,7 +350,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 var newCollectionUsers = dbContext.Collections
                     .Where(c =>
                         c.OrganizationId == organizationId &&
-                        !dbContext.CollectionUsers.Any(cu => cu.CollectionId == c.Id && cu.OrganizationUserId == organizationUser))
+                        c.CollectionUsers.All(cu => cu.OrganizationUserId != organizationUser))
                     .Select(c => new CollectionUser
                     {
                         CollectionId = c.Id,
