@@ -33,7 +33,7 @@ public class SecretsSyncQuery : ISecretsSyncQuery
             throw new NotFoundException();
         }
 
-        if (syncRequest.LastSyncedDate <= serviceAccount.RevisionDate)
+        if (syncRequest.LastSyncedDate.Value <= serviceAccount.RevisionDate)
         {
             return await GetSecretsAsync(syncRequest);
         }

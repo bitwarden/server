@@ -257,8 +257,14 @@ public class SecretsController : Controller
     }
 
     [HttpGet("/organizations/{organizationId}/secrets/sync")]
-    public async Task<SecretsSyncResponseModel> GetSecretsSyncAsync([FromRoute] Guid organizationId, [FromQuery] DateTime? lastSyncedDate = null)
+    public async Task<SecretsSyncResponseModel> GetSecretsSyncAsync([FromRoute] Guid organizationId,
+        [FromQuery] DateTime? lastSyncedDate = null)
     {
+        if (lastSyncedDate.HasValue && lastSyncedDate.Value > DateTime.UtcNow)
+        {
+            throw new BadRequestException("Last synced date must be in the past.");
+        }
+
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
@@ -278,6 +284,6 @@ public class SecretsController : Controller
             LastSyncedDate = lastSyncedDate
         };
         var (hasChanges, secrets) = await _secretsSyncQuery.GetAsync(syncRequest);
-        return new SecretsSyncResponseModel(hasChanges: hasChanges, secrets: secrets);
+        return new SecretsSyncResponseModel(hasChanges, secrets);
     }
 }

@@ -436,13 +436,9 @@ public class SecretsControllerTests
     [BitAutoData(false)]
     public async Task GetSecretsSyncAsync_AccessSecretsManagerFalse_ThrowsNotFound(
         bool nullLastSyncedDate,
-        DateTime? lastSyncedDate,
         SutProvider<SecretsController> sutProvider, Guid organizationId)
     {
-        if (nullLastSyncedDate)
-        {
-            lastSyncedDate = null;
-        }
+        var lastSyncedDate = GetLastSyncedDate(nullLastSyncedDate);
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
             .ReturnsForAnyArgs(false);
@@ -461,18 +457,29 @@ public class SecretsControllerTests
     public async Task GetSecretsSyncAsync_AccessClientIsNotAServiceAccount_ThrowsBadRequest(
         bool nullLastSyncedDate,
         AccessClientType accessClientType,
-        DateTime? lastSyncedDate,
         SutProvider<SecretsController> sutProvider, Guid organizationId)
     {
-        if (nullLastSyncedDate)
-        {
-            lastSyncedDate = null;
-        }
+        var lastSyncedDate = GetLastSyncedDate(nullLastSyncedDate);
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
             .ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
             .Returns((accessClientType, new Guid()));
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetSecretsSyncAsync(organizationId, lastSyncedDate));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSecretsSyncAsync_LastSyncedInFuture_ThrowsBadRequest(
+        List<Secret> secrets,
+        SutProvider<SecretsController> sutProvider, Guid organizationId)
+    {
+        DateTime? lastSyncedDate = DateTime.UtcNow.AddDays(3);
+
+        SetupSecretsSyncRequest(false, secrets, sutProvider, organizationId);
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.GetSecretsSyncAsync(organizationId, lastSyncedDate));
@@ -483,21 +490,10 @@ public class SecretsControllerTests
     [BitAutoData(false)]
     public async Task GetSecretsSyncAsync_AccessClientIsAServiceAccount_Success(
         bool nullLastSyncedDate,
-        DateTime? lastSyncedDate,
         List<Secret> secrets,
         SutProvider<SecretsController> sutProvider, Guid organizationId)
     {
-        if (nullLastSyncedDate)
-        {
-            lastSyncedDate = null;
-        }
-
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
-            .ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
-            .Returns((AccessClientType.ServiceAccount, new Guid()));
-        sutProvider.GetDependency<ISecretsSyncQuery>().GetAsync(Arg.Any<SecretsSyncRequest>())
-            .Returns((true, secrets));
+        var lastSyncedDate = SetupSecretsSyncRequest(nullLastSyncedDate, secrets, sutProvider, organizationId);
 
         var result = await sutProvider.Sut.GetSecretsSyncAsync(organizationId, lastSyncedDate);
         Assert.True(result.HasChanges);
@@ -522,5 +518,31 @@ public class SecretsControllerTests
         }
 
         return organizationId;
+    }
+
+    private static DateTime? SetupSecretsSyncRequest(bool nullLastSyncedDate, List<Secret> secrets,
+        SutProvider<SecretsController> sutProvider, Guid organizationId)
+    {
+        var lastSyncedDate = GetLastSyncedDate(nullLastSyncedDate);
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+            .ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
+            .Returns((AccessClientType.ServiceAccount, new Guid()));
+        sutProvider.GetDependency<ISecretsSyncQuery>().GetAsync(Arg.Any<SecretsSyncRequest>())
+            .Returns((true, secrets));
+        return lastSyncedDate;
+    }
+
+    private static DateTime? GetLastSyncedDate(bool nullLastSyncedDate)
+    {
+        DateTime? lastSyncedDate = DateTime.UtcNow.AddDays(-1);
+        if (nullLastSyncedDate)
+        {
+            lastSyncedDate = null;
+        }
+
+        return lastSyncedDate;
     }
 }
