@@ -38,7 +38,7 @@ public class ConfigResponseModel : ResponseModel
             Sso = globalSettings.BaseServiceUri.Sso
         };
         FeatureStates = featureStates;
-        Context = new ContextResponseModel(featureFlagContext);
+        Context = new ContextResponseModel(featureFlagContext.UserId, featureFlagContext.OrganizationIds);
     }
 }
 
@@ -62,9 +62,9 @@ public class ContextResponseModel
 {
     public Guid? UserId { get; set; }
     public Guid[] OrganizationIds { get; set; }
-    public ContextResponseModel(FeatureFlagContext context)
+    public ContextResponseModel(Guid? userId, Guid[] organizationIds)
     {
-        UserId = context.UserId;
-        OrganizationIds = context.OrganizationIds;
+        UserId = userId;
+        OrganizationIds = organizationIds;
     }
 }
