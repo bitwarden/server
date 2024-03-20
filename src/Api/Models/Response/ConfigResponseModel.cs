@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.Api;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -11,6 +12,7 @@ public class ConfigResponseModel : ResponseModel
     public ServerConfigResponseModel Server { get; set; }
     public EnvironmentConfigResponseModel Environment { get; set; }
     public IDictionary<string, object> FeatureStates { get; set; }
+    public ContextResponseModel Context { get; set; }
 
     public ConfigResponseModel() : base("config")
     {
@@ -22,7 +24,7 @@ public class ConfigResponseModel : ResponseModel
 
     public ConfigResponseModel(
         IGlobalSettings globalSettings,
-        IDictionary<string, object> featureStates) : base("config")
+        IDictionary<string, object> featureStates, FeatureFlagContext featureFlagContext) : base("config")
     {
         Version = AssemblyHelpers.GetVersion();
         GitHash = AssemblyHelpers.GetGitHash();
@@ -36,6 +38,7 @@ public class ConfigResponseModel : ResponseModel
             Sso = globalSettings.BaseServiceUri.Sso
         };
         FeatureStates = featureStates;
+        Context = new ContextResponseModel(featureFlagContext);
     }
 }
 
@@ -53,4 +56,15 @@ public class EnvironmentConfigResponseModel
     public string Identity { get; set; }
     public string Notifications { get; set; }
     public string Sso { get; set; }
+}
+
+public class ContextResponseModel
+{
+    public Guid? UserId { get; set; }
+    public Guid[] OrganizationIds { get; set; }
+    public ContextResponseModel(FeatureFlagContext context)
+    {
+        UserId = context.UserId;
+        OrganizationIds = context.OrganizationIds;
+    }
 }

@@ -96,11 +96,23 @@ public class LaunchDarklyFeatureService : IFeatureService
         return _client.StringVariation(key, BuildContext(), defaultValue);
     }
 
+    public FeatureFlagContext GetFlagContext()
+    {
+        return new FeatureFlagContext()
+        {
+            UserId = _currentContext.UserId,
+            OrganizationIds = _currentContext.Organizations?.Select(o => o.Id).ToArray()
+        };
+    }
+
     public Dictionary<string, object> GetAll()
     {
         var results = new Dictionary<string, object>();
 
         var keys = FeatureFlagKeys.GetAllKeys();
+
+        results.Add("userId", _currentContext.UserId);
+        results.Add("OrgIds", _currentContext.Organizations?.Select(o => o.Id).ToList());
 
         var values = _client.AllFlagsState(BuildContext());
         if (values.Valid)
