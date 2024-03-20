@@ -111,9 +111,6 @@ public class LaunchDarklyFeatureService : IFeatureService
 
         var keys = FeatureFlagKeys.GetAllKeys();
 
-        results.Add("userId", _currentContext.UserId);
-        results.Add("OrgIds", _currentContext.Organizations?.Select(o => o.Id).ToList());
-
         var values = _client.AllFlagsState(BuildContext());
         if (values.Valid)
         {
