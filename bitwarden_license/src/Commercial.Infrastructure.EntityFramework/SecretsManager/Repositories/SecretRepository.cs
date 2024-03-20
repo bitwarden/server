@@ -195,11 +195,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             await UpdateServiceAccountRevisionsByProjectIdsAsync(dbContext, projectIds);
         }
 
-        if (entity.Value != mappedEntity.Value)
-        {
-            await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
-        }
-
+        await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
         dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
