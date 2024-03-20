@@ -273,18 +273,16 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor(
-        [AdminConsoleFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy, SutProvider<PolicyService> sutProvider)
+        Organization organization,
+        [AdminConsoleFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy,
+        SutProvider<PolicyService> sutProvider)
     {
         // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
-        var org = new Organization
-        {
-            Id = policy.OrganizationId,
-            UsePolicies = true,
-            Name = "TEST",
-        };
+        organization.UsePolicies = true;
+        policy.OrganizationId = organization.Id;
 
-        SetupOrg(sutProvider, policy.OrganizationId, org);
+        SetupOrg(sutProvider, organization.Id, organization);
 
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByIdAsync(policy.Id)
@@ -292,27 +290,49 @@ public class PolicyServiceTests
             {
                 Id = policy.Id,
                 Type = PolicyType.TwoFactorAuthentication,
-                Enabled = false,
+                Enabled = false
             });
 
-        var orgUserDetailUser = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
+        var orgUserDetailUserInvited = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User,
+            // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
+            Email = "user1@test.com",
+            Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = false
+        };
+        var orgUserDetailUserAcceptedWith2FA = new OrganizationUserUserDetails
         {
             Id = Guid.NewGuid(),
             Status = OrganizationUserStatusType.Accepted,
             Type = OrganizationUserType.User,
             // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
-            Email = "test@bitwarden.com",
+            Email = "user2@test.com",
             Name = "TEST",
             UserId = Guid.NewGuid(),
             HasMasterPassword = true
         };
-        var orgUserDetailAdmin = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
+        var orgUserDetailUserAcceptedWithout2FA = new OrganizationUserUserDetails
         {
             Id = Guid.NewGuid(),
             Status = OrganizationUserStatusType.Accepted,
+            Type = OrganizationUserType.User,
+            // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
+            Email = "user3@test.com",
+            Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = true
+        };
+        var orgUserDetailAdmin = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Confirmed,
             Type = OrganizationUserType.Admin,
             // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
-            Email = "admin@bitwarden.com",
+            Email = "admin@test.com",
             Name = "ADMIN",
             UserId = Guid.NewGuid(),
             HasMasterPassword = false
@@ -320,19 +340,21 @@ public class PolicyServiceTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
-            .Returns(new List<Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails>
+            .Returns(new List<OrganizationUserUserDetails>
             {
-                orgUserDetailUser,
+                orgUserDetailUserInvited,
+                orgUserDetailUserAcceptedWith2FA,
+                orgUserDetailUserAcceptedWithout2FA,
                 orgUserDetailAdmin
             });
 
         var userService = Substitute.For<IUserService>();
         var organizationService = Substitute.For<IOrganizationService>();
 
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUser)
-            .Returns(false);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailAdmin)
-            .Returns(false);
+        userService.TwoFactorIsEnabledAsync(orgUserDetailUserInvited).Returns(false);
+        userService.TwoFactorIsEnabledAsync(orgUserDetailUserAcceptedWith2FA).Returns(true);
+        userService.TwoFactorIsEnabledAsync(orgUserDetailUserAcceptedWithout2FA).Returns(false);
+        userService.TwoFactorIsEnabledAsync(orgUserDetailAdmin).Returns(false);
 
         var utcNow = DateTime.UtcNow;
 
@@ -341,14 +363,22 @@ public class PolicyServiceTests
         await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
 
         await organizationService.Received()
-            .DeleteUserAsync(policy.OrganizationId, orgUserDetailUser.Id, savingUserId);
+            .DeleteUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWithout2FA.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().Received()
-            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(org.DisplayName(), orgUserDetailUser.Email);
+            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserAcceptedWithout2FA.Email);
 
+        await organizationService.DidNotReceive()
+            .DeleteUserAsync(policy.OrganizationId, orgUserDetailUserInvited.Id, savingUserId);
+        await sutProvider.GetDependency<IMailService>().DidNotReceive()
+            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserInvited.Email);
+        await organizationService.DidNotReceive()
+            .DeleteUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWith2FA.Id, savingUserId);
+        await sutProvider.GetDependency<IMailService>().DidNotReceive()
+            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserAcceptedWith2FA.Email);
         await organizationService.DidNotReceive()
             .DeleteUserAsync(policy.OrganizationId, orgUserDetailAdmin.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
-            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(org.DisplayName(), orgUserDetailAdmin.Email);
+            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailAdmin.Email);
 
         await sutProvider.GetDependency<IEventService>().Received()
             .LogPolicyEventAsync(policy, EventType.Policy_Updated);
@@ -361,53 +391,77 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor_WithoutMasterPasswordOr2FA_ThrowsBadRequest(
-        [AdminConsoleFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy, SutProvider<PolicyService> sutProvider)
+    public async Task SaveAsync_EnableTwoFactor_WithoutMasterPasswordOr2FA_ThrowsBadRequest(
+        Organization organization,
+        [AdminConsoleFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy,
+        SutProvider<PolicyService> sutProvider)
     {
-        // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
+        organization.UsePolicies = true;
+        policy.OrganizationId = organization.Id;
 
-        var org = new Organization
-        {
-            Id = policy.OrganizationId,
-            UsePolicies = true,
-            Name = "TEST",
-        };
+        SetupOrg(sutProvider, organization.Id, organization);
 
-        SetupOrg(sutProvider, policy.OrganizationId, org);
-
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByIdAsync(policy.Id)
-            .Returns(new Policy
-            {
-                Id = policy.Id,
-                Type = PolicyType.TwoFactorAuthentication,
-                Enabled = false,
-            });
-
-        var orgUserDetailUser = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
+        var orgUserDetailUserWith2FAAndMP = new OrganizationUserUserDetails
         {
             Id = Guid.NewGuid(),
-            Status = OrganizationUserStatusType.Accepted,
+            Status = OrganizationUserStatusType.Confirmed,
             Type = OrganizationUserType.User,
             // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
-            Email = "test@bitwarden.com",
+            Email = "user1@test.com",
             Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = true
+        };
+        var orgUserDetailUserWith2FANoMP = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
+            Email = "user2@test.com",
+            Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = false
+        };
+        var orgUserDetailUserWithout2FA = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
+            Email = "user3@test.com",
+            Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = false
+        };
+        var orgUserDetailAdmin = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Admin,
+            // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
+            Email = "admin@test.com",
+            Name = "ADMIN",
             UserId = Guid.NewGuid(),
             HasMasterPassword = false
         };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
-            .Returns(new List<Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails>
+            .Returns(new List<OrganizationUserUserDetails>
             {
-                orgUserDetailUser,
+                orgUserDetailUserWith2FAAndMP,
+                orgUserDetailUserWith2FANoMP,
+                orgUserDetailUserWithout2FA,
+                orgUserDetailAdmin
             });
 
         var userService = Substitute.For<IUserService>();
         var organizationService = Substitute.For<IOrganizationService>();
 
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUser)
-            .Returns(false);
+        userService.TwoFactorIsEnabledAsync(orgUserDetailUserWith2FANoMP).Returns(true);
+        userService.TwoFactorIsEnabledAsync(orgUserDetailUserWithout2FA).Returns(false);
+        userService.TwoFactorIsEnabledAsync(orgUserDetailAdmin).Returns(false);
 
         var savingUserId = Guid.NewGuid();
 
@@ -416,17 +470,17 @@ public class PolicyServiceTests
 
         Assert.Contains("Policy could not be enabled. Members of your organization would lose access to their accounts if this policy were enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
 
-        await organizationService.DidNotReceive()
-            .DeleteUserAsync(policy.OrganizationId, orgUserDetailUser.Id, savingUserId);
+        await organizationService.DidNotReceiveWithAnyArgs()
+            .DeleteUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);
 
-        await sutProvider.GetDependency<IMailService>().DidNotReceive()
-            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(org.DisplayName(), orgUserDetailUser.Email);
+        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
+            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(default, default);
 
-        await sutProvider.GetDependency<IEventService>().DidNotReceive()
-            .LogPolicyEventAsync(policy, EventType.Policy_Updated);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogPolicyEventAsync(default, default);
 
-        await sutProvider.GetDependency<IPolicyRepository>().DidNotReceive()
-            .UpsertAsync(policy);
+        await sutProvider.GetDependency<IPolicyRepository>().DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
     }
 
     [Theory, BitAutoData]

@@ -124,7 +124,8 @@ public class PolicyService : IPolicyService
                 switch (policy.Type)
                 {
                     case PolicyType.TwoFactorAuthentication:
-                        foreach (var orgUser in removableOrgUsers.OrderBy(ou => !ou.HasMasterPassword))
+                        // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
+                        foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
                         {
                             if (!await userService.TwoFactorIsEnabledAsync(orgUser))
                             {
