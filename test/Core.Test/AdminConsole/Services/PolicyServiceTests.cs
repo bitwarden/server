@@ -468,7 +468,7 @@ public class PolicyServiceTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId));
 
-        Assert.Contains("Policy could not be enabled. Members of your organization would lose access to their accounts if this policy were enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
 
         await organizationService.DidNotReceiveWithAnyArgs()
             .DeleteUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);

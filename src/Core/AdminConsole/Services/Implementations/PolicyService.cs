@@ -132,7 +132,7 @@ public class PolicyService : IPolicyService
                                 if (!orgUser.HasMasterPassword)
                                 {
                                     throw new BadRequestException(
-                                        "Policy could not be enabled. Members of your organization would lose access to their accounts if this policy were enabled.");
+                                        "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
                                 }
 
                                 await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
