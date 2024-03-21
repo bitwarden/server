@@ -47,4 +47,14 @@ public class TransactionRepository : Repository<Core.Entities.Transaction, Trans
             return Mapper.Map<List<Core.Entities.Transaction>>(results);
         }
     }
+
+    public async Task<ICollection<Core.Entities.Transaction>> GetManyByProviderIdAsync(Guid providerId)
+    {
+        using var serviceScope = ServiceScopeFactory.CreateScope();
+        var databaseContext = GetDatabaseContext(serviceScope);
+        var results = await databaseContext.Transactions
+            .Where(transaction => transaction.ProviderId == providerId)
+            .ToListAsync();
+        return Mapper.Map<List<Core.Entities.Transaction>>(results);
+    }
 }

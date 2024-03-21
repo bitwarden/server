@@ -14,7 +14,10 @@
     @UseEvents BIT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @Gateway TINYINT = 0,
+    @GatewayCustomerId VARCHAR(50) = NULL,
+    @GatewaySubscriptionId VARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -36,7 +39,10 @@ BEGIN
         [UseEvents] = @UseEvents,
         [Enabled] = @Enabled,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [Gateway] = @Gateway,
+        [GatewayCustomerId] = @GatewayCustomerId,
+        [GatewaySubscriptionId] = @GatewaySubscriptionId
     WHERE
         [Id] = @Id
 END
