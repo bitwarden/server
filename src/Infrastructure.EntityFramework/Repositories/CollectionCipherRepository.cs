@@ -248,4 +248,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public async Task AddCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds, IEnumerable<Guid> collectionIds) => throw new NotImplementedException();
+
+    public async Task RemoveCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds, IEnumerable<Guid> collectionIds) => throw new NotImplementedException();
 }
