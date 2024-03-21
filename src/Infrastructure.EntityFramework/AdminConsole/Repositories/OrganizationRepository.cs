@@ -378,7 +378,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .Where(ou =>
                     ou.OrganizationId == organizationId &&
                     (ou.Type == OrganizationUserType.Manager ||
-                     (ou.Permissions != null && EF.Functions.Like(ou.Permissions, "%\"editAssignedCollections\":true%"))))
+                     (ou.Type == OrganizationUserType.Custom &&
+                      ou.Permissions != null &&
+                      EF.Functions.Like(ou.Permissions, "%\"editAssignedCollections\":true%"))))
                 .ToList();
             var managerOrgUsersIds = managerOrgUsers
                 .Select(ou => ou.Id)
