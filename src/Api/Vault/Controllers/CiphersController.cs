@@ -582,6 +582,25 @@ public class CiphersController : Controller
             model.CollectionIds.Select(c => new Guid(c)), userId, true);
     }
 
+    [HttpPost("bulk-collections")]
+    public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
+    {
+        if (!await CanEditCiphersAsync(model.OrganizationId, model.CipherIds) ||
+            !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))
+        {
+            throw new NotFoundException();
+        }
+
+        if (model.RemoveCollections)
+        {
+            await _collectionCipherRepository.RemoveCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
+        }
+        else
+        {
+            await _collectionCipherRepository.AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
+        }
+    }
+
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid id)
