@@ -352,6 +352,14 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
+        // If not using V1, owners, admins, and users with EditAnyCollection permissions, and providers can always edit all ciphers
+        if (!await UseFlexibleCollectionsV1Async(organizationId))
+        {
+            return org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.EditAnyCollection: true } ||
+                await _currentContext.ProviderUserForOrgAsync(organizationId);
+        }
+
         // Custom users with EditAnyCollection permissions can always edit all ciphers
         if (org is { Type: OrganizationUserType.Custom, Permissions.EditAnyCollection: true })
         {
@@ -585,6 +593,14 @@ public class CiphersController : Controller
     [HttpPost("bulk-collections")]
     public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
+        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(model.OrganizationId);
+
+        // Only available for organizations with flexible collections
+        if (orgAbility is null or { FlexibleCollections: false })
+        {
+            throw new NotFoundException();
+        }
+
         if (!await CanEditCiphersAsync(model.OrganizationId, model.CipherIds) ||
             !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))
         {
