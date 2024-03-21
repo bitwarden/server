@@ -776,6 +776,7 @@ public class StripePaymentService : IPaymentService
         var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
         var isPm5864DollarThresholdEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5864DollarThreshold);
+        var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
 
         var subUpdateOptions = new SubscriptionUpdateOptions
         {
@@ -786,7 +787,15 @@ public class StripePaymentService : IPaymentService
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice",
             ProrationDate = prorationDate,
+
         };
+
+        if (isAnnualPlan)
+        {
+            subUpdateOptions.PendingInvoiceItemInterval =
+                new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "week" };
+        }
+
         var immediatelyInvoice = false;
         if (!invoiceNow && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
         {
@@ -800,12 +809,12 @@ public class StripePaymentService : IPaymentService
                 SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
             });
 
-            var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
-            immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 50000;
-
-            subUpdateOptions.BillingCycleAnchor = immediatelyInvoice
-                ? SubscriptionBillingCycleAnchor.Now
-                : SubscriptionBillingCycleAnchor.Unchanged;
+            immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 5000;
+            if (immediatelyInvoice)
+            {
+                subUpdateOptions.PendingInvoiceItemInterval =
+                    new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "day" };
+            }
         }
 
         var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
@@ -862,14 +871,13 @@ public class StripePaymentService : IPaymentService
                     {
                         if (chargeNow)
                         {
-                            paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(storableSubscriber, invoice);
+                            paymentIntentClientSecret =
+                                await PayInvoiceAfterSubscriptionChangeAsync(storableSubscriber, invoice);
                         }
                         else
                         {
-                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new InvoiceFinalizeOptions
-                            {
-                                AutoAdvance = false,
-                            });
+                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
+                                new InvoiceFinalizeOptions { AutoAdvance = false, });
                             await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
                             paymentIntentClientSecret = null;
                         }
