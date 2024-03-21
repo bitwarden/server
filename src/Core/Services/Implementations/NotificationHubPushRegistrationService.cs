@@ -53,11 +53,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
-                messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                payloadTemplate = "{\"message\": {\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}}";
+                messageTemplate = "{\"message\": {\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}}";
 
-                installation.Platform = NotificationPlatform.Fcm;
+                installation.Platform = NotificationPlatform.FcmV1;
                 break;
             case DeviceType.iOS:
                 payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
