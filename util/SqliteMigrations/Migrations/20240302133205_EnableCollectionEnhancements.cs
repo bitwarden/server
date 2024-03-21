@@ -37,8 +37,10 @@ public partial class EnableCollectionEnhancements : Migration
         try
         {
             // Step 1: AccessAll migration for Groups
-            var groupIdsWithAccessAll = _dbContext.Groups
+            var groupsWithAccessAll = _dbContext.Groups
                 .Where(g => g.OrganizationId == organizationId && g.AccessAll == true)
+                .ToList();
+            var groupIdsWithAccessAll = groupsWithAccessAll
                 .Select(g => g.Id)
                 .ToList();
 
@@ -56,36 +58,35 @@ public partial class EnableCollectionEnhancements : Migration
                 });
 
             // Insert new rows into CollectionGroup
-            foreach (var group in groupIdsWithAccessAll)
+            foreach (var group in groupsWithAccessAll)
             {
                 var newCollectionGroups = _dbContext.Collections
                     .Where(c =>
                         c.OrganizationId == organizationId &&
-                        !_dbContext.CollectionGroups.Any(cg => cg.CollectionId == c.Id && cg.GroupId == group))
+                        c.CollectionGroups.All(cg => cg.GroupId != group.Id))
                     .Select(c => new CollectionGroup
                     {
                         CollectionId = c.Id,
-                        GroupId = group,
+                        GroupId = group.Id,
                         ReadOnly = false,
                         HidePasswords = false,
                         Manage = false
                     })
                     .ToList();
                 _dbContext.CollectionGroups.AddRange(newCollectionGroups);
-            }
 
-            // Update Group to clear AccessAll flag
-            _dbContext.Groups
-                .Where(g => groupIdsWithAccessAll.Contains(g.Id))
-                .ToList()
-                .ForEach(g => g.AccessAll = false);
+                // Update Group to clear AccessAll flag
+                group.AccessAll = false;
+            }
 
             // Save changes for Step 1
             _dbContext.SaveChanges();
 
             // Step 2: AccessAll migration for OrganizationUsers
-            var orgUserIdsWithAccessAll = _dbContext.OrganizationUsers
+            var orgUsersWithAccessAll = _dbContext.OrganizationUsers
                 .Where(ou => ou.OrganizationId == organizationId && ou.AccessAll == true)
+                .ToList();
+            var orgUserIdsWithAccessAll = orgUsersWithAccessAll
                 .Select(ou => ou.Id)
                 .ToList();
 
@@ -103,29 +104,26 @@ public partial class EnableCollectionEnhancements : Migration
                 });
 
             // Insert new rows into CollectionUser
-            foreach (var organizationUser in orgUserIdsWithAccessAll)
+            foreach (var organizationUser in orgUsersWithAccessAll)
             {
                 var newCollectionUsers = _dbContext.Collections
                     .Where(c =>
                         c.OrganizationId == organizationId &&
-                        !_dbContext.CollectionUsers.Any(cu => cu.CollectionId == c.Id && cu.OrganizationUserId == organizationUser))
+                        c.CollectionUsers.All(cu => cu.OrganizationUserId != organizationUser.Id))
                     .Select(c => new CollectionUser
                     {
                         CollectionId = c.Id,
-                        OrganizationUserId = organizationUser,
+                        OrganizationUserId = organizationUser.Id,
                         ReadOnly = false,
                         HidePasswords = false,
                         Manage = false
                     })
                     .ToList();
                 _dbContext.CollectionUsers.AddRange(newCollectionUsers);
-            }
 
-            // Update OrganizationUser to clear AccessAll flag
-            _dbContext.OrganizationUsers
-                .Where(ou => orgUserIdsWithAccessAll.Contains(ou.Id))
-                .ToList()
-                .ForEach(ou => ou.AccessAll = false);
+                // Update OrganizationUser to clear AccessAll flag
+                organizationUser.AccessAll = false;
+            }
 
             // Save changes for Step 2
             _dbContext.SaveChanges();
@@ -133,11 +131,15 @@ public partial class EnableCollectionEnhancements : Migration
             // Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission
             // update their existing CollectionUser rows and insert new rows with [Manage] = 1
             // and finally update all OrganizationUsers with Manager role to User role
-            var managerOrgUsersIds = _dbContext.OrganizationUsers
+            var managerOrgUsers = _dbContext.OrganizationUsers
                 .Where(ou =>
                     ou.OrganizationId == organizationId &&
                     (ou.Type == OrganizationUserType.Manager ||
-                     (ou.Permissions != null && EF.Functions.Like(ou.Permissions, "%\"editAssignedCollections\":true%"))))
+                     (ou.Type == OrganizationUserType.Custom &&
+                      ou.Permissions != null &&
+                      EF.Functions.Like(ou.Permissions, "%\"editAssignedCollections\":true%"))))
+                .ToList();
+            var managerOrgUsersIds = managerOrgUsers
                 .Select(ou => ou.Id)
                 .ToList();
 
@@ -153,32 +155,30 @@ public partial class EnableCollectionEnhancements : Migration
                 });
 
             // Insert rows into CollectionUser with Manage = true
-            foreach (var manager in managerOrgUsersIds)
+            foreach (var manager in managerOrgUsers)
             {
                 var newCollectionUsersWithManage = (from cg in _dbContext.CollectionGroups
                                                     join gu in _dbContext.GroupUsers on cg.GroupId equals gu.GroupId
-                                                    where gu.OrganizationUserId == manager &&
+                                                    where gu.OrganizationUserId == manager.Id &&
                                                           !_dbContext.CollectionUsers.Any(cu =>
                                                               cu.CollectionId == cg.CollectionId &&
-                                                              cu.OrganizationUserId == manager)
+                                                              cu.OrganizationUserId == manager.Id)
                                                     select new CollectionUser
                                                     {
                                                         CollectionId = cg.CollectionId,
-                                                        OrganizationUserId = manager,
+                                                        OrganizationUserId = manager.Id,
                                                         ReadOnly = false,
                                                         HidePasswords = false,
                                                         Manage = true
                                                     }).Distinct().ToList();
                 _dbContext.CollectionUsers.AddRange(newCollectionUsersWithManage);
-            }
 
-            // Update OrganizationUser to migrate Managers to User role
-            _dbContext.OrganizationUsers
-                .Where(ou =>
-                    managerOrgUsersIds.Contains(ou.Id) &&
-                    ou.Type == OrganizationUserType.Manager)
-                .ToList()
-                .ForEach(ou => ou.Type = OrganizationUserType.User);
+                // Update OrganizationUser to migrate Managers to User role
+                if (manager.Type == OrganizationUserType.Manager)
+                {
+                    manager.Type = OrganizationUserType.User;
+                }
+            }
 
             // Save changes for Step 3
             _dbContext.SaveChanges();
@@ -200,10 +200,14 @@ public partial class EnableCollectionEnhancements : Migration
             foreach (var organizationUserId in orgUsersToBump)
             {
                 var userToUpdate = _dbContext.Users
-                    .FirstOrDefault(u => _dbContext.OrganizationUsers.Any(ou =>
-                        ou.UserId == u.Id &&
-                        ou.Id == organizationUserId &&
-                        ou.Status == OrganizationUserStatusType.Confirmed));
+                    .Join(_dbContext.OrganizationUsers,
+                        u => u.Id,
+                        ou => ou.UserId,
+                        (u, ou) => new { User = u, OrganizationUser = ou })
+                    .Where(pair => pair.OrganizationUser.Id == organizationUserId &&
+                                   pair.OrganizationUser.Status == OrganizationUserStatusType.Confirmed)
+                    .Select(pair => pair.User)
+                    .FirstOrDefault();
 
                 if (userToUpdate != null)
                 {
@@ -215,7 +219,7 @@ public partial class EnableCollectionEnhancements : Migration
             _dbContext.SaveChanges();
 
             // Step 5: Enable FlexibleCollections for the Organization
-            var organization = _dbContext.Organizations.SingleOrDefault(o => o.Id == organizationId);
+            var organization = _dbContext.Organizations.FirstOrDefault(o => o.Id == organizationId);
             organization.FlexibleCollections = true;
             organization.RevisionDate = DateTime.UtcNow;
 
