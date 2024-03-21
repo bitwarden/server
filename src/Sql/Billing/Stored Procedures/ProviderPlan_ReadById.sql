@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Transaction_ReadById]
+CREATE PROCEDURE [dbo].[ProviderPlan_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[TransactionView]
+        [dbo].[ProviderPlanView]
     WHERE
         [Id] = @Id
 END
