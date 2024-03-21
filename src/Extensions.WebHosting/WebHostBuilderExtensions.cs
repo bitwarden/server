@@ -1,6 +1,7 @@
 ﻿using Bit.Extensions.Hosting;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using Serilog;
 
 namespace Bit.Extensions.WebHosting;
 
@@ -16,8 +17,13 @@ public static class WebHostBuilderExtensions
     public static IWebHostBuilder UseBitwardenWebDefaults(this IWebHostBuilder webHostBuilder, BitwardenWebHostOptions bitwardenWebHostOptions)
     {
         // TODO: Add services and default starting middleware
-        webHostBuilder.Configure(static (context, builder) =>
+        webHostBuilder.Configure((context, builder) =>
         {
+            if (bitwardenWebHostOptions.IncludeRequestLogging)
+            {
+                builder.UseSerilogRequestLogging();
+            }
+
             // Exception handling middleware?
         });
 

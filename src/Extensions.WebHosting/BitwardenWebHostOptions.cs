@@ -4,5 +4,5 @@ namespace Bit.Extensions.WebHosting;
 
 public class BitwardenWebHostOptions : BitwardenHostOptions
 {
-    // In case there are web specific host options
+    public bool IncludeRequestLogging { get; set; }
 }
