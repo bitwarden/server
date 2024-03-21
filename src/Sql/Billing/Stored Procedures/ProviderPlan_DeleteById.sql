@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Transaction_DeleteById]
+CREATE PROCEDURE [dbo].[ProviderPlan_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -6,7 +6,7 @@ BEGIN
 
     DELETE
     FROM
-        [dbo].[Transaction]
+        [dbo].[ProviderPlan]
     WHERE
         [Id] = @Id
 END

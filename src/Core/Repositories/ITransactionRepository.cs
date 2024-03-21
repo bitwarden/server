@@ -7,5 +7,6 @@ public interface ITransactionRepository : IRepository<Transaction, Guid>
 {
     Task<ICollection<Transaction>> GetManyByUserIdAsync(Guid userId);
     Task<ICollection<Transaction>> GetManyByOrganizationIdAsync(Guid organizationId);
+    Task<ICollection<Transaction>> GetManyByProviderIdAsync(Guid providerId);
     Task<Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId);
 }
