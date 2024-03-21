@@ -35,9 +35,7 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         var globalSettings = new GlobalSettingsFactory(args)
             .GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
-
-        // Use env. variable "CONN_STR" for Git action otherwise use the GlobalSettings value
-        var connectionString = Environment.GetEnvironmentVariable("CONN_STR") ?? globalSettings.Sqlite?.ConnectionString;
+        var connectionString = globalSettings.Sqlite?.ConnectionString ?? Environment.GetEnvironmentVariable("CONN_STR") ?? "Data Source=:memory:";
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new Exception("No Sqlite connection string found.");
