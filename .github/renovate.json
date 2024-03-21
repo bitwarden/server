@@ -44,6 +44,7 @@
       "matchPackageNames": [
         "AspNetCoreRateLimit",
         "AspNetCoreRateLimit.Redis",
+        "Azure.Data.Tables",
         "Azure.Extensions.AspNetCore.DataProtection.Blobs",
         "Azure.Messaging.EventGrid",
         "Azure.Messaging.ServiceBus",
