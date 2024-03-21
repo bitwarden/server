@@ -148,10 +148,16 @@ public class OrganizationEnableCollectionEnhancementTests
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
-        var group = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
+        var group1 = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
+        var group2 = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
 
-        var collection1 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
-        var collection2 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
+        var collection1 = await CreateCollection(organization, collectionRepository, new[]
+        {
+            new CollectionAccessSelection { Id = group1.Id, HidePasswords = false, Manage = false, ReadOnly = false },
+            // Add a second group to test for overlapping access
+            new CollectionAccessSelection { Id = group2.Id, HidePasswords = false, Manage = false, ReadOnly = false }
+        });
+        var collection2 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group1.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
         var collection3 = await CreateCollection(organization, collectionRepository); // no access
 
         await organizationRepository.EnableCollectionEnhancements(organization.Id);
@@ -172,7 +178,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
 
         // Assert: group should only have Can Edit permissions (making sure no side-effects from the Manager migration)
-        var (updatedGroup, updatedGroupAccess) = await groupRepository.GetByIdWithCollectionsAsync(group.Id);
+        var (updatedGroup, updatedGroupAccess) = await groupRepository.GetByIdWithCollectionsAsync(group1.Id);
         Assert.Equal(2, updatedGroupAccess.Count);
         Assert.Contains(updatedGroupAccess, cas =>
             cas.Id == collection1.Id &&
