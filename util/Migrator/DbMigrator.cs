@@ -100,8 +100,8 @@ public class DbMigrator
 
     private bool MigrateDatabase(bool enableLogging = true,
         bool repeatable = false,
-        bool dryRun = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
+        bool dryRun = false,
         CancellationToken cancellationToken = default)
     {
         if (enableLogging)

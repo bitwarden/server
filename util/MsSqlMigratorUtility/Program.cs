@@ -27,11 +27,11 @@ internal class Program
         bool success;
         if (!string.IsNullOrWhiteSpace(folderName))
         {
-            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, dryRun, folderName);
+            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, folderName, dryRun);
         }
         else
         {
-            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, dryRun);
+            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, dryRun: dryRun);
         }
 
         return success;
