@@ -198,7 +198,7 @@ public class Program
         migrator.MigrateMsSqlDatabaseWithRetries(enableLogging);
 
         // execute explicit transition migration scripts, per EDD
-        migrator.MigrateMsSqlDatabaseWithRetries(enableLogging, true, folderName: MigratorConstants.TransitionMigrationsFolderName);
+        migrator.MigrateMsSqlDatabaseWithRetries(enableLogging, true, MigratorConstants.TransitionMigrationsFolderName);
     }
 
     private static bool ValidateInstallation()
