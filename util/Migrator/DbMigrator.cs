@@ -22,8 +22,8 @@ public class DbMigrator
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         bool repeatable = false,
-        bool dryRun = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
+        bool dryRun = false,
         CancellationToken cancellationToken = default)
     {
         var attempt = 1;
@@ -33,7 +33,7 @@ public class DbMigrator
             {
                 PrepareDatabase(cancellationToken);
 
-                var success = MigrateDatabase(enableLogging, repeatable, dryRun, folderName, cancellationToken);
+                var success = MigrateDatabase(enableLogging, repeatable, folderName, dryRun, cancellationToken);
                 return success;
             }
             catch (SqlException ex)
