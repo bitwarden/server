@@ -790,32 +790,32 @@ public class StripePaymentService : IPaymentService
 
         };
 
-        if (isAnnualPlan)
+        if (isAnnualPlan && isPm5864DollarThresholdEnabled)
         {
             subUpdateOptions.PendingInvoiceItemInterval =
                 new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "week" };
         }
 
-        var immediatelyInvoice = false;
-        if (!invoiceNow && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
-        {
-            var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
-            {
-                Customer = storableSubscriber.GatewayCustomerId,
-                Subscription = storableSubscriber.GatewaySubscriptionId,
-                SubscriptionItems = ToInvoiceSubscriptionItemOptions(updatedItemOptions),
-                SubscriptionProrationBehavior = Constants.CreateProrations,
-                SubscriptionProrationDate = prorationDate,
-                SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
-            });
-
-            immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 5000;
-            if (immediatelyInvoice)
-            {
-                subUpdateOptions.PendingInvoiceItemInterval =
-                    new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "day" };
-            }
-        }
+        // var immediatelyInvoice = false;
+        // if (!invoiceNow && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
+        // {
+        //     var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
+        //     {
+        //         Customer = storableSubscriber.GatewayCustomerId,
+        //         Subscription = storableSubscriber.GatewaySubscriptionId,
+        //         SubscriptionItems = ToInvoiceSubscriptionItemOptions(updatedItemOptions),
+        //         SubscriptionProrationBehavior = Constants.CreateProrations,
+        //         SubscriptionProrationDate = prorationDate,
+        //         SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
+        //     });
+        //
+        //     immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 5000;
+        //     if (immediatelyInvoice)
+        //     {
+        //         subUpdateOptions.PendingInvoiceItemInterval =
+        //             new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "day" };
+        //     }
+        // }
 
         var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
         if (pm5766AutomaticTaxIsEnabled &&
@@ -867,21 +867,21 @@ public class StripePaymentService : IPaymentService
             {
                 try
                 {
-                    if (!isPm5864DollarThresholdEnabled || immediatelyInvoice || invoiceNow)
+                    // if (!isPm5864DollarThresholdEnabled || immediatelyInvoice || invoiceNow)
+                    // {
+                    if (chargeNow)
                     {
-                        if (chargeNow)
-                        {
-                            paymentIntentClientSecret =
-                                await PayInvoiceAfterSubscriptionChangeAsync(storableSubscriber, invoice);
-                        }
-                        else
-                        {
-                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
-                                new InvoiceFinalizeOptions { AutoAdvance = false, });
-                            await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
-                            paymentIntentClientSecret = null;
-                        }
+                        paymentIntentClientSecret =
+                            await PayInvoiceAfterSubscriptionChangeAsync(storableSubscriber, invoice);
                     }
+                    else
+                    {
+                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
+                            new InvoiceFinalizeOptions { AutoAdvance = false, });
+                        await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
+                        paymentIntentClientSecret = null;
+                    }
+                    // }
                 }
                 catch
                 {
