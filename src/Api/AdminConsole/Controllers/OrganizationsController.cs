@@ -579,7 +579,7 @@ public class OrganizationsController : Controller
         }
     }
 
-    [HttpPost("delete-recover-token")]
+    [HttpPost("{id}/delete-recover-token")]
     [AllowAnonymous]
     public async Task PostDeleteRecoverToken(string id, [FromBody] OrganizationVerifyDeleteRecoverRequestModel model)
     {

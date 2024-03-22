@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Configuration.Provider;
+using System.Net;
 using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -980,13 +981,14 @@ public class HandlebarsMailService : IMailService
     public async Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
     {
         var message = CreateDefaultMessage("Delete Your Organization", email);
-        var model = new OrgInitiateDeleteModel
+        var model = new OrganizationInitiateDeleteModel
         {
             Token = WebUtility.UrlEncode(token),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             OrganizationId = organization.Id,
             OrganizationName = organization.Name,
+            OrganizationNameEncoded = WebUtility.UrlEncode(organization.Name),
             OrganizationBillingEmail = organization.BillingEmail,
             OrganizationPlan = organization.Plan,
             OrganizationSeats = organization.Seats.ToString(),
