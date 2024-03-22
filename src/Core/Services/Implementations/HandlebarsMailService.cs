@@ -1,5 +1,4 @@
-﻿using System.Configuration.Provider;
-using System.Net;
+﻿using System.Net;
 using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
