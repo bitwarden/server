@@ -35,9 +35,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
             ExpirationDate =
                 $"{expiringToken.ExpirationDate.ToLongDateString()} {expiringToken.ExpirationDate.ToShortTimeString()} UTC",
             OrganizationNameUrlEncoded = WebUtility.UrlEncode(orgInvitesInfo.OrganizationName),
-            WebVaultUrl = orgUser.AccessSecretsManager
-                ? globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
-                : globalSettings.BaseServiceUri.VaultWithHash,
+            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = globalSettings.SiteName,
             InitOrganization = orgInvitesInfo.InitOrganization,
             OrgSsoIdentifier = orgInvitesInfo.OrgSsoIdentifier,
