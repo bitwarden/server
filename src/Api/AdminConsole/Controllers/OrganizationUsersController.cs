@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
@@ -186,16 +187,29 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPost("invite")]
-    public async Task Invite(string orgId, [FromBody] OrganizationUserInviteRequestModel model)
+    public async Task Invite(Guid orgId, [FromBody] OrganizationUserInviteRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
+        // Flexible Collections - check the user has permission to grant access to the collections for the new user
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        if (organizationAbility?.FlexibleCollections ?? false)
+        {
+            var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
+            var authorized =
+                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess))
+                .Succeeded;
+            if (!authorized)
+            {
+                throw new NotFoundException();
+            }
+        }
+
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.InviteUsersAsync(orgGuidId, userId.Value,
+        await _organizationService.InviteUsersAsync(orgId, userId.Value,
             new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
     }
 
