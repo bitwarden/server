@@ -581,9 +581,10 @@ public class OrganizationsController : Controller
 
     [HttpPost("delete-recover-token")]
     [AllowAnonymous]
-    public async Task PostDeleteRecoverToken([FromBody] OrganizationVerifyDeleteRecoverRequestModel model)
+    public async Task PostDeleteRecoverToken(string id, [FromBody] OrganizationVerifyDeleteRecoverRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(new Guid(model.OrganizationId));
+        var orgIdGuid = new Guid(id);
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
         if (organization == null)
         {
             throw new UnauthorizedAccessException();
