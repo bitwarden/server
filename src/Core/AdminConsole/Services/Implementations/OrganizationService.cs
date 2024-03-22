@@ -537,6 +537,7 @@ public class OrganizationService : IOrganizationService
                 Storage = returnValue.Item1.MaxStorageGb,
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
+
         return returnValue;
     }
 
@@ -819,7 +820,7 @@ public class OrganizationService : IOrganizationService
             await customerService.UpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Email = organization.BillingEmail,
-                Description = organization.BusinessName
+                Description = organization.DisplayBusinessName()
             });
         }
     }
@@ -1276,7 +1277,7 @@ public class OrganizationService : IOrganizationService
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email);
                 await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
@@ -1412,18 +1413,18 @@ public class OrganizationService : IOrganizationService
         }
 
         // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(user.OrganizationId);
-        if (organizationAbility?.FlexibleCollections == true && user.Type == OrganizationUserType.Manager)
+        var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
+        if (organization.FlexibleCollections && user.Type == OrganizationUserType.Manager)
         {
             throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
         }
 
-        if (organizationAbility?.FlexibleCollections == true && user.AccessAll)
+        if (organization.FlexibleCollections && user.AccessAll)
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
         }
 
-        if (organizationAbility?.FlexibleCollections == true && collections?.Any() == true)
+        if (organization.FlexibleCollections && collections?.Any() == true)
         {
             var invalidAssociations = collections.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())
@@ -1440,7 +1441,6 @@ public class OrganizationService : IOrganizationService
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
                 var update = new SecretsManagerSubscriptionUpdate(organization, true)
                     .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
