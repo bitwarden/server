@@ -11,14 +11,15 @@ namespace Bit.Migrator;
 public class DbMigrator
 {
     private readonly string _connectionString;
-    private bool _skipDatabasePreparation;
     private readonly ILogger<DbMigrator> _logger;
+    private bool _skipDatabasePreparation;
 
-    public DbMigrator(string connectionString, bool skipDatabasePreparation = false)
+    public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
+        bool skipDatabasePreparation = false)
     {
         _connectionString = connectionString;
+        _logger = logger ?? CreateLogger();
         _skipDatabasePreparation = skipDatabasePreparation;
-        _logger = CreateLogger();
     }
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
