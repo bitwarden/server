@@ -44,6 +44,16 @@ public class TransactionRepository : Repository<Transaction, Guid>, ITransaction
         }
     }
 
+    public async Task<ICollection<Transaction>> GetManyByProviderIdAsync(Guid providerId)
+    {
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+        var results = await sqlConnection.QueryAsync<Transaction>(
+            $"[{Schema}].[Transaction_ReadByProviderId]",
+            new { ProviderId = providerId },
+            commandType: CommandType.StoredProcedure);
+        return results.ToList();
+    }
+
     public async Task<Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
     {
         using (var connection = new SqlConnection(ConnectionString))
