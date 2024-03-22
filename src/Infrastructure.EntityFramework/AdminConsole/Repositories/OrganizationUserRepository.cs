@@ -100,6 +100,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
             dbContext.UserServiceAccountAccessPolicy.RemoveRange(
                 dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
+            dbContext.UserSecretAccessPolicy.RemoveRange(
+                dbContext.UserSecretAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
 
             var orgSponsorships = await dbContext.OrganizationSponsorships
                 .Where(os => os.SponsoringOrganizationUserId == organizationUserId)
@@ -117,18 +119,36 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
-            var entities = await dbContext.OrganizationUsers
-                // TODO: Does this work?
-                .Where(ou => organizationUserIds.Contains(ou.Id))
-                .ToListAsync();
+        var targetOrganizationUserIds = organizationUserIds.ToList();
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
 
-            dbContext.OrganizationUsers.RemoveRange(entities);
-            await dbContext.SaveChangesAsync();
-        }
+        var transaction = await dbContext.Database.BeginTransactionAsync();
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(targetOrganizationUserIds);
+
+        await dbContext.CollectionUsers
+            .Where(cu => targetOrganizationUserIds.Contains(cu.OrganizationUserId))
+            .ExecuteDeleteAsync();
+
+        await dbContext.GroupUsers
+            .Where(gu => targetOrganizationUserIds.Contains(gu.OrganizationUserId))
+            .ExecuteDeleteAsync();
+
+        await dbContext.UserProjectAccessPolicy
+            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ExecuteDeleteAsync();
+        await dbContext.UserServiceAccountAccessPolicy
+            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ExecuteDeleteAsync();
+        await dbContext.UserSecretAccessPolicy
+            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ExecuteDeleteAsync();
+
+        await dbContext.OrganizationUsers
+            .Where(ou => targetOrganizationUserIds.Contains(ou.Id)).ExecuteDeleteAsync();
+
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task<Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)

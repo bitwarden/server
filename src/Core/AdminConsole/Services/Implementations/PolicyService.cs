@@ -124,14 +124,21 @@ public class PolicyService : IPolicyService
                 switch (policy.Type)
                 {
                     case PolicyType.TwoFactorAuthentication:
-                        foreach (var orgUser in removableOrgUsers)
+                        // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
+                        foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
                         {
                             if (!await userService.TwoFactorIsEnabledAsync(orgUser))
                             {
+                                if (!orgUser.HasMasterPassword)
+                                {
+                                    throw new BadRequestException(
+                                        "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
+                                }
+
                                 await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                     savingUserId);
                                 await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                    org.Name, orgUser.Email);
+                                    org.DisplayName(), orgUser.Email);
                             }
                         }
                         break;
@@ -147,7 +154,7 @@ public class PolicyService : IPolicyService
                                 await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                     savingUserId);
                                 await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
-                                    org.Name, orgUser.Email);
+                                    org.DisplayName(), orgUser.Email);
                             }
                         }
                         break;

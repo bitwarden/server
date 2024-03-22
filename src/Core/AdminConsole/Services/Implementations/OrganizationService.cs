@@ -424,7 +424,7 @@ public class OrganizationService : IOrganizationService
     /// <summary>
     /// Create a new organization in a cloud environment
     /// </summary>
-    public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
+    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(OrganizationSignup signup,
         bool provider = false)
     {
         var plan = StaticStore.GetPlan(signup.Plan);
@@ -533,9 +533,11 @@ public class OrganizationService : IOrganizationService
                 PlanName = plan.Name,
                 PlanType = plan.Type,
                 Seats = returnValue.Item1.Seats,
+                SignupInitiationPath = signup.InitiationPath,
                 Storage = returnValue.Item1.MaxStorageGb,
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
+
         return returnValue;
     }
 
@@ -552,7 +554,7 @@ public class OrganizationService : IOrganizationService
     /// <summary>
     /// Create a new organization on a self-hosted instance
     /// </summary>
-    public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(
+    public async Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
@@ -633,14 +635,14 @@ public class OrganizationService : IOrganizationService
         Directory.CreateDirectory(dir);
         await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
         await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
-        return result;
+        return (result.organization, result.organizationUser);
     }
 
     /// <summary>
     /// Private helper method to create a new organization.
     /// This is common code used by both the cloud and self-hosted methods.
     /// </summary>
-    private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
+    private async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(Organization organization,
         Guid ownerId, string ownerKey, string collectionName, bool withPayment)
     {
         try
@@ -655,6 +657,8 @@ public class OrganizationService : IOrganizationService
             });
             await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
+            // ownerId == default if the org is created by a provider - in this case it's created without an
+            // owner and the first owner is immediately invited afterwards
             OrganizationUser orgUser = null;
             if (ownerId != default)
             {
@@ -683,9 +687,10 @@ public class OrganizationService : IOrganizationService
                 await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
             }
 
+            Collection defaultCollection = null;
             if (!string.IsNullOrWhiteSpace(collectionName))
             {
-                var defaultCollection = new Collection
+                defaultCollection = new Collection
                 {
                     Name = collectionName,
                     OrganizationId = organization.Id,
@@ -695,7 +700,7 @@ public class OrganizationService : IOrganizationService
 
                 // If using Flexible Collections, give the owner Can Manage access over the default collection
                 List<CollectionAccessSelection> defaultOwnerAccess = null;
-                if (organization.FlexibleCollections)
+                if (orgUser != null && organization.FlexibleCollections)
                 {
                     defaultOwnerAccess =
                         [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
@@ -704,7 +709,7 @@ public class OrganizationService : IOrganizationService
                 await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
             }
 
-            return new Tuple<Organization, OrganizationUser>(organization, orgUser);
+            return (organization, orgUser, defaultCollection);
         }
         catch
         {
@@ -815,7 +820,7 @@ public class OrganizationService : IOrganizationService
             await customerService.UpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Email = organization.BillingEmail,
-                Description = organization.BusinessName
+                Description = organization.DisplayBusinessName()
             });
         }
     }
@@ -1272,7 +1277,7 @@ public class OrganizationService : IOrganizationService
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email);
                 await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
@@ -1408,18 +1413,18 @@ public class OrganizationService : IOrganizationService
         }
 
         // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(user.OrganizationId);
-        if (organizationAbility?.FlexibleCollections == true && user.Type == OrganizationUserType.Manager)
+        var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
+        if (organization.FlexibleCollections && user.Type == OrganizationUserType.Manager)
         {
             throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
         }
 
-        if (organizationAbility?.FlexibleCollections == true && user.AccessAll)
+        if (organization.FlexibleCollections && user.AccessAll)
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
         }
 
-        if (organizationAbility?.FlexibleCollections == true && collections?.Any() == true)
+        if (organization.FlexibleCollections && collections?.Any() == true)
         {
             var invalidAssociations = collections.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())
@@ -1436,7 +1441,6 @@ public class OrganizationService : IOrganizationService
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
                 var update = new SecretsManagerSubscriptionUpdate(organization, true)
                     .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
@@ -2523,7 +2527,7 @@ public class OrganizationService : IOrganizationService
         });
     }
 
-    public async Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName)
+    public async Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
     {
         await ValidateSignUpPoliciesAsync(userId);
 
@@ -2562,9 +2566,8 @@ public class OrganizationService : IOrganizationService
             List<CollectionAccessSelection> defaultOwnerAccess = null;
             if (org.FlexibleCollections)
             {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, userId);
                 defaultOwnerAccess =
-                    [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+                    [new CollectionAccessSelection { Id = organizationUserId, HidePasswords = false, ReadOnly = false, Manage = true }];
             }
 
             var defaultCollection = new Collection
