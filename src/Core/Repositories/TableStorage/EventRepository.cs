@@ -75,7 +75,7 @@ public class EventRepository : IEventRepository
             throw new ArgumentException(nameof(e));
         }
 
-        await CreateEntityAsync(entity);
+        await CreateEventAsync(entity);
     }
 
     public async Task CreateManyAsync(IEnumerable<IEvent> e)
@@ -98,7 +98,7 @@ public class EventRepository : IEventRepository
             var groupEntities = group.ToList();
             if (groupEntities.Count == 1)
             {
-                await CreateEntityAsync(groupEntities.First());
+                await CreateEventAsync(groupEntities.First());
                 continue;
             }
 
@@ -115,17 +115,13 @@ public class EventRepository : IEventRepository
 
                 foreach (var entity in batchEntities)
                 {
-                    batch.Add(new TableTransactionAction(TableTransactionActionType.Add, entity));
+                    batch.Add(new TableTransactionAction(TableTransactionActionType.Add,
+                        entity.ToAzureEvent()));
                 }
 
                 await _tableClient.SubmitTransactionAsync(batch);
             }
         }
-    }
-
-    public async Task CreateEntityAsync(ITableEntity entity)
-    {
-        await _tableClient.UpsertEntityAsync(entity);
     }
 
     public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,
@@ -136,15 +132,20 @@ public class EventRepository : IEventRepository
         var filter = MakeFilter(partitionKey, string.Format(rowKey, start), string.Format(rowKey, end));
 
         var result = new PagedResult<IEvent>();
-        var query = _tableClient.QueryAsync<EventTableEntity>(filter, pageOptions.PageSize);
+        var query = _tableClient.QueryAsync<AzureEvent>(filter, pageOptions.PageSize);
 
         await foreach (var page in query.AsPages(pageOptions?.ContinuationToken))
         {
             result.ContinuationToken = page.ContinuationToken;
-            result.Data.AddRange(page.Values);
+            result.Data.AddRange(page.Values.Select(e => e.ToEventTableEntity()));
         }
 
         return result;
+    }
+
+    private async Task CreateEventAsync(EventTableEntity entity)
+    {
+        await _tableClient.UpsertEntityAsync(entity.ToAzureEvent());
     }
 
     private string MakeFilter(string partitionKey, string rowStart, string rowEnd)

@@ -5,7 +5,69 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data;
 
-public class EventTableEntity : ITableEntity, IEvent
+// used solely for interaction with Azure Table Storage
+public class AzureEvent : ITableEntity
+{
+    public string PartitionKey { get; set; }
+    public string RowKey { get; set; }
+    public DateTimeOffset? Timestamp { get; set; }
+    public ETag ETag { get; set; }
+
+    public DateTime Date { get; set; }
+    public int Type { get; set; }
+    public Guid? UserId { get; set; }
+    public Guid? OrganizationId { get; set; }
+    public Guid? InstallationId { get; set; }
+    public Guid? ProviderId { get; set; }
+    public Guid? CipherId { get; set; }
+    public Guid? CollectionId { get; set; }
+    public Guid? PolicyId { get; set; }
+    public Guid? GroupId { get; set; }
+    public Guid? OrganizationUserId { get; set; }
+    public Guid? ProviderUserId { get; set; }
+    public Guid? ProviderOrganizationId { get; set; }
+    public int? DeviceType { get; set; }
+    public string IpAddress { get; set; }
+    public Guid? ActingUserId { get; set; }
+    public int? SystemUser { get; set; }
+    public string DomainName { get; set; }
+    public Guid? SecretId { get; set; }
+    public Guid? ServiceAccountId { get; set; }
+
+    public EventTableEntity ToEventTableEntity()
+    {
+        return new EventTableEntity
+        {
+            PartitionKey = PartitionKey,
+            RowKey = RowKey,
+            Timestamp = Timestamp,
+            ETag = ETag,
+
+            Date = Date,
+            Type = (EventType)Type,
+            UserId = UserId,
+            OrganizationId = OrganizationId,
+            InstallationId = InstallationId,
+            ProviderId = ProviderId,
+            CipherId = CipherId,
+            CollectionId = CollectionId,
+            PolicyId = PolicyId,
+            GroupId = GroupId,
+            OrganizationUserId = OrganizationUserId,
+            ProviderUserId = ProviderUserId,
+            ProviderOrganizationId = ProviderOrganizationId,
+            DeviceType = DeviceType.HasValue ? (DeviceType)DeviceType.Value : null,
+            IpAddress = IpAddress,
+            ActingUserId = ActingUserId,
+            SystemUser = SystemUser.HasValue ? (EventSystemUser)SystemUser.Value : null,
+            DomainName = DomainName,
+            SecretId = SecretId,
+            ServiceAccountId = ServiceAccountId
+        };
+    }
+}
+
+public class EventTableEntity : IEvent
 {
     public EventTableEntity() { }
 
@@ -58,6 +120,38 @@ public class EventTableEntity : ITableEntity, IEvent
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+
+    public AzureEvent ToAzureEvent()
+    {
+        return new AzureEvent
+        {
+            PartitionKey = PartitionKey,
+            RowKey = RowKey,
+            Timestamp = Timestamp,
+            ETag = ETag,
+
+            Date = Date,
+            Type = (int)Type,
+            UserId = UserId,
+            OrganizationId = OrganizationId,
+            InstallationId = InstallationId,
+            ProviderId = ProviderId,
+            CipherId = CipherId,
+            CollectionId = CollectionId,
+            PolicyId = PolicyId,
+            GroupId = GroupId,
+            OrganizationUserId = OrganizationUserId,
+            ProviderUserId = ProviderUserId,
+            ProviderOrganizationId = ProviderOrganizationId,
+            DeviceType = DeviceType.HasValue ? (int)DeviceType.Value : null,
+            IpAddress = IpAddress,
+            ActingUserId = ActingUserId,
+            SystemUser = SystemUser.HasValue ? (int)SystemUser.Value : null,
+            DomainName = DomainName,
+            SecretId = SecretId,
+            ServiceAccountId = ServiceAccountId
+        };
+    }
 
     public static List<EventTableEntity> IndexEvent(EventMessage e)
     {
