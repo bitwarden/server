@@ -874,4 +874,40 @@ public static class CoreHelpers
     {
         return _whiteSpaceRegex.Replace(input, newValue);
     }
+
+    public static string RedactEmailAddress(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var emailParts = email.Split('@');
+
+        string shownPart;
+        if (emailParts[0].Length > 2 && emailParts[0].Length <= 4)
+        {
+            shownPart = emailParts[0].Substring(0, 1);
+        }
+        else if (emailParts[0].Length > 4)
+        {
+            shownPart = emailParts[0].Substring(0, 2);
+        }
+        else
+        {
+            shownPart = string.Empty;
+        }
+
+        string redactedPart;
+        if (emailParts[0].Length > 4)
+        {
+            redactedPart = new string('*', emailParts[0].Length - 2);
+        }
+        else
+        {
+            redactedPart = new string('*', emailParts[0].Length - shownPart.Length);
+        }
+
+        return $"{shownPart}{redactedPart}@{emailParts[1]}";
+    }
 }
