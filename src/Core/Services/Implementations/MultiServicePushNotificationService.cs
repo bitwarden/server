@@ -43,7 +43,8 @@ public class MultiServicePushNotificationService : IPushNotificationService
         }
         else
         {
-            if (CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
+            var generalHub = globalSettings.NotificationHubs?.FirstOrDefault(h => h.HubType == NotificationHubType.General);
+            if (CoreHelpers.SettingHasValue(generalHub?.ConnectionString))
             {
                 _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
                     globalSettings, httpContextAccessor, hubLogger));
