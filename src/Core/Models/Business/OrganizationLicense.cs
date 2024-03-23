@@ -337,6 +337,10 @@ public class OrganizationLicense : ILicense
                 valid = organization.UseCustomPermissions == UseCustomPermissions;
             }
 
+            /*Version 12 added ExpirationWithoutDatePeriod, but that property is informational only and is not saved
+            to the Organization object. It's validated as part of the hash but does not need to be validated here.
+            */
+
             if (valid && Version >= 13)
             {
                 valid = organization.UseSecretsManager == UseSecretsManager &&
