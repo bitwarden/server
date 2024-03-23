@@ -12,10 +12,6 @@ public class SecretResponseModel : BaseSecretResponseModel
         Write = write;
     }
 
-    public SecretResponseModel() : base(_objectName)
-    {
-    }
-
     public bool Read { get; set; }
 
     public bool Write { get; set; }
