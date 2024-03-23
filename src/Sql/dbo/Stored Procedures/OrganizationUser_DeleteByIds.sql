@@ -58,7 +58,7 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION GoupUser_DeleteMany_GroupUsers
+        COMMIT TRANSACTION GroupUser_DeleteMany_GroupUsers
     END
 
     EXEC [dbo].[OrganizationSponsorship_OrganizationUsersDeleted] @Ids
