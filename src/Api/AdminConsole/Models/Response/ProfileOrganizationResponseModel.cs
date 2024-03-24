@@ -98,8 +98,11 @@ public class ProfileOrganizationResponseModel : ResponseModel
             }
 
             // Set 'Edit/Delete Assigned Collections' custom permissions to false
-            Permissions.EditAssignedCollections = false;
-            Permissions.DeleteAssignedCollections = false;
+            if (Permissions is not null)
+            {
+                Permissions.EditAssignedCollections = false;
+                Permissions.DeleteAssignedCollections = false;
+            }
         }
     }
 
