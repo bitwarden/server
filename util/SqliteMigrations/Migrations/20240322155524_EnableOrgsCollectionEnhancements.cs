@@ -3,20 +3,19 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+public partial class EnableOrgsCollectionEnhancements : Migration
 {
-    public partial class EnableOrgsCollectionEnhancements : Migration
+    private const string _enableOrgsCollectionEnhancementsScript = "SqliteMigrations.HelperScripts.2024-03-22_00_EnableOrgsCollectionEnhancements.sql";
+
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        private const string _enableOrgsCollectionEnhancementsScript = "SqliteMigrations.HelperScripts.2024-03-22_00_EnableOrgsCollectionEnhancements.sql";
+        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_enableOrgsCollectionEnhancementsScript));
+    }
 
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_enableOrgsCollectionEnhancementsScript));
-        }
-
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            throw new Exception("Irreversible migration");
-        }
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        throw new Exception("Irreversible migration");
     }
 }
