@@ -16,7 +16,7 @@ internal class Program
         bool repeatable = false,
         [Option('f', "folder", Description = "Folder name of database scripts")]
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
-        [Option("dry-run", Description = "Print the scripts that will be applied without actually executing them")]
+        [Option('d', "dry-run", Description = "Print the scripts that will be applied without actually executing them")]
         bool dryRun = false
         ) => MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun);
 
