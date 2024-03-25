@@ -4,7 +4,6 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -17,7 +16,7 @@ namespace Bit.MySqlMigrations.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.15")
+                .HasAnnotation("ProductVersion", "7.0.16")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
@@ -277,6 +276,15 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("GatewayCustomerId")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("GatewaySubscriptionId")
+                        .HasColumnType("longtext");
+
+                    b.Property<byte?>("GatewayType")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<string>("Name")
                         .HasColumnType("longtext");
 
@@ -486,8 +494,7 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+                        .HasColumnType("int");
 
                     b.Property<string>("ClientId")
                         .IsRequired()
@@ -664,6 +671,36 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("WebAuthnCredential", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int?>("AllocatedSeats")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("PlanType")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int?>("PurchasedSeats")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SeatMinimum")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("Id", "PlanType")
+                        .IsUnique();
+
+                    b.ToTable("ProviderPlan", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
@@ -1273,6 +1310,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<byte?>("PaymentMethodType")
                         .HasColumnType("tinyint unsigned");
 
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("char(36)");
+
                     b.Property<bool?>("Refunded")
                         .HasColumnType("tinyint(1)");
 
@@ -1288,6 +1328,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProviderId");
 
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -2008,6 +2050,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -2203,11 +2256,17 @@ namespace Bit.MySqlMigrations.Migrations
                         .WithMany("Transactions")
                         .HasForeignKey("OrganizationId");
 
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("Transactions")
                         .HasForeignKey("UserId");
 
                     b.Navigation("Organization");
+
+                    b.Navigation("Provider");
 
                     b.Navigation("User");
                 });

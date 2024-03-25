@@ -763,6 +763,14 @@ public static class CoreHelpers
         return claims;
     }
 
+    /// <summary>
+    /// Deserializes JSON data into the specified type.
+    /// If the JSON data is a null reference, it will still return an instantiated class.
+    /// However, if the JSON data is a string "null", it will return null.
+    /// </summary>
+    /// <param name="jsonData">The JSON data</param>
+    /// <typeparam name="T">The type to deserialize into</typeparam>
+    /// <returns></returns>
     public static T LoadClassFromJsonData<T>(string jsonData) where T : new()
     {
         if (string.IsNullOrWhiteSpace(jsonData))
