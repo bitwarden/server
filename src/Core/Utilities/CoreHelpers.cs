@@ -32,6 +32,11 @@ public static class CoreHelpers
     private static readonly Random _random = new Random();
     private static readonly string RealConnectingIp = "X-Connecting-IP";
     private static readonly Regex _whiteSpaceRegex = new Regex(@"\s+");
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
 
     /// <summary>
     /// Generate sequential Guid for Sql Server.
@@ -763,6 +768,14 @@ public static class CoreHelpers
         return claims;
     }
 
+    /// <summary>
+    /// Deserializes JSON data into the specified type.
+    /// If the JSON data is a null reference, it will still return an instantiated class.
+    /// However, if the JSON data is a string "null", it will return null.
+    /// </summary>
+    /// <param name="jsonData">The JSON data</param>
+    /// <typeparam name="T">The type to deserialize into</typeparam>
+    /// <returns></returns>
     public static T LoadClassFromJsonData<T>(string jsonData) where T : new()
     {
         if (string.IsNullOrWhiteSpace(jsonData))
@@ -770,22 +783,12 @@ public static class CoreHelpers
             return new T();
         }
 
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
-
-        return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, options);
+        return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, _jsonSerializerOptions);
     }
 
     public static string ClassToJsonData<T>(T data)
     {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
-
-        return System.Text.Json.JsonSerializer.Serialize(data, options);
+        return System.Text.Json.JsonSerializer.Serialize(data, _jsonSerializerOptions);
     }
 
     public static ICollection<T> AddIfNotExists<T>(this ICollection<T> list, T item)
