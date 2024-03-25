@@ -303,7 +303,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
+        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.DisplayBusinessName() ||
                                                             model.BillingEmail != organization.BillingEmail);
 
         var hasRequiredPermissions = updateBilling
@@ -464,8 +464,8 @@ public class OrganizationsController : Controller
         await _organizationService.VerifyBankAsync(orgIdGuid, model.Amount1.Value, model.Amount2.Value);
     }
 
-    [HttpPost("{id}/churn")]
-    public async Task PostChurn(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
+    [HttpPost("{id}/cancel")]
+    public async Task PostCancel(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
     {
         if (!await _currentContext.EditSubscription(id))
         {
@@ -497,19 +497,6 @@ public class OrganizationsController : Controller
         {
             EndOfPeriod = organization.IsExpired()
         });
-    }
-
-    [HttpPost("{id}/cancel")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel(string id)
-    {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.EditSubscription(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationService.CancelSubscriptionAsync(orgIdGuid);
     }
 
     [HttpPost("{id}/reinstate")]

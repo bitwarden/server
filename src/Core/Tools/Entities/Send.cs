@@ -118,6 +118,11 @@ public class Send : ITableObject<Guid>
     public bool? HideEmail { get; set; }
 
     /// <summary>
+    /// Identifies the Cipher associated with this send.
+    /// </summary>
+    public Guid? CipherId { get; set; }
+
+    /// <summary>
     /// Generates the send's <see cref="Id" />
     /// </summary>
     public void SetNewId()

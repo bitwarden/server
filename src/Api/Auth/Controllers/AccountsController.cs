@@ -821,8 +821,8 @@ public class AccountsController : Controller
         await _userService.UpdateLicenseAsync(user, license);
     }
 
-    [HttpPost("churn-premium")]
-    public async Task PostChurn([FromBody] SubscriptionCancellationRequestModel request)
+    [HttpPost("cancel")]
+    public async Task PostCancel([FromBody] SubscriptionCancellationRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
@@ -849,19 +849,6 @@ public class AccountsController : Controller
         {
             EndOfPeriod = user.IsExpired()
         });
-    }
-
-    [HttpPost("cancel-premium")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await _userService.CancelPremiumAsync(user);
     }
 
     [HttpPost("reinstate-premium")]
