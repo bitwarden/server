@@ -1,6 +1,6 @@
 -- This script will enable collection enhancements for organizations that don't have Collection Enhancements enabled.
 
--- Step 1: Create a temporary table to store the Organizations with FlexibleCollections = 1
+-- Step 1: Create a temporary table to store the Organizations with FlexibleCollections = 0
 SELECT [Id] AS [OrganizationId]
 INTO #TempOrg
 FROM [dbo].[Organization]
