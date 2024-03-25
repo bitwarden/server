@@ -1,6 +1,6 @@
 -- This script will enable collection enhancements for organizations that don't have Collection Enhancements enabled.
 
--- Step 1: Insert into a temporary table, selecting a percentage of the rows for each distinct PlanType
+-- Step 1: Create a temporary table to store the Organizations with FlexibleCollections = 1
 SELECT [Id] AS [OrganizationId]
 INTO #TempOrg
 FROM [dbo].[Organization]
