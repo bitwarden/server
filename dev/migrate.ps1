@@ -24,7 +24,8 @@ if ($all -or $postgres -or $mysql -or $sqlite) {
   dotnet ef *> $null
   if ($LASTEXITCODE -ne 0) {
     Write-Host "Entity Framework Core tools were not found in the dotnet global tools. Attempting to install"
-    dotnet tool install dotnet-ef -g
+    dotnet tool install dotnet-ef -g --version 6.0.25
+    dotnet tool restore
   }
 }
 
