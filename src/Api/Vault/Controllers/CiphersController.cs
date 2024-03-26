@@ -45,6 +45,7 @@ public class CiphersController : Controller
     private readonly IFeatureService _featureService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly ICollectionRepository _collectionRepository;
 
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
@@ -61,7 +62,8 @@ public class CiphersController : Controller
         GlobalSettings globalSettings,
         IFeatureService featureService,
         IOrganizationCiphersQuery organizationCiphersQuery,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService,
+        ICollectionRepository collectionRepository)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -75,6 +77,7 @@ public class CiphersController : Controller
         _featureService = featureService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _applicationCacheService = applicationCacheService;
+        _collectionRepository = collectionRepository;
     }
 
     [HttpGet("{id}")]
@@ -381,6 +384,45 @@ public class CiphersController : Controller
     /// <summary>
     /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
     /// </summary>
+    private async Task<bool> CanEditAllCiphersAsync(Guid organizationId)
+    {
+        var org = _currentContext.GetOrganization(organizationId);
+
+        // If not using V1, owners, admins, and users with EditAnyCollection permissions, and providers can always edit all ciphers
+        if (!await UseFlexibleCollectionsV1Async(organizationId))
+        {
+            return org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.EditAnyCollection: true } ||
+                await _currentContext.ProviderUserForOrgAsync(organizationId);
+        }
+
+        // Custom users with EditAnyCollection permissions can always edit all ciphers
+        if (org is { Type: OrganizationUserType.Custom, Permissions.EditAnyCollection: true })
+        {
+            return true;
+        }
+
+        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+
+        // Owners/Admins can only edit all ciphers if the organization has the setting enabled
+        if (orgAbility is { AllowAdminAccessToAllCollectionItems: true } && org is
+            { Type: OrganizationUserType.Admin or OrganizationUserType.Owner })
+        {
+            return true;
+        }
+
+        // Provider users can edit all ciphers in V1 (to change later)
+        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
+    /// </summary>
     private async Task<bool> CanAccessOrganizationCiphersAsync(Guid organizationId)
     {
         var org = _currentContext.GetOrganization(organizationId);
@@ -422,6 +464,97 @@ public class CiphersController : Controller
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
+    /// </summary>
+    private async Task<bool> CanEditCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
+    {
+        // If the user can edit all ciphers for the organization, just check they all belong to the org
+        if (await CanEditAllCiphersAsync(organizationId))
+        {
+            // TODO: This can likely be optimized to only query the requested ciphers and then checking they belong to the org
+            var orgCiphers = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId)).ToDictionary(c => c.Id);
+
+            // Ensure all requested ciphers are in orgCiphers
+            if (cipherIds.Any(c => !orgCiphers.ContainsKey(c)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        // The user cannot access any ciphers for the organization, we're done
+        if (!await CanAccessOrganizationCiphersAsync(organizationId))
+        {
+            return false;
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        // Select all editable ciphers for this user belonging to the organization
+        var editableOrgCipherList = (await _cipherRepository.GetManyByUserIdAsync(userId, true))
+            .Where(c => c.OrganizationId == organizationId && c.UserId == null && c.Edit).ToList();
+
+        // Special case for unassigned ciphers
+        if (await CanAccessUnassignedCiphersAsync(organizationId))
+        {
+            var unassignedCiphers =
+                (await _cipherRepository.GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(
+                    organizationId));
+
+            // Users that can access unassigned ciphers can also edit them
+            editableOrgCipherList.AddRange(unassignedCiphers.Select(c => new CipherDetails(c) { Edit = true }));
+        }
+
+        var editableOrgCiphers = editableOrgCipherList
+            .ToDictionary(c => c.Id);
+
+        if (cipherIds.Any(c => !editableOrgCiphers.ContainsKey(c)))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
+    /// This likely belongs to the BulkCollectionAuthorizationHandler
+    /// </summary>
+    private async Task<bool> CanEditItemsInCollections(Guid organizationId, IEnumerable<Guid> collectionIds)
+    {
+        if (await CanEditAllCiphersAsync(organizationId))
+        {
+            // TODO: This can likely be optimized to only query the requested ciphers and then checking they belong to the org
+            var orgCollections = (await _collectionRepository.GetManyByOrganizationIdAsync(organizationId)).ToDictionary(c => c.Id);
+
+            // Ensure all requested collections are in orgCollections
+            if (collectionIds.Any(c => !orgCollections.ContainsKey(c)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        if (!await CanAccessOrganizationCiphersAsync(organizationId))
+        {
+            return false;
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var editableCollections = (await _collectionRepository.GetManyByUserIdAsync(userId, true))
+            .Where(c => c.OrganizationId == organizationId && !c.ReadOnly)
+            .ToDictionary(c => c.Id);
+
+        if (collectionIds.Any(c => !editableCollections.ContainsKey(c)))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     [HttpPut("{id}/partial")]
@@ -491,6 +624,33 @@ public class CiphersController : Controller
 
         await _cipherService.SaveCollectionsAsync(cipher,
             model.CollectionIds.Select(c => new Guid(c)), userId, true);
+    }
+
+    [HttpPost("bulk-collections")]
+    public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
+    {
+        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(model.OrganizationId);
+
+        // Only available for organizations with flexible collections
+        if (orgAbility is null or { FlexibleCollections: false })
+        {
+            throw new NotFoundException();
+        }
+
+        if (!await CanEditCiphersAsync(model.OrganizationId, model.CipherIds) ||
+            !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))
+        {
+            throw new NotFoundException();
+        }
+
+        if (model.RemoveCollections)
+        {
+            await _collectionCipherRepository.RemoveCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
+        }
+        else
+        {
+            await _collectionCipherRepository.AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
+        }
     }
 
     [HttpDelete("{id}")]
