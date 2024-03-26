@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationEnableCollectionEnhancementTests
 {
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_User_WithAccessAll_GivesCanEditAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -43,7 +43,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanEdit(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Group_WithAccessAll_GivesCanEditAccessToAllCollections(
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
@@ -73,7 +73,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanEdit(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Manager_WithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -106,7 +106,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanManage(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_GivesCanManageAccessToAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -137,7 +137,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_GivesCanManageAccess_ToGroupAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -148,10 +148,16 @@ public class OrganizationEnableCollectionEnhancementTests
         var user = await CreateUser(userRepository);
         var organization = await CreateOrganization(organizationRepository);
         var orgUser = await CreateOrganizationUser(user, organization, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
-        var group = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
+        var group1 = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
+        var group2 = await CreateGroup(organization, accessAll: false, groupRepository, orgUser);
 
-        var collection1 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
-        var collection2 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
+        var collection1 = await CreateCollection(organization, collectionRepository, new[]
+        {
+            new CollectionAccessSelection { Id = group1.Id, HidePasswords = false, Manage = false, ReadOnly = false },
+            // Add a second group to test for overlapping access
+            new CollectionAccessSelection { Id = group2.Id, HidePasswords = false, Manage = false, ReadOnly = false }
+        });
+        var collection2 = await CreateCollection(organization, collectionRepository, new[] { new CollectionAccessSelection { Id = group1.Id, HidePasswords = false, Manage = false, ReadOnly = false } });
         var collection3 = await CreateCollection(organization, collectionRepository); // no access
 
         await organizationRepository.EnableCollectionEnhancements(organization.Id);
@@ -172,7 +178,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
 
         // Assert: group should only have Can Edit permissions (making sure no side-effects from the Manager migration)
-        var (updatedGroup, updatedGroupAccess) = await groupRepository.GetByIdWithCollectionsAsync(group.Id);
+        var (updatedGroup, updatedGroupAccess) = await groupRepository.GetByIdWithCollectionsAsync(group1.Id);
         Assert.Equal(2, updatedGroupAccess.Count);
         Assert.Contains(updatedGroupAccess, cas =>
             cas.Id == collection1.Id &&
@@ -184,7 +190,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_Manager_WithoutAccessAll_InGroupWithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
@@ -248,7 +254,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanEdit(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -283,7 +289,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanManage(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_GivesCanManageAccessToAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -315,7 +321,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_GivesCanManageAccess_ToGroupAssignedCollections(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -362,7 +368,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas.Id == collection3.Id);
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_CustomUser_WithEditAssignedCollections_WithoutAccessAll_InGroupWithAccessAll_GivesCanManageAccessToAllCollections(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
@@ -427,7 +433,7 @@ public class OrganizationEnableCollectionEnhancementTests
             CanEdit(cas));
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_NonManagers_WithoutAccessAll_NoChangeToRoleOrCollectionAccess(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -500,7 +506,7 @@ public class OrganizationEnableCollectionEnhancementTests
             cas is { HidePasswords: true, ReadOnly: false, Manage: false });
     }
 
-    [DatabaseTheory, MssqlDatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task Migrate_DoesNotAffect_OtherOrganizations(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
