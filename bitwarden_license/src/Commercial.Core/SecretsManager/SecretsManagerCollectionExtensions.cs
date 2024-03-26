@@ -61,5 +61,6 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IImportCommand, ImportCommand>();
         services.AddScoped<IEmptyTrashCommand, EmptyTrashCommand>();
         services.AddScoped<IRestoreTrashCommand, RestoreTrashCommand>();
+        services.AddScoped<IAuthorizationHandler, ProjectServiceAccountsAccessPoliciesAuthorizationHandler>();
     }
 }

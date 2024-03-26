@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Api.SecretsManager.Utilities;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 
@@ -51,7 +52,7 @@ public class PeopleAccessPoliciesRequestModel
             policies.AddRange(groupAccessPolicies);
         }
 
-        CheckForDistinctAccessPolicies(policies);
+        AccessPolicyHelpers.CheckForDistinctAccessPolicies(policies);
 
         return new ProjectPeopleAccessPolicies
         {

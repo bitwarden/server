@@ -303,6 +303,41 @@ public class AccessPoliciesController : Controller
         return new ServiceAccountPeopleAccessPoliciesResponseModel(results, userId);
     }
 
+    [HttpGet("/projects/{id}/access-policies/service-accounts")]
+    public async Task<ProjectServiceAccountsAccessPoliciesResponseModel> GetProjectServiceAccountsAccessPoliciesAsync(
+    [FromRoute] Guid id)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        await CheckUserHasWriteAccessToProjectAsync(project);
+
+        var results = await _accessPolicyRepository.GetServiceAccountPoliciesByGrantedProjectIdAsync(id);
+        return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
+    }
+
+    [HttpPut("/projects/{id}/access-policies/service-accounts")]
+    public async Task<ProjectServiceAccountsAccessPoliciesResponseModel> PutProjectServiceAccountsAccessPoliciesAsync(
+        [FromRoute] Guid id,
+        [FromBody] ServiceAccountsAccessPoliciesRequestModel request)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var projectServiceAccountsAccessPolicies = request.ToProjectServiceAccountsAccessPolicies(id, project.OrganizationId);
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, projectServiceAccountsAccessPolicies,
+            ProjectServiceAccountsAccessPoliciesOperations.Replace);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var results = await _accessPolicyRepository.ReplaceProjectServiceAccountsAsync(projectServiceAccountsAccessPolicies);
+        return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
+    }
+
     private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)
     {
         if (project == null)
