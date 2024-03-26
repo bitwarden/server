@@ -134,10 +134,13 @@ public class EventRepository : IEventRepository
         var result = new PagedResult<IEvent>();
         var query = _tableClient.QueryAsync<AzureEvent>(filter, pageOptions.PageSize);
 
-        await foreach (var page in query.AsPages(pageOptions?.ContinuationToken))
+        await using (var enumerator = query.AsPages(pageOptions?.ContinuationToken,
+            pageOptions.PageSize).GetAsyncEnumerator())
         {
-            result.ContinuationToken = page.ContinuationToken;
-            result.Data.AddRange(page.Values.Select(e => e.ToEventTableEntity()));
+            await enumerator.MoveNextAsync();
+
+            result.ContinuationToken = enumerator.Current.ContinuationToken;
+            result.Data.AddRange(enumerator.Current.Values.Select(e => e.ToEventTableEntity()));
         }
 
         return result;
