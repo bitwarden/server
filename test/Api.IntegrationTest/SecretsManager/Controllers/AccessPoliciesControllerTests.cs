@@ -772,7 +772,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountGrantedPoliciesPermissionDetailsResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Empty(result!.GrantedProjectPolicies);
+        Assert.Empty(result.GrantedProjectPolicies);
     }
 
     [Fact]
@@ -820,7 +820,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             .ReadFromJsonAsync<ServiceAccountGrantedPoliciesPermissionDetailsResponseModel>();
 
         Assert.NotNull(result);
-        Assert.NotEmpty(result!.GrantedProjectPolicies);
+        Assert.NotEmpty(result.GrantedProjectPolicies);
         Assert.Equal(initData.ServiceAccountId, result.GrantedProjectPolicies.First().AccessPolicy.ServiceAccountId);
         Assert.NotNull(result.GrantedProjectPolicies.First().AccessPolicy.ServiceAccountName);
         Assert.NotNull(result.GrantedProjectPolicies.First().AccessPolicy.GrantedProjectName);
@@ -1274,7 +1274,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         Assert.NotNull(result);
         Assert.Equal(request.ProjectGrantedPolicyRequests.First().GrantedId,
-            result!.GrantedProjectPolicies.First().AccessPolicy.GrantedProjectId);
+            result.GrantedProjectPolicies.First().AccessPolicy.GrantedProjectId);
         Assert.True(result.GrantedProjectPolicies.First().AccessPolicy.Read);
         Assert.True(result.GrantedProjectPolicies.First().AccessPolicy.Write);
         Assert.True(result.GrantedProjectPolicies.First().HasPermission);

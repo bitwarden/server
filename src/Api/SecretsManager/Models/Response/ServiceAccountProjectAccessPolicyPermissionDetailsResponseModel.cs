@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Api;
+﻿#nullable enable
+using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Api.SecretsManager.Models.Response;
@@ -7,7 +8,8 @@ public class ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel : R
 {
     private const string _objectName = "serviceAccountProjectAccessPolicyPermissionDetails";
 
-    public ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel(ServiceAccountProjectAccessPolicyPermissionDetails apPermissionDetails, string obj = _objectName) : base(obj)
+    public ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel(
+        ServiceAccountProjectAccessPolicyPermissionDetails apPermissionDetails, string obj = _objectName) : base(obj)
     {
         AccessPolicy = new ServiceAccountProjectAccessPolicyResponseModel(apPermissionDetails.AccessPolicy);
         HasPermission = apPermissionDetails.HasPermission;
@@ -18,6 +20,6 @@ public class ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel : R
     {
     }
 
-    public ServiceAccountProjectAccessPolicyResponseModel AccessPolicy { get; set; }
+    public ServiceAccountProjectAccessPolicyResponseModel AccessPolicy { get; set; } = new();
     public bool HasPermission { get; set; }
 }

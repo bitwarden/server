@@ -1,4 +1,5 @@
-﻿using Bit.Api.SecretsManager.Utilities;
+﻿#nullable enable
+using Bit.Api.SecretsManager.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
@@ -96,7 +97,5 @@ public class AccessPolicyHelpersTests
         AccessPolicyHelpers.CheckAccessPoliciesHaveReadPermission(accessPolicies);
     }
 
-    private class UnsupportedAccessPolicy : BaseAccessPolicy
-    {
-    }
+    private class UnsupportedAccessPolicy : BaseAccessPolicy;
 }

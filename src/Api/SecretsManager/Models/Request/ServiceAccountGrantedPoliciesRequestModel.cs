@@ -1,4 +1,5 @@
-﻿using Bit.Api.SecretsManager.Utilities;
+﻿#nullable enable
+using Bit.Api.SecretsManager.Utilities;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 
@@ -6,12 +7,13 @@ namespace Bit.Api.SecretsManager.Models.Request;
 
 public class ServiceAccountGrantedPoliciesRequestModel
 {
-    public IEnumerable<GrantedAccessPolicyRequest> ProjectGrantedPolicyRequests { get; set; }
+    public required IEnumerable<GrantedAccessPolicyRequest> ProjectGrantedPolicyRequests { get; set; }
 
     public ServiceAccountGrantedPolicies ToGrantedPolicies(ServiceAccount serviceAccount)
     {
-        var projectGrantedPolicies = ProjectGrantedPolicyRequests?
-            .Select(x => x.ToServiceAccountProjectAccessPolicy(serviceAccount.Id, serviceAccount.OrganizationId)).ToList();
+        var projectGrantedPolicies = ProjectGrantedPolicyRequests
+            .Select(x => x.ToServiceAccountProjectAccessPolicy(serviceAccount.Id, serviceAccount.OrganizationId))
+            .ToList();
 
         AccessPolicyHelpers.CheckForDistinctAccessPolicies(projectGrantedPolicies);
         AccessPolicyHelpers.CheckAccessPoliciesHaveReadPermission(projectGrantedPolicies);
@@ -20,7 +22,7 @@ public class ServiceAccountGrantedPoliciesRequestModel
         {
             ServiceAccountId = serviceAccount.Id,
             OrganizationId = serviceAccount.OrganizationId,
-            ProjectGrantedPolicies = projectGrantedPolicies,
+            ProjectGrantedPolicies = projectGrantedPolicies
         };
     }
 }

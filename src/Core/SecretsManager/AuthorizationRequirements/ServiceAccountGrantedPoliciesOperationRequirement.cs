@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
+﻿#nullable enable
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Bit.Core.SecretsManager.AuthorizationRequirements;
 
@@ -9,5 +10,5 @@ public class ServiceAccountGrantedPoliciesOperationRequirement : OperationAuthor
 
 public static class ServiceAccountGrantedPoliciesOperations
 {
-    public static readonly ServiceAccountGrantedPoliciesOperationRequirement Replace = new() { Name = nameof(Replace) };
+    public static readonly ServiceAccountGrantedPoliciesOperationRequirement Updates = new() { Name = nameof(Updates) };
 }

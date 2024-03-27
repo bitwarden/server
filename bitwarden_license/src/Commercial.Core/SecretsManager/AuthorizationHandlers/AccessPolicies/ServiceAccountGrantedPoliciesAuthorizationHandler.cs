@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿#nullable enable
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Models.Data;
@@ -10,30 +11,27 @@ namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicie
 
 public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHandler<
     ServiceAccountGrantedPoliciesOperationRequirement,
-    ServiceAccountGrantedPolicies>
+    ServiceAccountGrantedPoliciesUpdates>
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
-    private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public ServiceAccountGrantedPoliciesAuthorizationHandler(ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository,
-        IAccessPolicyRepository accessPolicyRepository,
         IServiceAccountRepository serviceAccountRepository)
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
-        _accessPolicyRepository = accessPolicyRepository;
         _serviceAccountRepository = serviceAccountRepository;
         _projectRepository = projectRepository;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         ServiceAccountGrantedPoliciesOperationRequirement requirement,
-        ServiceAccountGrantedPolicies resource)
+        ServiceAccountGrantedPoliciesUpdates resource)
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -50,8 +48,8 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
 
         switch (requirement)
         {
-            case not null when requirement == ServiceAccountGrantedPoliciesOperations.Replace:
-                await CanReplaceServiceAccountGrantedPoliciesAsync(context, requirement, resource, accessClient,
+            case not null when requirement == ServiceAccountGrantedPoliciesOperations.Updates:
+                await CanUpdateAsync(context, requirement, resource, accessClient,
                     userId);
                 break;
             default:
@@ -60,8 +58,8 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
         }
     }
 
-    private async Task CanReplaceServiceAccountGrantedPoliciesAsync(AuthorizationHandlerContext context,
-        ServiceAccountGrantedPoliciesOperationRequirement requirement, ServiceAccountGrantedPolicies resource,
+    private async Task CanUpdateAsync(AuthorizationHandlerContext context,
+        ServiceAccountGrantedPoliciesOperationRequirement requirement, ServiceAccountGrantedPoliciesUpdates resource,
         AccessClientType accessClient, Guid userId)
     {
         var access =
@@ -69,31 +67,14 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
                 accessClient);
         if (access.Write)
         {
-            var projectIds = resource.ProjectGrantedPolicies
-                .Select(ap => ap.GrantedProjectId!.Value)
-                .ToList();
+            var projectIdsToCheck = resource.ProjectGrantedPolicyUpdates.Select(update =>
+                update.AccessPolicy.GrantedProjectId!.Value).ToList();
+
             var sameOrganization =
-                await _projectRepository.ProjectsAreInOrganization(projectIds, resource.OrganizationId);
+                await _projectRepository.ProjectsAreInOrganization(projectIdsToCheck, resource.OrganizationId);
             if (!sameOrganization)
             {
                 return;
-            }
-
-            var currentGrantedPolices =
-                await _accessPolicyRepository.GetServiceAccountGrantedPoliciesAsync(resource.ServiceAccountId);
-
-            List<Guid> projectIdsToCheck;
-            if (currentGrantedPolices == null)
-            {
-                projectIdsToCheck = projectIds;
-            }
-            else
-            {
-                var policyChanges = currentGrantedPolices.GetPolicyChanges(resource);
-                projectIdsToCheck = policyChanges.ProjectIdsToCreate
-                    .Concat(policyChanges.ProjectIdsToUpdate)
-                    .Concat(policyChanges.ProjectIdsToDelete)
-                    .ToList();
             }
 
             var projectsAccess =

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿#nullable enable
+using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.Test.SecretsManager.Enums;
@@ -1114,7 +1115,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPolicies>());
+            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     [Theory]
@@ -1133,7 +1134,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPolicies>());
+            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     [Theory]
@@ -1152,7 +1153,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPolicies>());
+            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     [Theory]
@@ -1173,7 +1174,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPolicies>());
+            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     [Theory]
@@ -1193,7 +1194,7 @@ public class AccessPoliciesControllerTests
         await sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .ReplaceServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPolicies>());
+            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     private static AccessPoliciesCreateRequest AddRequestsOverMax(AccessPoliciesCreateRequest request)

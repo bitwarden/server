@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -28,6 +29,7 @@ public class AccessPoliciesController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
     private readonly IAccessClientQuery _accessClientQuery;
+    private readonly IServiceAccountGrantedPolicyUpdatesQuery _serviceAccountGrantedPolicyUpdatesQuery;
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
 
@@ -39,6 +41,7 @@ public class AccessPoliciesController : Controller
         IServiceAccountRepository serviceAccountRepository,
         IProjectRepository projectRepository,
         IAccessClientQuery accessClientQuery,
+        IServiceAccountGrantedPolicyUpdatesQuery serviceAccountGrantedPolicyUpdatesQuery,
         ICreateAccessPoliciesCommand createAccessPoliciesCommand,
         IDeleteAccessPolicyCommand deleteAccessPolicyCommand,
         IUpdateAccessPolicyCommand updateAccessPolicyCommand)
@@ -53,6 +56,7 @@ public class AccessPoliciesController : Controller
         _deleteAccessPolicyCommand = deleteAccessPolicyCommand;
         _updateAccessPolicyCommand = updateAccessPolicyCommand;
         _accessClientQuery = accessClientQuery;
+        _serviceAccountGrantedPolicyUpdatesQuery = serviceAccountGrantedPolicyUpdatesQuery;
     }
 
     [HttpPost("/projects/{id}/access-policies")]
@@ -317,17 +321,17 @@ public class AccessPoliciesController : Controller
             [FromBody] ServiceAccountGrantedPoliciesRequestModel request)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id) ?? throw new NotFoundException();
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, serviceAccount.OrganizationId);
-        var grantedPolicies = request.ToGrantedPolicies(serviceAccount);
+        var grantedPoliciesUpdates = await _serviceAccountGrantedPolicyUpdatesQuery.GetAsync(serviceAccount, request.ToGrantedPolicies(serviceAccount));
 
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, grantedPolicies,
-            ServiceAccountGrantedPoliciesOperations.Replace);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, grantedPoliciesUpdates,
+            ServiceAccountGrantedPoliciesOperations.Updates);
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        await _accessPolicyRepository.ReplaceServiceAccountGrantedPoliciesAsync(grantedPolicies);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, serviceAccount.OrganizationId);
+        await _accessPolicyRepository.UpdateServiceAccountGrantedPoliciesAsync(grantedPoliciesUpdates);
         var results =
             await _accessPolicyRepository.GetServiceAccountGrantedPoliciesPermissionDetailsAsync(id, userId,
                 accessClient);

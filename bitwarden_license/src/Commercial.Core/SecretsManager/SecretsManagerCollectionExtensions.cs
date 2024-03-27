@@ -44,6 +44,7 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IMaxProjectsQuery, MaxProjectsQuery>();
         services.AddScoped<ISameOrganizationQuery, SameOrganizationQuery>();
         services.AddScoped<IServiceAccountSecretsDetailsQuery, ServiceAccountSecretsDetailsQuery>();
+        services.AddScoped<IServiceAccountGrantedPolicyUpdatesQuery, ServiceAccountGrantedPolicyUpdatesQuery>();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
         services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();

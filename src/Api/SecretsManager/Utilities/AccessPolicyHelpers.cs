@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿#nullable enable
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Api.SecretsManager.Utilities;

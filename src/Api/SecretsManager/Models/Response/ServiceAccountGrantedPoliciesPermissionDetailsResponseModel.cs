@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Api;
+﻿#nullable enable
+using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Api.SecretsManager.Models.Response;
@@ -7,7 +8,8 @@ public class ServiceAccountGrantedPoliciesPermissionDetailsResponseModel : Respo
 {
     private const string _objectName = "ServiceAccountGrantedPoliciesPermissionDetails";
 
-    public ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(ServiceAccountGrantedPoliciesPermissionDetails grantedPoliciesPermissionDetails)
+    public ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(
+        ServiceAccountGrantedPoliciesPermissionDetails? grantedPoliciesPermissionDetails)
         : base(_objectName)
     {
         if (grantedPoliciesPermissionDetails == null)
@@ -23,5 +25,6 @@ public class ServiceAccountGrantedPoliciesPermissionDetailsResponseModel : Respo
     {
     }
 
-    public List<ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel> GrantedProjectPolicies { get; set; } = new();
+    public List<ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel> GrantedProjectPolicies { get; set; } =
+        [];
 }
