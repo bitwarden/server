@@ -8,7 +8,7 @@
     "build": "gulp build"
   },
   "devDependencies": {
-    "bootstrap": "4.5.0",
+    "bootstrap": "5.3.3",
     "del": "6.0.0",
     "font-awesome": "4.7.0",
     "gulp": "4.0.2",
