@@ -115,15 +115,20 @@ public class CollectionsControllerTests
 
         await sutProvider.Sut.GetManyWithDetails(organizationAbility.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdWithAccessAsync(userId, organizationAbility.Id, Arg.Any<bool>());
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithAccessAsync(organizationAbility.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithPermissionsAsync(organizationAbility.Id, userId, true);
     }
 
     [Theory, BitAutoData]
     public async Task GetOrganizationCollectionsWithGroups_MissingReadAllPermissions_GetsAssignedCollections(
-        OrganizationAbility organizationAbility, Guid userId, SutProvider<CollectionsController> sutProvider)
+        OrganizationAbility organizationAbility, Guid userId, SutProvider<CollectionsController> sutProvider, List<CollectionAdminDetails> collections)
     {
         ArrangeOrganizationAbility(sutProvider, organizationAbility);
+        collections.ForEach(c => c.OrganizationId = organizationAbility.Id);
+        collections.ForEach(c => c.Manage = false);
+
+        var managedCollection = collections.First();
+        managedCollection.Manage = true;
+
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -145,10 +150,16 @@ public class CollectionsControllerTests
                         operation.Name == nameof(BulkCollectionOperations.ReadWithAccess))))
             .Returns(AuthorizationResult.Success());
 
-        await sutProvider.Sut.GetManyWithDetails(organizationAbility.Id);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdWithPermissionsAsync(organizationAbility.Id, userId, true)
+            .Returns(collections);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdWithAccessAsync(userId, organizationAbility.Id, Arg.Any<bool>());
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdWithAccessAsync(organizationAbility.Id);
+        var response = await sutProvider.Sut.GetManyWithDetails(organizationAbility.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithPermissionsAsync(organizationAbility.Id, userId, true);
+        Assert.Single(response.Data);
+        Assert.All(response.Data, c => Assert.Equal(organizationAbility.Id, c.OrganizationId));
+        Assert.All(response.Data, c => Assert.Equal(managedCollection.Id, c.Id));
     }
 
     [Theory, BitAutoData]

@@ -36,6 +36,10 @@ public class CollectionCustomization : ICustomization
             .With(o => o.OrganizationId, orgId)
             .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed));
 
+        fixture.Customize<CollectionAdminDetails>(composer => composer
+            .With(o => o.OrganizationId, orgId)
+            .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed));
+
         fixture.Customize<CollectionUser>(c => c
             .WithGuidFromSeed(cu => cu.OrganizationUserId, _userIdSeed)
             .WithGuidFromSeed(cu => cu.CollectionId, _collectionIdSeed));
