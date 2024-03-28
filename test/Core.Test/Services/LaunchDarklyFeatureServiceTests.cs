@@ -29,14 +29,56 @@ public class LaunchDarklyFeatureServiceTests
         return new SutProvider<LaunchDarklyFeatureService>(fixture)
             .SetDependency(globalSettings)
             .SetDependency(currentContext)
-            .SetDependency(client)
-            .Create();
+            .SetDependency(client);
+    }
+
+    [Fact]
+    public void NoContext_WhenUnauthed()
+    {
+        var sutProvider = GetSutProvider(new Settings.GlobalSettings());
+
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.UserId.Returns(null as Guid?);
+        sutProvider.SetDependency(currentContext);
+
+        Assert.Equivalent(sutProvider.Create().Sut.GetFlagContext(), new FeatureFlagContext
+        {
+            UserId = null,
+            OrganizationIds = null,
+        });
+    }
+
+    [Fact]
+    public void UserContext_WhenAuthed()
+    {
+        var sutProvider = GetSutProvider(new Settings.GlobalSettings());
+
+        var userId = Guid.NewGuid();
+        var organizations = new List<CurrentContextOrganization>
+        {
+            new CurrentContextOrganization { Id = Guid.NewGuid() },
+            new CurrentContextOrganization { Id = Guid.NewGuid() },
+        };
+
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.UserId.Returns(userId);
+        currentContext.Organizations.Returns(organizations);
+        sutProvider.SetDependency(currentContext);
+
+        var expected = new FeatureFlagContext
+        {
+            UserId = userId,
+            OrganizationIds = organizations.Select(o => o.Id).ToArray(),
+        };
+
+        Assert.Equivalent(sutProvider.Create().Sut.GetFlagContext(), expected);
+
     }
 
     [Theory, BitAutoData]
     public void DefaultFeatureValue_WhenSelfHost(string key)
     {
-        var sutProvider = GetSutProvider(new Settings.GlobalSettings { SelfHosted = true });
+        var sutProvider = GetSutProvider(new Settings.GlobalSettings { SelfHosted = true }).Create();
 
         Assert.False(sutProvider.Sut.IsEnabled(key));
     }
@@ -44,7 +86,7 @@ public class LaunchDarklyFeatureServiceTests
     [Fact]
     public void DefaultFeatureValue_NoSdkKey()
     {
-        var sutProvider = GetSutProvider(new Settings.GlobalSettings());
+        var sutProvider = GetSutProvider(new Settings.GlobalSettings()).Create();
 
         Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey));
     }
@@ -54,7 +96,7 @@ public class LaunchDarklyFeatureServiceTests
     {
         var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
-        var sutProvider = GetSutProvider(settings);
+        var sutProvider = GetSutProvider(settings).Create();
 
         Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey));
     }
@@ -64,7 +106,7 @@ public class LaunchDarklyFeatureServiceTests
     {
         var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
-        var sutProvider = GetSutProvider(settings);
+        var sutProvider = GetSutProvider(settings).Create();
 
         Assert.Equal(0, sutProvider.Sut.GetIntVariation(_fakeFeatureKey));
     }
@@ -74,7 +116,7 @@ public class LaunchDarklyFeatureServiceTests
     {
         var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
-        var sutProvider = GetSutProvider(settings);
+        var sutProvider = GetSutProvider(settings).Create();
 
         Assert.Null(sutProvider.Sut.GetStringVariation(_fakeFeatureKey));
     }
@@ -82,7 +124,7 @@ public class LaunchDarklyFeatureServiceTests
     [Fact(Skip = "For local development")]
     public void GetAll()
     {
-        var sutProvider = GetSutProvider(new Settings.GlobalSettings());
+        var sutProvider = GetSutProvider(new Settings.GlobalSettings()).Create();
 
         var results = sutProvider.Sut.GetAll();
 
