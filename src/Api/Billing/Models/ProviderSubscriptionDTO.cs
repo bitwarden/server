@@ -27,6 +27,7 @@ public record ProviderSubscriptionDTO(
                     plan.Name,
                     providerPlan.SeatMinimum,
                     providerPlan.PurchasedSeats,
+                    providerPlan.AssignedSeats,
                     cost,
                     cadence);
             });
@@ -43,5 +44,6 @@ public record ProviderPlanDTO(
     string PlanName,
     int SeatMinimum,
     int PurchasedSeats,
+    int AssignedSeats,
     decimal Cost,
     string Cadence);

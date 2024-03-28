@@ -87,7 +87,8 @@ public class ProviderBillingQueriesTests
             ProviderId = providerId,
             PlanType = PlanType.EnterpriseMonthly,
             SeatMinimum = 100,
-            PurchasedSeats = 0
+            PurchasedSeats = 0,
+            AllocatedSeats = 0
         };
 
         var teamsPlan = new ProviderPlan
@@ -96,7 +97,8 @@ public class ProviderBillingQueriesTests
             ProviderId = providerId,
             PlanType = PlanType.TeamsMonthly,
             SeatMinimum = 50,
-            PurchasedSeats = 10
+            PurchasedSeats = 10,
+            AllocatedSeats = 60
         };
 
         var providerPlans = new List<ProviderPlan>
@@ -145,6 +147,7 @@ public class ProviderBillingQueriesTests
             Assert.Equal(providerPlan.ProviderId, configuredProviderPlan.ProviderId);
             Assert.Equal(providerPlan.SeatMinimum!.Value, configuredProviderPlan.SeatMinimum);
             Assert.Equal(providerPlan.PurchasedSeats!.Value, configuredProviderPlan.PurchasedSeats);
+            Assert.Equal(providerPlan.AllocatedSeats!.Value, configuredProviderPlan.AssignedSeats);
         }
     }
     #endregion

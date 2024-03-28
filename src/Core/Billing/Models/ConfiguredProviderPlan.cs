@@ -8,15 +8,17 @@ public record ConfiguredProviderPlan(
     Guid ProviderId,
     PlanType PlanType,
     int SeatMinimum,
-    int PurchasedSeats)
+    int PurchasedSeats,
+    int AssignedSeats)
 {
     public static ConfiguredProviderPlan From(ProviderPlan providerPlan) =>
-        providerPlan.Configured
+        providerPlan.IsConfigured()
             ? new ConfiguredProviderPlan(
                 providerPlan.Id,
                 providerPlan.ProviderId,
                 providerPlan.PlanType,
                 providerPlan.SeatMinimum.GetValueOrDefault(0),
-                providerPlan.PurchasedSeats.GetValueOrDefault(0))
+                providerPlan.PurchasedSeats.GetValueOrDefault(0),
+                providerPlan.AllocatedSeats.GetValueOrDefault(0))
             : null;
 }
