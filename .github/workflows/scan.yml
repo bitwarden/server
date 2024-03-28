@@ -7,25 +7,33 @@ on:
       - "main"
       - "rc"
       - "hotfix-rc"
-  pull_request:
-
-permissions: read-all
+  pull_request_target:
+    types: [opened, synchronize]
 
 jobs:
+  check-run:
+    name: Check PR run
+    uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
+
   sast:
     name: SAST scan
     runs-on: ubuntu-22.04
+    needs: check-run
     permissions:
+      contents: read
+      pull-requests: write
       security-events: write
 
     steps:
       - name: Check out repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{  github.event.pull_request.head.sha }}
 
       - name: Scan with Checkmarx
         uses: checkmarx/ast-github-action@749fec53e0db0f6404a97e2e0807c3e80e3583a7 #2.0.23
         env:
-          INCREMENTAL: "${{ github.event_name == 'pull_request' && '--sast-incremental' || '' }}"
+          INCREMENTAL: "${{ contains(github.event_name, 'pull_request') && '--sast-incremental' || '' }}"
         with:
           project_name: ${{ github.repository }}
           cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
@@ -35,19 +43,24 @@ jobs:
           additional_params: --report-format sarif --output-path . ${{ env.INCREMENTAL }}
 
       - name: Upload Checkmarx results to GitHub
-        uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+        uses: github/codeql-action/upload-sarif@1b1aada464948af03b950897e5eb522f92603cc2 # v3.24.9
         with:
           sarif_file: cx_result.sarif
 
   quality:
     name: Quality scan
     runs-on: ubuntu-22.04
+    needs: check-run
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Check out repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
+          ref: ${{  github.event.pull_request.head.sha }}
 
       - name: Scan with SonarCloud
         uses: sonarsource/sonarcloud-github-action@49e6cd3b187936a73b8280d59ffd9da69df63ec9 # v2.1.1
