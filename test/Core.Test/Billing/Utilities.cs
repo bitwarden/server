@@ -1,4 +1,4 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Billing;
 using Xunit;
 
 using static Bit.Core.Billing.Utilities;
@@ -11,7 +11,7 @@ public static class Utilities
     {
         var contactSupport = ContactSupport();
 
-        var exception = await Assert.ThrowsAsync<GatewayException>(function);
+        var exception = await Assert.ThrowsAsync<BillingException>(function);
 
         Assert.Equal(contactSupport.Message, exception.Message);
     }

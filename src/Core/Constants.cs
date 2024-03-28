@@ -130,6 +130,7 @@ public static class FeatureFlagKeys
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
+    public const string EnableConsolidatedBilling = "enable-consolidated-billing";
 
     public static List<string> GetAllKeys()
     {
