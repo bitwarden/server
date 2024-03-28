@@ -150,22 +150,17 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, true)]
     [BitAutoData(false, false)]
     [BitAutoData(true, false)]
+    [BitAutoData(true, true)]
     public async Task CanEditAnyCipherAsAdminAsync_Providers(
-        bool fcV1Enabled, bool shouldSucceed, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
+        bool fcV1Enabled, bool restrictProviders, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
     )
     {
-        if (fcV1Enabled)
-        {
-            sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(shouldSucceed);
-        }
-        else
-        {
-            sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organization.Id).Returns(shouldSucceed);
-        }
+        // Simulate that the user is a provider for the organization
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organization.Id).Returns(true);
+
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -176,6 +171,7 @@ public class CiphersControllerTests
             AllowAdminAccessToAllCollectionItems = false
         });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(fcV1Enabled);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(restrictProviders);
 
         var requestModel = new CipherCreateRequestModel
         {
@@ -183,7 +179,7 @@ public class CiphersControllerTests
             CollectionIds = new List<Guid>()
         };
 
-        if (shouldSucceed)
+        if (!fcV1Enabled || !restrictProviders)
         {
             await sutProvider.Sut.PostAdmin(requestModel);
             await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
