@@ -101,5 +101,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrganizationUserAuthorizationHandler>();
+        services.AddScoped<ICollectionAuthorizationHelpers, CollectionAuthorizationHelpers>();
     }
 }

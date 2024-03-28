@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Services;
@@ -14,13 +15,16 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
 {
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectionAuthorizationHandler(
         ICurrentContext currentContext,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IApplicationCacheService applicationCacheService)
     {
         _currentContext = currentContext;
         _featureService = featureService;
+        _applicationCacheService = applicationCacheService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -49,6 +53,10 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
 
             case not null when requirement.Name == nameof(CollectionOperations.ReadAllWithAccess):
                 await CanReadAllWithAccessAsync(context, requirement, org);
+                break;
+
+            case not null when requirement.Name == nameof(CollectionOperations.EditAll):
+                await CanEditAllAsync(context, requirement, org);
                 break;
         }
     }
@@ -92,6 +100,36 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         }
 
         // Allow provider users to read collections if they are a provider for the target organization
+        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task CanEditAllAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
+        CurrentContextOrganization? org)
+    {
+        // Users with EditAnyCollection permission can always update a collection
+        if (org is
+            { Permissions.EditAnyCollection: true })
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
+        // Owners and Admins can update any collection only if permitted by collection management settings
+        if (org is not null)
+        {
+            var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(org.Id);
+            if ((organizationAbility is { AllowAdminAccessToAllCollectionItems: true } || !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)) &&
+                org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+
+        // Allow providers to manage collections if they are a provider for the target organization
         if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
         {
             context.Succeed(requirement);

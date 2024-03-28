@@ -1,8 +1,11 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -292,5 +295,86 @@ public class CollectionAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.True(context.HasFailed);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanEditAllAsync_WhenAdminOrOwner_WithV1Disabled_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<CollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.EditAll(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanEditAllAsync_WhenAdminOrOwner_PermittedByCollectionManagementSettings_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<CollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization, OrganizationAbility organizationAbility)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+        organizationAbility.Id = organization.Id;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = true;
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.EditAll(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+            sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
+                .Returns(organizationAbility);
+            sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanEditAllAsync_WhenAdminOrOwner_NotPermittedByCollectionManagementSettings_Failure(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<CollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization, OrganizationAbility organizationAbility)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+        organizationAbility.Id = organization.Id;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.EditAll(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+            sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
+                .Returns(organizationAbility);
+            sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
     }
 }

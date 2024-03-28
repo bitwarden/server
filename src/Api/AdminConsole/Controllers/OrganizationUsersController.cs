@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
@@ -10,10 +11,12 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -43,6 +46,7 @@ public class OrganizationUsersController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
+    private readonly ICollectionAuthorizationHelpers _collectionAuthorizationHelpers;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -59,7 +63,8 @@ public class OrganizationUsersController : Controller
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ICollectionAuthorizationHelpers collectionAuthorizationHelpers)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -76,6 +81,7 @@ public class OrganizationUsersController : Controller
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
+        _collectionAuthorizationHelpers = collectionAuthorizationHelpers;
     }
 
     [HttpGet("{id}")]
@@ -183,16 +189,29 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPost("invite")]
-    public async Task Invite(string orgId, [FromBody] OrganizationUserInviteRequestModel model)
+    public async Task Invite(Guid orgId, [FromBody] OrganizationUserInviteRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
+        // Flexible Collections - check the user has permission to grant access to the collections for the new user
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        if (organizationAbility?.FlexibleCollections ?? false)
+        {
+            var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
+            var authorized =
+                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess))
+                .Succeeded;
+            if (!authorized)
+            {
+                throw new NotFoundException();
+            }
+        }
+
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.InviteUsersAsync(orgGuidId, userId.Value,
+        await _organizationService.InviteUsersAsync(orgId, userId.Value,
             new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
     }
 
@@ -338,8 +357,10 @@ public class OrganizationUsersController : Controller
             ? null
             : model.Groups;
 
+        var collections = await _collectionAuthorizationHelpers.GetCollectionAccessToUpdateAsync(User, organizationAbility, model.Collections);
+
         await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), groups);
+            collections, groups);
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
