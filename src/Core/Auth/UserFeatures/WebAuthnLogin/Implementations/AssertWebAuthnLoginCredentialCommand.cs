@@ -46,8 +46,17 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
         // Always return true, since we've already filtered the credentials after user id
         IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
         var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
-        var assertionVerificationResult = await _fido2.MakeAssertionAsync(
-            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+
+        Fido2NetLib.Objects.AssertionVerificationResult assertionVerificationResult = null;
+        try
+        {
+            assertionVerificationResult = await _fido2.MakeAssertionAsync(
+                assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+        }
+        catch (Fido2VerificationException)
+        {
+            throw new BadRequestException("Unable to verify credential.");
+        }
 
         // Update SignatureCounter
         credential.Counter = (int)assertionVerificationResult.Counter;
