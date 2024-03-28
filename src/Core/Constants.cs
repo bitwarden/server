@@ -146,7 +146,8 @@ public static class FeatureFlagKeys
         {
             { TrustedDeviceEncryption, "true" },
             { Fido2VaultCredentials, "true" },
-            { DuoRedirect, "true" }
+            { DuoRedirect, "true" },
+            { FlexibleCollectionsSignup, "true" }
         };
     }
 }
