@@ -15,5 +15,12 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id);
     Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take);
     Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId);
+    /// <summary>
+    /// Enable collection enhancements.
+    /// </summary>
+    /// <remarks>
+    /// On SQL, it will migrate the data for the given organization.
+    /// On EF providers, it will migrate the data for all existing organizations.
+    /// </remarks>
     Task EnableCollectionEnhancements(Guid organizationId);
 }
