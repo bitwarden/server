@@ -526,7 +526,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        const int newSmServiceAccounts = 199;
+        const int newSmServiceAccounts = 49;
 
         organization.SmServiceAccounts = newSmServiceAccounts - 10;
 
@@ -537,7 +537,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Plan has a minimum of 200 service accounts", exception.Message);
+        Assert.Contains("Plan has a minimum of 50 service accounts", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
