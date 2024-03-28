@@ -8,6 +8,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -59,7 +60,7 @@ public class CiphersControllerTests
     [BitAutoData(OrganizationUserType.Admin, false, false)]
     [BitAutoData(OrganizationUserType.Owner, false, false)]
     [BitAutoData(OrganizationUserType.Custom, false, false)]
-    public async Task CanEditAnyCipherAsAdminAsync_FlexibleCollections_Success(
+    public async Task CanEditCiphersAsAdminAsync_FlexibleCollections_Success(
         OrganizationUserType userType, bool allowAdminsAccessToAllItems, bool shouldSucceed,
         CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
     )
@@ -105,17 +106,15 @@ public class CiphersControllerTests
     /// To be removed after FlexibleCollections is fully released
     /// </summary>
     [Theory]
-    [BitAutoData(false, false, true)]
-    [BitAutoData(false, true, true)]
-    [BitAutoData(true, false, true)]
-    [BitAutoData(false, false, false)]
-    [BitAutoData(false, true, false)]
-    [BitAutoData(true, false, false)]
-    public async Task CanEditAnyCipherAsAdminAsync_NonFlexibleCollections(
-        bool fcV1Enabled, bool fcEnabled, bool shouldSucceed,
-        CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
+    [BitAutoData(true, true)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, false)]
+    public async Task CanEditCiphersAsAdminAsync_NonFlexibleCollections(
+        bool v1Enabled, bool shouldSucceed, CurrentContextOrganization organization, Guid userId, Cipher cipher, SutProvider<CiphersController> sutProvider
     )
     {
+        cipher.OrganizationId = organization.Id;
         sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organization.Id).Returns(shouldSucceed);
 
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -124,28 +123,23 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
-            FlexibleCollections = fcEnabled,
+            FlexibleCollections = false,
             AllowAdminAccessToAllCollectionItems = false
         });
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(fcV1Enabled);
-
-        var requestModel = new CipherCreateRequestModel
-        {
-            Cipher = new CipherRequestModel { OrganizationId = organization.Id.ToString(), Type = CipherType.Login, Login = new CipherLoginModel() },
-            CollectionIds = new List<Guid>()
-        };
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(v1Enabled);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
 
         if (shouldSucceed)
         {
-            await sutProvider.Sut.PostAdmin(requestModel);
+            await sutProvider.Sut.DeleteAdmin(cipher.Id.ToString());
             await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
-                .SaveAsync(default, default, default);
+                .DeleteAsync(default, default);
         }
         else
         {
-            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostAdmin(requestModel));
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipher.Id.ToString()));
             await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
-                .SaveAsync(default, default, default);
+                .DeleteAsync(default, default);
         }
     }
 
@@ -154,10 +148,11 @@ public class CiphersControllerTests
     [BitAutoData(true, true)]
     [BitAutoData(false, false)]
     [BitAutoData(true, false)]
-    public async Task CanEditAnyCipherAsAdminAsync_Providers(
-        bool fcV1Enabled, bool shouldSucceed, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
+    public async Task CanEditCiphersAsAdminAsync_Providers(
+        bool fcV1Enabled, bool shouldSucceed, Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
     )
     {
+        cipher.OrganizationId = organization.Id;
         if (fcV1Enabled)
         {
             sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(shouldSucceed);
@@ -169,6 +164,9 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipher });
+
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
@@ -177,23 +175,17 @@ public class CiphersControllerTests
         });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(fcV1Enabled);
 
-        var requestModel = new CipherCreateRequestModel
-        {
-            Cipher = new CipherRequestModel { OrganizationId = organization.Id.ToString(), Type = CipherType.Login, Login = new CipherLoginModel() },
-            CollectionIds = new List<Guid>()
-        };
-
         if (shouldSucceed)
         {
-            await sutProvider.Sut.PostAdmin(requestModel);
+            await sutProvider.Sut.DeleteAdmin(cipher.Id.ToString());
             await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
-                .SaveAsync(default, default, default);
+                .DeleteAsync(default, default);
         }
         else
         {
-            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostAdmin(requestModel));
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipher.Id.ToString()));
             await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
-                .SaveAsync(default, default, default);
+                .DeleteAsync(default, default);
         }
 
         if (fcV1Enabled)
