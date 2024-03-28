@@ -3,6 +3,7 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Executions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -272,6 +273,12 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public Task EnableCollectionEnhancements(Guid organizationId)
     {
-        throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var execution = new OrganizationEnableCollectionEnhancementsExecution();
+        execution.Run(dbContext);
+
+        return Task.FromResult(0);
     }
 }

@@ -14,4 +14,10 @@
     <ItemGroup>
       <ProjectReference Include="..\Core\Core.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Include="AdminConsole\Repositories\Executions\MySql\OrganizationEnableCollectionEnhancements.sql" />
+      <EmbeddedResource Include="AdminConsole\Repositories\Executions\Postgres\OrganizationEnableCollectionEnhancements.psql" />
+      <EmbeddedResource Include="AdminConsole\Repositories\Executions\Sqlite\OrganizationEnableCollectionEnhancements.sql" />
+    </ItemGroup>
 </Project>
