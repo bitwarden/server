@@ -118,7 +118,8 @@ public class AssignSeatsToClientOrganizationCommandTests
                 ProviderId = provider.Id,
                 PurchasedSeats = 0,
                 // 100 minimum
-                SeatMinimum = 100
+                SeatMinimum = 100,
+                AllocatedSeats = 50
             },
             new()
             {
@@ -126,7 +127,8 @@ public class AssignSeatsToClientOrganizationCommandTests
                 PlanType = PlanType.EnterpriseMonthly,
                 ProviderId = provider.Id,
                 PurchasedSeats = 0,
-                SeatMinimum = 500
+                SeatMinimum = 500,
+                AllocatedSeats = 0
             }
         };
 
@@ -149,8 +151,8 @@ public class AssignSeatsToClientOrganizationCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.Id == organization.Id && org.Seats == seats));
 
-        await sutProvider.GetDependency<IProviderPlanRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(
-            Arg.Any<ProviderPlan>());
+        await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            pPlan => pPlan.AllocatedSeats == 60));
     }
 
     [Theory, BitAutoData]
@@ -175,7 +177,8 @@ public class AssignSeatsToClientOrganizationCommandTests
                 ProviderId = provider.Id,
                 PurchasedSeats = 0,
                 // 100 minimum
-                SeatMinimum = 100
+                SeatMinimum = 100,
+                AllocatedSeats = 95
             },
             new()
             {
@@ -183,7 +186,8 @@ public class AssignSeatsToClientOrganizationCommandTests
                 PlanType = PlanType.EnterpriseMonthly,
                 ProviderId = provider.Id,
                 PurchasedSeats = 0,
-                SeatMinimum = 500
+                SeatMinimum = 500,
+                AllocatedSeats = 0
             }
         };
 
@@ -208,7 +212,7 @@ public class AssignSeatsToClientOrganizationCommandTests
 
         // 105 total seats - 100 minimum = 5 purchased seats
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
-            pPlan => pPlan.Id == providerPlan.Id && pPlan.PurchasedSeats == 5));
+            pPlan => pPlan.Id == providerPlan.Id && pPlan.PurchasedSeats == 5 && pPlan.AllocatedSeats == 105));
     }
 
     [Theory, BitAutoData]
@@ -234,7 +238,8 @@ public class AssignSeatsToClientOrganizationCommandTests
                 // 10 additional purchased seats
                 PurchasedSeats = 10,
                 // 100 seat minimum
-                SeatMinimum = 100
+                SeatMinimum = 100,
+                AllocatedSeats = 110
             },
             new()
             {
@@ -242,7 +247,8 @@ public class AssignSeatsToClientOrganizationCommandTests
                 PlanType = PlanType.EnterpriseMonthly,
                 ProviderId = provider.Id,
                 PurchasedSeats = 0,
-                SeatMinimum = 500
+                SeatMinimum = 500,
+                AllocatedSeats = 0
             }
         };
 
@@ -267,7 +273,7 @@ public class AssignSeatsToClientOrganizationCommandTests
 
         // 120 total seats - 100 seat minimum = 20 purchased seats
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
-            pPlan => pPlan.Id == providerPlan.Id && pPlan.PurchasedSeats == 20));
+            pPlan => pPlan.Id == providerPlan.Id && pPlan.PurchasedSeats == 20 && pPlan.AllocatedSeats == 120));
     }
 
     [Theory, BitAutoData]
@@ -293,7 +299,8 @@ public class AssignSeatsToClientOrganizationCommandTests
                 // 10 additional purchased seats
                 PurchasedSeats = 10,
                 // 100 seat minimum
-                SeatMinimum = 100
+                SeatMinimum = 100,
+                AllocatedSeats = 110
             },
             new()
             {
@@ -301,7 +308,8 @@ public class AssignSeatsToClientOrganizationCommandTests
                 PlanType = PlanType.EnterpriseMonthly,
                 ProviderId = provider.Id,
                 PurchasedSeats = 0,
-                SeatMinimum = 500
+                SeatMinimum = 500,
+                AllocatedSeats = 0
             }
         };
 
@@ -326,6 +334,6 @@ public class AssignSeatsToClientOrganizationCommandTests
 
         // Being below the seat minimum means no purchased seats.
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
-            pPlan => pPlan.Id == providerPlan.Id && pPlan.PurchasedSeats == 0));
+            pPlan => pPlan.Id == providerPlan.Id && pPlan.PurchasedSeats == 0 && pPlan.AllocatedSeats == 80));
     }
 }
