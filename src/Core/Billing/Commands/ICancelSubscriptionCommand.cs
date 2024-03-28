@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Stripe;
 
 namespace Bit.Core.Billing.Commands;
@@ -17,7 +16,6 @@ public interface ICancelSubscriptionCommand
     /// <param name="subscription">The <see cref="User"/> or <see cref="Organization"/> with the subscription to cancel.</param>
     /// <param name="offboardingSurveyResponse">An <see cref="OffboardingSurveyResponse"/> DTO containing user-provided feedback on why they are cancelling the subscription.</param>
     /// <param name="cancelImmediately">A flag indicating whether to cancel the subscription immediately or at the end of the subscription period.</param>
-    /// <exception cref="GatewayException">Thrown when the provided subscription is already in an inactive state.</exception>
     Task CancelSubscription(
         Subscription subscription,
         OffboardingSurveyResponse offboardingSurveyResponse,

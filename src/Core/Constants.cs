@@ -114,7 +114,6 @@ public static class FeatureFlagKeys
     /// </summary>
     public const string FlexibleCollections = "flexible-collections-disabled-do-not-use";
     public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
-    public const string BulkCollectionAccess = "bulk-collection-access";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
@@ -131,6 +130,7 @@ public static class FeatureFlagKeys
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
+    public const string EnableConsolidatedBilling = "enable-consolidated-billing";
 
     public static List<string> GetAllKeys()
     {
