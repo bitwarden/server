@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,16 +21,19 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IFeatureService _featureService;
     private Guid _targetOrganizationId;
 
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService,
+        IFeatureService featureService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _applicationCacheService = applicationCacheService;
+        _featureService = featureService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -192,9 +196,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return;
         }
 
-        // Owners and Admins can update any collection only if permitted by collection management settings
+        // If V1 is enabled, Owners and Admins can update any collection only if permitted by collection management settings
         var organizationAbility = await GetOrganizationAbilityAsync(org);
-        if (organizationAbility is { AllowAdminAccessToAllCollectionItems: true } &&
+        if ((organizationAbility is { AllowAdminAccessToAllCollectionItems: true }  || !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)) &&
             org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             context.Succeed(requirement);
