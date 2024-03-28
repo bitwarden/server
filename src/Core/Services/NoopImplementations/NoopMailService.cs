@@ -268,5 +268,10 @@ public class NoopMailService : IMailService
     {
         return Task.FromResult(0);
     }
+
+    public Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
+    {
+        return Task.FromResult(0);
+    }
 }
 

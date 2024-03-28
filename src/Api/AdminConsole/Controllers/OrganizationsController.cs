@@ -566,6 +566,19 @@ public class OrganizationsController : Controller
         }
     }
 
+    [HttpPost("{id}/delete-recover-token")]
+    [AllowAnonymous]
+    public async Task PostDeleteRecoverToken(string id, [FromBody] OrganizationVerifyDeleteRecoverRequestModel model)
+    {
+        var orgIdGuid = new Guid(id);
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        if (organization == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+        await _organizationService.DeleteAsync(organization, model.Token);
+    }
+
     [HttpPost("{id}/import")]
     public async Task Import(string id, [FromBody] ImportOrganizationUsersRequestModel model)
     {
