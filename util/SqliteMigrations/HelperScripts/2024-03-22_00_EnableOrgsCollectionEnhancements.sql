@@ -28,7 +28,7 @@
         ("OU"."Type" = 3 OR
          ("OU"."Type" = 4 AND
           "OU"."Permissions" IS NOT NULL AND
-          JSON_VALID("OU"."Permissions") AND JSON_EXTRACT(ou."Permissions", '$.editAssignedCollections') = 'true'));
+          JSON_VALID("OU"."Permissions") AND JSON_EXTRACT(ou."Permissions", '$.editAssignedCollections') = 1));
 
 -- Step 1
     -- Update existing rows in "CollectionGroups"
