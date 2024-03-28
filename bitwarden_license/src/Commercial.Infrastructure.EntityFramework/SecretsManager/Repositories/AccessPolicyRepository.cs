@@ -25,10 +25,14 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             policy.GrantedProject.GroupAccessPolicies.Any(ap =>
                 ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write));
 
-    public async Task<List<Core.SecretsManager.Entities.BaseAccessPolicy>> CreateManyAsync(List<Core.SecretsManager.Entities.BaseAccessPolicy> baseAccessPolicies)
+    public async Task<List<Core.SecretsManager.Entities.BaseAccessPolicy>> CreateManyAsync(
+        List<Core.SecretsManager.Entities.BaseAccessPolicy> baseAccessPolicies)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var serviceAccountIds = new List<Guid>();
         foreach (var baseAccessPolicy in baseAccessPolicies)
         {
             baseAccessPolicy.SetNewId();
@@ -64,12 +68,22 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                     {
                         var entity = Mapper.Map<ServiceAccountProjectAccessPolicy>(accessPolicy);
                         await dbContext.AddAsync(entity);
+                        serviceAccountIds.Add(entity.ServiceAccountId!.Value);
                         break;
                     }
             }
         }
 
+        if (serviceAccountIds.Count > 0)
+        {
+            var utcNow = DateTime.UtcNow;
+            await dbContext.ServiceAccount
+                .Where(sa => serviceAccountIds.Contains(sa.Id))
+                .ExecuteUpdateAsync(setters => setters.SetProperty(sa => sa.RevisionDate, utcNow));
+        }
+
         await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
         return baseAccessPolicies;
     }
 
@@ -190,6 +204,16 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         var entity = await dbContext.AccessPolicies.FindAsync(id);
         if (entity != null)
         {
+            if (entity is ServiceAccountProjectAccessPolicy serviceAccountProjectAccessPolicy)
+            {
+                var serviceAccount =
+                    await dbContext.ServiceAccount.FindAsync(serviceAccountProjectAccessPolicy.ServiceAccountId);
+                if (serviceAccount != null)
+                {
+                    serviceAccount.RevisionDate = DateTime.UtcNow;
+                }
+            }
+
             dbContext.Remove(entity);
             await dbContext.SaveChangesAsync();
         }
