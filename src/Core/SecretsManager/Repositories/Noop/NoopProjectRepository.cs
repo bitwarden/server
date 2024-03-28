@@ -62,4 +62,10 @@ public class NoopProjectRepository : IProjectRepository
     {
         return Task.FromResult(0);
     }
+
+    public Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds,
+        Guid userId, AccessClientType accessType)
+    {
+        return Task.FromResult(null as Dictionary<Guid, (bool Read, bool Write)>);
+    }
 }
