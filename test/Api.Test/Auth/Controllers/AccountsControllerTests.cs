@@ -57,7 +57,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly ISubscriberQueries _subscriberQueries;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -90,7 +90,7 @@ public class AccountsControllerTests : IDisposable
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
-        _getSubscriptionQuery = Substitute.For<IGetSubscriptionQuery>();
+        _subscriberQueries = Substitute.For<ISubscriberQueries>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _cipherValidator =
@@ -122,7 +122,7 @@ public class AccountsControllerTests : IDisposable
             _rotateUserKeyCommand,
             _featureService,
             _cancelSubscriptionCommand,
-            _getSubscriptionQuery,
+            _subscriberQueries,
             _referenceEventService,
             _currentContext,
             _cipherValidator,
