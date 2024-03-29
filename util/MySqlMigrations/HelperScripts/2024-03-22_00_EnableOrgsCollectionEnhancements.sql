@@ -24,6 +24,7 @@
     DROP TEMPORARY TABLE IF EXISTS `TempUserManagers`;
     CREATE TEMPORARY TABLE `TempUserManagers` AS
     SELECT `OU`.`Id` AS `OrganizationUserId`,
+           `OU`.`OrganizationId`,
            CASE WHEN `OU`.`Type` = 3 THEN 1 ELSE 0 END AS `IsManager`
     FROM `OrganizationUser` `OU`
     INNER JOIN `Organization` `O` ON `OU`.`OrganizationId` = `O`.`Id`
