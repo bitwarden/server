@@ -574,7 +574,7 @@ public class OrganizationsController : Controller
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
         if (organization == null)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
         await _organizationService.DeleteAsync(organization, model.Token);
     }

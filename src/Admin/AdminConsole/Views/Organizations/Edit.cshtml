@@ -39,7 +39,7 @@
 
             document.getElementById('initiate-delete-form').addEventListener('submit', (e) => {
                 const email = prompt('Enter the email address of the owner/admin that your want to ' +
-                    'initiate the organization delete verification process with.');
+                    'request the organization delete verification process with.');
                 document.getElementById('AdminEmail').value = email;
                 if (email == null || email === '') {
                     e.preventDefault();
@@ -113,11 +113,11 @@
         {
             <form asp-action="DeleteInitiation" asp-route-id="@Model.Organization.Id" id="initiate-delete-form">
                 <input type="hidden" name="AdminEmail" id="AdminEmail" />
-                <button class="btn btn-danger mr-2" type="submit">Initiate Delete</button>
+                <button class="btn btn-danger mr-2" type="submit">Request Delete</button>
             </form>
             <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
                   onsubmit="return confirm('Are you sure you want to hard delete this organization?')">
-                <button class="btn btn-danger" type="submit">Hard Delete</button>
+                <button class="btn btn-outline-danger" type="submit">Delete</button>
             </form>
         }
     </div>

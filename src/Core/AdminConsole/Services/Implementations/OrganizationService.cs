@@ -750,7 +750,7 @@ public class OrganizationService : IOrganizationService
 
     public async Task DeleteAsync(Organization organization, string token)
     {
-        if (!_orgDeleteTokenDataFactory.TryUnprotect(token, out var data) && data.IsValid(organization))
+        if (!_orgDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.IsValid(organization))
         {
             throw new BadRequestException("Invalid token.");
         }
