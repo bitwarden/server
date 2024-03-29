@@ -41,7 +41,7 @@
     SET `CG`.`ReadOnly` = 0,
         `CG`.`HidePasswords` = 0,
         `CG`.`Manage` = 0
-    WHERE `C`.`OrganizationId` = `TG`.`OrganizationId`;
+    WHERE `CG`.`CollectionId` = `C`.`Id` AND `C`.`OrganizationId` = `TG`.`OrganizationId`;
 
     -- Insert new rows into `CollectionGroups`
     INSERT INTO `CollectionGroups` (`CollectionId`, `GroupId`, `ReadOnly`, `HidePasswords`, `Manage`)
@@ -58,13 +58,14 @@
 
 -- Step 2
     -- Update existing rows in `CollectionUsers`
-    UPDATE `CollectionUsers` `target`
-    INNER JOIN `Collection` `C` ON `target`.`CollectionId` = `C`.`Id`
+    UPDATE `CollectionUsers` `CU`
+    INNER JOIN `Collection` `C` ON `CU`.`CollectionId` = `C`.`Id`
     INNER JOIN `TempUsersAccessAll` `TU`
-        ON `C`.`OrganizationId` = `TU`.`OrganizationId` AND `target`.`OrganizationUserId` = `TU`.`OrganizationUserId`
-    SET `target`.`ReadOnly` = 0,
-        `target`.`HidePasswords` = 0,
-        `target`.`Manage` = 0;
+        ON `C`.`OrganizationId` = `TU`.`OrganizationId` AND `CU`.`OrganizationUserId` = `TU`.`OrganizationUserId`
+    SET `CU`.`ReadOnly` = 0,
+        `CU`.`HidePasswords` = 0,
+        `CU`.`Manage` = 0
+    WHERE `CU`.`CollectionId` = `C`.`Id`;
 
     -- Insert new rows into `CollectionUsers`
     INSERT INTO `CollectionUsers` (`CollectionId`, `OrganizationUserId`, `ReadOnly`, `HidePasswords`, `Manage`)
