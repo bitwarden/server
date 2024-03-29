@@ -130,9 +130,23 @@
     SET `U`.`AccountRevisionDate` = UTC_TIMESTAMP();
 
 -- Step 5: Set `FlexibleCollections` = 1 for all organizations that have not yet been migrated.
-    UPDATE `Organization`
-    SET `FlexibleCollections` = 1
-    WHERE `FlexibleCollections` = 0;
+    UPDATE `Organization` AS `O`
+    JOIN (
+        SELECT DISTINCT `TG`.`OrganizationId`
+        FROM `TempGroupsAccessAll` AS `TG`
+
+        UNION
+
+        SELECT DISTINCT `TU`.`OrganizationId`
+        FROM `TempUsersAccessAll` AS `TU`
+
+        UNION
+
+        SELECT DISTINCT `OU`.`OrganizationId`
+        FROM `TempUserManagers` AS `OU`
+    ) AS `TempOrgIds` ON `O`.`Id` = `TempOrgIds`.`OrganizationId`
+    SET `O`.`FlexibleCollections` = 1
+    WHERE `O`.`FlexibleCollections` = 0;
 
 -- Step 6: Drop the temporary tables
     DROP TEMPORARY TABLE IF EXISTS `TempGroupsAccessAll`;

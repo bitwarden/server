@@ -143,7 +143,9 @@
 -- Step 5: Set "FlexibleCollections" = 1 for all organizations that have not yet been migrated.
     UPDATE "Organization"
     SET "FlexibleCollections" = 1
-    WHERE "FlexibleCollections" = 0;
+    WHERE "Id" IN (
+        SELECT DISTINCT "TG"."OrganizationId"
+        FROM "TempGroupsAccessAll" AS "TG"
 
 -- Step 6: Drop the temporary tables
     DROP TABLE IF EXISTS "TempGroupsAccessAll";

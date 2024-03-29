@@ -131,9 +131,24 @@
     );
 
 -- Step 5: Set "FlexibleCollections" = true for all organizations that have not yet been migrated.
-    UPDATE "Organization"
+    UPDATE "Organization" AS "O"
     SET "FlexibleCollections" = true
-    WHERE "FlexibleCollections" = false;
+    FROM (
+        SELECT DISTINCT "TG"."OrganizationId"
+        FROM "TempGroupsAccessAll" AS "TG"
+
+        UNION
+
+        SELECT DISTINCT "TU"."OrganizationId"
+        FROM "TempUsersAccessAll" AS "TU"
+
+        UNION
+
+        SELECT DISTINCT "OU"."OrganizationId"
+        FROM "TempUserManagers" AS "OU"
+    ) AS "TempOrgIds"
+    WHERE "O"."Id" = "TempOrgIds"."OrganizationId"
+    AND "O"."FlexibleCollections" = false;
 
 -- Step 6: Drop the temporary tables
     DROP TABLE IF EXISTS "TempGroupsAccessAll";
