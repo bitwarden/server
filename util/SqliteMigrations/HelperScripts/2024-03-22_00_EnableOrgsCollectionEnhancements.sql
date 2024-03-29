@@ -62,16 +62,14 @@
 
 -- Step 2
     -- Update existing rows in "CollectionUsers"
-    UPDATE "CollectionUsers"
-    SET
-        "ReadOnly" = 0,
+    UPDATE "CollectionUsers" "CU"
+    SET "ReadOnly" = 0,
         "HidePasswords" = 0,
         "Manage" = 0
-    WHERE "CollectionId" IN (
-        SELECT "C"."Id"
-        FROM "Collection" "C"
-        INNER JOIN "TempUsersAccessAll" "TU" ON "C"."OrganizationId" = "TU"."OrganizationId"
-    );
+    FROM "Collection" "C"
+    INNER JOIN "TempUsersAccessAll" AS "TU" ON "CU"."OrganizationUserId" = "TU"."OrganizationUserId" AND
+        "C"."OrganizationId" = "TU"."OrganizationId"
+    WHERE "CU"."CollectionId" = "C"."Id";
 
     -- Insert new rows into "CollectionUsers"
     INSERT INTO "CollectionUsers" ("CollectionId", "OrganizationUserId", "ReadOnly", "HidePasswords", "Manage")

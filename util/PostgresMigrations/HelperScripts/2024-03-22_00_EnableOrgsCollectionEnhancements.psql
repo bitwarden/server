@@ -40,8 +40,8 @@
         "HidePasswords" = false,
         "Manage" = false
     FROM "Collection" "C"
-    WHERE "CG"."CollectionId" = "C"."Id"
-    AND "C"."OrganizationId" IN (SELECT "OrganizationId" FROM "TempGroupsAccessAll");
+    JOIN "TempGroupsAccessAll" "TG" ON "CG"."GroupId" = "TG"."GroupId"
+    WHERE "CG"."CollectionId" = "C"."Id" AND "C"."OrganizationId" = TG."OrganizationId";
 
     -- Insert new rows into CollectionGroups
     INSERT INTO "CollectionGroups" ("CollectionId", "GroupId", "ReadOnly", "HidePasswords", "Manage")
@@ -58,14 +58,14 @@
 
 -- Step 2
     -- Update existing rows in CollectionUsers
-    UPDATE "CollectionUsers" "target"
+    UPDATE "CollectionUsers" "CU"
     SET "ReadOnly" = false,
         "HidePasswords" = false,
         "Manage" = false
     FROM "Collection" "C"
-    WHERE "target"."CollectionId" = "C"."Id"
-    AND "C"."OrganizationId" IN (SELECT "OrganizationId" FROM "TempUsersAccessAll")
-    AND "target"."OrganizationUserId" IN (SELECT "OrganizationUserId" FROM "TempUsersAccessAll");
+    INNER JOIN "TempUsersAccessAll" "TU" ON "C"."OrganizationId" = "TU"."OrganizationId" AND
+        "CU"."OrganizationUserId" = "TU"."OrganizationUserId"
+    WHERE "CU"."CollectionId" = "C"."Id";
 
     -- Insert new rows into CollectionUsers
     INSERT INTO "CollectionUsers" ("CollectionId", "OrganizationUserId", "ReadOnly", "HidePasswords", "Manage")
