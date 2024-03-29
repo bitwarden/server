@@ -266,6 +266,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
             await _loginHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             accessType = AccessClientType.User;
 
             var accessPolicies = new List<BaseAccessPolicy>
@@ -393,6 +394,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task GetSecretsByProject_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await _loginHelper.LoginAsync(_email);
         await _loginHelper.LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
