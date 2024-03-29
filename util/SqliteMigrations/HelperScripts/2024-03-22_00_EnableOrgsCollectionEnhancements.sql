@@ -24,6 +24,7 @@
     DROP TABLE IF EXISTS "TempUserManagers";
     CREATE TEMPORARY TABLE "TempUserManagers" AS
     SELECT "OU"."Id" AS "OrganizationUserId",
+           "OU"."OrganizationId",
            CASE WHEN "OU"."Type" = 3 THEN 1 ELSE 0 END AS "IsManager"
     FROM "OrganizationUser" "OU"
     INNER JOIN "Organization" "O" ON "OU"."OrganizationId" = "O"."Id"
@@ -62,14 +63,17 @@
 
 -- Step 2
     -- Update existing rows in "CollectionUsers"
-    UPDATE "CollectionUsers" "CU"
+    UPDATE "CollectionUsers"
     SET "ReadOnly" = 0,
         "HidePasswords" = 0,
         "Manage" = 0
-    FROM "Collection" "C"
-    INNER JOIN "TempUsersAccessAll" AS "TU" ON "CU"."OrganizationUserId" = "TU"."OrganizationUserId" AND
-        "C"."OrganizationId" = "TU"."OrganizationId"
-    WHERE "CU"."CollectionId" = "C"."Id";
+    WHERE EXISTS (
+        SELECT 1
+        FROM "Collection" AS "C"
+        INNER JOIN "TempUsersAccessAll" AS "TU" ON "CollectionUsers"."OrganizationUserId" = "TU"."OrganizationUserId" AND
+                                                   "C"."OrganizationId" = "TU"."OrganizationId"
+        WHERE "CollectionUsers"."CollectionId" = "C"."Id"
+    );
 
     -- Insert new rows into "CollectionUsers"
     INSERT INTO "CollectionUsers" ("CollectionId", "OrganizationUserId", "ReadOnly", "HidePasswords", "Manage")
