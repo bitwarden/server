@@ -28,6 +28,7 @@ public record TeamsStarterPlan2023 : Plan
 
         PasswordManager = new TeamsStarter2023PasswordManagerFeatures();
         SecretsManager = new TeamsStarter2023SecretsManagerFeatures();
+        LegacyYear = 2024;
     }
 
     private record TeamsStarter2023SecretsManagerFeatures : SecretsManagerPlanFeatures
