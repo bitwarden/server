@@ -141,8 +141,7 @@
         ) AS "CombinedOrgUsers" ON "OU"."Id" = "CombinedOrgUsers"."OrganizationUserId"
     );
 
--- Step 5
-    -- Set "FlexibleCollections" = 1 for all organizations that have not yet been migrated.
+-- Step 5: Set "FlexibleCollections" = 1 for all organizations that have not yet been migrated.
     UPDATE "Organization"
     SET "FlexibleCollections" = 1
     WHERE "FlexibleCollections" = 0;
