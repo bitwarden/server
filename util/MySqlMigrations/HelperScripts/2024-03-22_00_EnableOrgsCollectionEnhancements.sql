@@ -1,6 +1,7 @@
 -- Step 1: AccessAll migration for Groups
     -- Create a temporary table to store the groups with AccessAll = 1
-    CREATE TEMPORARY TABLE IF NOT EXISTS `TempGroupsAccessAll` AS
+    DROP TEMPORARY TABLE IF EXISTS `TempGroupsAccessAll`;
+    CREATE TEMPORARY TABLE `TempGroupsAccessAll` AS
     SELECT `G`.`Id` AS `GroupId`,
            `G`.`OrganizationId`
     FROM `Group` `G`
@@ -9,7 +10,8 @@
 
 -- Step 2: AccessAll migration for OrganizationUsers
     -- Create a temporary table to store the OrganizationUsers with AccessAll = 1
-    CREATE TEMPORARY TABLE IF NOT EXISTS `TempUsersAccessAll` AS
+    DROP TEMPORARY TABLE IF EXISTS `TempUsersAccessAll`;
+    CREATE TEMPORARY TABLE `TempUsersAccessAll` AS
     SELECT `OU`.`Id` AS `OrganizationUserId`,
            `OU`.`OrganizationId`
     FROM `OrganizationUser` `OU`
@@ -19,7 +21,8 @@
 -- Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission update their existing CollectionUsers rows and insert new rows with [Manage] = 1
 -- and finally update all OrganizationUsers with Manager role to User role
     -- Create a temporary table to store the OrganizationUsers with Manager role or 'EditAssignedCollections' permission
-    CREATE TEMPORARY TABLE IF NOT EXISTS `TempUserManagers` AS
+    DROP TEMPORARY TABLE IF EXISTS `TempUserManagers`;
+    CREATE TEMPORARY TABLE `TempUserManagers` AS
     SELECT `OU`.`Id` AS `OrganizationUserId`,
            CASE WHEN `OU`.`Type` = 3 THEN 1 ELSE 0 END AS `IsManager`
     FROM `OrganizationUser` `OU`
@@ -138,7 +141,7 @@ START TRANSACTION;
 -- Commit transaction
 COMMIT;
 
--- Step 5: Drop the temporary tables
+-- Step 6: Drop the temporary tables
 DROP TEMPORARY TABLE IF EXISTS `TempGroupsAccessAll`;
 DROP TEMPORARY TABLE IF EXISTS `TempUsersAccessAll`;
 DROP TEMPORARY TABLE IF EXISTS `TempUserManagers`;
