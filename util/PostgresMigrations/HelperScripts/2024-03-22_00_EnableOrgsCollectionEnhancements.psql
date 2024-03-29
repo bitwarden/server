@@ -24,7 +24,8 @@
     DROP TABLE IF EXISTS "TempUserManagers";
     CREATE TEMPORARY TABLE "TempUserManagers" AS
     SELECT "OU"."Id" AS "OrganizationUserId",
-           CASE WHEN "OU"."Type" = 3 THEN true ELSE false END AS "IsManager"
+        "OU"."OrganizationId",
+        CASE WHEN "OU"."Type" = 3 THEN true ELSE false END AS "IsManager"
     FROM "OrganizationUser" "OU"
     INNER JOIN "Organization" "O" ON "OU"."OrganizationId" = "O"."Id"
     WHERE "O"."FlexibleCollections" = false AND
@@ -39,9 +40,12 @@
     SET "ReadOnly" = false,
         "HidePasswords" = false,
         "Manage" = false
-    FROM "Collection" "C"
-    JOIN "TempGroupsAccessAll" "TG" ON "CG"."GroupId" = "TG"."GroupId"
-    WHERE "CG"."CollectionId" = "C"."Id" AND "C"."OrganizationId" = TG."OrganizationId";
+    WHERE "CG"."CollectionId" IN (
+        SELECT "C"."Id"
+        FROM "Collection" "C"
+        INNER JOIN "TempGroupsAccessAll" "TG" ON "C"."OrganizationId" = "TG"."OrganizationId"
+        WHERE "CG"."GroupId" = "TG"."GroupId"
+    );
 
     -- Insert new rows into CollectionGroups
     INSERT INTO "CollectionGroups" ("CollectionId", "GroupId", "ReadOnly", "HidePasswords", "Manage")
@@ -62,10 +66,12 @@
     SET "ReadOnly" = false,
         "HidePasswords" = false,
         "Manage" = false
-    FROM "Collection" "C"
-    INNER JOIN "TempUsersAccessAll" "TU" ON "C"."OrganizationId" = "TU"."OrganizationId" AND
-        "CU"."OrganizationUserId" = "TU"."OrganizationUserId"
-    WHERE "CU"."CollectionId" = "C"."Id";
+    WHERE "CU"."CollectionId" IN (
+        SELECT "C"."Id"
+        FROM "Collection" "C"
+        INNER JOIN "TempUsersAccessAll" "TU" ON "C"."OrganizationId" = "TU"."OrganizationId"
+        WHERE "CU"."OrganizationUserId" = "TU"."OrganizationUserId"
+    );
 
     -- Insert new rows into CollectionUsers
     INSERT INTO "CollectionUsers" ("CollectionId", "OrganizationUserId", "ReadOnly", "HidePasswords", "Manage")
