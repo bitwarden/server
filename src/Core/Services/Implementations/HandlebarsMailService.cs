@@ -979,7 +979,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
     {
-        var message = CreateDefaultMessage("Delete Your Organization", email);
+        var message = CreateDefaultMessage("Request to Delete Your Organization", email);
         var model = new OrganizationInitiateDeleteModel
         {
             Token = WebUtility.UrlEncode(token),
