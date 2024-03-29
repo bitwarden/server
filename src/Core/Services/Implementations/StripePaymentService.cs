@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -757,14 +758,14 @@ public class StripePaymentService : IPaymentService
         }).ToList();
     }
 
-    private async Task<string> FinalizeSubscriptionChangeAsync(IStorableSubscriber storableSubscriber,
+    private async Task<string> FinalizeSubscriptionChangeAsync(ISubscriber subscriber,
         SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate, bool invoiceNow = false)
     {
         // remember, when in doubt, throw
         var subGetOptions = new SubscriptionGetOptions();
         // subGetOptions.AddExpand("customer");
         subGetOptions.AddExpand("customer.tax");
-        var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId, subGetOptions);
+        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subGetOptions);
         if (sub == null)
         {
             throw new GatewayException("Subscription not found.");
@@ -848,7 +849,7 @@ public class StripePaymentService : IPaymentService
                     if (chargeNow)
                     {
                         paymentIntentClientSecret =
-                            await PayInvoiceAfterSubscriptionChangeAsync(storableSubscriber, invoice);
+                            await PayInvoiceAfterSubscriptionChangeAsync(subscriber, invoice);
                     }
                     else
                     {
@@ -925,6 +926,17 @@ public class StripePaymentService : IPaymentService
     {
         return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
     }
+
+    public Task<string> AdjustSeats(
+        Provider provider,
+        StaticStore.Plan plan,
+        int currentlySubscribedSeats,
+        int newlySubscribedSeats,
+        DateTime? prorationDate = null)
+        => FinalizeSubscriptionChangeAsync(
+            provider,
+            new ProviderSubscriptionUpdate(plan.Type, currentlySubscribedSeats, newlySubscribedSeats),
+            prorationDate);
 
     public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
     {
