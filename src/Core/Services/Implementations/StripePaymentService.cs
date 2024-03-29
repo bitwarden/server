@@ -776,6 +776,7 @@ public class StripePaymentService : IPaymentService
         var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
         var isPm5864DollarThresholdEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5864DollarThreshold);
+        var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
 
         var subUpdateOptions = new SubscriptionUpdateOptions
         {
@@ -787,25 +788,11 @@ public class StripePaymentService : IPaymentService
             CollectionMethod = "send_invoice",
             ProrationDate = prorationDate,
         };
-        var immediatelyInvoice = false;
-        if (!invoiceNow && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
+
+        if (!invoiceNow && isAnnualPlan && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
         {
-            var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
-            {
-                Customer = storableSubscriber.GatewayCustomerId,
-                Subscription = storableSubscriber.GatewaySubscriptionId,
-                SubscriptionItems = ToInvoiceSubscriptionItemOptions(updatedItemOptions),
-                SubscriptionProrationBehavior = Constants.CreateProrations,
-                SubscriptionProrationDate = prorationDate,
-                SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
-            });
-
-            var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
-            immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 50000;
-
-            subUpdateOptions.BillingCycleAnchor = immediatelyInvoice
-                ? SubscriptionBillingCycleAnchor.Now
-                : SubscriptionBillingCycleAnchor.Unchanged;
+            subUpdateOptions.PendingInvoiceItemInterval =
+                new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
         }
 
         var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
@@ -858,21 +845,17 @@ public class StripePaymentService : IPaymentService
             {
                 try
                 {
-                    if (!isPm5864DollarThresholdEnabled || immediatelyInvoice || invoiceNow)
+                    if (chargeNow)
                     {
-                        if (chargeNow)
-                        {
-                            paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(storableSubscriber, invoice);
-                        }
-                        else
-                        {
-                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new InvoiceFinalizeOptions
-                            {
-                                AutoAdvance = false,
-                            });
-                            await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
-                            paymentIntentClientSecret = null;
-                        }
+                        paymentIntentClientSecret =
+                            await PayInvoiceAfterSubscriptionChangeAsync(storableSubscriber, invoice);
+                    }
+                    else
+                    {
+                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
+                            new InvoiceFinalizeOptions { AutoAdvance = false, });
+                        await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
+                        paymentIntentClientSecret = null;
                     }
                 }
                 catch
