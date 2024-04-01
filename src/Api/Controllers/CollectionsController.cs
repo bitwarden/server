@@ -641,7 +641,7 @@ public class CollectionsController : Controller
 
         await _collectionService.SaveAsync(collection, groups, users);
 
-        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(orgId))
+        if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(orgId) == null && await _currentContext.ProviderUserForOrgAsync(orgId)))
         {
             return CollectionDetailsResponseModel.FromUnassigned(collection);
         }
@@ -665,7 +665,7 @@ public class CollectionsController : Controller
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
         await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
 
-        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId))
+        if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(collection.OrganizationId) == null && await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId)))
         {
             return CollectionDetailsResponseModel.FromUnassigned(collection);
         }
