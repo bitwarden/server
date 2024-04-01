@@ -58,6 +58,6 @@ public class ProviderOrganizationController(
             organization,
             requestBody.AssignedSeats);
 
-        return TypedResults.NoContent();
+        return TypedResults.Ok();
     }
 }
