@@ -14,7 +14,7 @@ public class ProviderPlanRepository(
         globalSettings.SqlServer.ConnectionString,
         globalSettings.SqlServer.ReadOnlyConnectionString), IProviderPlanRepository
 {
-    public async Task<ProviderPlan> GetByProviderId(Guid providerId)
+    public async Task<ICollection<ProviderPlan>> GetByProviderId(Guid providerId)
     {
         var sqlConnection = new SqlConnection(ConnectionString);
 
@@ -23,6 +23,6 @@ public class ProviderPlanRepository(
             new { ProviderId = providerId },
             commandType: CommandType.StoredProcedure);
 
-        return results.FirstOrDefault();
+        return results.ToArray();
     }
 }
