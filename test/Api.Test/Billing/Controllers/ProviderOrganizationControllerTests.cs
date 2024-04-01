@@ -163,6 +163,6 @@ public class ProviderOrganizationControllerTests
                 organization,
                 requestBody.AssignedSeats);
 
-        Assert.IsType<NoContent>(result);
+        Assert.IsType<Ok>(result);
     }
 }
