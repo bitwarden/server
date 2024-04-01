@@ -248,6 +248,11 @@ public class OrganizationsController : Controller
     [RequirePermission(Permission.Org_Delete)]
     public async Task<IActionResult> DeleteInitiation(Guid id, OrganizationInitiateDeleteModel model)
     {
+        if (!ModelState.IsValid)
+        {
+            return RedirectToAction("Edit", new { id });
+        }
+
         var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization != null)
         {

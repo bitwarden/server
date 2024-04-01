@@ -568,7 +568,7 @@ public class OrganizationsController : Controller
 
     [HttpPost("{id}/delete-recover-token")]
     [AllowAnonymous]
-    public async Task PostDeleteRecoverToken(string id, [FromBody] OrganizationVerifyDeleteRecoverRequestModel model)
+    public async Task PostDeleteRecoverToken(Guid id, [FromBody] OrganizationVerifyDeleteRecoverRequestModel model)
     {
         var orgIdGuid = new Guid(id);
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
