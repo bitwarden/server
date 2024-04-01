@@ -8,12 +8,12 @@ public class OrganizationInitiateDeleteModel : BaseMailModel
         WebVaultUrl,
         OrganizationId,
         Token,
-        OrganizationNameEncoded);
+        OrganizationNameUrlEncoded);
 
     public string Token { get; set; }
     public Guid OrganizationId { get; set; }
     public string OrganizationName { get; set; }
-    public string OrganizationNameEncoded { get; set; }
+    public string OrganizationNameUrlEncoded { get; set; }
     public string OrganizationPlan { get; set; }
     public string OrganizationSeats { get; set; }
     public string OrganizationBillingEmail { get; set; }

@@ -987,7 +987,7 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             OrganizationId = organization.Id,
             OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false),
-            OrganizationNameEncoded = WebUtility.UrlEncode(organization.Name),
+            OrganizationNameUrlEncoded = WebUtility.UrlEncode(organization.Name),
             OrganizationBillingEmail = organization.BillingEmail,
             OrganizationPlan = organization.Plan,
             OrganizationSeats = organization.Seats.ToString(),

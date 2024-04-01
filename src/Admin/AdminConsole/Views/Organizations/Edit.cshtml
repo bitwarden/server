@@ -18,33 +18,43 @@
 
     <script>
         (() => {
-            document.getElementById('teams-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
-                    alert('Organization is not on a free plan.');
-                    return;
-                }
-                setTrialDefaults('@((byte)PlanType.TeamsAnnually)');
-                togglePlanFeatures('@((byte)PlanType.TeamsAnnually)');
-                document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
-            });
-            document.getElementById('enterprise-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
-                    alert('Organization is not on a free plan.');
-                    return;
-                }
-                setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
-                togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
-                document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
-            });
+            const treamsTrialButton = document.getElementById('teams-trial');
+            if (treamsTrialButton != null) {
+                treamsTrialButton.addEventListener('click', () => {
+                    if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
+                        alert('Organization is not on a free plan.');
+                        return;
+                    }
+                    setTrialDefaults('@((byte)PlanType.TeamsAnnually)');
+                    togglePlanFeatures('@((byte)PlanType.TeamsAnnually)');
+                    document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
+                });
+            }
 
-            document.getElementById('initiate-delete-form').addEventListener('submit', (e) => {
-                const email = prompt('Enter the email address of the owner/admin that your want to ' +
-                    'request the organization delete verification process with.');
-                document.getElementById('AdminEmail').value = email;
-                if (email == null || email === '') {
-                    e.preventDefault();
-                }
-            });
+            const entTrialButton = document.getElementById('enterprise-trial');
+            if (entTrialButton != null) {
+                entTrialButton.addEventListener('click', () => {
+                    if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
+                        alert('Organization is not on a free plan.');
+                        return;
+                    }
+                    setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
+                    togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
+                    document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
+                });
+            }
+
+            const initDeleteButton = document.getElementById('initiate-delete-form');
+            if (initDeleteButton != null) {
+                initDeleteButton.addEventListener('submit', (e) => {
+                    const email = prompt('Enter the email address of the owner/admin that your want to ' +
+                        'request the organization delete verification process with.');
+                    document.getElementById('AdminEmail').value = email;
+                    if (email == null || email === '') {
+                        e.preventDefault();
+                    }
+                });
+            }
 
             function setTrialDefaults(planType) {
                 // Plan
