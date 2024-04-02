@@ -1,5 +1,4 @@
-﻿using System.Linq.Expressions;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Enums.AccessPolicies;
 using Bit.Core.SecretsManager.Models.Data;
@@ -20,12 +19,6 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         mapper)
     {
     }
-
-    private static Expression<Func<ServiceAccountProjectAccessPolicy, bool>> UserHasWriteAccessToProject(Guid userId) =>
-        policy =>
-            policy.GrantedProject.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-            policy.GrantedProject.GroupAccessPolicies.Any(ap =>
-                ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write));
 
     public async Task<List<Core.SecretsManager.Entities.BaseAccessPolicy>> CreateManyAsync(List<Core.SecretsManager.Entities.BaseAccessPolicy> baseAccessPolicies)
     {
@@ -453,6 +446,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         await UpsertServiceAccountGrantedPoliciesAsync(dbContext, currentAccessPolicies,
             updates.ProjectGrantedPolicyUpdates.Where(pu => pu.Operation != AccessPolicyOperation.Delete).ToList());
+        await UpdateServiceAccountRevisionAsync(dbContext, updates.ServiceAccountId);
         await dbContext.SaveChangesAsync();
     }
 
@@ -603,5 +597,14 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             _ => throw new ArgumentOutOfRangeException(nameof(accessClientType), accessClientType, null)
         };
         return permissionDetails;
+    }
+
+    private static async Task UpdateServiceAccountRevisionAsync(DatabaseContext dbContext, Guid serviceAccountId)
+    {
+        var entity = await dbContext.ServiceAccount.FindAsync(serviceAccountId);
+        if (entity != null)
+        {
+            entity.RevisionDate = DateTime.UtcNow;
+        }
     }
 }
