@@ -1,9 +1,12 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
+using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
@@ -20,15 +23,23 @@ public class ProvidersController : Controller
     private readonly IProviderService _providerService;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
+    private readonly IStartSubscriptionCommand _startSubscriptionCommand;
+    private readonly ILogger<ProvidersController> _logger;
 
     public ProvidersController(IUserService userService, IProviderRepository providerRepository,
-        IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings)
+        IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings,
+        IFeatureService featureService, IStartSubscriptionCommand startSubscriptionCommand,
+        ILogger<ProvidersController> logger)
     {
         _userService = userService;
         _providerRepository = providerRepository;
         _providerService = providerService;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
+        _featureService = featureService;
+        _startSubscriptionCommand = startSubscriptionCommand;
+        _logger = logger;
     }
 
     [HttpGet("{id:guid}")]
@@ -85,6 +96,30 @@ public class ProvidersController : Controller
 
         var response =
             await _providerService.CompleteSetupAsync(model.ToProvider(provider), userId, model.Token, model.Key);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        {
+            var taxInfo = new TaxInfo
+            {
+                BillingAddressCountry = model.TaxInfo.Country,
+                BillingAddressPostalCode = model.TaxInfo.PostalCode,
+                TaxIdNumber = model.TaxInfo.TaxId,
+                BillingAddressLine1 = model.TaxInfo.Line1,
+                BillingAddressLine2 = model.TaxInfo.Line2,
+                BillingAddressCity = model.TaxInfo.City,
+                BillingAddressState = model.TaxInfo.State
+            };
+
+            try
+            {
+                await _startSubscriptionCommand.StartSubscription(provider, taxInfo);
+            }
+            catch
+            {
+                // We don't want to trap the user on the setup page, so we'll let this go through but the provider will be in an un-billable state.
+                _logger.LogError("Failed to create subscription for provider with ID {ID} during setup", provider.Id);
+            }
+        }
 
         return new ProviderResponseModel(response);
     }

@@ -255,7 +255,7 @@ public class StripeController : Controller
                 customerGetOptions.AddExpand("tax");
                 var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
                 if (!subscription.AutomaticTax.Enabled &&
-                    customer.Tax?.AutomaticTax == StripeCustomerAutomaticTaxStatus.Supported)
+                    customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported)
                 {
                     subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
                         new SubscriptionUpdateOptions
