@@ -1603,10 +1603,25 @@ public class StripePaymentService : IPaymentService
             return subscriptionInfo;
         }
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["test_clock"]
+        });
+
         if (sub != null)
         {
             subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.AC1795_UpdatedSubscriptionStatusSection))
+            {
+                var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(sub);
+
+                if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
+                {
+                    subscriptionInfo.Subscription.SuspensionDate = suspensionDate;
+                    subscriptionInfo.Subscription.UnpaidPeriodEndDate = unpaidPeriodEndDate;
+                }
+            }
         }
 
         if (sub is { CanceledAt: not null } || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -1922,5 +1937,46 @@ public class StripePaymentService : IPaymentService
         return subscriberName.Length <= 30
             ? subscriberName
             : subscriberName[..30];
+    }
+
+    private async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
+    {
+        if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
+        {
+            return (null, null);
+        }
+
+        var openInvoices = await _stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+        {
+            Query = $"subscription:'{subscription.Id}' status:'open'"
+        });
+
+        if (openInvoices.Count == 0)
+        {
+            return (null, null);
+        }
+
+        var currentDate = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        switch (subscription.CollectionMethod)
+        {
+            case "charge_automatically":
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                        .MinBy(invoice => invoice.Created);
+
+                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
+                }
+            case "send_invoice":
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.DueDate < currentDate)
+                        .MinBy(invoice => invoice.Created);
+
+                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
+                }
+            default: return (null, null);
+        }
     }
 }
