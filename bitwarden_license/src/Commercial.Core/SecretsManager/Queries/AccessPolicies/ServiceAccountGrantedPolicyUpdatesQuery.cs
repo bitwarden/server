@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Enums.AccessPolicies;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
@@ -17,16 +16,16 @@ public class ServiceAccountGrantedPolicyUpdatesQuery : IServiceAccountGrantedPol
         _accessPolicyRepository = accessPolicyRepository;
     }
 
-    public async Task<ServiceAccountGrantedPoliciesUpdates> GetAsync(ServiceAccount serviceAccount,
+    public async Task<ServiceAccountGrantedPoliciesUpdates> GetAsync(
         ServiceAccountGrantedPolicies grantedPolicies)
     {
-        var currentPolicies = await _accessPolicyRepository.GetServiceAccountGrantedPoliciesAsync(serviceAccount.Id);
+        var currentPolicies = await _accessPolicyRepository.GetServiceAccountGrantedPoliciesAsync(grantedPolicies.ServiceAccountId);
         if (currentPolicies == null)
         {
             return new ServiceAccountGrantedPoliciesUpdates
             {
-                ServiceAccountId = serviceAccount.Id,
-                OrganizationId = serviceAccount.OrganizationId,
+                ServiceAccountId = grantedPolicies.ServiceAccountId,
+                OrganizationId = grantedPolicies.OrganizationId,
                 ProjectGrantedPolicyUpdates = grantedPolicies.ProjectGrantedPolicies.Select(p =>
                     new ServiceAccountProjectAccessPolicyUpdate
                     {

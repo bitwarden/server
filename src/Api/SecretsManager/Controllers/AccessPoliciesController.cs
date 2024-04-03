@@ -321,7 +321,7 @@ public class AccessPoliciesController : Controller
             [FromBody] ServiceAccountGrantedPoliciesRequestModel request)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id) ?? throw new NotFoundException();
-        var grantedPoliciesUpdates = await _serviceAccountGrantedPolicyUpdatesQuery.GetAsync(serviceAccount, request.ToGrantedPolicies(serviceAccount));
+        var grantedPoliciesUpdates = await _serviceAccountGrantedPolicyUpdatesQuery.GetAsync(request.ToGrantedPolicies(serviceAccount));
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, grantedPoliciesUpdates,
             ServiceAccountGrantedPoliciesOperations.Updates);
