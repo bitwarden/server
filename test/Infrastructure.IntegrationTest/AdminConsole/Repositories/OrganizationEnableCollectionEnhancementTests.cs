@@ -537,6 +537,89 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.False(updatedOrganization.FlexibleCollections);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task Migrate_MultipleOrganizations_NoIncorrectAssociations(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Create the first organization
+        var organizationA = await CreateOrganization(organizationRepository);
+        var userA = await CreateUser(userRepository);
+        var orgUserA = await CreateOrganizationUser(userA, organizationA, OrganizationUserType.Manager, accessAll: true, organizationUserRepository);
+        var collectionA1 = await CreateCollection(organizationA, collectionRepository);
+        var collectionA2 = await CreateCollection(organizationA, collectionRepository);
+
+        // Create the second organization
+        var organizationB = await CreateOrganization(organizationRepository);
+        var userB = await CreateUser(userRepository);
+        var orgUserB = await CreateOrganizationUser(userB, organizationB, OrganizationUserType.Manager, accessAll: true, organizationUserRepository);
+        var collectionB1 = await CreateCollection(organizationB, collectionRepository);
+        var collectionB2 = await CreateCollection(organizationB, collectionRepository);
+
+        // Create the third organization
+        var organizationC = await CreateOrganization(organizationRepository);
+        var userC = await CreateUser(userRepository);
+        var orgUserC = await CreateOrganizationUser(userC, organizationC, OrganizationUserType.Manager, accessAll: true, organizationUserRepository);
+        var collectionC1 = await CreateCollection(organizationC, collectionRepository);
+        var collectionC2 = await CreateCollection(organizationC, collectionRepository);
+
+        // Enable collection enhancements for all organizations
+        await organizationRepository.EnableCollectionEnhancements(organizationA.Id);
+        await organizationRepository.EnableCollectionEnhancements(organizationB.Id);
+        await organizationRepository.EnableCollectionEnhancements(organizationC.Id);
+
+        // Verify associations for organization A
+        var (updatedOrgUserA, collectionAccessA) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserA.Id);
+        Assert.Equal(OrganizationUserType.User, updatedOrgUserA.Type);
+        Assert.Equal(2, collectionAccessA.Count);
+        Assert.Contains(collectionAccessA, cas =>
+            cas.Id == collectionA1.Id &&
+            CanManage(cas));
+        Assert.Contains(collectionAccessA, cas =>
+            cas.Id == collectionA2.Id &&
+            CanManage(cas));
+
+        // Verify associations for organization B
+        var (updatedOrgUserB, collectionAccessB) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserB.Id);
+        Assert.Equal(OrganizationUserType.User, updatedOrgUserB.Type);
+        Assert.Equal(2, collectionAccessB.Count);
+        Assert.Contains(collectionAccessB, cas =>
+            cas.Id == collectionB1.Id &&
+            CanManage(cas));
+        Assert.Contains(collectionAccessB, cas =>
+            cas.Id == collectionB2.Id &&
+            CanManage(cas));
+
+        // Verify associations for organization C
+        var (updatedOrgUserC, collectionAccessC) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserC.Id);
+        Assert.Equal(OrganizationUserType.User, updatedOrgUserC.Type);
+        Assert.Equal(2, collectionAccessC.Count);
+        Assert.Contains(collectionAccessC, cas =>
+            cas.Id == collectionC1.Id &&
+            CanManage(cas));
+        Assert.Contains(collectionAccessC, cas =>
+            cas.Id == collectionC2.Id &&
+            CanManage(cas));
+
+        // Ensure there are no incorrect associations between organizations
+        Assert.DoesNotContain(collectionAccessA, cas => cas.Id == collectionB1.Id);
+        Assert.DoesNotContain(collectionAccessA, cas => cas.Id == collectionB2.Id);
+        Assert.DoesNotContain(collectionAccessA, cas => cas.Id == collectionC1.Id);
+        Assert.DoesNotContain(collectionAccessA, cas => cas.Id == collectionC2.Id);
+
+        Assert.DoesNotContain(collectionAccessB, cas => cas.Id == collectionA1.Id);
+        Assert.DoesNotContain(collectionAccessB, cas => cas.Id == collectionA2.Id);
+        Assert.DoesNotContain(collectionAccessB, cas => cas.Id == collectionC1.Id);
+        Assert.DoesNotContain(collectionAccessB, cas => cas.Id == collectionC2.Id);
+
+        Assert.DoesNotContain(collectionAccessC, cas => cas.Id == collectionA1.Id);
+        Assert.DoesNotContain(collectionAccessC, cas => cas.Id == collectionA2.Id);
+        Assert.DoesNotContain(collectionAccessC, cas => cas.Id == collectionB1.Id);
+        Assert.DoesNotContain(collectionAccessC, cas => cas.Id == collectionB2.Id);
+    }
+
     private async Task<User> CreateUser(IUserRepository userRepository)
     {
         return await userRepository.CreateAsync(new User
