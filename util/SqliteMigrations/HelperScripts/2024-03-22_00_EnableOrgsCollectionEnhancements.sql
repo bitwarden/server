@@ -123,11 +123,11 @@
     WHERE "Id" IN (
         SELECT DISTINCT "OU"."UserId"
         FROM "OrganizationUser" "OU"
-                 INNER JOIN (
+        INNER JOIN (
             -- Step 1
             SELECT "GU"."OrganizationUserId"
             FROM "GroupUser" "GU"
-                     INNER JOIN "TempGroupsAccessAll" "TG" ON "GU"."GroupId" = "TG"."GroupId"
+            INNER JOIN "TempGroupsAccessAll" "TG" ON "GU"."GroupId" = "TG"."GroupId"
 
             UNION
 
@@ -146,20 +146,7 @@
 -- Step 5: Set "FlexibleCollections" = 1 for all organizations that have not yet been migrated.
     UPDATE "Organization"
     SET "FlexibleCollections" = 1
-    WHERE "Id" IN (
-        SELECT DISTINCT "TG"."OrganizationId"
-        FROM "TempGroupsAccessAll" AS "TG"
-
-        UNION
-
-        SELECT DISTINCT "TU"."OrganizationId"
-        FROM "TempUsersAccessAll" AS "TU"
-
-        UNION
-
-        SELECT DISTINCT "OU"."OrganizationId"
-        FROM "TempUserManagers" AS "OU"
-    ) AND "FlexibleCollections" = 0;
+    WHERE "FlexibleCollections" = 0;
 
 -- Step 6: Drop the temporary tables
     DROP TABLE IF EXISTS "TempGroupsAccessAll";
