@@ -868,7 +868,7 @@ public class StripeController : Controller
     private bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
     {
         return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
-               invoice.BillingReason is "subscription_cycle" or "automatic_pending_invoice_item_invoice" && invoice.SubscriptionId != null;
+            invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
     }
 
     private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)

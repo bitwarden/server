@@ -1,6 +1,6 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Repositories;
@@ -17,7 +17,6 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly ISecretRepository _secretRepository;
-    private readonly LoginHelper _loginHelper;
 
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
@@ -27,7 +26,6 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
         _factory = factory;
         _client = _factory.CreateClient();
         _secretRepository = _factory.GetService<ISecretRepository>();
-        _loginHelper = new LoginHelper(_factory, _client);
     }
 
     public async Task InitializeAsync()
@@ -43,6 +41,12 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
         return Task.CompletedTask;
     }
 
+    private async Task LoginAsync(string email)
+    {
+        var tokens = await _factory.LoginAsync(email);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+    }
+
     [Theory]
     [InlineData(false, false, false)]
     [InlineData(false, false, true)]
@@ -54,7 +58,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     public async Task ListByOrganization_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _loginHelper.LoginAsync(_email);
+        await LoginAsync(_email);
 
         var response = await _client.GetAsync($"/secrets/{org.Id}/trash");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -65,7 +69,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _loginHelper.LoginAsync(email);
+        await LoginAsync(email);
 
         var response = await _client.GetAsync($"/secrets/{org.Id}/trash");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -75,7 +79,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     public async Task ListByOrganization_Success()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _loginHelper.LoginAsync(_email);
+        await LoginAsync(_email);
 
         await _secretRepository.CreateAsync(new Secret
         {
@@ -110,7 +114,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     public async Task Empty_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _loginHelper.LoginAsync(_email);
+        await LoginAsync(_email);
 
         var ids = new List<Guid> { Guid.NewGuid() };
         var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/trash/empty", ids);
@@ -122,7 +126,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _loginHelper.LoginAsync(email);
+        await LoginAsync(email);
 
         var ids = new List<Guid> { Guid.NewGuid() };
         var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/trash/empty", ids);
@@ -133,7 +137,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     public async Task Empty_Invalid_NotFound()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _loginHelper.LoginAsync(_email);
+        await LoginAsync(_email);
 
         var secret = await _secretRepository.CreateAsync(new Secret
         {
@@ -151,7 +155,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     public async Task Empty_Success()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _loginHelper.LoginAsync(_email);
+        await LoginAsync(_email);
 
         var secret = await _secretRepository.CreateAsync(new Secret
         {
@@ -177,7 +181,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     public async Task Restore_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
-        await _loginHelper.LoginAsync(_email);
+        await LoginAsync(_email);
 
         var ids = new List<Guid> { Guid.NewGuid() };
         var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/trash/restore", ids);
@@ -189,7 +193,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await _loginHelper.LoginAsync(email);
+        await LoginAsync(email);
 
         var ids = new List<Guid> { Guid.NewGuid() };
         var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/trash/restore", ids);
@@ -200,7 +204,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     public async Task Restore_Invalid_NotFound()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _loginHelper.LoginAsync(_email);
+        await LoginAsync(_email);
 
         var secret = await _secretRepository.CreateAsync(new Secret
         {
@@ -218,7 +222,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     public async Task Restore_Success()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-        await _loginHelper.LoginAsync(_email);
+        await LoginAsync(_email);
 
         var secret = await _secretRepository.CreateAsync(new Secret
         {

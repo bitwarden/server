@@ -16,17 +16,14 @@ public class ProviderPlanRepository(
         mapper,
         context => context.ProviderPlans), IProviderPlanRepository
 {
-    public async Task<ICollection<ProviderPlan>> GetByProviderId(Guid providerId)
+    public async Task<ProviderPlan> GetByProviderId(Guid providerId)
     {
         using var serviceScope = ServiceScopeFactory.CreateScope();
-
         var databaseContext = GetDatabaseContext(serviceScope);
-
         var query =
             from providerPlan in databaseContext.ProviderPlans
             where providerPlan.ProviderId == providerId
             select providerPlan;
-
-        return await query.ToArrayAsync();
+        return await query.FirstOrDefaultAsync();
     }
 }

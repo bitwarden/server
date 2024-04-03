@@ -74,10 +74,10 @@ public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
     private string AddStripePlanId => _applySponsorship ? _sponsoredPlanStripeId : _existingPlanStripeId;
     private Stripe.SubscriptionItem RemoveStripeItem(Subscription subscription) =>
         _applySponsorship ?
-            FindSubscriptionItem(subscription, _existingPlanStripeId) :
-            FindSubscriptionItem(subscription, _sponsoredPlanStripeId);
+            SubscriptionItem(subscription, _existingPlanStripeId) :
+            SubscriptionItem(subscription, _sponsoredPlanStripeId);
     private Stripe.SubscriptionItem AddStripeItem(Subscription subscription) =>
         _applySponsorship ?
-            FindSubscriptionItem(subscription, _sponsoredPlanStripeId) :
-            FindSubscriptionItem(subscription, _existingPlanStripeId);
+            SubscriptionItem(subscription, _sponsoredPlanStripeId) :
+            SubscriptionItem(subscription, _existingPlanStripeId);
 }
