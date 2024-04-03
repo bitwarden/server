@@ -5,7 +5,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapper" Version="2.1.35" />
+      <PackageReference Include="Dapper" Version="2.1.28" />
     </ItemGroup>
 
 </Project>

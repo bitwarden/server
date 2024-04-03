@@ -18,7 +18,7 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
 
     public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
     {
-        var item = FindSubscriptionItem(subscription, PlanIds.Single());
+        var item = SubscriptionItem(subscription, PlanIds.Single());
         return new()
         {
             new SubscriptionItemOptions
@@ -34,7 +34,7 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
     public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
     {
 
-        var item = FindSubscriptionItem(subscription, PlanIds.Single());
+        var item = SubscriptionItem(subscription, PlanIds.Single());
         return new()
         {
             new SubscriptionItemOptions

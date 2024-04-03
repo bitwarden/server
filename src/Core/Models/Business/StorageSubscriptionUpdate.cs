@@ -17,7 +17,7 @@ public class StorageSubscriptionUpdate : SubscriptionUpdate
 
     public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
     {
-        var item = FindSubscriptionItem(subscription, PlanIds.Single());
+        var item = SubscriptionItem(subscription, PlanIds.Single());
         _prevStorage = item?.Quantity ?? 0;
         return new()
         {
@@ -38,7 +38,7 @@ public class StorageSubscriptionUpdate : SubscriptionUpdate
             throw new Exception("Unknown previous value, must first call UpgradeItemsOptions");
         }
 
-        var item = FindSubscriptionItem(subscription, PlanIds.Single());
+        var item = SubscriptionItem(subscription, PlanIds.Single());
         return new()
         {
             new SubscriptionItemOptions

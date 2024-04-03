@@ -88,7 +88,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddScoped<IAccessControlService, AccessControlService>();
-        services.AddBillingOperations();
+        services.AddBillingCommands();
 
 #if OSS
         services.AddOosServices();
