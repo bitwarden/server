@@ -777,6 +777,7 @@ public class StripePaymentService : IPaymentService
         var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
         var isPm5864DollarThresholdEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5864DollarThreshold);
+        var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
 
         var subUpdateOptions = new SubscriptionUpdateOptions
         {
@@ -788,25 +789,10 @@ public class StripePaymentService : IPaymentService
             CollectionMethod = "send_invoice",
             ProrationDate = prorationDate,
         };
-        var immediatelyInvoice = false;
-        if (!invoiceNow && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
+        if (!invoiceNow && isAnnualPlan && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
         {
-            var upcomingInvoiceWithChanges = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
-            {
-                Customer = subscriber.GatewayCustomerId,
-                Subscription = subscriber.GatewaySubscriptionId,
-                SubscriptionItems = ToInvoiceSubscriptionItemOptions(updatedItemOptions),
-                SubscriptionProrationBehavior = Constants.CreateProrations,
-                SubscriptionProrationDate = prorationDate,
-                SubscriptionBillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
-            });
-
-            var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
-            immediatelyInvoice = isAnnualPlan && upcomingInvoiceWithChanges.AmountRemaining >= 50000;
-
-            subUpdateOptions.BillingCycleAnchor = immediatelyInvoice
-                ? SubscriptionBillingCycleAnchor.Now
-                : SubscriptionBillingCycleAnchor.Unchanged;
+            subUpdateOptions.PendingInvoiceItemInterval =
+                new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
         }
 
         var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
@@ -859,21 +845,16 @@ public class StripePaymentService : IPaymentService
             {
                 try
                 {
-                    if (!isPm5864DollarThresholdEnabled || immediatelyInvoice || invoiceNow)
+                    if (chargeNow)
                     {
-                        if (chargeNow)
-                        {
-                            paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(subscriber, invoice);
-                        }
-                        else
-                        {
-                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new InvoiceFinalizeOptions
-                            {
-                                AutoAdvance = false,
-                            });
-                            await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
-                            paymentIntentClientSecret = null;
-                        }
+                        paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(subscriber, invoice);
+                    }
+                    else
+                    {
+                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
+                            new InvoiceFinalizeOptions { AutoAdvance = false, });
+                        await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
+                        paymentIntentClientSecret = null;
                     }
                 }
                 catch
@@ -1622,10 +1603,25 @@ public class StripePaymentService : IPaymentService
             return subscriptionInfo;
         }
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["test_clock"]
+        });
+
         if (sub != null)
         {
             subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.AC1795_UpdatedSubscriptionStatusSection))
+            {
+                var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(sub);
+
+                if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
+                {
+                    subscriptionInfo.Subscription.SuspensionDate = suspensionDate;
+                    subscriptionInfo.Subscription.UnpaidPeriodEndDate = unpaidPeriodEndDate;
+                }
+            }
         }
 
         if (sub is { CanceledAt: not null } || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -1941,5 +1937,46 @@ public class StripePaymentService : IPaymentService
         return subscriberName.Length <= 30
             ? subscriberName
             : subscriberName[..30];
+    }
+
+    private async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
+    {
+        if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
+        {
+            return (null, null);
+        }
+
+        var openInvoices = await _stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+        {
+            Query = $"subscription:'{subscription.Id}' status:'open'"
+        });
+
+        if (openInvoices.Count == 0)
+        {
+            return (null, null);
+        }
+
+        var currentDate = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        switch (subscription.CollectionMethod)
+        {
+            case "charge_automatically":
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                        .MinBy(invoice => invoice.Created);
+
+                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
+                }
+            case "send_invoice":
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.DueDate < currentDate)
+                        .MinBy(invoice => invoice.Created);
+
+                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
+                }
+            default: return (null, null);
+        }
     }
 }
