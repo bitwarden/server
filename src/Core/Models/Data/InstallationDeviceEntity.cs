@@ -1,8 +1,9 @@
-﻿using Microsoft.Azure.Cosmos.Table;
+﻿using Azure;
+using Azure.Data.Tables;
 
 namespace Bit.Core.Models.Data;
 
-public class InstallationDeviceEntity : TableEntity
+public class InstallationDeviceEntity : ITableEntity
 {
     public InstallationDeviceEntity() { }
 
@@ -26,6 +27,11 @@ public class InstallationDeviceEntity : TableEntity
         PartitionKey = parts[0];
         RowKey = parts[1];
     }
+
+    public string PartitionKey { get; set; }
+    public string RowKey { get; set; }
+    public DateTimeOffset? Timestamp { get; set; }
+    public ETag ETag { get; set; }
 
     public static bool IsInstallationDeviceId(string deviceId)
     {
