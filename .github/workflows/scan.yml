@@ -40,7 +40,8 @@ jobs:
           base_uri: https://ast.checkmarx.net/
           cx_client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
           cx_client_secret: ${{ secrets.CHECKMARX_SECRET }}
-          additional_params: --report-format sarif \
+          additional_params: |
+            --report-format sarif \
             --filter "state=TO_VERIFY;PROPOSED_NOT_EXPLOITABLE;CONFIRMED;URGENT" \
             --output-path . ${{ env.INCREMENTAL }}
 
