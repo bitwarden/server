@@ -28,6 +28,7 @@ public class AccessPoliciesController : Controller
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
+    private readonly IUpdateServiceAccountGrantedPoliciesCommand _updateServiceAccountGrantedPoliciesCommand;
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly IServiceAccountGrantedPolicyUpdatesQuery _serviceAccountGrantedPolicyUpdatesQuery;
     private readonly IUserService _userService;
@@ -42,6 +43,7 @@ public class AccessPoliciesController : Controller
         IProjectRepository projectRepository,
         IAccessClientQuery accessClientQuery,
         IServiceAccountGrantedPolicyUpdatesQuery serviceAccountGrantedPolicyUpdatesQuery,
+        IUpdateServiceAccountGrantedPoliciesCommand updateServiceAccountGrantedPoliciesCommand,
         ICreateAccessPoliciesCommand createAccessPoliciesCommand,
         IDeleteAccessPolicyCommand deleteAccessPolicyCommand,
         IUpdateAccessPolicyCommand updateAccessPolicyCommand)
@@ -55,6 +57,7 @@ public class AccessPoliciesController : Controller
         _createAccessPoliciesCommand = createAccessPoliciesCommand;
         _deleteAccessPolicyCommand = deleteAccessPolicyCommand;
         _updateAccessPolicyCommand = updateAccessPolicyCommand;
+        _updateServiceAccountGrantedPoliciesCommand = updateServiceAccountGrantedPoliciesCommand;
         _accessClientQuery = accessClientQuery;
         _serviceAccountGrantedPolicyUpdatesQuery = serviceAccountGrantedPolicyUpdatesQuery;
     }
@@ -95,44 +98,6 @@ public class AccessPoliciesController : Controller
         var (_, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
         var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id, userId);
         return new ProjectAccessPoliciesResponseModel(results);
-    }
-
-    [HttpPost("/service-accounts/{id}/granted-policies")]
-    public async Task<ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>>
-        CreateServiceAccountGrantedPoliciesAsync([FromRoute] Guid id,
-            [FromBody] List<GrantedAccessPolicyRequest> requests)
-    {
-        if (requests.Count > _maxBulkCreation)
-        {
-            throw new BadRequestException($"Can process no more than {_maxBulkCreation} creation requests at once.");
-        }
-
-        if (requests.Count != requests.DistinctBy(request => request.GrantedId).Count())
-        {
-            throw new BadRequestException("Resources must be unique");
-        }
-
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var policies = requests.Select(request => request.ToServiceAccountProjectAccessPolicy(id, serviceAccount.OrganizationId)).ToList();
-        foreach (var policy in policies)
-        {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, policy, AccessPolicyOperations.Create);
-            if (!authorizationResult.Succeeded)
-            {
-                throw new NotFoundException();
-            }
-        }
-
-        var results =
-            await _createAccessPoliciesCommand.CreateManyAsync(new List<BaseAccessPolicy>(policies));
-        var responses = results.Select(ap =>
-            new ServiceAccountProjectAccessPolicyResponseModel((ServiceAccountProjectAccessPolicy)ap));
-        return new ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>(responses);
     }
 
     [HttpPut("{id}")]
@@ -307,11 +272,7 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, serviceAccount.OrganizationId);
-        var results =
-            await _accessPolicyRepository.GetServiceAccountGrantedPoliciesPermissionDetailsAsync(id, userId,
-                accessClient);
-        return new ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(results);
+        return await GetServiceAccountGrantedPoliciesAsync(serviceAccount);
     }
 
 
@@ -321,7 +282,8 @@ public class AccessPoliciesController : Controller
             [FromBody] ServiceAccountGrantedPoliciesRequestModel request)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id) ?? throw new NotFoundException();
-        var grantedPoliciesUpdates = await _serviceAccountGrantedPolicyUpdatesQuery.GetAsync(request.ToGrantedPolicies(serviceAccount));
+        var grantedPoliciesUpdates =
+            await _serviceAccountGrantedPolicyUpdatesQuery.GetAsync(request.ToGrantedPolicies(serviceAccount));
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, grantedPoliciesUpdates,
             ServiceAccountGrantedPoliciesOperations.Updates);
@@ -330,12 +292,8 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, serviceAccount.OrganizationId);
-        await _accessPolicyRepository.UpdateServiceAccountGrantedPoliciesAsync(grantedPoliciesUpdates);
-        var results =
-            await _accessPolicyRepository.GetServiceAccountGrantedPoliciesPermissionDetailsAsync(id, userId,
-                accessClient);
-        return new ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(results);
+        await _updateServiceAccountGrantedPoliciesCommand.UpdateAsync(grantedPoliciesUpdates);
+        return await GetServiceAccountGrantedPoliciesAsync(serviceAccount);
     }
 
     private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)
@@ -389,5 +347,12 @@ public class AccessPoliciesController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         return (accessClient, userId);
+    }
+
+    private async Task<ServiceAccountGrantedPoliciesPermissionDetailsResponseModel> GetServiceAccountGrantedPoliciesAsync(ServiceAccount serviceAccount)
+    {
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, serviceAccount.OrganizationId);
+        var results = await _accessPolicyRepository.GetServiceAccountGrantedPoliciesPermissionDetailsAsync(serviceAccount.Id, userId, accessClient);
+        return new ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(results);
     }
 }
