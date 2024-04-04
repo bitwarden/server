@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -29,12 +28,6 @@ public interface IPaymentService
         int newlyPurchasedAdditionalStorage,
         DateTime? prorationDate = null);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
-    Task<string> AdjustSeats(
-        Provider provider,
-        Plan plan,
-        int currentlySubscribedSeats,
-        int newlySubscribedSeats,
-        DateTime? prorationDate = null);
     Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
 

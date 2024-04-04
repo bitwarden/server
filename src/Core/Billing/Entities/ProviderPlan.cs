@@ -20,6 +20,4 @@ public class ProviderPlan : ITableObject<Guid>
             Id = CoreHelpers.GenerateComb();
         }
     }
-
-    public bool IsConfigured() => SeatMinimum.HasValue && PurchasedSeats.HasValue && AllocatedSeats.HasValue;
 }

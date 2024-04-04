@@ -32,10 +32,6 @@ public static class CoreHelpers
     private static readonly Random _random = new Random();
     private static readonly string RealConnectingIp = "X-Connecting-IP";
     private static readonly Regex _whiteSpaceRegex = new Regex(@"\s+");
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
 
     /// <summary>
     /// Generate sequential Guid for Sql Server.
@@ -782,12 +778,22 @@ public static class CoreHelpers
             return new T();
         }
 
-        return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, _jsonSerializerOptions);
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
+        return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, options);
     }
 
     public static string ClassToJsonData<T>(T data)
     {
-        return System.Text.Json.JsonSerializer.Serialize(data, _jsonSerializerOptions);
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
+        return System.Text.Json.JsonSerializer.Serialize(data, options);
     }
 
     public static ICollection<T> AddIfNotExists<T>(this ICollection<T> list, T item)

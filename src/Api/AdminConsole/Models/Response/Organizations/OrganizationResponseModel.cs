@@ -126,14 +126,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         if (hideSensitiveData)
         {
             BillingEmail = null;
-            if (Subscription != null)
-            {
-                Subscription.Items = null;
-            }
-            if (UpcomingInvoice != null)
-            {
-                UpcomingInvoice.Amount = null;
-            }
+            Subscription.Items = null;
+            UpcomingInvoice.Amount = null;
         }
     }
 

@@ -2,6 +2,7 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -10,6 +11,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -320,6 +322,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("bulk-access")]
+    [RequireFeature(FeatureFlagKeys.BulkCollectionAccess)]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
         // Authorization logic assumes flexible collections is enabled

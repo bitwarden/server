@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Stripe;
 
@@ -278,6 +279,25 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         };
     }
 
+    private static SubscriptionItem FindSubscriptionItem(Subscription subscription, string planId)
+    {
+        if (string.IsNullOrEmpty(planId))
+        {
+            return null;
+        }
+
+        var data = subscription.Items.Data;
+
+        var subscriptionItem = data.FirstOrDefault(item => item.Plan?.Id == planId) ?? data.FirstOrDefault(item => item.Price?.Id == planId);
+
+        return subscriptionItem;
+    }
+
+    private static string GetPasswordManagerPlanId(StaticStore.Plan plan)
+        => IsNonSeatBasedPlan(plan)
+            ? plan.PasswordManager.StripePlanId
+            : plan.PasswordManager.StripeSeatPlanId;
+
     private static SubscriptionData GetSubscriptionDataFor(Organization organization)
     {
         var plan = Utilities.StaticStore.GetPlan(organization.PlanType);
@@ -300,4 +320,10 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
                 0
         };
     }
+
+    private static bool IsNonSeatBasedPlan(StaticStore.Plan plan)
+        => plan.Type is
+            >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
+            or PlanType.FamiliesAnnually
+            or PlanType.TeamsStarter;
 }

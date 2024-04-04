@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Models.BitStripe;
-using Stripe;
 
 namespace Bit.Core.Services;
 
@@ -17,7 +16,6 @@ public interface IStripeAdapter
     Task<Stripe.Invoice> InvoiceUpcomingAsync(Stripe.UpcomingInvoiceOptions options);
     Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options);
     Task<List<Stripe.Invoice>> InvoiceListAsync(StripeInvoiceListOptions options);
-    Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options);
     Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options);
     Task<Stripe.Invoice> InvoiceFinalizeInvoiceAsync(string id, Stripe.InvoiceFinalizeOptions options);
     Task<Stripe.Invoice> InvoiceSendInvoiceAsync(string id, Stripe.InvoiceSendOptions options);
