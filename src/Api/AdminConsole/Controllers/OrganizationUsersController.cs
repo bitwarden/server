@@ -355,8 +355,39 @@ public class OrganizationUsersController : Controller
             ? null
             : model.Groups;
 
+        // The client only sends collections that the saving user has permissions to edit.
+        // On the server side, we need to (1) confirm this and (2) concat these with the collections that the user
+        // can't edit before saving to the database.
+        // TODO: this doesn't return the Manage value - fix
+        var (_, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
+        var currentCollections = await _collectionRepository
+            .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
+
+        var readonlyCollectionIds = new HashSet<Guid>();
+        foreach (var collection in currentCollections)
+        {
+            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess))
+                .Succeeded)
+            {
+                readonlyCollectionIds.Add(collection.Id);
+            }
+        }
+
+        if (model.Collections.Any(c => readonlyCollectionIds.Contains(c.Id)))
+        {
+            throw new BadRequestException("You must have Can Manage permissions to edit a collection's membership");
+        }
+
+        var editedCollectionAccess = model.Collections
+            .Select(c => c.ToSelectionReadOnly());
+        var readonlyCollectionAccess = currentAccess
+            .Where(ca => readonlyCollectionIds.Contains(ca.Id));
+        var collectionsToSave = editedCollectionAccess
+            .Concat(readonlyCollectionAccess)
+            .ToList();
+
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), groups);
+            collectionsToSave, groups);
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
