@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -8,6 +9,7 @@ using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
 
@@ -18,23 +20,27 @@ public class CreateProviderCommand : ICreateProviderCommand
     private readonly IProviderService _providerService;
     private readonly IUserRepository _userRepository;
     private readonly IProviderPlanRepository _providerPlanRepository;
+    private readonly IFeatureService _featureService;
 
     public CreateProviderCommand(
         IProviderRepository providerRepository,
         IProviderUserRepository providerUserRepository,
         IProviderService providerService,
         IUserRepository userRepository,
-        IProviderPlanRepository providerPlanRepository)
+        IProviderPlanRepository providerPlanRepository,
+        IFeatureService featureService)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
         _providerService = providerService;
         _userRepository = userRepository;
         _providerPlanRepository = providerPlanRepository;
+        _featureService = featureService;
     }
 
     public async Task CreateMspAsync(Provider provider, string ownerEmail, int teamsMinimumSeats, int enterpriseMinimumSeats)
     {
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
         var owner = await _userRepository.GetByEmailAsync(ownerEmail);
         if (owner == null)
         {
@@ -50,32 +56,24 @@ public class CreateProviderCommand : ICreateProviderCommand
             Type = ProviderUserType.ProviderAdmin,
             Status = ProviderUserStatusType.Confirmed,
         };
-        var providerPlans = new List<ProviderPlan>
+
+        if (isConsolidatedBillingEnabled)
         {
-            new ProviderPlan
+            var providerPlans = new List<ProviderPlan>
             {
-                ProviderId = provider.Id,
-                PlanType = PlanType.TeamsMonthly,
-                SeatMinimum = teamsMinimumSeats,
-                PurchasedSeats = 0,
-                AllocatedSeats = 0
-            },
-            new ProviderPlan
+                CreateProviderPlan(provider.Id, PlanType.TeamsMonthly, teamsMinimumSeats),
+                CreateProviderPlan(provider.Id, PlanType.EnterpriseMonthly, enterpriseMinimumSeats)
+            };
+
+            foreach (var providerPlan in providerPlans)
             {
-                ProviderId = provider.Id,
-                PlanType = PlanType.EnterpriseMonthly,
-                SeatMinimum = enterpriseMinimumSeats,
-                PurchasedSeats = 0,
-                AllocatedSeats = 0
+                await _providerPlanRepository.CreateAsync(providerPlan);
             }
-        };
+        }
 
         await _providerUserRepository.CreateAsync(providerUser);
-        foreach (var providerPlan in providerPlans)
-        {
-            await _providerPlanRepository.CreateAsync(providerPlan);
-        }
         await _providerService.SendProviderSetupInviteEmailAsync(provider, owner.Email);
+
     }
 
     public async Task CreateResellerAsync(Provider provider)
@@ -89,5 +87,17 @@ public class CreateProviderCommand : ICreateProviderCommand
         provider.Enabled = true;
         provider.UseEvents = true;
         await _providerRepository.CreateAsync(provider);
+    }
+
+    private ProviderPlan CreateProviderPlan(Guid providerId, PlanType planType, int seatMinimum)
+    {
+        return new ProviderPlan
+        {
+            ProviderId = providerId,
+            PlanType = planType,
+            SeatMinimum = seatMinimum,
+            PurchasedSeats = 0,
+            AllocatedSeats = 0
+        };
     }
 }

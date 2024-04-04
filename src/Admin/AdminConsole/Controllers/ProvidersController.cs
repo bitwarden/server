@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -146,15 +147,21 @@ public class ProvidersController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id)
     {
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
         var provider = await _providerRepository.GetByIdAsync(id);
         if (provider == null)
         {
             return RedirectToAction("Index");
         }
-        var providerPlan = await _providerPlanRepository.GetByProviderId(id);
+
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        return View(new ProviderEditModel(provider, users, providerOrganizations, providerPlan));
+        if (isConsolidatedBillingEnabled)
+        {
+            var providerPlan = await _providerPlanRepository.GetByProviderId(id);
+            return View(new ProviderEditModel(provider, users, providerOrganizations, providerPlan));
+        }
+        return View(new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>()));
     }
 
     [HttpPost]
@@ -163,6 +170,7 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
     {
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
         var provider = await _providerRepository.GetByIdAsync(id);
         if (provider == null)
@@ -171,13 +179,17 @@ public class ProvidersController : Controller
         }
 
         model.ToProvider(provider);
-        model.ToProviderPlan(providerPlans);
         await _providerRepository.ReplaceAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
-        foreach (var providerPlan in providerPlans)
+        if (isConsolidatedBillingEnabled)
         {
-            await _providerPlanRepository.ReplaceAsync(providerPlan);
+            model.ToProviderPlan(providerPlans);
+            foreach (var providerPlan in providerPlans)
+            {
+                await _providerPlanRepository.ReplaceAsync(providerPlan);
+            }
         }
+
         return RedirectToAction("Edit", new { id });
     }
 
