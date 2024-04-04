@@ -542,14 +542,16 @@ public class OrganizationEnableCollectionEnhancementTests
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IGroupRepository groupRepository)
     {
         // Create the first organization
         var organizationA = await CreateOrganization(organizationRepository);
         var userA = await CreateUser(userRepository);
-        var orgUserA = await CreateOrganizationUser(userA, organizationA, OrganizationUserType.Manager, accessAll: true, organizationUserRepository);
+        var orgUserA = await CreateOrganizationUser(userA, organizationA, OrganizationUserType.Manager, accessAll: false, organizationUserRepository);
         var collectionA1 = await CreateCollection(organizationA, collectionRepository);
         var collectionA2 = await CreateCollection(organizationA, collectionRepository);
+        var groupA = await CreateGroup(organizationA, accessAll: true, groupRepository, orgUserA);
 
         // Create the second organization
         var organizationB = await CreateOrganization(organizationRepository);
