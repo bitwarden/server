@@ -582,6 +582,14 @@ public class OrganizationEnableCollectionEnhancementTests
         Assert.Contains(collectionAccessA, cas =>
             cas.Id == collectionA2.Id &&
             CanManage(cas));
+        var (updatedGroupA, updatedGroupAccessA) = await groupRepository.GetByIdWithCollectionsAsync(groupA.Id);
+        Assert.Equal(2, updatedGroupAccessA.Count);
+        Assert.Contains(updatedGroupAccessA, cas =>
+            cas.Id == collectionA1.Id &&
+            CanEdit(cas));
+        Assert.Contains(updatedGroupAccessA, cas =>
+            cas.Id == collectionA2.Id &&
+            CanEdit(cas));
 
         // Verify associations for organization B
         var (updatedOrgUserB, collectionAccessB) = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserB.Id);
