@@ -1,6 +1,8 @@
 ﻿@using Bit.SharedWeb.Utilities
 @using Bit.Core.AdminConsole.Enums.Provider
+@using Bit.Core
 @model CreateProviderModel
+@inject Bit.Core.Services.IFeatureService FeatureService
 @{
     ViewData["Title"] = "Create Provider";
 }
@@ -39,20 +41,23 @@
             <label asp-for="OwnerEmail"></label>
             <input type="text" class="form-control" asp-for="OwnerEmail">
         </div>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="TeamsMinimumSeats"></label>
-                    <input type="number" class="form-control" asp-for="TeamsMinimumSeats">
+        @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        {
+            <div class="row">
+                <div class="col-sm">
+                    <div class="form-group">
+                        <label asp-for="TeamsMinimumSeats"></label>
+                        <input type="number" class="form-control" asp-for="TeamsMinimumSeats">
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <div class="form-group">
+                        <label asp-for="EnterpriseMinimumSeats"></label>
+                        <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
+                    </div>
                 </div>
             </div>
-            <div class="col-sm">
-                <div class="form-group">
-                     <label asp-for="EnterpriseMinimumSeats"></label>
-                     <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
-                  </div>
-            </div>
-        </div>
+        }
     </div>
 
     <div id="@($"info-{(int)ProviderType.Reseller}")" class="form-group @(Model.Type != ProviderType.Reseller ? "d-none" : string.Empty)">
