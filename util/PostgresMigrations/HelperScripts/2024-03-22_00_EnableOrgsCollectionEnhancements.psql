@@ -9,7 +9,6 @@
 
 -- Step 2: AccessAll migration for OrganizationUsers
     -- Create a temporary table to store the OrganizationUsers with AccessAll = true
-    DROP TABLE IF EXISTS "TempUsersAccessAll";
     CREATE TEMPORARY TABLE "TempUsersAccessAll" AS
     SELECT "OU"."Id" AS "OrganizationUserId",
            "OU"."OrganizationId"
@@ -20,7 +19,6 @@
 -- Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission update their existing CollectionUsers rows and insert new rows with Manage = 1
 -- and finally update all OrganizationUsers with Manager role to User role
     -- Create a temporary table to store the OrganizationUsers with Manager role or 'EditAssignedCollections' permission
-    DROP TABLE IF EXISTS "TempUserManagers";
     CREATE TEMPORARY TABLE "TempUserManagers" AS
     SELECT "OU"."Id" AS "OrganizationUserId",
         "OU"."OrganizationId",
