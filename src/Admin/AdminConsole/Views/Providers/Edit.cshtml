@@ -41,6 +41,20 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="TeamsMinimumSeats"></label>
+                <input type="number" class="form-control" asp-for="TeamsMinimumSeats">
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="form-group">
+                 <label asp-for="EnterpriseMinimumSeats"></label>
+                 <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
+              </div>
+        </div>
+    </div>
 </form>
 @await Html.PartialAsync("Organizations", Model)
 @if (canEdit)
