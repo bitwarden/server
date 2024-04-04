@@ -43,6 +43,9 @@ public class SubscriptionInfo
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
             }
             CollectionMethod = sub.CollectionMethod;
+            GracePeriod = sub.CollectionMethod == "charge_automatically"
+                ? 14
+                : 30;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -56,6 +59,9 @@ public class SubscriptionInfo
         public bool Cancelled { get; set; }
         public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
         public string CollectionMethod { get; set; }
+        public DateTime? SuspensionDate { get; set; }
+        public DateTime? UnpaidPeriodEndDate { get; set; }
+        public int GracePeriod { get; set; }
 
         public class BillingSubscriptionItem
         {
