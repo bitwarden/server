@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
@@ -109,19 +110,15 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
-        var orgId = organizationAbility.Id = organizationUser.OrganizationId;
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
-            .Returns(organizationAbility);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, true);
 
+        // Save these for later - organizationUser object will be mutated
         var orgUserId = organizationUser.Id;
         var orgUserEmail = organizationUser.Email;
 
-        await sutProvider.Sut.Put(orgId, organizationUser.Id, model);
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
 
-        sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
             ou.Type == model.Type &&
             ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
             ou.AccessSecretsManager == model.AccessSecretsManager &&
@@ -145,19 +142,14 @@ public class OrganizationUsersControllerTests
         organizationAbility.AllowAdminAccessToAllCollectionItems = false;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
-        var orgId = organizationAbility.Id = organizationUser.OrganizationId;
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
-            .Returns(organizationAbility);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, true);
 
         var orgUserId = organizationUser.Id;
         var orgUserEmail = organizationUser.Email;
 
-        await sutProvider.Sut.Put(orgId, organizationUser.Id, model);
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
 
-        sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
             ou.Type == model.Type &&
             ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
             ou.AccessSecretsManager == model.AccessSecretsManager &&
@@ -181,19 +173,14 @@ public class OrganizationUsersControllerTests
         organizationAbility.AllowAdminAccessToAllCollectionItems = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
-        var orgId = organizationAbility.Id = organizationUser.OrganizationId;
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
-            .Returns(organizationAbility);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, true);
 
         var orgUserId = organizationUser.Id;
         var orgUserEmail = organizationUser.Email;
 
-        await sutProvider.Sut.Put(orgId, organizationUser.Id, model);
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
 
-        sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
             ou.Type == model.Type &&
             ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
             ou.AccessSecretsManager == model.AccessSecretsManager &&
@@ -280,6 +267,36 @@ public class OrganizationUsersControllerTests
         Assert.Equal(OrganizationUserType.User, customUserResponse.Type);
         Assert.False(customUserResponse.Permissions.EditAssignedCollections);
         Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
+    }
+
+    private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider, OrganizationAbility organizationAbility,
+        OrganizationUser organizationUser, Guid savingUserId, OrganizationUserUpdateRequestModel model,  bool authorizeAll)
+    {
+        var orgId = organizationAbility.Id = organizationUser.OrganizationId;
+
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id).Returns(organizationUser);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
+            .Returns(organizationAbility);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
+
+        if (authorizeAll)
+        {
+            // Simple case: saving user can edit all collections, all collection access is replaced
+            sutProvider.GetDependency<IOrganizationUserRepository>()
+                .GetByIdWithCollectionsAsync(organizationUser.Id)
+                .Returns(new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(organizationUser,
+                    model.Collections.Select(cas => cas.ToSelectionReadOnly()).ToList()));
+            var collections = model.Collections.Select(cas => new Collection { Id = cas.Id }).ToList();
+            sutProvider.GetDependency<ICollectionRepository>()
+                .GetManyByManyIdsAsync(collections.Select(c => c.Id))
+                .Returns(collections);
+
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<IEnumerable<Collection>>(),
+                    BulkCollectionOperations.ModifyAccess)
+                .Returns(AuthorizationResult.Success());
+        }
     }
 
     private void Get_Setup(OrganizationAbility organizationAbility,
