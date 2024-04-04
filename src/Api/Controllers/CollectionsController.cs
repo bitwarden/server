@@ -260,9 +260,10 @@ public class CollectionsController : Controller
         var userCollectionDetails = await _collectionRepository.GetByIdAsync(collection.Id,
             _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
 
+        // TODO: temp fix only, Shane should fix this
         return userCollectionDetails == null
             ? new CollectionResponseModel(collection)
-            : new CollectionDetailsResponseModel(userCollectionDetails);
+            : CollectionDetailsResponseModel.FromAssigned(userCollectionDetails);
     }
 
     [HttpPut("{id}")]
@@ -294,9 +295,10 @@ public class CollectionsController : Controller
         // If we have a user, fetch the collection details to get the latest permission details for the user
         var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
 
+        // TODO: temp fix only, Shane should fix this
         return updatedCollectionDetails == null
             ? new CollectionResponseModel(collection)
-            : new CollectionDetailsResponseModel(updatedCollectionDetails);
+            : CollectionDetailsResponseModel.FromAssigned(updatedCollectionDetails);
     }
 
     [HttpPut("{id}/users")]
