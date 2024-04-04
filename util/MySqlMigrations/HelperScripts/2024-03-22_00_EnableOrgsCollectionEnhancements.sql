@@ -1,6 +1,5 @@
 -- Step 1: AccessAll migration for Groups
     -- Create a temporary table to store the groups with AccessAll = 1
-    DROP TEMPORARY TABLE IF EXISTS `TempGroupsAccessAll`;
     CREATE TEMPORARY TABLE `TempGroupsAccessAll` AS
     SELECT `G`.`Id` AS `GroupId`,
            `G`.`OrganizationId`
