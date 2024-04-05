@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadWithCollectionsById]
+-- Update to add the Manage column
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadWithCollectionsById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
