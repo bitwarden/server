@@ -4,7 +4,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -200,7 +199,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         // If V1 is enabled, Owners and Admins can update any collection only if permitted by collection management settings
         var organizationAbility = await GetOrganizationAbilityAsync(org);
-        if ((organizationAbility is { AllowAdminAccessToAllCollectionItems: true }  || !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)) &&
+        if ((organizationAbility is { AllowAdminAccessToAllCollectionItems: true } || !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)) &&
             org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             context.Succeed(requirement);
