@@ -152,7 +152,6 @@ public static class StaticStore
 
     public static Plan GetPlan(PlanType planType) => Plans.SingleOrDefault(p => p.Type == planType);
 
-
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
 

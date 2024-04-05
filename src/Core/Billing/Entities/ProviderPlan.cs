@@ -11,6 +11,7 @@ public class ProviderPlan : ITableObject<Guid>
     public PlanType PlanType { get; set; }
     public int? SeatMinimum { get; set; }
     public int? PurchasedSeats { get; set; }
+    public int? AllocatedSeats { get; set; }
 
     public void SetNewId()
     {
@@ -20,5 +21,5 @@ public class ProviderPlan : ITableObject<Guid>
         }
     }
 
-    public bool Configured => SeatMinimum.HasValue && PurchasedSeats.HasValue;
+    public bool IsConfigured() => SeatMinimum.HasValue && PurchasedSeats.HasValue && AllocatedSeats.HasValue;
 }
