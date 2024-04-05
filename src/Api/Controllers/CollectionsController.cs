@@ -262,7 +262,7 @@ public class CollectionsController : Controller
 
         return userCollectionDetails == null
             ? new CollectionResponseModel(collection)
-            : new CollectionDetailsResponseModel(userCollectionDetails);
+            : CollectionDetailsResponseModel.FromAssigned(userCollectionDetails);
     }
 
     [HttpPut("{id}")]
@@ -296,7 +296,7 @@ public class CollectionsController : Controller
 
         return updatedCollectionDetails == null
             ? new CollectionResponseModel(collection)
-            : new CollectionDetailsResponseModel(updatedCollectionDetails);
+            : CollectionDetailsResponseModel.FromAssigned(updatedCollectionDetails);
     }
 
     [HttpPut("{id}/users")]
