@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request;
@@ -23,7 +22,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
