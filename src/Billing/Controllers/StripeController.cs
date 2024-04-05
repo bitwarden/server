@@ -3,6 +3,7 @@ using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -188,7 +189,7 @@ public class StripeController : Controller
                     }
 
                     var user = await _userService.GetUserByIdAsync(userId);
-                    if (user.Premium)
+                    if (user?.Premium == true)
                     {
                         await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
                     }
@@ -250,20 +251,20 @@ public class StripeController : Controller
             var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
             if (pm5766AutomaticTaxIsEnabled)
             {
-                var customer = await _stripeFacade.GetCustomer(subscription.CustomerId);
+                var customerGetOptions = new CustomerGetOptions();
+                customerGetOptions.AddExpand("tax");
+                var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
                 if (!subscription.AutomaticTax.Enabled &&
-                    !string.IsNullOrEmpty(customer.Address?.PostalCode) &&
-                    !string.IsNullOrEmpty(customer.Address?.Country))
+                    customer.Tax?.AutomaticTax == StripeCustomerAutomaticTaxStatus.Supported)
                 {
                     subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
                         new SubscriptionUpdateOptions
                         {
-                            DefaultTaxRates = new List<string>(),
+                            DefaultTaxRates = [],
                             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
                         });
                 }
             }
-
 
             var updatedSubscription = pm5766AutomaticTaxIsEnabled
                 ? subscription
@@ -319,7 +320,7 @@ public class StripeController : Controller
             {
                 var user = await _userService.GetUserByIdAsync(userId.Value);
 
-                if (user.Premium)
+                if (user?.Premium == true)
                 {
                     await SendEmails(new List<string> { user.Email });
                 }
@@ -571,7 +572,7 @@ public class StripeController : Controller
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.CustomerUpdated))
         {
             var customer =
-                await _stripeEventService.GetCustomer(parsedEvent, true, new List<string> { "subscriptions" });
+                await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
 
             if (customer.Subscriptions == null || !customer.Subscriptions.Any())
             {
@@ -614,7 +615,7 @@ public class StripeController : Controller
         {
             Customer = paymentMethod.CustomerId,
             Status = StripeSubscriptionStatus.Unpaid,
-            Expand = new List<string> { "data.latest_invoice" }
+            Expand = ["data.latest_invoice"]
         };
 
         StripeList<Subscription> unpaidSubscriptions;
@@ -672,9 +673,9 @@ public class StripeController : Controller
         }
     }
 
-    private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
+    private static Tuple<Guid?, Guid?> GetIdsFromMetaData(Dictionary<string, string> metaData)
     {
-        if (metaData == null || !metaData.Any())
+        if (metaData == null || metaData.Count == 0)
         {
             return new Tuple<Guid?, Guid?>(null, null);
         }
@@ -682,29 +683,35 @@ public class StripeController : Controller
         Guid? orgId = null;
         Guid? userId = null;
 
-        if (metaData.ContainsKey("organizationId"))
+        if (metaData.TryGetValue("organizationId", out var orgIdString))
         {
-            orgId = new Guid(metaData["organizationId"]);
+            orgId = new Guid(orgIdString);
         }
-        else if (metaData.ContainsKey("userId"))
+        else if (metaData.TryGetValue("userId", out var userIdString))
         {
-            userId = new Guid(metaData["userId"]);
+            userId = new Guid(userIdString);
         }
 
-        if (userId == null && orgId == null)
+        if (userId != null && userId != Guid.Empty || orgId != null && orgId != Guid.Empty)
         {
-            var orgIdKey = metaData.Keys.FirstOrDefault(k => k.ToLowerInvariant() == "organizationid");
-            if (!string.IsNullOrWhiteSpace(orgIdKey))
+            return new Tuple<Guid?, Guid?>(orgId, userId);
+        }
+
+        var orgIdKey = metaData.Keys
+            .FirstOrDefault(k => k.Equals("organizationid", StringComparison.InvariantCultureIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(orgIdKey))
+        {
+            orgId = new Guid(metaData[orgIdKey]);
+        }
+        else
+        {
+            var userIdKey = metaData.Keys
+                .FirstOrDefault(k => k.Equals("userid", StringComparison.InvariantCultureIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(userIdKey))
             {
-                orgId = new Guid(metaData[orgIdKey]);
-            }
-            else
-            {
-                var userIdKey = metaData.Keys.FirstOrDefault(k => k.ToLowerInvariant() == "userid");
-                if (!string.IsNullOrWhiteSpace(userIdKey))
-                {
-                    userId = new Guid(metaData[userIdKey]);
-                }
+                userId = new Guid(metaData[userIdKey]);
             }
         }
 
@@ -861,7 +868,7 @@ public class StripeController : Controller
     private bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
     {
         return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
-            invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
+               invoice.BillingReason is "subscription_cycle" or "automatic_pending_invoice_item_invoice" && invoice.SubscriptionId != null;
     }
 
     private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
@@ -891,9 +898,9 @@ public class StripeController : Controller
             return subscription;
         }
 
-        subscription.DefaultTaxRates = new List<Stripe.TaxRate> { stripeTaxRate };
+        subscription.DefaultTaxRates = [stripeTaxRate];
 
-        var subscriptionOptions = new SubscriptionUpdateOptions { DefaultTaxRates = new List<string> { stripeTaxRate.Id } };
+        var subscriptionOptions = new SubscriptionUpdateOptions { DefaultTaxRates = [stripeTaxRate.Id] };
         subscription = await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionOptions);
 
         return subscription;
