@@ -2,6 +2,7 @@
 using AutoMapper.Internal;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -199,42 +200,69 @@ public class OrganizationUsersControllerTests
     [BitAutoData]
     public async Task Put_UpdateCollections_OnlyUpdatesCollectionsTheSavingUserCanUpdate(OrganizationUserUpdateRequestModel model,
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId,
-        List<CollectionAccessSelection> unauthorizedCollectionAccess)
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
+
+        var editedCollectionId = CoreHelpers.GenerateComb();
+        var readonlyCollectionId1 = CoreHelpers.GenerateComb();
+        var readonlyCollectionId2 = CoreHelpers.GenerateComb();
+
+        var currentCollectionAccess = new List<CollectionAccessSelection>
+        {
+            new()
+            {
+                Id = editedCollectionId,
+                HidePasswords = true,
+                Manage = false,
+                ReadOnly = true
+            },
+            new()
+            {
+                Id = readonlyCollectionId1,
+                HidePasswords = false,
+                Manage = true,
+                ReadOnly = false
+            },
+            new()
+            {
+                Id = readonlyCollectionId2,
+                HidePasswords = false,
+                Manage = false,
+                ReadOnly = false
+            },
+        };
+
+        // User is upgrading editedCollectionId to manage
+        model.Collections = new List<SelectionReadOnlyRequestModel>
+        {
+            new() { Id = editedCollectionId, HidePasswords = false, Manage = true, ReadOnly = false }
+        };
 
         // Save these for later - organizationUser object will be mutated
         var orgUserId = organizationUser.Id;
         var orgUserEmail = organizationUser.Email;
 
-        // Current user access returns a mix of authorized and unauthorized collections
-        var allCollectionAccess = model.Collections.Select(cas => cas.ToSelectionReadOnly())
-                    .Concat(unauthorizedCollectionAccess)
-                    .ToList();
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdWithCollectionsAsync(organizationUser.Id)
             .Returns(new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(organizationUser,
-                allCollectionAccess));
+                currentCollectionAccess));
 
-        var collections = model.Collections
+        var currentCollections = currentCollectionAccess
             .Select(cas => new Collection { Id = cas.Id }).ToList();
-        var unauthorizedCollections = unauthorizedCollectionAccess
-            .Select(cas => new Collection { Id = cas.Id }).ToList();
-        var allCollections = collections.Concat(unauthorizedCollections).ToList();
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(allCollections);
+            .Returns(currentCollections);
 
-        // Authorize the collections submitted by the user
+        // Authorize the editedCollection
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => c.Id == editedCollectionId),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
             .Returns(AuthorizationResult.Success());
 
-        // Do not authorize the unauthorized collections
+        // Do not authorize the readonly collections
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => unauthorizedCollections.Contains(c)),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => c.Id == readonlyCollectionId1 || c.Id == readonlyCollectionId2),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
             .Returns(AuthorizationResult.Failed());
 
@@ -249,7 +277,10 @@ public class OrganizationUsersControllerTests
             ou.Email == orgUserEmail),
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
-                cas.Select(c => c.Id).SequenceEqual(allCollectionAccess.Select(c => c.Id))),
+                cas.Select(c => c.Id).SequenceEqual(currentCollectionAccess.Select(c => c.Id)) &&
+                cas.First(c => c.Id == editedCollectionId).Manage == true &&
+                cas.First(c => c.Id == editedCollectionId).ReadOnly == false &&
+                cas.First(c => c.Id == editedCollectionId).HidePasswords == false),
             model.Groups);
     }
 
