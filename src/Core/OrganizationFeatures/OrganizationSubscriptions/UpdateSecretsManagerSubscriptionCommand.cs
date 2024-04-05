@@ -118,7 +118,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Error encountered notifying organization owners of service accounts limit reached.");
+            _logger.LogError(e, $"Error encountered notifying organization owners of machine accounts limit reached.");
         }
 
     }
@@ -253,12 +253,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check if the organization has unlimited service accounts
         if (organization.SmServiceAccounts == null)
         {
-            throw new BadRequestException("Organization has no service accounts limit, no need to adjust service accounts");
+            throw new BadRequestException("Organization has no machine accounts limit, no need to adjust machine accounts");
         }
 
         if (update.Autoscaling && update.SmServiceAccounts.Value < organization.SmServiceAccounts.Value)
         {
-            throw new BadRequestException("Cannot use autoscaling to subtract service accounts.");
+            throw new BadRequestException("Cannot use autoscaling to subtract machine accounts.");
         }
 
         // Check plan maximum service accounts
@@ -267,7 +267,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             var planMaxServiceAccounts = plan.SecretsManager.BaseServiceAccount +
                                          plan.SecretsManager.MaxAdditionalServiceAccount.GetValueOrDefault();
-            throw new BadRequestException($"You have reached the maximum number of service accounts ({planMaxServiceAccounts}) for this plan.");
+            throw new BadRequestException($"You have reached the maximum number of machine accounts ({planMaxServiceAccounts}) for this plan.");
         }
 
         // Check autoscale maximum service accounts
@@ -275,21 +275,21 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             update.SmServiceAccounts.Value > update.MaxAutoscaleSmServiceAccounts.Value)
         {
             var message = update.Autoscaling
-                ? "Secrets Manager service account limit has been reached."
-                : "Cannot set max service accounts autoscaling below service account amount.";
+                ? "Secrets Manager machine account limit has been reached."
+                : "Cannot set max machine accounts autoscaling below machine account amount.";
             throw new BadRequestException(message);
         }
 
         // Check minimum service accounts included with plan
         if (plan.SecretsManager.BaseServiceAccount > update.SmServiceAccounts.Value)
         {
-            throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseServiceAccount} service accounts.");
+            throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseServiceAccount} machine accounts.");
         }
 
         // Check minimum service accounts required by business logic
         if (update.SmServiceAccounts.Value <= 0)
         {
-            throw new BadRequestException("You must have at least 1 service account.");
+            throw new BadRequestException("You must have at least 1 machine account.");
         }
 
         // Check minimum service accounts currently in use by the organization
@@ -298,8 +298,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             var currentServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
             if (currentServiceAccounts > update.SmServiceAccounts)
             {
-                throw new BadRequestException($"Your organization currently has {currentServiceAccounts} service accounts. " +
-                                              $"You cannot decrease your subscription below your current service account usage.");
+                throw new BadRequestException($"Your organization currently has {currentServiceAccounts} machine accounts. " +
+                                              $"You cannot decrease your subscription below your current machine account usage.");
             }
         }
     }
@@ -346,18 +346,18 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (update.SmServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value < update.SmServiceAccounts.Value)
         {
             throw new BadRequestException(
-                $"Cannot set max service accounts autoscaling below current service accounts count.");
+                $"Cannot set max machine accounts autoscaling below current machine accounts count.");
         }
 
         if (!plan.SecretsManager.AllowServiceAccountsAutoscale)
         {
-            throw new BadRequestException("Your plan does not allow service accounts autoscaling.");
+            throw new BadRequestException("Your plan does not allow machine accounts autoscaling.");
         }
 
         if (plan.SecretsManager.MaxServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value > plan.SecretsManager.MaxServiceAccounts)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a service account limit of {plan.SecretsManager.MaxServiceAccounts}, ",
+                $"Your plan has a machine account limit of {plan.SecretsManager.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {update.MaxAutoscaleSmServiceAccounts}.",
                 "Reduce your max autoscale count."));
         }

@@ -1277,7 +1277,7 @@ public class OrganizationService : IOrganizationService
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
                 await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
@@ -1959,7 +1959,7 @@ public class OrganizationService : IOrganizationService
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException("Plan does not allow additional Service Accounts.");
+            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
         if ((plan.Product == ProductType.TeamsStarter &&
@@ -1972,7 +1972,7 @@ public class OrganizationService : IOrganizationService
 
         if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
         {
-            throw new BadRequestException("You can't subtract Service Accounts!");
+            throw new BadRequestException("You can't subtract Machine Accounts!");
         }
 
         switch (plan.SecretsManager.HasAdditionalSeatsOption)

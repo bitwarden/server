@@ -85,7 +85,7 @@ public class PeopleAccessPoliciesRequestModel
 
         if (!policies.All(ap => ap.Read && ap.Write))
         {
-            throw new BadRequestException("Service account access must be Can read, write");
+            throw new BadRequestException("Machine account access must be Can read, write");
         }
 
         return new ServiceAccountPeopleAccessPolicies

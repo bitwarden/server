@@ -410,7 +410,7 @@ public class OrganizationServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(signup));
-        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+        Assert.Contains("Plan does not allow additional Machine Accounts.", exception.Message);
     }
 
     [Theory]
@@ -444,7 +444,7 @@ public class OrganizationServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(signup));
-        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+        Assert.Contains("You can't subtract Machine Accounts!", exception.Message);
     }
 
     [Theory]
@@ -1859,7 +1859,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             AdditionalSeats = 3
         };
         var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
-        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+        Assert.Contains("Plan does not allow additional Machine Accounts.", exception.Message);
     }
 
     [Theory]
@@ -1900,7 +1900,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             AdditionalSeats = 5
         };
         var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
-        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+        Assert.Contains("You can't subtract Machine Accounts!", exception.Message);
     }
 
     [Theory]

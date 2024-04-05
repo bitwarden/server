@@ -17,6 +17,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
+using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Services;
 
@@ -374,8 +375,22 @@ public class ProviderService : IProviderService
             Key = key,
         };
 
-        await ApplyProviderPriceRateAsync(organizationId, providerId);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        await ApplyProviderPriceRateAsync(organization, provider);
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
+
+        organization.BillingEmail = provider.BillingEmail;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
+        {
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            {
+                Email = provider.BillingEmail
+            });
+        }
+
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
     }
 
@@ -400,16 +415,14 @@ public class ProviderService : IProviderService
         await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
-    private async Task ApplyProviderPriceRateAsync(Guid organizationId, Guid providerId)
+    private async Task ApplyProviderPriceRateAsync(Organization organization, Provider provider)
     {
-        var provider = await _providerRepository.GetByIdAsync(providerId);
         // if a provider was created before Nov 6, 2023.If true, the organization plan assigned to that provider is updated to a 2020 plan.
         if (provider.CreationDate >= Constants.ProviderCreatedPriorNov62023)
         {
             return;
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
         var extractedPlanType = PlanTypeMappings(organization);
         if (subscriptionItem != null)
