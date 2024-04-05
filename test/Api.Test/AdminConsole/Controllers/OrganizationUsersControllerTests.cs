@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using AutoMapper.Internal;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request;
