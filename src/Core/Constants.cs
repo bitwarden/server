@@ -131,6 +131,7 @@ public static class FeatureFlagKeys
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
     public const string EnableConsolidatedBilling = "enable-consolidated-billing";
+    public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
 
     public static List<string> GetAllKeys()
     {
