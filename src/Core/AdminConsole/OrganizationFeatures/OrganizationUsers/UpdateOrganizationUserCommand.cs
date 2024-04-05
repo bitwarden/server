@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿#nullable enable
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -36,7 +37,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     }
 
     public async Task UpdateUserAsync(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
+        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid>? groups)
     {
         if (user.Id.Equals(default(Guid)))
         {
