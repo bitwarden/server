@@ -38,7 +38,7 @@ public class SyncResponseModel : ResponseModel
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
         Collections = collections?.Select(
-            CollectionDetailsResponseModel.FromAssigned) ?? new List<CollectionDetailsResponseModel>();
+            c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         Sends = sends.Select(s => new SendResponseModel(s, globalSettings));
