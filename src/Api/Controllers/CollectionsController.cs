@@ -581,13 +581,6 @@ public class CollectionsController : Controller
         // Filter collections to only return those where the user has Manage permission
         var manageableOrgCollections = allOrgCollections.Where(c => c.Manage).ToList();
 
-        var authorized = (await _authorizationService.AuthorizeAsync(User, manageableOrgCollections, BulkCollectionOperations.ReadWithAccess)).Succeeded;
-
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
         return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
             new CollectionAccessDetailsResponseModel(c)
         ));
