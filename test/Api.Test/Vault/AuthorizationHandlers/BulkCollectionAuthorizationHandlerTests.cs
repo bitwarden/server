@@ -1051,6 +1051,39 @@ public class BulkCollectionAuthorizationHandlerTests
         }
     }
 
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CachesCollectionsWithCanManagePermissions(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        CollectionDetails collection1, CollectionDetails collection2,
+        CurrentContextOrganization organization, Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(actingUserId, Arg.Any<bool>())
+            .Returns(new List<CollectionDetails>() { collection1, collection2 });
+
+        var context1 = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Update },
+            new ClaimsPrincipal(),
+            collection1);
+
+        await sutProvider.Sut.HandleAsync(context1);
+
+        var context2 = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Update },
+            new ClaimsPrincipal(),
+            collection2);
+
+        await sutProvider.Sut.HandleAsync(context2);
+
+        // Expect: only calls the database once
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(Arg.Any<Guid>(), Arg.Any<bool>());
+    }
+
     private static void ArrangeOrganizationAbility(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization, bool limitCollectionCreationDeletion)
