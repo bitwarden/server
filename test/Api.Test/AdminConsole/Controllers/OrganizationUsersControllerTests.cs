@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using AutoMapper.Internal;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
@@ -11,6 +12,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -195,6 +197,94 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task Put_UpdateCollections_OnlyUpdatesCollectionsTheSavingUserCanUpdate(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId,
+        List<CollectionAccessSelection> unauthorizedCollectionAccess)
+    {
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
+
+        // Save these for later - organizationUser object will be mutated
+        var orgUserId = organizationUser.Id;
+        var orgUserEmail = organizationUser.Email;
+
+        // Current user access returns a mix of authorized and unauthorized collections
+        var allCollectionAccess = model.Collections.Select(cas => cas.ToSelectionReadOnly())
+                    .Concat(unauthorizedCollectionAccess)
+                    .ToList();
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(organizationUser,
+                allCollectionAccess));
+
+        var collections = model.Collections
+            .Select(cas => new Collection { Id = cas.Id }).ToList();
+        var unauthorizedCollections = unauthorizedCollectionAccess
+            .Select(cas => new Collection { Id = cas.Id }).ToList();
+        var allCollections = collections.Concat(unauthorizedCollections).ToList();
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(allCollections);
+
+        // Authorize the collections submitted by the user
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+            .Returns(AuthorizationResult.Success());
+
+        // Do not authorize the unauthorized collections
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => unauthorizedCollections.Contains(c)),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+            .Returns(AuthorizationResult.Failed());
+
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+
+        // Expect all collection access (modified and unmodified) to be saved
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
+            ou.Type == model.Type &&
+            ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
+            ou.AccessSecretsManager == model.AccessSecretsManager &&
+            ou.Id == orgUserId &&
+            ou.Email == orgUserEmail),
+            savingUserId,
+            Arg.Is<List<CollectionAccessSelection>>(cas =>
+                cas.Select(c => c.Id).SequenceEqual(allCollectionAccess.Select(c => c.Id))),
+            model.Groups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_UpdateCollections_ThrowsIfSavingUserCannotUpdateCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
+
+        // Save these for later - organizationUser object will be mutated
+        var orgUserId = organizationUser.Id;
+        var orgUserEmail = organizationUser.Email;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(organizationUser,
+                model.Collections.Select(cas => cas.ToSelectionReadOnly()).ToList()));
+        var collections = model.Collections.Select(cas => new Collection { Id = cas.Id }).ToList();
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(guids => guids.SequenceEqual(collections.Select(c => c.Id))))
+            .Returns(collections);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+            .Returns(AuthorizationResult.Failed());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+        Assert.Contains("You must have Can Manage permission", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task Get_WithFlexibleCollections_ReturnsUsers(
         ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider)
@@ -271,7 +361,7 @@ public class OrganizationUsersControllerTests
     }
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider, OrganizationAbility organizationAbility,
-        OrganizationUser organizationUser, Guid savingUserId, OrganizationUserUpdateRequestModel model,  bool authorizeAll)
+        OrganizationUser organizationUser, Guid savingUserId, OrganizationUserUpdateRequestModel model, bool authorizeAll)
     {
         var orgId = organizationAbility.Id = organizationUser.OrganizationId;
 
@@ -290,12 +380,12 @@ public class OrganizationUsersControllerTests
                     model.Collections.Select(cas => cas.ToSelectionReadOnly()).ToList()));
             var collections = model.Collections.Select(cas => new Collection { Id = cas.Id }).ToList();
             sutProvider.GetDependency<ICollectionRepository>()
-                .GetManyByManyIdsAsync(collections.Select(c => c.Id))
+                .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(guids => guids.SequenceEqual(collections.Select(c => c.Id))))
                 .Returns(collections);
 
             sutProvider.GetDependency<IAuthorizationService>()
-                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<IEnumerable<Collection>>(),
-                    BulkCollectionOperations.ModifyAccess)
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ModifyAccess)))
                 .Returns(AuthorizationResult.Success());
         }
     }
