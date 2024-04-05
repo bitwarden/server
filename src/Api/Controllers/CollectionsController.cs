@@ -552,16 +552,16 @@ public class CollectionsController : Controller
     private async Task<CollectionAccessDetailsResponseModel> GetDetails_vNext(Guid id)
     {
         // New flexible collections logic
-        var collectionDetails =
+        var collectionAdminDetails =
             await _collectionRepository.GetByIdWithPermissionsAsync(id, _currentContext.UserId, true);
 
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collectionDetails, BulkCollectionOperations.ReadWithAccess)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collectionAdminDetails, BulkCollectionOperations.ReadWithAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
         }
 
-        return new CollectionAccessDetailsResponseModel(collectionDetails);
+        return new CollectionAccessDetailsResponseModel(collectionAdminDetails);
     }
 
     private async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails_vNext(Guid orgId)
