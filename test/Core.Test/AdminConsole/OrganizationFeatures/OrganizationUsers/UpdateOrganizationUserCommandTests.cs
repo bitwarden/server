@@ -30,17 +30,6 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
-        ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
-    {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        organizationUserRepository.GetByIdAsync(user.Id).Returns(user);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collections, groups));
-        Assert.Contains("make changes before saving", exception.Message.ToLowerInvariant());
-    }
-
-    [Theory, BitAutoData]
     public async Task UpdateUserAsync_Passes(
         Organization organization,
         OrganizationUser oldUserData,

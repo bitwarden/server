@@ -45,10 +45,6 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         }
 
         var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-        if (user.Equals(originalUser))
-        {
-            throw new BadRequestException("Please make changes before saving.");
-        }
 
         if (savingUserId.HasValue)
         {
