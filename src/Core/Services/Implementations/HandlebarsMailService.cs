@@ -951,7 +951,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Service Accounts Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Machine Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
             OrganizationId = organization.Id,

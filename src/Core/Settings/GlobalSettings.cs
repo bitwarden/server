@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Settings;
+using Bit.Core.Enums;
 using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
@@ -64,7 +65,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
     public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
     public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
-    public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
+    public virtual List<NotificationHubSettings> NotificationHubs { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
@@ -416,12 +417,16 @@ public class GlobalSettings : IGlobalSettings
             set => _connectionString = value.Trim('"');
         }
         public string HubName { get; set; }
-
         /// <summary>
         /// Enables TestSend on the Azure Notification Hub, which allows tracing of the request through the hub and to the platform-specific push notification service (PNS).
         /// Enabling this will result in delayed responses because the Hub must wait on delivery to the PNS.  This should ONLY be enabled in a non-production environment, as results are throttled.
         /// </summary>
         public bool EnableSendTracing { get; set; } = false;
+        /// <summary>
+        /// At least one hub configuration should have registration enabled, preferably the General hub as a safety net.
+        /// </summary>
+        public bool EnableRegistration { get; set; }
+        public NotificationHubType HubType { get; set; }
     }
 
     public class YubicoSettings

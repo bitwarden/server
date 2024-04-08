@@ -2,11 +2,11 @@
 
 namespace Bit.Core.Models.StaticStore.Plans;
 
-public record EnterprisePlan : Plan
+public record Enterprise2023Plan : Plan
 {
-    public EnterprisePlan(bool isAnnual)
+    public Enterprise2023Plan(bool isAnnual)
     {
-        Type = isAnnual ? PlanType.EnterpriseAnnually : PlanType.EnterpriseMonthly;
+        Type = isAnnual ? PlanType.EnterpriseAnnually2023 : PlanType.EnterpriseMonthly2023;
         Product = ProductType.Enterprise;
         Name = isAnnual ? "Enterprise (Annually)" : "Enterprise (Monthly)";
         IsAnnual = isAnnual;
@@ -34,17 +34,19 @@ public record EnterprisePlan : Plan
         UpgradeSortOrder = 4;
         DisplaySortOrder = 4;
 
-        PasswordManager = new EnterprisePasswordManagerFeatures(isAnnual);
-        SecretsManager = new EnterpriseSecretsManagerFeatures(isAnnual);
+        LegacyYear = 2024;
+
+        PasswordManager = new Enterprise2023PasswordManagerFeatures(isAnnual);
+        SecretsManager = new Enterprise2023SecretsManagerFeatures(isAnnual);
     }
 
-    private record EnterpriseSecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record Enterprise2023SecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public EnterpriseSecretsManagerFeatures(bool isAnnual)
+        public Enterprise2023SecretsManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 50;
+            BaseServiceAccount = 200;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -55,23 +57,23 @@ public record EnterprisePlan : Plan
             if (isAnnual)
             {
                 StripeSeatPlanId = "secrets-manager-enterprise-seat-annually";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-annually";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-annually";
                 SeatPrice = 144;
-                AdditionalPricePerServiceAccount = 12;
+                AdditionalPricePerServiceAccount = 6;
             }
             else
             {
                 StripeSeatPlanId = "secrets-manager-enterprise-seat-monthly";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
                 SeatPrice = 13;
-                AdditionalPricePerServiceAccount = 1;
+                AdditionalPricePerServiceAccount = 0.5M;
             }
         }
     }
 
-    private record EnterprisePasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record Enterprise2023PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public EnterprisePasswordManagerFeatures(bool isAnnual)
+        public Enterprise2023PasswordManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BaseStorageGb = 1;

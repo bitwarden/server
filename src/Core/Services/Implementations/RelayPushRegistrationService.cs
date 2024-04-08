@@ -38,30 +38,37 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
         await SendAsync(HttpMethod.Post, "push/register", requestModel);
     }
 
-    public async Task DeleteRegistrationAsync(string deviceId)
+    public async Task DeleteRegistrationAsync(string deviceId, DeviceType type)
     {
-        await SendAsync(HttpMethod.Delete, string.Concat("push/", deviceId));
+        var requestModel = new PushDeviceRequestModel
+        {
+            Id = deviceId,
+            Type = type,
+        };
+        await SendAsync(HttpMethod.Post, "push/delete", requestModel);
     }
 
-    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task AddUserRegistrationOrganizationAsync(
+        IEnumerable<KeyValuePair<string, DeviceType>> devices, string organizationId)
     {
-        if (!deviceIds.Any())
+        if (!devices.Any())
         {
             return;
         }
 
-        var requestModel = new PushUpdateRequestModel(deviceIds, organizationId);
+        var requestModel = new PushUpdateRequestModel(devices, organizationId);
         await SendAsync(HttpMethod.Put, "push/add-organization", requestModel);
     }
 
-    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task DeleteUserRegistrationOrganizationAsync(
+        IEnumerable<KeyValuePair<string, DeviceType>> devices, string organizationId)
     {
-        if (!deviceIds.Any())
+        if (!devices.Any())
         {
             return;
         }
 
-        var requestModel = new PushUpdateRequestModel(deviceIds, organizationId);
+        var requestModel = new PushUpdateRequestModel(devices, organizationId);
         await SendAsync(HttpMethod.Put, "push/delete-organization", requestModel);
     }
 }
