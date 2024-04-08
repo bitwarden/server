@@ -355,11 +355,10 @@ public class StripeController : Controller
             {
                 await _transactionRepository.CreateAsync(transaction);
             }
-            // Catch foreign key violations because user/org could have been deleted.
             catch (SqlException e) when (e.Number == 547)
             {
                 _logger.LogWarning(
-                    "Charge success transaction creation failed as entity may have been deleted. {ChargeId}",
+                    "Charge success could not create transaction as entity may have been deleted. {ChargeId}",
                     charge.Id);
                 return new OkResult();
             }
@@ -367,51 +366,65 @@ public class StripeController : Controller
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
         {
             var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
-            var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                GatewayType.Stripe, charge.Id);
-            if (chargeTransaction == null)
+            var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
+            if (parentTransaction == null)
             {
-                throw new Exception("Cannot find refunded charge. " + charge.Id);
+                // Attempt to create a transaction for the charge if it doesn't exist
+                var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
+                var tx = FromChargeToTransaction(charge, organizationId, userId);
+                try
+                {
+                    parentTransaction = await _transactionRepository.CreateAsync(tx);
+                }
+                catch (SqlException e) when (e.Number == 547)
+                {
+                    _logger.LogWarning(
+                        "Charge refund could not create transaction as entity may have been deleted. {ChargeId}",
+                        charge.Id);
+                    return new OkResult();
+                }
             }
 
             var amountRefunded = charge.AmountRefunded / 100M;
 
-            if (!chargeTransaction.Refunded.GetValueOrDefault() &&
-                chargeTransaction.RefundedAmount.GetValueOrDefault() < amountRefunded)
+            if (parentTransaction.Refunded.GetValueOrDefault() ||
+                parentTransaction.RefundedAmount.GetValueOrDefault() >= amountRefunded)
             {
-                chargeTransaction.RefundedAmount = amountRefunded;
-                if (charge.Refunded)
-                {
-                    chargeTransaction.Refunded = true;
-                }
-                await _transactionRepository.ReplaceAsync(chargeTransaction);
-
-                foreach (var refund in charge.Refunds)
-                {
-                    var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                        GatewayType.Stripe, refund.Id);
-                    if (refundTransaction != null)
-                    {
-                        continue;
-                    }
-
-                    await _transactionRepository.CreateAsync(new Transaction
-                    {
-                        Amount = refund.Amount / 100M,
-                        CreationDate = refund.Created,
-                        OrganizationId = chargeTransaction.OrganizationId,
-                        UserId = chargeTransaction.UserId,
-                        Type = TransactionType.Refund,
-                        Gateway = GatewayType.Stripe,
-                        GatewayId = refund.Id,
-                        PaymentMethodType = chargeTransaction.PaymentMethodType,
-                        Details = chargeTransaction.Details
-                    });
-                }
+                _logger.LogWarning(
+                    "Charge refund amount doesn't match parent transaction's amount or parent has already been refunded. {ChargeId}",
+                    charge.Id);
+                return new OkResult();
             }
-            else
+
+            parentTransaction.RefundedAmount = amountRefunded;
+            if (charge.Refunded)
             {
-                _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
+                parentTransaction.Refunded = true;
+            }
+
+            await _transactionRepository.ReplaceAsync(parentTransaction);
+
+            foreach (var refund in charge.Refunds)
+            {
+                var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.Stripe, refund.Id);
+                if (refundTransaction != null)
+                {
+                    continue;
+                }
+
+                await _transactionRepository.CreateAsync(new Transaction
+                {
+                    Amount = refund.Amount / 100M,
+                    CreationDate = refund.Created,
+                    OrganizationId = parentTransaction.OrganizationId,
+                    UserId = parentTransaction.UserId,
+                    Type = TransactionType.Refund,
+                    Gateway = GatewayType.Stripe,
+                    GatewayId = refund.Id,
+                    PaymentMethodType = parentTransaction.PaymentMethodType,
+                    Details = parentTransaction.Details
+                });
             }
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentSucceeded))
