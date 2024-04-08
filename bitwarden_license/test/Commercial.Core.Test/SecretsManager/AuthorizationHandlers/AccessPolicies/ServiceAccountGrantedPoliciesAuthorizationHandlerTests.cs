@@ -190,6 +190,33 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
     [Theory]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     [BitAutoData(AccessClientType.User)]
+    public async Task Handler_AccessResultsPartial_DoesNotSucceed(
+        AccessClientType accessClientType,
+        SutProvider<ServiceAccountGrantedPoliciesAuthorizationHandler> sutProvider,
+        ServiceAccountGrantedPoliciesUpdates resource,
+        Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = ServiceAccountGrantedPoliciesOperations.Updates;
+        var projectIds = SetupProjectAccessTest(sutProvider, accessClientType, resource, userId);
+
+        var accessResult = projectIds.ToDictionary(projectId => projectId, _ => (false, false));
+        accessResult.Remove(projectIds.First());
+        sutProvider.GetDependency<IProjectRepository>()
+            .AccessToProjectsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
+            .Returns(accessResult);
+
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(AccessClientType.NoAccessCheck)]
+    [BitAutoData(AccessClientType.User)]
     public async Task Handler_UserHasAccessToAllGrantedProjects_Success(
         AccessClientType accessClientType,
         SutProvider<ServiceAccountGrantedPoliciesAuthorizationHandler> sutProvider,

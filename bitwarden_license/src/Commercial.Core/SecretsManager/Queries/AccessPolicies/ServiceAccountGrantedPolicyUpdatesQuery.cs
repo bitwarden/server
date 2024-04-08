@@ -19,7 +19,8 @@ public class ServiceAccountGrantedPolicyUpdatesQuery : IServiceAccountGrantedPol
     public async Task<ServiceAccountGrantedPoliciesUpdates> GetAsync(
         ServiceAccountGrantedPolicies grantedPolicies)
     {
-        var currentPolicies = await _accessPolicyRepository.GetServiceAccountGrantedPoliciesAsync(grantedPolicies.ServiceAccountId);
+        var currentPolicies =
+            await _accessPolicyRepository.GetServiceAccountGrantedPoliciesAsync(grantedPolicies.ServiceAccountId);
         if (currentPolicies == null)
         {
             return new ServiceAccountGrantedPoliciesUpdates

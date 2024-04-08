@@ -79,7 +79,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
 
             var projectsAccess =
                 await _projectRepository.AccessToProjectsAsync(projectIdsToCheck, userId, accessClient);
-            if (projectsAccess.All(a => a.Value.Write))
+            if (projectsAccess.Count == projectIdsToCheck.Count && projectsAccess.All(a => a.Value.Write))
             {
                 context.Succeed(requirement);
             }
