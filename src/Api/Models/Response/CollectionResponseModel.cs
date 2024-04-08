@@ -27,77 +27,50 @@ public class CollectionResponseModel : ResponseModel
 }
 
 /// <summary>
-/// Response model for a collection that includes a user's permission when that user is assigned to the collection.
+/// Response model for a collection that is always assigned to the requesting user, including permissions.
 /// </summary>
 public class CollectionDetailsResponseModel : CollectionResponseModel
 {
     /// <summary>
-    /// Create a response model for when the user is not assigned to the collection
-    /// (they have no explicit permissions/assignment).
-    /// </summary>
-    private CollectionDetailsResponseModel(Collection collection)
-        : base(collection, "collectionDetails")
-    {
-        ReadOnly = false;
-        HidePasswords = false;
-        Manage = false;
-        Assigned = false;
-    }
-
-    /// <summary>
     /// Create a response model for when the user is assumed to be assigned to the collection with permissions.
     /// e.g. The collection details comes from a repository method that only returns collections the user is assigned to.
     /// </summary>
-    private CollectionDetailsResponseModel(CollectionDetails collectionDetails)
+    public CollectionDetailsResponseModel(CollectionDetails collectionDetails)
         : base(collectionDetails, "collectionDetails")
     {
         ReadOnly = collectionDetails.ReadOnly;
         HidePasswords = collectionDetails.HidePasswords;
         Manage = collectionDetails.Manage;
-        Assigned = true;
-    }
-
-    /// <summary>
-    /// Create a response model for when a user may or may not be assigned to the collection with permissions.
-    /// </summary>
-    public CollectionDetailsResponseModel(CollectionAdminDetails collection)
-        : base(collection, "collectionDetails")
-    {
-        ReadOnly = collection.ReadOnly;
-        HidePasswords = collection.HidePasswords;
-        Manage = collection.Manage;
-        Assigned = collection.Assigned;
     }
 
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
     public bool Manage { get; set; }
-
-    /// <summary>
-    /// Flag for whether the user has been explicitly assigned to the collection either directly or through a group.
-    /// </summary>
-    public bool Assigned { get; set; }
-
-
-    /// <summary>
-    /// Create a response model for when the user is assigned to the collection with permissions.
-    /// </summary>
-    public static CollectionDetailsResponseModel FromAssigned(CollectionDetails collectionDetails)
-    {
-        return new CollectionDetailsResponseModel(collectionDetails);
-    }
-
-    /// <summary>
-    /// Create a response model for when the user is NOT assigned to the collection.
-    /// </summary>
-    public static CollectionDetailsResponseModel FromUnassigned(Collection collection)
-    {
-        return new CollectionDetailsResponseModel(collection);
-    }
 }
 
 public class CollectionAccessDetailsResponseModel : CollectionResponseModel
 {
+    /// <summary>
+    /// Create a response model for when the requesting user is assumed not assigned to the collection.
+    /// No user permissions are included.
+    ///
+    /// Ideally, the CollectionAdminDetails constructor should be used instead wherever possible. This is only
+    /// used in the case of MSPs where the Provider user will likely never be assigned to the collection.
+    /// </summary>
+    /// <param name="collection"></param>
+    public CollectionAccessDetailsResponseModel(Collection collection)
+        : base(collection, "collectionAccessDetails")
+    { }
+
+    /// <summary>
+    /// Create a response model for when the requesting user is assumed not assigned to the collection. Includes
+    /// the other groups and user relationships for the collection.
+    /// No user permissions are included.
+    /// </summary>
+    /// <param name="collection"></param>
+    /// <param name="groups"></param>
+    /// <param name="users"></param>
+    [Obsolete("Use the CollectionAdminDetails constructor instead.")]
     public CollectionAccessDetailsResponseModel(Collection collection, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
         : base(collection, "collectionAccessDetails")
     {
@@ -105,6 +78,10 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
         Users = users.Select(g => new SelectionReadOnlyResponseModel(g));
     }
 
+    /// <summary>
+    /// Create a response model for when the requesting user's assignment is available via CollectionAdminDetails.
+    /// </summary>
+    /// <param name="collection"></param>
     public CollectionAccessDetailsResponseModel(CollectionAdminDetails collection)
         : base(collection, "collectionAccessDetails")
     {
