@@ -4,7 +4,7 @@ IF NOT EXISTS (
         *
     FROM
         sys.types
-    WHERE
+    WHERE 
         [Name] = 'OrganizationSponsorshipType' AND
         is_user_defined = 1
 )
@@ -81,7 +81,7 @@ BEGIN
 
     UPDATE
         OS
-    SET
+    SET 
         [Id] = OSI.[Id],
         [SponsoringOrganizationId] = OSI.[SponsoringOrganizationId],
         [SponsoringOrganizationUserID] = OSI.[SponsoringOrganizationUserID],
