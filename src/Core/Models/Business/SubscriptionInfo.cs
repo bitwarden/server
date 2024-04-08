@@ -8,22 +8,12 @@ public class SubscriptionInfo
     public BillingSubscription Subscription { get; set; }
     public BillingUpcomingInvoice UpcomingInvoice { get; set; }
 
-    public class BillingCustomerDiscount
+    public class BillingCustomerDiscount(Discount discount)
     {
-        public BillingCustomerDiscount() { }
-
-        public BillingCustomerDiscount(Discount discount)
-        {
-            Id = discount.Id;
-            Active = discount.Start != null && discount.End == null;
-            PercentOff = discount.Coupon?.PercentOff;
-            AppliesTo = discount.Coupon?.AppliesTo?.Products ?? new List<string>();
-        }
-
-        public string Id { get; }
-        public bool Active { get; }
-        public decimal? PercentOff { get; }
-        public List<string> AppliesTo { get; }
+        public string Id { get; } = discount.Coupon?.Id;
+        public bool Active { get; } = discount.End == null;
+        public decimal? PercentOff { get; } = discount.Coupon?.PercentOff;
+        public List<string> AppliesTo { get; } = discount.Coupon?.AppliesTo?.Products ?? [];
     }
 
     public class BillingSubscription
