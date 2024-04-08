@@ -50,9 +50,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         {
             var dbContext = GetDatabaseContext(scope);
             var organizations = await GetDbSet(dbContext)
-                .Select(e => e.OrganizationUsers
-                    .Where(ou => ou.UserId == userId)
-                    .Select(ou => ou.Organization))
+                .SelectMany(e => e.OrganizationUsers
+                    .Where(ou => ou.UserId == userId))
+                .Include(ou => ou.Organization)
+                .Select(ou => ou.Organization)
                 .ToListAsync();
             return Mapper.Map<List<Core.AdminConsole.Entities.Organization>>(organizations);
         }
