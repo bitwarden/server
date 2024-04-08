@@ -329,127 +329,40 @@ public class StripeController : Controller
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
         {
             var charge = await _stripeEventService.GetCharge(parsedEvent);
-            var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                GatewayType.Stripe, charge.Id);
-            if (chargeTransaction != null)
+
+            var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
+            if (existingTransaction is not null)
             {
-                _logger.LogWarning("Charge success already processed. " + charge.Id);
+                _logger.LogInformation("Charge success already processed. {ChargeId}", charge.Id);
                 return new OkResult();
             }
 
-            Tuple<Guid?, Guid?> ids = null;
-            Subscription subscription = null;
-
-            if (charge.InvoiceId != null)
+            var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
+            if (!organizationId.HasValue && !userId.HasValue)
             {
-                var invoice = await _stripeFacade.GetInvoice(charge.InvoiceId);
-                if (invoice?.SubscriptionId != null)
-                {
-                    subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-                    ids = GetIdsFromMetaData(subscription?.Metadata);
-                }
+                _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
+                return new OkResult();
             }
 
-            if (subscription == null || ids == null || (ids.Item1.HasValue && ids.Item2.HasValue))
+            var transaction = FromChargeToTransaction(charge, organizationId, userId);
+            if (!transaction.PaymentMethodType.HasValue)
             {
-                var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
-                {
-                    Customer = charge.CustomerId
-                });
-                foreach (var sub in subscriptions)
-                {
-                    if (sub.Status != StripeSubscriptionStatus.Canceled && sub.Status != StripeSubscriptionStatus.IncompleteExpired)
-                    {
-                        ids = GetIdsFromMetaData(sub.Metadata);
-                        if (ids.Item1.HasValue || ids.Item2.HasValue)
-                        {
-                            subscription = sub;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!ids.Item1.HasValue && !ids.Item2.HasValue)
-            {
-                _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
-                return new BadRequestResult();
-            }
-
-            var tx = new Transaction
-            {
-                Amount = charge.Amount / 100M,
-                CreationDate = charge.Created,
-                OrganizationId = ids.Item1,
-                UserId = ids.Item2,
-                Type = TransactionType.Charge,
-                Gateway = GatewayType.Stripe,
-                GatewayId = charge.Id
-            };
-
-            if (charge.Source != null && charge.Source is Card card)
-            {
-                tx.PaymentMethodType = PaymentMethodType.Card;
-                tx.Details = $"{card.Brand}, *{card.Last4}";
-            }
-            else if (charge.Source != null && charge.Source is BankAccount bankAccount)
-            {
-                tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
-            }
-            else if (charge.Source != null && charge.Source is Source source)
-            {
-                if (source.Card != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.Card;
-                    tx.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
-                }
-                else if (source.AchDebit != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
-                }
-                else if (source.AchCreditTransfer != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"ACH => {source.AchCreditTransfer.BankName}, " +
-                        $"{source.AchCreditTransfer.AccountNumber}";
-                }
-            }
-            else if (charge.PaymentMethodDetails != null)
-            {
-                if (charge.PaymentMethodDetails.Card != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.Card;
-                    tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
-                        $"*{charge.PaymentMethodDetails.Card.Last4}";
-                }
-                else if (charge.PaymentMethodDetails.AchDebit != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"{charge.PaymentMethodDetails.AchDebit.BankName}, " +
-                        $"*{charge.PaymentMethodDetails.AchDebit.Last4}";
-                }
-                else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"ACH => {charge.PaymentMethodDetails.AchCreditTransfer.BankName}, " +
-                        $"{charge.PaymentMethodDetails.AchCreditTransfer.AccountNumber}";
-                }
-            }
-
-            if (!tx.PaymentMethodType.HasValue)
-            {
-                _logger.LogWarning("Charge success from unsupported source/method. " + charge.Id);
+                _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);
                 return new OkResult();
             }
 
             try
             {
-                await _transactionRepository.CreateAsync(tx);
+                await _transactionRepository.CreateAsync(transaction);
             }
             // Catch foreign key violations because user/org could have been deleted.
-            catch (SqlException e) when (e.Number == 547) { }
+            catch (SqlException e) when (e.Number == 547)
+            {
+                _logger.LogWarning(
+                    "Charge success transaction creation failed as entity may have been deleted. {ChargeId}",
+                    charge.Id);
+                return new OkResult();
+            }
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
         {
@@ -601,6 +514,147 @@ public class StripeController : Controller
         }
 
         return new OkResult();
+    }
+
+    /// <summary>
+    /// Gets the organization or user ID from the metadata of a Stripe Charge object.
+    /// </summary>
+    /// <param name="charge"></param>
+    /// <returns></returns>
+    private async Task<(Guid?, Guid?)> GetEntityIdsFromChargeAsync(Charge charge)
+    {
+        Guid? organizationId = null;
+        Guid? userId = null;
+
+        if (charge.InvoiceId != null)
+        {
+            var invoice = await _stripeFacade.GetInvoice(charge.InvoiceId);
+            if (invoice?.SubscriptionId != null)
+            {
+                var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+                (organizationId, userId) = GetIdsFromMetaData(subscription?.Metadata);
+            }
+        }
+
+        if (organizationId.HasValue || userId.HasValue)
+        {
+            return (organizationId, userId);
+        }
+
+        var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
+        {
+            Customer = charge.CustomerId
+        });
+
+        foreach (var subscription in subscriptions)
+        {
+            if (subscription.Status is StripeSubscriptionStatus.Canceled or StripeSubscriptionStatus.IncompleteExpired)
+            {
+                continue;
+            }
+
+            (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+
+            if (organizationId.HasValue || userId.HasValue)
+            {
+                return (organizationId, userId);
+            }
+        }
+
+        return (null, null);
+    }
+
+    /// <summary>
+    /// Converts a Stripe Charge object to a Bitwarden Transaction object.
+    /// </summary>
+    /// <param name="charge"></param>
+    /// <param name="organizationId"></param>
+    /// <param name="userId"></param>
+    /// <returns></returns>
+    private static Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId)
+    {
+        var transaction = new Transaction
+        {
+            Amount = charge.Amount / 100M,
+            CreationDate = charge.Created,
+            OrganizationId = organizationId,
+            UserId = userId,
+            Type = TransactionType.Charge,
+            Gateway = GatewayType.Stripe,
+            GatewayId = charge.Id
+        };
+
+        switch (charge.Source)
+        {
+            case Card card:
+                {
+                    transaction.PaymentMethodType = PaymentMethodType.Card;
+                    transaction.Details = $"{card.Brand}, *{card.Last4}";
+                    break;
+                }
+            case BankAccount bankAccount:
+                {
+                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                    transaction.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+                    break;
+                }
+            case Source { Card: not null } source:
+                {
+                    transaction.PaymentMethodType = PaymentMethodType.Card;
+                    transaction.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
+                    break;
+                }
+            case Source { AchDebit: not null } source:
+                {
+                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                    transaction.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
+                    break;
+                }
+            case Source source:
+                {
+                    if (source.AchCreditTransfer == null)
+                    {
+                        break;
+                    }
+
+                    var achCreditTransfer = source.AchCreditTransfer;
+
+                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                    transaction.Details = $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
+
+                    break;
+                }
+            default:
+                {
+                    if (charge.PaymentMethodDetails == null)
+                    {
+                        break;
+                    }
+
+                    if (charge.PaymentMethodDetails.Card != null)
+                    {
+                        var card = charge.PaymentMethodDetails.Card;
+                        transaction.PaymentMethodType = PaymentMethodType.Card;
+                        transaction.Details = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}";
+                    }
+                    else if (charge.PaymentMethodDetails.AchDebit != null)
+                    {
+                        var achDebit = charge.PaymentMethodDetails.AchDebit;
+                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                        transaction.Details = $"{achDebit.BankName}, *{achDebit.Last4}";
+                    }
+                    else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
+                    {
+                        var achCreditTransfer = charge.PaymentMethodDetails.AchCreditTransfer;
+                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                        transaction.Details = $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
+                    }
+
+                    break;
+                }
+        }
+
+        return transaction;
     }
 
     private async Task HandlePaymentMethodAttachedAsync(PaymentMethod paymentMethod)
