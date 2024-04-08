@@ -533,9 +533,11 @@ public class OrganizationService : IOrganizationService
                 PlanName = plan.Name,
                 PlanType = plan.Type,
                 Seats = returnValue.Item1.Seats,
+                SignupInitiationPath = signup.InitiationPath,
                 Storage = returnValue.Item1.MaxStorageGb,
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
+
         return returnValue;
     }
 
@@ -818,7 +820,7 @@ public class OrganizationService : IOrganizationService
             await customerService.UpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Email = organization.BillingEmail,
-                Description = organization.BusinessName
+                Description = organization.DisplayBusinessName()
             });
         }
     }
@@ -1275,7 +1277,7 @@ public class OrganizationService : IOrganizationService
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
                 await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
@@ -1411,18 +1413,18 @@ public class OrganizationService : IOrganizationService
         }
 
         // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(user.OrganizationId);
-        if (organizationAbility?.FlexibleCollections == true && user.Type == OrganizationUserType.Manager)
+        var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
+        if (organization.FlexibleCollections && user.Type == OrganizationUserType.Manager)
         {
             throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
         }
 
-        if (organizationAbility?.FlexibleCollections == true && user.AccessAll)
+        if (organization.FlexibleCollections && user.AccessAll)
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
         }
 
-        if (organizationAbility?.FlexibleCollections == true && collections?.Any() == true)
+        if (organization.FlexibleCollections && collections?.Any() == true)
         {
             var invalidAssociations = collections.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())
@@ -1439,7 +1441,6 @@ public class OrganizationService : IOrganizationService
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
                 var update = new SecretsManagerSubscriptionUpdate(organization, true)
                     .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
@@ -2038,7 +2039,7 @@ public class OrganizationService : IOrganizationService
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException("Plan does not allow additional Service Accounts.");
+            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
         if ((plan.Product == ProductType.TeamsStarter &&
@@ -2051,7 +2052,7 @@ public class OrganizationService : IOrganizationService
 
         if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
         {
-            throw new BadRequestException("You can't subtract Service Accounts!");
+            throw new BadRequestException("You can't subtract Machine Accounts!");
         }
 
         switch (plan.SecretsManager.HasAdditionalSeatsOption)
@@ -2528,7 +2529,7 @@ public class OrganizationService : IOrganizationService
         });
     }
 
-    public async Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName)
+    public async Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
     {
         await ValidateSignUpPoliciesAsync(userId);
 
@@ -2567,9 +2568,8 @@ public class OrganizationService : IOrganizationService
             List<CollectionAccessSelection> defaultOwnerAccess = null;
             if (org.FlexibleCollections)
             {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, userId);
                 defaultOwnerAccess =
-                    [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+                    [new CollectionAccessSelection { Id = organizationUserId, HidePasswords = false, ReadOnly = false, Manage = true }];
             }
 
             var defaultCollection = new Collection

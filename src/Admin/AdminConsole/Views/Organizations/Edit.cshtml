@@ -4,7 +4,7 @@
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model OrganizationEditModel
 @{
-    ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Organization.Name;
+    ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Name;
 
     var canViewOrganizationInformation = AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View);
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_View);
@@ -58,7 +58,7 @@
     </script>
 }
 
-<h1>@(Model.Provider != null ? "Client " : string.Empty)Organization <small>@Model.Organization.Name</small></h1>
+<h1>@(Model.Provider != null ? "Client " : string.Empty)Organization <small>@Model.Name</small></h1>
 
 @if (Model.Provider != null)
 {

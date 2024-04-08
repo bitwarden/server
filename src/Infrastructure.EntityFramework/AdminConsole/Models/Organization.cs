@@ -26,7 +26,20 @@ public class OrganizationMapperProfile : Profile
 {
     public OrganizationMapperProfile()
     {
-        CreateMap<Core.AdminConsole.Entities.Organization, Organization>().ReverseMap();
+        CreateMap<Core.AdminConsole.Entities.Organization, Organization>()
+            .ForMember(org => org.Ciphers, opt => opt.Ignore())
+            .ForMember(org => org.OrganizationUsers, opt => opt.Ignore())
+            .ForMember(org => org.Groups, opt => opt.Ignore())
+            .ForMember(org => org.Policies, opt => opt.Ignore())
+            .ForMember(org => org.Collections, opt => opt.Ignore())
+            .ForMember(org => org.SsoConfigs, opt => opt.Ignore())
+            .ForMember(org => org.SsoUsers, opt => opt.Ignore())
+            .ForMember(org => org.Transactions, opt => opt.Ignore())
+            .ForMember(org => org.ApiKeys, opt => opt.Ignore())
+            .ForMember(org => org.Connections, opt => opt.Ignore())
+            .ForMember(org => org.Domains, opt => opt.Ignore())
+            .ReverseMap();
+
         CreateProjection<Organization, SelfHostedOrganizationDetails>()
             .ForMember(sd => sd.CollectionCount, opt => opt.MapFrom(o => o.Collections.Count))
             .ForMember(sd => sd.GroupCount, opt => opt.MapFrom(o => o.Groups.Count))

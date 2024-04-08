@@ -147,6 +147,7 @@ public class GlobalSettings : IGlobalSettings
         public string CloudRegion { get; set; }
         public string Vault { get; set; }
         public string VaultWithHash => $"{Vault}/#";
+        public string VaultWithHashAndSecretManagerProduct => $"{Vault}/#/sm";
 
         public string Api
         {
@@ -221,6 +222,8 @@ public class GlobalSettings : IGlobalSettings
         private string _connectionString;
         private string _readOnlyConnectionString;
         private string _jobSchedulerConnectionString;
+        public bool SkipDatabasePreparation { get; set; }
+        public bool DisableDatabaseMaintenanceJobs { get; set; }
 
         public string ConnectionString
         {
