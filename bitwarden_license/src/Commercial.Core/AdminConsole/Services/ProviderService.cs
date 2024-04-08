@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -15,6 +16,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
@@ -38,13 +40,15 @@ public class ProviderService : IProviderService
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IStripeAdapter stripeAdapter)
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter,
+        IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -59,6 +63,7 @@ public class ProviderService : IProviderService
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
+        _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
@@ -588,6 +593,24 @@ public class ProviderService : IProviderService
         {
             await _eventService.LogOrganizationEventAsync(organization, EventType.Organization_VaultAccessed);
         }
+    }
+
+    public async Task InitiateDeleteAsync(Provider provider, string providerAdminEmail)
+    {
+        var providerAdmin = await _userRepository.GetByEmailAsync(providerAdminEmail);
+        if (providerAdmin == null)
+        {
+            throw new BadRequestException("Provider admin not found.");
+        }
+        var providerAdminOrgUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, providerAdmin.Id);
+        if (providerAdminOrgUser == null || providerAdminOrgUser.Status != ProviderUserStatusType.Confirmed ||
+            providerAdminOrgUser.Type != ProviderUserType.ProviderAdmin)
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+
+        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider, 1));
+        await _mailService.SendInitiateDeletProviderEmailAsync(providerAdminEmail, provider, token);
     }
 
     private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)

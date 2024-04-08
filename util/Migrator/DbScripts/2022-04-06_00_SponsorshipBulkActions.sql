@@ -179,3 +179,25 @@ BEGIN
         [SponsoringOrganizationId] = @SponsoringOrganizationId
 END
 GO
+
+-- Create ProviderPlanType
+IF NOT EXISTS (
+    SELECT
+        *
+    FROM
+        sys.types
+    WHERE 
+        [Name] = 'ProviderPlanType' AND
+        is_user_defined = 1
+)
+BEGIN
+CREATE TYPE [dbo].[ProviderPlanType] AS TABLE(
+    [Id] UNIQUEIDENTIFIER,
+    [ProviderId] UNIQUEIDENTIFIER,
+    [PlanType] TINYINT,
+    [LastSyncDate] DATETIME2(7),
+    [ValidUntil] DATETIME2(7),
+    [ToDelete] BIT
+)
+END
+GO

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.RegularExpressions;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
@@ -8,6 +9,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -249,5 +251,65 @@ public class ProvidersController : Controller
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
+    }
+
+    [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> Delete(Guid id, string providerName)
+    {
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+
+        if (providerOrganizations.Count == 0)
+        {
+            var provider = await _providerRepository.GetByIdAsync(id);
+
+            if (provider is null)
+            {
+                return BadRequest("provider does not exist");
+            }
+
+            if (providerName.ToLower().Trim() != provider.Name.ToLower().Trim())
+            {
+                return BadRequest("Invalid provider name");
+            }
+            await _providerRepository.DeleteAsync(provider);
+            await _applicationCacheService.DeleteProviderAbilityAsync(provider.Id);
+        }
+
+        return NoContent();
+    }
+
+    [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> DeleteInitiation(Guid id, string providerEmail)
+    {
+        if (!IsValidEmail(providerEmail))
+        {
+            return BadRequest("Invalid provider admin email");
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider != null)
+        {
+            try
+            {
+                await _providerService.InitiateDeleteAsync(provider, providerEmail);
+            }
+            catch (BadRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        return NoContent();
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        const string pattern = @"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$";
+        var regex = new Regex(pattern);
+        return regex.IsMatch(email);
     }
 }

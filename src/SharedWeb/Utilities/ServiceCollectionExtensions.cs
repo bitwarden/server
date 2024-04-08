@@ -203,6 +203,14 @@ public static class ServiceCollectionExtensions
                 DuoUserStateTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<DuoUserStateTokenable>>>()));
+
+        services.AddSingleton<IDataProtectorTokenFactory<ProviderDeleteTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<ProviderDeleteTokenable>(
+                ProviderDeleteTokenable.ClearTextPrefix,
+                ProviderDeleteTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<ProviderDeleteTokenable>>>())
+        );
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
