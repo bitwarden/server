@@ -88,4 +88,16 @@ public class ProvidersController : Controller
 
         return new ProviderResponseModel(response);
     }
+
+    [HttpPost("{id}/delete-recover-token")]
+    [AllowAnonymous]
+    public async Task PostDeleteRecoverToken(Guid id, [FromBody] ProviderVerifyDeleteRecoverRequestModel model)
+    {
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider == null)
+        {
+            throw new NotFoundException();
+        }
+        await _providerService.DeleteAsync(provider, model.Token);
+    }
 }

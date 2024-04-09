@@ -273,8 +273,8 @@ public class ProvidersController : Controller
             {
                 return BadRequest("Invalid provider name");
             }
-            await _providerRepository.DeleteAsync(provider);
-            await _applicationCacheService.DeleteProviderAbilityAsync(provider.Id);
+
+            await _providerService.DeleteAsync(provider);
         }
 
         return NoContent();
