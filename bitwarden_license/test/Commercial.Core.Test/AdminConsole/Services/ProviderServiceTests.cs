@@ -16,10 +16,10 @@ using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Braintree;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
-using Stripe;
 using Xunit;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 using ProviderUser = Bit.Core.AdminConsole.Entities.Provider.ProviderUser;
@@ -669,6 +669,18 @@ public class ProviderServiceTests
                 !t.First().Item1.Collections.Single().ReadOnly &&
                 t.First().Item1.Collections.Single().Manage &&
                 t.First().Item2 == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Delete_Success(Provider provider, SutProvider<ProviderService> sutProvider)
+    {
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        await sutProvider.Sut.DeleteAsync(provider);
+
+        await providerRepository.Received().DeleteAsync(provider);
+        await applicationCacheService.Received().DeleteProviderAbilityAsync(provider.Id);
     }
 
     private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
