@@ -1,5 +1,5 @@
 ﻿using Bit.Api.Billing.Controllers;
-using Bit.Api.Billing.Models;
+using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Queries;
@@ -61,7 +61,7 @@ public class ProviderBillingControllerTests
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(providerId)
             .Returns(true);
 
-        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionData(providerId).ReturnsNull();
+        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionDTO(providerId).ReturnsNull();
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
 
@@ -79,7 +79,7 @@ public class ProviderBillingControllerTests
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(providerId)
             .Returns(true);
 
-        var configuredPlans = new List<ConfiguredProviderPlan>
+        var configuredPlans = new List<ConfiguredProviderPlanDTO>
         {
             new (Guid.NewGuid(), providerId, PlanType.TeamsMonthly, 50, 10, 30),
             new (Guid.NewGuid(), providerId, PlanType.EnterpriseMonthly, 100, 0, 90)
@@ -92,18 +92,18 @@ public class ProviderBillingControllerTests
             Customer = new Customer { Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } } }
         };
 
-        var providerSubscriptionData = new ProviderSubscriptionData(
+        var providerSubscriptionData = new ProviderSubscriptionDTO(
             configuredPlans,
             subscription);
 
-        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionData(providerId)
+        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionDTO(providerId)
             .Returns(providerSubscriptionData);
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
 
-        Assert.IsType<Ok<ProviderSubscriptionDTO>>(result);
+        Assert.IsType<Ok<ProviderSubscriptionResponse>>(result);
 
-        var providerSubscriptionDTO = ((Ok<ProviderSubscriptionDTO>)result).Value;
+        var providerSubscriptionDTO = ((Ok<ProviderSubscriptionResponse>)result).Value;
 
         Assert.Equal(providerSubscriptionDTO.Status, subscription.Status);
         Assert.Equal(providerSubscriptionDTO.CurrentPeriodEndDate, subscription.CurrentPeriodEnd);

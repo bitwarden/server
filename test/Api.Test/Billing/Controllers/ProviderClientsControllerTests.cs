@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models;
+using Bit.Api.Billing.Models.Requests;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
@@ -18,16 +19,16 @@ using ProviderOrganization = Bit.Core.AdminConsole.Entities.Provider.ProviderOrg
 
 namespace Bit.Api.Test.Billing.Controllers;
 
-[ControllerCustomize(typeof(ProviderOrganizationController))]
+[ControllerCustomize(typeof(ProviderClientsController))]
 [SutProviderCustomize]
-public class ProviderOrganizationControllerTests
+public class ProviderClientsControllerTests
 {
     [Theory, BitAutoData]
     public async Task UpdateAsync_FFDisabled_NotFound(
         Guid providerId,
         Guid providerOrganizationId,
-        UpdateProviderOrganizationRequestBody requestBody,
-        SutProvider<ProviderOrganizationController> sutProvider)
+        UpdateClientOrganizationRequestBody requestBody,
+        SutProvider<ProviderClientsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
             .Returns(false);
@@ -41,8 +42,8 @@ public class ProviderOrganizationControllerTests
     public async Task GetSubscriptionAsync_NotProviderAdmin_Unauthorized(
         Guid providerId,
         Guid providerOrganizationId,
-        UpdateProviderOrganizationRequestBody requestBody,
-        SutProvider<ProviderOrganizationController> sutProvider)
+        UpdateClientOrganizationRequestBody requestBody,
+        SutProvider<ProviderClientsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
             .Returns(true);
@@ -59,8 +60,8 @@ public class ProviderOrganizationControllerTests
     public async Task GetSubscriptionAsync_NoProvider_NotFound(
         Guid providerId,
         Guid providerOrganizationId,
-        UpdateProviderOrganizationRequestBody requestBody,
-        SutProvider<ProviderOrganizationController> sutProvider)
+        UpdateClientOrganizationRequestBody requestBody,
+        SutProvider<ProviderClientsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
             .Returns(true);
@@ -80,9 +81,9 @@ public class ProviderOrganizationControllerTests
     public async Task GetSubscriptionAsync_NoProviderOrganization_NotFound(
         Guid providerId,
         Guid providerOrganizationId,
-        UpdateProviderOrganizationRequestBody requestBody,
+        UpdateClientOrganizationRequestBody requestBody,
         Provider provider,
-        SutProvider<ProviderOrganizationController> sutProvider)
+        SutProvider<ProviderClientsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
             .Returns(true);
@@ -105,10 +106,10 @@ public class ProviderOrganizationControllerTests
     public async Task GetSubscriptionAsync_NoOrganization_ServerError(
         Guid providerId,
         Guid providerOrganizationId,
-        UpdateProviderOrganizationRequestBody requestBody,
+        UpdateClientOrganizationRequestBody requestBody,
         Provider provider,
         ProviderOrganization providerOrganization,
-        SutProvider<ProviderOrganizationController> sutProvider)
+        SutProvider<ProviderClientsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
             .Returns(true);
@@ -134,11 +135,11 @@ public class ProviderOrganizationControllerTests
     public async Task GetSubscriptionAsync_NoContent(
         Guid providerId,
         Guid providerOrganizationId,
-        UpdateProviderOrganizationRequestBody requestBody,
+        UpdateClientOrganizationRequestBody requestBody,
         Provider provider,
         ProviderOrganization providerOrganization,
         Organization organization,
-        SutProvider<ProviderOrganizationController> sutProvider)
+        SutProvider<ProviderClientsController> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
             .Returns(true);

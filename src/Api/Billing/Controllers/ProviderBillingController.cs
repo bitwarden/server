@@ -1,4 +1,4 @@
-﻿using Bit.Api.Billing.Models;
+﻿using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
@@ -28,17 +28,17 @@ public class ProviderBillingController(
             return TypedResults.Unauthorized();
         }
 
-        var subscriptionData = await providerBillingQueries.GetSubscriptionData(providerId);
+        var providerSubscriptionDTO = await providerBillingQueries.GetSubscriptionDTO(providerId);
 
-        if (subscriptionData == null)
+        if (providerSubscriptionDTO == null)
         {
             return TypedResults.NotFound();
         }
 
-        var (providerPlans, subscription) = subscriptionData;
+        var (providerPlans, subscription) = providerSubscriptionDTO;
 
-        var providerSubscriptionDTO = ProviderSubscriptionDTO.From(providerPlans, subscription);
+        var response = ProviderSubscriptionResponse.From(providerPlans, subscription);
 
-        return TypedResults.Ok(providerSubscriptionDTO);
+        return TypedResults.Ok(response);
     }
 }
