@@ -570,8 +570,7 @@ public class OrganizationsController : Controller
     [AllowAnonymous]
     public async Task PostDeleteRecoverToken(Guid id, [FromBody] OrganizationVerifyDeleteRecoverRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {
             throw new NotFoundException();
