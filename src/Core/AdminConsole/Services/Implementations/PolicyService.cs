@@ -59,50 +59,7 @@ public class PolicyService : IPolicyService
             throw new BadRequestException("This organization cannot use policies.");
         }
 
-        // Handle dependent policy checks
-        switch (policy.Type)
-        {
-            case PolicyType.SingleOrg:
-                if (!policy.Enabled)
-                {
-                    await RequiredBySsoAsync(org);
-                    await RequiredByVaultTimeoutAsync(org);
-                    await RequiredByKeyConnectorAsync(org);
-                    await RequiredByAccountRecoveryAsync(org);
-                }
-                break;
-
-            case PolicyType.RequireSso:
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                else
-                {
-                    await RequiredByKeyConnectorAsync(org);
-                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
-                }
-                break;
-
-            case PolicyType.ResetPassword:
-                if (!policy.Enabled || policy.GetDataModel<ResetPasswordDataModel>()?.AutoEnrollEnabled == false)
-                {
-                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
-                }
-
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                break;
-
-            case PolicyType.MaximumVaultTimeout:
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                break;
-        }
+        await HandleDependentPoliciesAsync(policy, org);
 
         var now = DateTime.UtcNow;
         if (policy.Id == default(Guid))
@@ -283,6 +240,53 @@ public class PolicyService : IPolicyService
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
         {
             throw new BadRequestException("Trusted device encryption is on and requires this policy.");
+        }
+    }
+
+    private async Task HandleDependentPoliciesAsync(Policy policy, Organization org)
+    {
+        switch (policy.Type)
+        {
+            case PolicyType.SingleOrg:
+                if (!policy.Enabled)
+                {
+                    await RequiredBySsoAsync(org);
+                    await RequiredByVaultTimeoutAsync(org);
+                    await RequiredByKeyConnectorAsync(org);
+                    await RequiredByAccountRecoveryAsync(org);
+                }
+                break;
+
+            case PolicyType.RequireSso:
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
+                }
+                else
+                {
+                    await RequiredByKeyConnectorAsync(org);
+                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
+                }
+                break;
+
+            case PolicyType.ResetPassword:
+                if (!policy.Enabled || policy.GetDataModel<ResetPasswordDataModel>()?.AutoEnrollEnabled == false)
+                {
+                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
+                }
+
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
+                }
+                break;
+
+            case PolicyType.MaximumVaultTimeout:
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
+                }
+                break;
         }
     }
 }
