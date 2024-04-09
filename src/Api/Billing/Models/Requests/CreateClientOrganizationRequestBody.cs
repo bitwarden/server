@@ -1,0 +1,29 @@
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Utilities;
+using Bit.Core.Enums;
+
+namespace Bit.Api.Billing.Models.Requests;
+
+public class CreateClientOrganizationRequestBody
+{
+    [Required(ErrorMessage = "'name' must be provided")]
+    public string Name { get; set; }
+
+    [Required(ErrorMessage = "'ownerEmail' must be provided")]
+    public string OwnerEmail { get; set; }
+
+    [EnumMatches<PlanType>(PlanType.TeamsMonthly, PlanType.EnterpriseMonthly, ErrorMessage = "'planType' must be Teams (Monthly) or Enterprise (Monthly)")]
+    public PlanType PlanType { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "'seats' must be greater than 0")]
+    public int Seats { get; set; }
+
+    [Required(ErrorMessage = "'userKey' must be provided")]
+    public string UserKey { get; set; }
+
+    [Required(ErrorMessage = "'keys' must be provided")]
+    public KeysRequestBody Keys { get; set; }
+
+    [Required(ErrorMessage = "'collectionName' must be provided")]
+    public string CollectionName { get; set; }
+}
