@@ -94,8 +94,11 @@ public class OrganizationUsersController : Controller
             response.Type = GetFlexibleCollectionsUserType(response.Type, response.Permissions);
 
             // Set 'Edit/Delete Assigned Collections' custom permissions to false
-            response.Permissions.EditAssignedCollections = false;
-            response.Permissions.DeleteAssignedCollections = false;
+            if (response.Permissions is not null)
+            {
+                response.Permissions.EditAssignedCollections = false;
+                response.Permissions.DeleteAssignedCollections = false;
+            }
         }
 
         if (includeGroups)
@@ -552,8 +555,11 @@ public class OrganizationUsersController : Controller
                 orgUser.Type = GetFlexibleCollectionsUserType(orgUser.Type, orgUser.Permissions);
 
                 // Set 'Edit/Delete Assigned Collections' custom permissions to false
-                orgUser.Permissions.EditAssignedCollections = false;
-                orgUser.Permissions.DeleteAssignedCollections = false;
+                if (orgUser.Permissions is not null)
+                {
+                    orgUser.Permissions.EditAssignedCollections = false;
+                    orgUser.Permissions.DeleteAssignedCollections = false;
+                }
 
                 return orgUser;
             });
@@ -565,7 +571,7 @@ public class OrganizationUsersController : Controller
     private OrganizationUserType GetFlexibleCollectionsUserType(OrganizationUserType type, Permissions permissions)
     {
         // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-        if (type == OrganizationUserType.Custom)
+        if (type == OrganizationUserType.Custom && permissions is not null)
         {
             if ((permissions.EditAssignedCollections || permissions.DeleteAssignedCollections) &&
                 permissions is

@@ -684,8 +684,8 @@ public class OrganizationService : IOrganizationService
 
                 await _organizationUserRepository.CreateAsync(orgUser);
 
-                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
+                var devices = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(devices,
                     organization.Id.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
             }
@@ -1306,7 +1306,7 @@ public class OrganizationService : IOrganizationService
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
                 await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
@@ -1961,17 +1961,19 @@ public class OrganizationService : IOrganizationService
 
     private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
     {
-        var deviceIds = await GetUserDeviceIdsAsync(userId);
-        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
+        var devices = await GetUserDeviceIdsAsync(userId);
+        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
             organizationId.ToString());
         await _pushNotificationService.PushSyncOrgKeysAsync(userId);
     }
 
 
-    private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
+    private async Task<IEnumerable<KeyValuePair<string, DeviceType>>> GetUserDeviceIdsAsync(Guid userId)
     {
         var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
-        return devices.Where(d => !string.IsNullOrWhiteSpace(d.PushToken)).Select(d => d.Id.ToString());
+        return devices
+            .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
+            .Select(d => new KeyValuePair<string, DeviceType>(d.Id.ToString(), d.Type));
     }
 
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
@@ -2066,7 +2068,7 @@ public class OrganizationService : IOrganizationService
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException("Plan does not allow additional Service Accounts.");
+            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
         if ((plan.Product == ProductType.TeamsStarter &&
@@ -2079,7 +2081,7 @@ public class OrganizationService : IOrganizationService
 
         if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
         {
-            throw new BadRequestException("You can't subtract Service Accounts!");
+            throw new BadRequestException("You can't subtract Machine Accounts!");
         }
 
         switch (plan.SecretsManager.HasAdditionalSeatsOption)
