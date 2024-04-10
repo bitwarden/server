@@ -1,5 +1,7 @@
 ﻿@using Bit.Admin.Enums;
+@using Bit.Core
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject Bit.Core.Services.IFeatureService FeatureService
 
 @model ProviderEditModel
 @{
@@ -40,6 +42,23 @@
             </div>
         </div>
     </div>
+    @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+    {
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="TeamsMinimumSeats"></label>
+                    <input type="number" class="form-control" asp-for="TeamsMinimumSeats">
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="EnterpriseMinimumSeats"></label>
+                    <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
+                </div>
+            </div>
+        </div>
+    }
 </form>
 @await Html.PartialAsync("Organizations", Model)
  @if (canEdit)
