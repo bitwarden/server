@@ -453,7 +453,7 @@ public class StripeController : Controller
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
         {
-            var charge = await _stripeEventService.GetCharge(parsedEvent);
+            var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
             var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                 GatewayType.Stripe, charge.Id);
             if (chargeTransaction == null)
