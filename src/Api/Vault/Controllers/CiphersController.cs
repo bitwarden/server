@@ -1118,8 +1118,11 @@ public class CiphersController : Controller
     [HttpGet("has-unassigned-ciphers")]
     public async Task<bool> HasUnassignedCiphers()
     {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+
         var adminOrganizations = _currentContext.Organizations
-            .Where(o => o.Type is OrganizationUserType.Admin or OrganizationUserType.Owner);
+            .Where(o => o.Type is OrganizationUserType.Admin or OrganizationUserType.Owner &&
+                        orgAbilities.ContainsKey(o.Id) && orgAbilities[o.Id].FlexibleCollections);
 
         foreach (var org in adminOrganizations)
         {
