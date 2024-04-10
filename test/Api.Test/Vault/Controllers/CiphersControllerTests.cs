@@ -146,19 +146,17 @@ public class CiphersControllerTests
     [Theory]
     [BitAutoData(false, false)]
     [BitAutoData(true, false)]
+    [BitAutoData(true, true)]
     public async Task CanEditCiphersAsAdminAsync_Providers(
-        bool fcV1Enabled, bool shouldSucceed, Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
+        bool fcV1Enabled, bool restrictProviders, Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
     )
     {
         cipher.OrganizationId = organization.Id;
-        if (fcV1Enabled)
-        {
-            sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(shouldSucceed);
-        }
-        else
-        {
-            sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organization.Id).Returns(shouldSucceed);
-        }
+
+        // Simulate that the user is a provider for the organization
+        sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(true);
+
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -174,13 +172,14 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(fcV1Enabled);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(restrictProviders);
 
-        if (shouldSucceed)
+        // Non V1 FC or non restricted providers should succeed
+        if (!fcV1Enabled || !restrictProviders)
         {
             await sutProvider.Sut.DeleteAdmin(cipher.Id.ToString());
             await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
                 .DeleteAsync(default, default);
         }
-        else
+        else // Otherwise, they should fail
         {
             await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipher.Id.ToString()));
             await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
