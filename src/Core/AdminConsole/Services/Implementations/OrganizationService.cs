@@ -681,8 +681,8 @@ public class OrganizationService : IOrganizationService
 
                 await _organizationUserRepository.CreateAsync(orgUser);
 
-                var devices = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(devices,
+                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
                     organization.Id.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
             }
@@ -1932,19 +1932,17 @@ public class OrganizationService : IOrganizationService
 
     private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
     {
-        var devices = await GetUserDeviceIdsAsync(userId);
-        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
+        var deviceIds = await GetUserDeviceIdsAsync(userId);
+        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
             organizationId.ToString());
         await _pushNotificationService.PushSyncOrgKeysAsync(userId);
     }
 
 
-    private async Task<IEnumerable<KeyValuePair<string, DeviceType>>> GetUserDeviceIdsAsync(Guid userId)
+    private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
     {
         var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
-        return devices
-            .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
-            .Select(d => new KeyValuePair<string, DeviceType>(d.Id.ToString(), d.Type));
+        return devices.Where(d => !string.IsNullOrWhiteSpace(d.PushToken)).Select(d => d.Id.ToString());
     }
 
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
@@ -2039,7 +2037,7 @@ public class OrganizationService : IOrganizationService
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
+            throw new BadRequestException("Plan does not allow additional Service Accounts.");
         }
 
         if ((plan.Product == ProductType.TeamsStarter &&
@@ -2052,7 +2050,7 @@ public class OrganizationService : IOrganizationService
 
         if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
         {
-            throw new BadRequestException("You can't subtract Machine Accounts!");
+            throw new BadRequestException("You can't subtract Service Accounts!");
         }
 
         switch (plan.SecretsManager.HasAdditionalSeatsOption)

@@ -22,7 +22,7 @@ public class CreateProviderCommandTests
         provider.Type = ProviderType.Msp;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateMspAsync(provider, default, default, default));
+            () => sutProvider.Sut.CreateMspAsync(provider, default));
         Assert.Contains("Invalid owner.", exception.Message);
     }
 
@@ -34,7 +34,7 @@ public class CreateProviderCommandTests
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         userRepository.GetByEmailAsync(user.Email).Returns(user);
 
-        await sutProvider.Sut.CreateMspAsync(provider, user.Email, default, default);
+        await sutProvider.Sut.CreateMspAsync(provider, user.Email);
 
         await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<IProviderService>().Received(1).SendProviderSetupInviteEmailAsync(provider, user.Email);

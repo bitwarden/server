@@ -382,14 +382,10 @@ public class ProviderService : IProviderService
 
         organization.BillingEmail = provider.BillingEmail;
         await _organizationRepository.ReplaceAsync(organization);
-
-        if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
+        await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
-            {
-                Email = provider.BillingEmail
-            });
-        }
+            Email = provider.BillingEmail
+        });
 
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
     }

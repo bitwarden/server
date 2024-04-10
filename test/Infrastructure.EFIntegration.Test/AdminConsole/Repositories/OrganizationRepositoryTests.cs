@@ -1,11 +1,9 @@
-﻿using AutoMapper;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
@@ -15,13 +13,6 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 
 public class OrganizationRepositoryTests
 {
-    [Fact]
-    public void ValidateOrganizationMappings_ReturnsSuccess()
-    {
-        var config = new MapperConfiguration(cfg => cfg.AddProfile<OrganizationMapperProfile>());
-        config.AssertConfigurationIsValid();
-    }
-
     [CiSkippedTheory, EfOrganizationAutoData]
     public async Task CreateAsync_Works_DataMatches(
         Organization organization,

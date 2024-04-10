@@ -192,7 +192,7 @@ public class UpgradeOrganizationPlanCommandTests
             .GetServiceAccountCountByOrganizationIdAsync(organization.Id).Returns(currentServiceAccounts);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
-        Assert.Contains($"Your organization currently has {currentServiceAccounts} machine accounts. Your new plan only allows", exception.Message);
+        Assert.Contains($"Your organization currently has {currentServiceAccounts} service accounts. Your new plan only allows", exception.Message);
 
         sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
     }

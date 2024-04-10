@@ -330,9 +330,9 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             if (currentServiceAccounts > newPlanServiceAccounts)
             {
                 throw new BadRequestException(
-                    $"Your organization currently has {currentServiceAccounts} machine accounts. " +
-                    $"Your new plan only allows {newSecretsManagerPlan.SecretsManager.MaxServiceAccounts} machine accounts. " +
-                    "Remove some machine accounts or increase your subscription.");
+                    $"Your organization currently has {currentServiceAccounts} service accounts. " +
+                    $"Your new plan only allows {newSecretsManagerPlan.SecretsManager.MaxServiceAccounts} service accounts. " +
+                    "Remove some service accounts or increase your subscription.");
             }
         }
     }
