@@ -114,8 +114,13 @@ public static class StaticStore
             new TeamsPlan(true),
             new TeamsPlan(false),
 
+            new Enterprise2023Plan(true),
+            new Enterprise2023Plan(false),
             new Enterprise2020Plan(true),
             new Enterprise2020Plan(false),
+            new TeamsStarterPlan2023(),
+            new Teams2023Plan(true),
+            new Teams2023Plan(false),
             new Teams2020Plan(true),
             new Teams2020Plan(false),
             new FamiliesPlan(),
