@@ -2,11 +2,11 @@
 
 namespace Bit.Core.Models.StaticStore.Plans;
 
-public record TeamsStarterPlan : Plan
+public record TeamsStarterPlan2023 : Plan
 {
-    public TeamsStarterPlan()
+    public TeamsStarterPlan2023()
     {
-        Type = PlanType.TeamsStarter;
+        Type = PlanType.TeamsStarter2023;
         Product = ProductType.TeamsStarter;
         Name = "Teams (Starter)";
         NameLocalizationKey = "planNameTeamsStarter";
@@ -26,17 +26,18 @@ public record TeamsStarterPlan : Plan
         UpgradeSortOrder = 2;
         DisplaySortOrder = 2;
 
-        PasswordManager = new TeamsStarterPasswordManagerFeatures();
-        SecretsManager = new TeamsStarterSecretsManagerFeatures();
+        PasswordManager = new TeamsStarter2023PasswordManagerFeatures();
+        SecretsManager = new TeamsStarter2023SecretsManagerFeatures();
+        LegacyYear = 2024;
     }
 
-    private record TeamsStarterSecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record TeamsStarter2023SecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public TeamsStarterSecretsManagerFeatures()
+        public TeamsStarter2023SecretsManagerFeatures()
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 20;
+            BaseServiceAccount = 50;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -45,15 +46,15 @@ public record TeamsStarterPlan : Plan
             AllowServiceAccountsAutoscale = true;
 
             StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
-            StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
+            StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
             SeatPrice = 7;
-            AdditionalPricePerServiceAccount = 1;
+            AdditionalPricePerServiceAccount = 0.5M;
         }
     }
 
-    private record TeamsStarterPasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record TeamsStarter2023PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public TeamsStarterPasswordManagerFeatures()
+        public TeamsStarter2023PasswordManagerFeatures()
         {
             BaseSeats = 10;
             BaseStorageGb = 1;
