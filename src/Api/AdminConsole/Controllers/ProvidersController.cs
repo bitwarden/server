@@ -100,4 +100,29 @@ public class ProvidersController : Controller
         }
         await _providerService.DeleteAsync(provider, model.Token);
     }
+
+    [HttpDelete("{id}")]
+    [HttpPost("{id}/delete")]
+    public async Task Delete(string id)
+    {
+        var providerIdGuid = new Guid(id);
+        if (!_currentContext.ProviderProviderAdmin(providerIdGuid))
+        {
+            throw new NotFoundException();
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(providerIdGuid);
+        if (provider == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _providerService.DeleteAsync(provider);
+    }
 }
