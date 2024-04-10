@@ -75,7 +75,7 @@ public class PayPalController : Controller
 
         if (string.IsNullOrEmpty(transactionModel.TransactionId))
         {
-            _logger.LogWarning("PayPal IPN: Transaction ID is missing");
+            _logger.LogError("PayPal IPN: Transaction ID is missing");
             return Ok();
         }
 

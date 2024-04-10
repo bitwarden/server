@@ -560,7 +560,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/collections")]
     [HttpPost("{id}/collections")]
-    public async Task<CipherResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
@@ -572,10 +572,6 @@ public class CiphersController : Controller
 
         await _cipherService.SaveCollectionsAsync(cipher,
             model.CollectionIds.Select(c => new Guid(c)), userId, false);
-
-        var updatedCipherCollections = await GetByIdAsync(id, userId);
-        var response = new CipherResponseModel(updatedCipherCollections, _globalSettings);
-        return response;
     }
 
     [HttpPut("{id}/collections-admin")]
@@ -1108,33 +1104,6 @@ public class CiphersController : Controller
                 }
             }
         });
-    }
-
-    /// <summary>
-    /// Returns true if the user is an admin or owner of an organization with unassigned ciphers (i.e. ciphers that
-    /// are not assigned to a collection).
-    /// </summary>
-    /// <returns></returns>
-    [HttpGet("has-unassigned-ciphers")]
-    public async Task<bool> HasUnassignedCiphers()
-    {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-
-        var adminOrganizations = _currentContext.Organizations
-            .Where(o => o.Type is OrganizationUserType.Admin or OrganizationUserType.Owner &&
-                        orgAbilities.ContainsKey(o.Id) && orgAbilities[o.Id].FlexibleCollections);
-
-        foreach (var org in adminOrganizations)
-        {
-            var unassignedCiphers = await _cipherRepository.GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(org.Id);
-            // We only care about non-deleted ciphers
-            if (unassignedCiphers.Any(c => c.DeletedDate == null))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private void ValidateAttachment()

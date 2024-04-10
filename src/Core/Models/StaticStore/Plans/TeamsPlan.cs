@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.StaticStore.Plans;
 
-public record TeamsPlan : Plan
+public record TeamsPlan : Models.StaticStore.Plan
 {
     public TeamsPlan(bool isAnnual)
     {
@@ -37,7 +37,7 @@ public record TeamsPlan : Plan
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 20;
+            BaseServiceAccount = 50;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -48,16 +48,16 @@ public record TeamsPlan : Plan
             if (isAnnual)
             {
                 StripeSeatPlanId = "secrets-manager-teams-seat-annually";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-annually";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-annually";
                 SeatPrice = 72;
-                AdditionalPricePerServiceAccount = 12;
+                AdditionalPricePerServiceAccount = 6;
             }
             else
             {
                 StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
                 SeatPrice = 7;
-                AdditionalPricePerServiceAccount = 1;
+                AdditionalPricePerServiceAccount = 0.5M;
             }
         }
     }

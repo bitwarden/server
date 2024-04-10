@@ -6,7 +6,7 @@ public interface IPushRegistrationService
 {
     Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
         string identifier, DeviceType type);
-    Task DeleteRegistrationAsync(string deviceId, DeviceType type);
-    Task AddUserRegistrationOrganizationAsync(IEnumerable<KeyValuePair<string, DeviceType>> devices, string organizationId);
-    Task DeleteUserRegistrationOrganizationAsync(IEnumerable<KeyValuePair<string, DeviceType>> devices, string organizationId);
+    Task DeleteRegistrationAsync(string deviceId);
+    Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId);
+    Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId);
 }

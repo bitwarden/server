@@ -36,7 +36,7 @@ public record TeamsStarterPlan : Plan
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 20;
+            BaseServiceAccount = 50;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -45,9 +45,9 @@ public record TeamsStarterPlan : Plan
             AllowServiceAccountsAutoscale = true;
 
             StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
-            StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
+            StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
             SeatPrice = 7;
-            AdditionalPricePerServiceAccount = 1;
+            AdditionalPricePerServiceAccount = 0.5M;
         }
     }
 
