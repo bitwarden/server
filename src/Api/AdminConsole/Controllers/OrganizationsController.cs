@@ -66,7 +66,7 @@ public class OrganizationsController : Controller
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly ISubscriberQueries _subscriberQueries;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
 
@@ -93,7 +93,7 @@ public class OrganizationsController : Controller
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
         IPushNotificationService pushNotificationService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
-        IGetSubscriptionQuery getSubscriptionQuery,
+        ISubscriberQueries subscriberQueries,
         IReferenceEventService referenceEventService,
         IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand)
     {
@@ -119,7 +119,7 @@ public class OrganizationsController : Controller
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
         _pushNotificationService = pushNotificationService;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
-        _getSubscriptionQuery = getSubscriptionQuery;
+        _subscriberQueries = subscriberQueries;
         _referenceEventService = referenceEventService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
     }
@@ -464,8 +464,8 @@ public class OrganizationsController : Controller
         await _organizationService.VerifyBankAsync(orgIdGuid, model.Amount1.Value, model.Amount2.Value);
     }
 
-    [HttpPost("{id}/churn")]
-    public async Task PostChurn(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
+    [HttpPost("{id}/cancel")]
+    public async Task PostCancel(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
     {
         if (!await _currentContext.EditSubscription(id))
         {
@@ -479,7 +479,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var subscription = await _getSubscriptionQuery.GetSubscription(organization);
+        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(organization);
 
         await _cancelSubscriptionCommand.CancelSubscription(subscription,
             new OffboardingSurveyResponse
@@ -497,19 +497,6 @@ public class OrganizationsController : Controller
         {
             EndOfPeriod = organization.IsExpired()
         });
-    }
-
-    [HttpPost("{id}/cancel")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel(string id)
-    {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.EditSubscription(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationService.CancelSubscriptionAsync(orgIdGuid);
     }
 
     [HttpPost("{id}/reinstate")]
