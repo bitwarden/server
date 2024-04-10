@@ -360,10 +360,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can access all ciphers in V1 (to change later)
+        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
@@ -399,10 +399,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can edit all ciphers in V1 (to change later)
+        // Provider users can edit all ciphers if RestrictProviderAccess is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
@@ -422,10 +422,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can still access organization ciphers in V1 (to change later)
+        // Provider users can only access organization ciphers if RestrictProviderAccess is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
@@ -445,10 +445,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can access all ciphers in V1 (to change later)
+        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
