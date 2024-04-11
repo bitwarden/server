@@ -88,7 +88,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddScoped<IAccessControlService, AccessControlService>();
-        services.AddBillingCommands();
+        services.AddBillingOperations();
 
 #if OSS
         services.AddOosServices();
@@ -107,6 +107,7 @@ public class Startup
         services.Configure<RazorViewEngineOptions>(o =>
          {
              o.ViewLocationFormats.Add("/Auth/Views/{1}/{0}.cshtml");
+             o.ViewLocationFormats.Add("/AdminConsole/Views/{1}/{0}.cshtml");
          });
 
         // Jobs service
@@ -118,14 +119,6 @@ public class Startup
         }
         else
         {
-            if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
-            {
-                services.AddHostedService<HostedServices.AzureQueueBlockIpHostedService>();
-            }
-            else if (CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
-            {
-                services.AddHostedService<HostedServices.AmazonSqsBlockIpHostedService>();
-            }
             if (CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
             {
                 services.AddHostedService<HostedServices.AzureQueueMailHostedService>();

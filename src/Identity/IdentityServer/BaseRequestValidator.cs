@@ -27,7 +27,6 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -38,6 +37,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceService _deviceService;
     private readonly IEventService _eventService;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
+    private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -46,8 +46,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
-    private readonly IDistributedCache _distributedCache;
-    private readonly DistributedCacheEntryOptions _cacheEntryOptions;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -63,6 +61,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
+        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
@@ -75,7 +74,6 @@ public abstract class BaseRequestValidator<T> where T : class
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IDistributedCache distributedCache,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
@@ -84,6 +82,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _userService = userService;
         _eventService = eventService;
         _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
+        _duoWebV4SDKService = duoWebV4SDKService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _applicationCacheService = applicationCacheService;
@@ -96,14 +95,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _tokenDataFactory = tokenDataFactory;
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
-        _distributedCache = distributedCache;
-        _cacheEntryOptions = new DistributedCacheEntryOptions
-        {
-            // This sets the time an item is cached to 17 minutes. This value is hard coded
-            // to 17 because to it covers all time-out windows for both Authenticators and
-            // Email TOTP.
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(17)
-        };
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
     }
 
@@ -150,11 +141,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
-
-            var cacheKey = "TOTP_" + user.Email + "_" + twoFactorToken;
-
-            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, cacheKey, out string _);
-            if (!verified || isBot || isOtpCached)
+            if (!verified || isBot)
             {
                 if (twoFactorProviderType != TwoFactorProviderType.Remember)
                 {
@@ -166,11 +153,6 @@ public abstract class BaseRequestValidator<T> where T : class
                     await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
                 }
                 return;
-            }
-            // We only want to track TOTPs in the chache to enforce one time use.
-            if (twoFactorProviderType == TwoFactorProviderType.Authenticator || twoFactorProviderType == TwoFactorProviderType.Email)
-            {
-                await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
             }
         }
         else
@@ -428,9 +410,22 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Remember:
                 if (type != TwoFactorProviderType.Remember &&
-                    !(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
+                    !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return false;
+                }
+                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
+                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
+                {
+                    if (type == TwoFactorProviderType.Duo)
+                    {
+                        if (!token.Contains(':'))
+                        {
+                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
+                            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
+                        }
+                    }
                 }
 
                 return await _userManager.VerifyTwoFactorTokenAsync(user,
@@ -439,6 +434,20 @@ public abstract class BaseRequestValidator<T> where T : class
                 if (!organization?.TwoFactorProviderIsEnabled(type) ?? true)
                 {
                     return false;
+                }
+
+                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
+                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
+                {
+                    if (type == TwoFactorProviderType.OrganizationDuo)
+                    {
+                        if (!token.Contains(':'))
+                        {
+                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
+                            var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
+                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
+                        }
+                    }
                 }
 
                 return await _organizationDuoWebTokenProvider.ValidateAsync(token, organization, user);
@@ -465,11 +474,19 @@ public abstract class BaseRequestValidator<T> where T : class
                     CoreHelpers.CustomProviderName(type));
                 if (type == TwoFactorProviderType.Duo)
                 {
-                    return new Dictionary<string, object>
+                    var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
                         ["Signature"] = token
                     };
+
+                    // DUO SDK v4 Update: Duo-Redirect
+                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
+                    {
+                        // Generate AuthUrl from DUO SDK v4 token provider
+                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
+                    }
+                    return duoResponse;
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)
                 {
@@ -493,13 +510,19 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.OrganizationDuo:
                 if (await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
                 {
-                    return new Dictionary<string, object>
+                    var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
                         ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
                     };
+                    // DUO SDK v4 Update: DUO-Redirect
+                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
+                    {
+                        // Generate AuthUrl from DUO SDK v4 token provider
+                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
+                    }
+                    return duoResponse;
                 }
-
                 return null;
             default:
                 return null;

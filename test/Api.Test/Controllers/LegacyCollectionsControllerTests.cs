@@ -49,6 +49,10 @@ public class LegacyCollectionsControllerTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, orgUser.UserId.Value)
             .Returns(orgUser);
 
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(Arg.Any<Guid>(), orgUser.UserId.Value, Arg.Any<bool>())
+            .Returns(new CollectionDetails());
+
         var collectionRequest = new CollectionRequestModel
         {
             Name = "encrypted_string",
@@ -86,6 +90,10 @@ public class LegacyCollectionsControllerTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, orgUser.UserId.Value)
             .Returns(orgUser);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(Arg.Any<Guid>(), orgUser.UserId.Value, Arg.Any<bool>())
+            .Returns(new CollectionDetails());
 
         var collectionRequest = new CollectionRequestModel
         {

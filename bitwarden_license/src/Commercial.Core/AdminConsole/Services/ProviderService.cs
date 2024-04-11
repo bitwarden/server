@@ -17,6 +17,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
+using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Services;
 
@@ -257,7 +258,7 @@ public class ProviderService : IProviderService
 
                 await _providerUserRepository.ReplaceAsync(providerUser);
                 events.Add((providerUser, EventType.ProviderUser_Confirmed, null));
-                await _mailService.SendProviderConfirmedEmailAsync(provider.Name, user.Email);
+                await _mailService.SendProviderConfirmedEmailAsync(provider.DisplayName(), user.Email);
                 result.Add(Tuple.Create(providerUser, ""));
             }
             catch (BadRequestException e)
@@ -331,7 +332,7 @@ public class ProviderService : IProviderService
                 var email = user == null ? providerUser.Email : user.Email;
                 if (!string.IsNullOrWhiteSpace(email))
                 {
-                    await _mailService.SendProviderUserRemoved(provider.Name, email);
+                    await _mailService.SendProviderUserRemoved(provider.DisplayName(), email);
                 }
 
                 result.Add(Tuple.Create(providerUser, ""));
@@ -374,8 +375,22 @@ public class ProviderService : IProviderService
             Key = key,
         };
 
-        await ApplyProviderPriceRateAsync(organizationId, providerId);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        await ApplyProviderPriceRateAsync(organization, provider);
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
+
+        organization.BillingEmail = provider.BillingEmail;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
+        {
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            {
+                Email = provider.BillingEmail
+            });
+        }
+
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
     }
 
@@ -400,16 +415,14 @@ public class ProviderService : IProviderService
         await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
-    private async Task ApplyProviderPriceRateAsync(Guid organizationId, Guid providerId)
+    private async Task ApplyProviderPriceRateAsync(Organization organization, Provider provider)
     {
-        var provider = await _providerRepository.GetByIdAsync(providerId);
         // if a provider was created before Nov 6, 2023.If true, the organization plan assigned to that provider is updated to a 2020 plan.
         if (provider.CreationDate >= Constants.ProviderCreatedPriorNov62023)
         {
             return;
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
         var extractedPlanType = PlanTypeMappings(organization);
         if (subscriptionItem != null)
@@ -496,7 +509,7 @@ public class ProviderService : IProviderService
     {
         ThrowOnInvalidPlanType(organizationSignup.Plan);
 
-        var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
+        var (organization, _, defaultCollection) = await _organizationService.SignUpAsync(organizationSignup, true);
 
         var providerOrganization = new ProviderOrganization
         {
@@ -507,6 +520,21 @@ public class ProviderService : IProviderService
 
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
+
+        // If using Flexible Collections, give the owner Can Manage access over the default collection
+        // The orgUser is not available when the org is created so we have to do it here as part of the invite
+        var defaultOwnerAccess = organization.FlexibleCollections && defaultCollection != null
+            ?
+            [
+                new CollectionAccessSelection
+                {
+                    Id = defaultCollection.Id,
+                    HidePasswords = false,
+                    ReadOnly = false,
+                    Manage = true
+                }
+            ]
+            : Array.Empty<CollectionAccessSelection>();
 
         await _organizationService.InviteUsersAsync(organization.Id, user.Id,
             new (OrganizationUserInvite, string)[]
@@ -521,7 +549,7 @@ public class ProviderService : IProviderService
                         AccessAll = !organization.FlexibleCollections,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
-                        Collections = Array.Empty<CollectionAccessSelection>(),
+                        Collections = defaultOwnerAccess,
                     },
                     null
                 )
@@ -571,7 +599,7 @@ public class ProviderService : IProviderService
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
         var token = _dataProtector.Protect(
             $"ProviderUserInvite {providerUser.Id} {providerUser.Email} {nowMillis}");
-        await _mailService.SendProviderInviteEmailAsync(provider.Name, providerUser, token, providerUser.Email);
+        await _mailService.SendProviderInviteEmailAsync(provider.DisplayName(), providerUser, token, providerUser.Email);
     }
 
     private async Task<bool> HasConfirmedProviderAdminExceptAsync(Guid providerId, IEnumerable<Guid> providerUserIds)

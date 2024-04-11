@@ -1,15 +1,13 @@
 #!/usr/bin/env pwsh
-# This script need only be run once
+# !!! UPDATED 2024 for MsSqlMigratorUtility !!!
 #
-# This is a migration script for updating recording the last migration run
-# in a file to recording migrations in a database table. It will create a
-# migrations_vault table and store all of the previously run migrations as
-# indicated by a last_migrations file. It will then delete this file.
+# This is a migration script to move data from [migrations_vault_dev].[dbo].[migrations] (used by our custom
+# migrator script) to [vault_dev].[dbo].[Migration] (used by MsSqlMigratorUtility). It is safe to run multiple
+# times because it will not perform any migration if it detects that the new table is already present.
+# This will be deleted after a few months after everyone has (presumably) migrated to the new schema.
 
 # Due to azure-edge-sql not containing the mssql-tools on ARM, we manually use
-#  the mssql-tools container which runs under x86_64. We should monitor this
-#  in the future and investigate if we can migrate back.
-# docker-compose --profile mssql exec mssql bash /mnt/helpers/run_migrations.sh @args
+# the mssql-tools container which runs under x86_64.
 
 docker run `
   -v "$(pwd)/helpers/mssql:/mnt/helpers" `

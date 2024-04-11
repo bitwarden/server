@@ -50,11 +50,13 @@ public class BillingCustomerDiscount
         Id = discount.Id;
         Active = discount.Active;
         PercentOff = discount.PercentOff;
+        AppliesTo = discount.AppliesTo;
     }
 
     public string Id { get; }
     public bool Active { get; }
     public decimal? PercentOff { get; }
+    public List<string> AppliesTo { get; }
 }
 
 public class BillingSubscription
@@ -73,6 +75,10 @@ public class BillingSubscription
         {
             Items = sub.Items.Select(i => new BillingSubscriptionItem(i));
         }
+        CollectionMethod = sub.CollectionMethod;
+        SuspensionDate = sub.SuspensionDate;
+        UnpaidPeriodEndDate = sub.UnpaidPeriodEndDate;
+        GracePeriod = sub.GracePeriod;
     }
 
     public DateTime? TrialStartDate { get; set; }
@@ -84,11 +90,16 @@ public class BillingSubscription
     public string Status { get; set; }
     public bool Cancelled { get; set; }
     public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
+    public string CollectionMethod { get; set; }
+    public DateTime? SuspensionDate { get; set; }
+    public DateTime? UnpaidPeriodEndDate { get; set; }
+    public int? GracePeriod { get; set; }
 
     public class BillingSubscriptionItem
     {
         public BillingSubscriptionItem(SubscriptionInfo.BillingSubscription.BillingSubscriptionItem item)
         {
+            ProductId = item.ProductId;
             Name = item.Name;
             Amount = item.Amount;
             Interval = item.Interval;
@@ -97,6 +108,7 @@ public class BillingSubscription
             AddonSubscriptionItem = item.AddonSubscriptionItem;
         }
 
+        public string ProductId { get; set; }
         public string Name { get; set; }
         public decimal Amount { get; set; }
         public int Quantity { get; set; }

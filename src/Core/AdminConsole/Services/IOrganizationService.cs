@@ -20,8 +20,17 @@ public interface IOrganizationService
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null);
     Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
-    Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
-    Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationLicense license, User owner,
+    /// <summary>
+    /// Create a new organization in a cloud environment
+    /// </summary>
+    /// <returns>A tuple containing the new organization, the initial organizationUser (if any) and the default collection (if any)</returns>
+#nullable enable
+    Task<(Organization organization, OrganizationUser? organizationUser, Collection? defaultCollection)> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
+#nullable disable
+    /// <summary>
+    /// Create a new organization on a self-hosted instance
+    /// </summary>
+    Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(OrganizationLicense license, User owner,
         string ownerKey, string collectionName, string publicKey, string privateKey);
     Task DeleteAsync(Organization organization);
     Task EnableAsync(Guid organizationId, DateTime? expirationDate);
@@ -36,7 +45,7 @@ public interface IOrganizationService
     Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
+        OrganizationUserType type, bool accessAll, string externalId, ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
@@ -45,7 +54,7 @@ public interface IOrganizationService
         Guid confirmingUserId, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId, IUserService userService);
-    Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
+    Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
     [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
@@ -75,7 +84,7 @@ public interface IOrganizationService
     /// <remarks>
     /// This method must target a disabled Organization that has null keys and status as 'Pending'.
     /// </remarks>
-    Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName);
+    Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);

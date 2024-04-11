@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -10,15 +11,21 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Entities;
 
-public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
+public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable, IReferenceable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
     public Guid Id { get; set; }
     [MaxLength(50)]
     public string Identifier { get; set; }
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
+    /// </summary>
     [MaxLength(50)]
     public string Name { get; set; }
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
+    /// </summary>
     [MaxLength(50)]
     public string BusinessName { get; set; }
     [MaxLength(50)]
@@ -78,7 +85,6 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
-    public bool SecretsManagerBeta { get; set; }
     /// <summary>
     /// Refers to the ability for an organization to limit collection creation and deletion to owners and admins only
     /// </summary>
@@ -105,6 +111,22 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         }
     }
 
+    /// <summary>
+    /// Returns the name of the organization, HTML decoded ready for display.
+    /// </summary>
+    public string DisplayName()
+    {
+        return WebUtility.HtmlDecode(Name);
+    }
+
+    /// <summary>
+    /// Returns the business name of the organization, HTML decoded ready for display.
+    /// </summary>
+    public string DisplayBusinessName()
+    {
+        return WebUtility.HtmlDecode(BusinessName);
+    }
+
     public string BillingEmailAddress()
     {
         return BillingEmail?.ToLowerInvariant()?.Trim();
@@ -112,12 +134,12 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
 
     public string BillingName()
     {
-        return BusinessName;
+        return DisplayBusinessName();
     }
 
     public string SubscriberName()
     {
-        return Name;
+        return DisplayName();
     }
 
     public string BraintreeCustomerIdPrefix()
@@ -140,6 +162,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return "organizationId";
     }
 
+    public bool IsOrganization() => true;
+
     public bool IsUser()
     {
         return false;
@@ -149,6 +173,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     {
         return "Organization";
     }
+
+    public bool IsExpired() => ExpirationDate.HasValue && ExpirationDate.Value <= DateTime.UtcNow;
 
     public long StorageBytesRemaining()
     {

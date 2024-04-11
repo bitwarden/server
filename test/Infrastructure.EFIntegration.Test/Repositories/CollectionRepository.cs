@@ -14,7 +14,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class CollectionRepositoryTests
 {
     [CiSkippedTheory, BitAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         Collection collection,
         Organization organization,
         CollectionCompare equalityComparer,
