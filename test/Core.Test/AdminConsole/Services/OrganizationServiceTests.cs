@@ -452,8 +452,9 @@ public class OrganizationServiceTests
         OrganizationSignup signup,
         SutProvider<OrganizationService> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
+
         signup.Plan = PlanType.TeamsMonthly;
-        signup.AdditionalSeats = 10;
 
         var (organization, _, _) = await sutProvider.Sut.SignupClientAsync(signup);
 
@@ -464,7 +465,6 @@ public class OrganizationServiceTests
             org.Name == signup.Name &&
             org.Plan == plan.Name &&
             org.PlanType == plan.Type &&
-            org.Seats == signup.AdditionalSeats &&
             org.UsePolicies == plan.HasPolicies &&
             org.PublicKey == signup.PublicKey &&
             org.PrivateKey == signup.PrivateKey &&
@@ -485,8 +485,7 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(
             re =>
                 re.Type == ReferenceEventType.Signup &&
-                re.PlanType == plan.Type &&
-                re.Seats == signup.AdditionalSeats));
+                re.PlanType == plan.Type));
     }
 
     [Theory]

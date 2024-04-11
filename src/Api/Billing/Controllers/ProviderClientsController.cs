@@ -57,7 +57,6 @@ public class ProviderClientsController(
         {
             Name = requestBody.Name,
             Plan = requestBody.PlanType,
-            AdditionalSeats = requestBody.Seats,
             Owner = user,
             OwnerKey = requestBody.UserKey,
             PublicKey = requestBody.Keys.PublicKey,
@@ -79,6 +78,11 @@ public class ProviderClientsController(
 
             return TypedResults.Problem();
         }
+
+        await assignSeatsToClientOrganizationCommand.AssignSeatsToClientOrganization(
+            provider,
+            clientOrganization,
+            requestBody.Seats);
 
         await createCustomerCommand.CreateCustomer(
             provider,

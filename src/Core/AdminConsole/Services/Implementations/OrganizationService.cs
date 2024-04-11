@@ -423,6 +423,13 @@ public class OrganizationService : IOrganizationService
 
     public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
     {
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (!consolidatedBillingEnabled)
+        {
+            throw new InvalidOperationException($"{nameof(SignupClientAsync)} is only for use within Consolidated Billing");
+        }
+
         var plan = StaticStore.GetPlan(signup.Plan);
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
