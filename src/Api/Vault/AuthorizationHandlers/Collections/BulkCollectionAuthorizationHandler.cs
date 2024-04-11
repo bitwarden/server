@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,16 +21,19 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IFeatureService _featureService;
     private Guid _targetOrganizationId;
 
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService,
+        IFeatureService featureService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _applicationCacheService = applicationCacheService;
+        _featureService = featureService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -215,19 +219,27 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     private async Task CanDeleteAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement,
         ICollection<Collection> resources, CurrentContextOrganization? org)
     {
-        // Owners, Admins, and users with DeleteAnyCollection permission can always delete collections
-        if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.DeleteAnyCollection: true })
+        // Users with DeleteAnyCollection permission can always delete collections
+        if (org is { Permissions.DeleteAnyCollection: true })
         {
             context.Succeed(requirement);
             return;
         }
 
-        // Check for non-null org here: the user must be apart of the organization for this setting to take affect
+        // Check for non-null org here: the user must be apart of the organization for these settings to take affect
+        // If V1 is enabled, Owners and Admins can delete any collection only if permitted by collection management settings
+        var organizationAbility = await GetOrganizationAbilityAsync(org);
+        if ((organizationAbility is { AllowAdminAccessToAllCollectionItems: true } ||
+             !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)) &&
+            org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
         // The limit collection management setting is disabled,
         // ensure acting user has manage permissions for all collections being deleted
-        if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
+        if (organizationAbility is { LimitCollectionCreationDeletion: false })
         {
             var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
