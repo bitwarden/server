@@ -255,7 +255,7 @@ public class StripeController : Controller
                 customerGetOptions.AddExpand("tax");
                 var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
                 if (!subscription.AutomaticTax.Enabled &&
-                    customer.Tax?.AutomaticTax == StripeCustomerAutomaticTaxStatus.Supported)
+                    customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported)
                 {
                     subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
                         new SubscriptionUpdateOptions
@@ -453,7 +453,7 @@ public class StripeController : Controller
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
         {
-            var charge = await _stripeEventService.GetCharge(parsedEvent);
+            var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
             var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
                 GatewayType.Stripe, charge.Id);
             if (chargeTransaction == null)
