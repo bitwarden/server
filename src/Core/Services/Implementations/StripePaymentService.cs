@@ -845,16 +845,20 @@ public class StripePaymentService : IPaymentService
             {
                 try
                 {
-                    if (chargeNow)
+                    if (!isPm5864DollarThresholdEnabled && !invoiceNow)
                     {
-                        paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(subscriber, invoice);
-                    }
-                    else
-                    {
-                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
-                            new InvoiceFinalizeOptions { AutoAdvance = false, });
-                        await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
-                        paymentIntentClientSecret = null;
+                        if (chargeNow)
+                        {
+                            paymentIntentClientSecret =
+                                await PayInvoiceAfterSubscriptionChangeAsync(subscriber, invoice);
+                        }
+                        else
+                        {
+                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
+                                new InvoiceFinalizeOptions { AutoAdvance = false, });
+                            await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
+                            paymentIntentClientSecret = null;
+                        }
                     }
                 }
                 catch
