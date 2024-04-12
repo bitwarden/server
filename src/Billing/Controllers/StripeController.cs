@@ -272,7 +272,7 @@ public class StripeController : Controller
                     {
                         var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
                         await HandlePaymentMethodAttachedAsync(paymentMethod);
-                        break;
+                        return Ok();
                     }
                 case HandledStripeWebhook.CustomerUpdated:
                     {
@@ -732,6 +732,10 @@ public class StripeController : Controller
         return transaction;
     }
 
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.PaymentMethodAttached"/> event type from Stripe.
+    /// </summary>
+    /// <param name="paymentMethod"></param>
     private async Task HandlePaymentMethodAttachedAsync(PaymentMethod paymentMethod)
     {
         if (paymentMethod is null)
