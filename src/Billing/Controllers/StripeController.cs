@@ -168,16 +168,91 @@ public class StripeController : Controller
         if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated))
         {
             var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-            var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+            await HandleCustomerSubscriptionUpdatedEventAsync(subscription);
+            return Ok();
+        }
 
-            if (subscription.Status is StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired)
-            {
-                if (organizationId.HasValue)
+        switch (parsedEvent.Type)
+        {
+            case HandledStripeWebhook.UpcomingInvoice:
+                {
+                    var invoice = await _stripeEventService.GetInvoice(parsedEvent);
+                    await HandleUpcomingInvoiceEventAsync(invoice, parsedEvent.Id);
+                    return Ok();
+                }
+            case HandledStripeWebhook.ChargeSucceeded:
+                {
+                    var charge = await _stripeEventService.GetCharge(parsedEvent);
+                    await HandleChargeSucceededEventAsync(charge);
+                    return Ok();
+                }
+            case HandledStripeWebhook.ChargeRefunded:
+                {
+                    var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
+                    await HandleChargeRefundedEventAsync(charge);
+                    return Ok();
+                }
+            case HandledStripeWebhook.PaymentSucceeded:
+                {
+                    var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
+                    await HandlePaymentSucceededEventAsync(invoice);
+                    return Ok();
+                }
+            case HandledStripeWebhook.PaymentFailed:
+                {
+                    var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
+                    await HandlePaymentFailedEventAsync(invoice);
+                    return Ok();
+                }
+            case HandledStripeWebhook.InvoiceCreated:
+                {
+                    var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
+                    await HandleInvoiceCreatedEventAsync(invoice);
+                    return Ok();
+                }
+            case HandledStripeWebhook.PaymentMethodAttached:
+                {
+                    var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
+                    await HandlePaymentMethodAttachedAsync(paymentMethod);
+                    return Ok();
+                }
+            case HandledStripeWebhook.CustomerUpdated:
+                {
+                    var customer = await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
+                    await HandleCustomerUpdatedEventAsync(customer);
+                    return Ok();
+                }
+            default:
+                {
+                    _logger.LogWarning("Unsupported event received. {EventType}", parsedEvent.Type);
+                    return Ok();
+                }
+        }
+    }
+
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.SubscriptionUpdated"/> event type from Stripe.
+    /// </summary>
+    /// <param name="subscription"></param>
+    private async Task HandleCustomerSubscriptionUpdatedEventAsync(Subscription subscription)
+    {
+        var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+
+        switch (subscription.Status)
+        {
+            case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired
+                when organizationId.HasValue:
                 {
                     await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                    break;
                 }
-                else if (userId.HasValue)
+            case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired:
                 {
+                    if (!userId.HasValue)
+                    {
+                        break;
+                    }
+
                     if (subscription.Status is StripeSubscriptionStatus.Unpaid &&
                         subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
                     {
@@ -190,92 +265,37 @@ public class StripeController : Controller
                     {
                         await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
                     }
-                }
-            }
 
-            if (subscription.Status == StripeSubscriptionStatus.Active)
-            {
-                if (organizationId.HasValue)
+                    break;
+                }
+            case StripeSubscriptionStatus.Active when organizationId.HasValue:
                 {
                     await _organizationService.EnableAsync(organizationId.Value);
+                    break;
                 }
-                else if (userId.HasValue)
+            case StripeSubscriptionStatus.Active:
                 {
-                    await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
-                }
-            }
+                    if (userId.HasValue)
+                    {
+                        await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+                    }
 
-            if (organizationId.HasValue)
-            {
-                await _organizationService.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
-                if (IsSponsoredSubscription(subscription))
-                {
-                    await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                    break;
                 }
-            }
-            else if (userId.HasValue)
+        }
+
+        if (organizationId.HasValue)
+        {
+            await _organizationService.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            if (IsSponsoredSubscription(subscription))
             {
-                await _userService.UpdatePremiumExpirationAsync(userId.Value, subscription.CurrentPeriodEnd);
+                await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
             }
         }
-        else switch (parsedEvent.Type)
-            {
-                case HandledStripeWebhook.UpcomingInvoice:
-                    {
-                        var invoice = await _stripeEventService.GetInvoice(parsedEvent);
-                        await HandleUpcomingInvoiceEventAsync(invoice, parsedEvent.Id);
-                        return Ok();
-                    }
-                case HandledStripeWebhook.ChargeSucceeded:
-                    {
-                        var charge = await _stripeEventService.GetCharge(parsedEvent);
-                        await HandleChargeSucceededEventAsync(charge);
-                        return Ok();
-                    }
-                case HandledStripeWebhook.ChargeRefunded:
-                    {
-                        var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
-                        await HandleChargeRefundedEventAsync(charge);
-                        return Ok();
-                    }
-                case HandledStripeWebhook.PaymentSucceeded:
-                    {
-                        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-                        await HandlePaymentSucceededEventAsync(invoice);
-                        return Ok();
-                    }
-                case HandledStripeWebhook.PaymentFailed:
-                    {
-                        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-                        await HandlePaymentFailedEventAsync(invoice);
-                        return Ok();
-                    }
-                case HandledStripeWebhook.InvoiceCreated:
-                    {
-                        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-                        await HandleInvoiceCreatedEventAsync(invoice);
-                        return Ok();
-                    }
-                case HandledStripeWebhook.PaymentMethodAttached:
-                    {
-                        var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
-                        await HandlePaymentMethodAttachedAsync(paymentMethod);
-                        return Ok();
-                    }
-                case HandledStripeWebhook.CustomerUpdated:
-                    {
-                        var customer = await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
-                        await HandleCustomerUpdatedEventAsync(customer);
-                        return Ok();
-                    }
-                default:
-                    {
-                        _logger.LogWarning("Unsupported event received. {EventType}", parsedEvent.Type);
-                        return Ok();
-                    }
-            }
-
-        return Ok();
+        else if (userId.HasValue)
+        {
+            await _userService.UpdatePremiumExpirationAsync(userId.Value, subscription.CurrentPeriodEnd);
+        }
     }
 
     private async Task<bool> HandleCustomerSubscriptionDeletedEventAsync(Subscription subscription)
