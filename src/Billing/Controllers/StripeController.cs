@@ -276,30 +276,9 @@ public class StripeController : Controller
                     }
                 case HandledStripeWebhook.CustomerUpdated:
                     {
-                        var customer =
-                            await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
-
-                        if (customer.Subscriptions == null || !customer.Subscriptions.Any())
-                        {
-                            return new OkResult();
-                        }
-
-                        var subscription = customer.Subscriptions.First();
-
-                        var (organizationId, _) = GetIdsFromMetaData(subscription.Metadata);
-
-                        if (!organizationId.HasValue)
-                        {
-                            return new OkResult();
-                        }
-
-                        var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-                        organization.BillingEmail = customer.Email;
-                        await _organizationRepository.ReplaceAsync(organization);
-
-                        await _referenceEventService.RaiseEventAsync(
-                            new ReferenceEvent(ReferenceEventType.OrganizationEditedInStripe, organization, _currentContext));
-                        break;
+                        var customer = await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
+                        await HandleCustomerUpdatedEventAsync(customer);
+                        return Ok();
                     }
                 default:
                     _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
@@ -307,6 +286,34 @@ public class StripeController : Controller
             }
 
         return new OkResult();
+    }
+
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.CustomerUpdated"/> event type from Stripe.
+    /// </summary>
+    /// <param name="customer"></param>
+    private async Task HandleCustomerUpdatedEventAsync(Customer customer)
+    {
+        if (customer.Subscriptions == null || !customer.Subscriptions.Any())
+        {
+            return;
+        }
+
+        var subscription = customer.Subscriptions.First();
+
+        var (organizationId, _) = GetIdsFromMetaData(subscription.Metadata);
+
+        if (!organizationId.HasValue)
+        {
+            return;
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+        organization.BillingEmail = customer.Email;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        await _referenceEventService.RaiseEventAsync(
+            new ReferenceEvent(ReferenceEventType.OrganizationEditedInStripe, organization, _currentContext));
     }
 
     /// <summary>
