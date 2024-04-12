@@ -257,8 +257,11 @@ public class StripeController : Controller
                         return Ok();
                     }
                 case HandledStripeWebhook.PaymentFailed:
-                    await HandlePaymentFailed(await _stripeEventService.GetInvoice(parsedEvent, true));
-                    break;
+                    {
+                        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
+                        await HandlePaymentFailedEventAsync(invoice);
+                        return Ok();
+                    }
                 case HandledStripeWebhook.InvoiceCreated:
                     {
                         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
@@ -1025,7 +1028,11 @@ public class StripeController : Controller
     private static bool IsSponsoredSubscription(Subscription subscription) =>
         StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
 
-    private async Task HandlePaymentFailed(Invoice invoice)
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.PaymentFailed"/> event type from Stripe.
+    /// </summary>
+    /// <param name="invoice"></param>
+    private async Task HandlePaymentFailedEventAsync(Invoice invoice)
     {
         if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
         {
