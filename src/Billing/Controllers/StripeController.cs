@@ -158,22 +158,20 @@ public class StripeController : Controller
             return new OkResult();
         }
 
-        if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted))
-        {
-            var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-            await HandleCustomerSubscriptionDeletedEventAsync(subscription);
-            return Ok();
-        }
-
-        if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated))
-        {
-            var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-            await HandleCustomerSubscriptionUpdatedEventAsync(subscription);
-            return Ok();
-        }
-
         switch (parsedEvent.Type)
         {
+            case HandledStripeWebhook.SubscriptionDeleted:
+                {
+                    var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
+                    await HandleCustomerSubscriptionDeletedEventAsync(subscription);
+                    return Ok();
+                }
+            case HandledStripeWebhook.SubscriptionUpdated:
+                {
+                    var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
+                    await HandleCustomerSubscriptionUpdatedEventAsync(subscription);
+                    return Ok();
+                }
             case HandledStripeWebhook.UpcomingInvoice:
                 {
                     var invoice = await _stripeEventService.GetInvoice(parsedEvent);
