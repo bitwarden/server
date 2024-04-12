@@ -158,76 +158,81 @@ public class StripeController : Controller
             return new OkResult();
         }
 
-        var subDeleted = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
-        var subUpdated = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
-
-        if (subDeleted || subUpdated)
+        if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted))
         {
             var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-            var ids = GetIdsFromMetaData(subscription.Metadata);
-            var organizationId = ids.Item1 ?? Guid.Empty;
-            var userId = ids.Item2 ?? Guid.Empty;
-            var subCanceled = subDeleted && subscription.Status == StripeSubscriptionStatus.Canceled;
-            var subUnpaid = subUpdated && subscription.Status == StripeSubscriptionStatus.Unpaid;
-            var subActive = subUpdated && subscription.Status == StripeSubscriptionStatus.Active;
-            var subIncompleteExpired = subUpdated && subscription.Status == StripeSubscriptionStatus.IncompleteExpired;
+            var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+            var subCanceled = subscription.Status == StripeSubscriptionStatus.Canceled;
 
-            if (subCanceled || subUnpaid || subIncompleteExpired)
+            if (!subCanceled)
             {
-                // org
-                if (organizationId != Guid.Empty)
+                return Ok();
+            }
+
+            if (organizationId.HasValue)
+            {
+                await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            }
+            else if (userId.HasValue)
+            {
+                var user = await _userService.GetUserByIdAsync(userId.Value);
+                if (user?.Premium == true)
                 {
-                    await _organizationService.DisableAsync(organizationId, subscription.CurrentPeriodEnd);
+                    await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
                 }
-                // user
-                else if (userId != Guid.Empty)
+            }
+        }
+        else if (parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated))
+        {
+            var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
+            var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+
+            if (subscription.Status is StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired)
+            {
+                if (organizationId.HasValue)
                 {
-                    if (subUnpaid && subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
+                    await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                }
+                else if (userId.HasValue)
+                {
+                    if (subscription.Status is StripeSubscriptionStatus.Unpaid &&
+                        subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
                     {
                         await CancelSubscription(subscription.Id);
                         await VoidOpenInvoices(subscription.Id);
                     }
 
-                    var user = await _userService.GetUserByIdAsync(userId);
+                    var user = await _userService.GetUserByIdAsync(userId.Value);
                     if (user?.Premium == true)
                     {
-                        await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+                        await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
                     }
                 }
             }
 
-            if (subActive)
+            if (subscription.Status == StripeSubscriptionStatus.Active)
             {
-
-                if (organizationId != Guid.Empty)
+                if (organizationId.HasValue)
                 {
-                    await _organizationService.EnableAsync(organizationId);
+                    await _organizationService.EnableAsync(organizationId.Value);
                 }
-                else if (userId != Guid.Empty)
+                else if (userId.HasValue)
                 {
-                    await _userService.EnablePremiumAsync(userId,
-                        subscription.CurrentPeriodEnd);
+                    await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
                 }
             }
 
-            if (subUpdated)
+            if (organizationId.HasValue)
             {
-                // org
-                if (organizationId != Guid.Empty)
+                await _organizationService.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                if (IsSponsoredSubscription(subscription))
                 {
-                    await _organizationService.UpdateExpirationDateAsync(organizationId,
-                        subscription.CurrentPeriodEnd);
-                    if (IsSponsoredSubscription(subscription))
-                    {
-                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId, subscription.CurrentPeriodEnd);
-                    }
+                    await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
                 }
-                // user
-                else if (userId != Guid.Empty)
-                {
-                    await _userService.UpdatePremiumExpirationAsync(userId,
-                        subscription.CurrentPeriodEnd);
-                }
+            }
+            else if (userId.HasValue)
+            {
+                await _userService.UpdatePremiumExpirationAsync(userId.Value, subscription.CurrentPeriodEnd);
             }
         }
         else switch (parsedEvent.Type)
