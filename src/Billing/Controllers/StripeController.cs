@@ -265,12 +265,8 @@ public class StripeController : Controller
                 case HandledStripeWebhook.InvoiceCreated:
                     {
                         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-                        if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
-                        {
-                            await AttemptToPayInvoiceAsync(invoice);
-                        }
-
-                        break;
+                        await HandleInvoiceCreatedEventAsync(invoice);
+                        return Ok();
                     }
                 case HandledStripeWebhook.PaymentMethodAttached:
                     {
@@ -311,6 +307,20 @@ public class StripeController : Controller
             }
 
         return new OkResult();
+    }
+
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.InvoiceCreated"/> event type from Stripe.
+    /// </summary>
+    /// <param name="invoice"></param>
+    private async Task HandleInvoiceCreatedEventAsync(Invoice invoice)
+    {
+        if (invoice.Paid || !ShouldAttemptToPayInvoice(invoice))
+        {
+            return;
+        }
+
+        await AttemptToPayInvoiceAsync(invoice);
     }
 
     /// <summary>
@@ -984,11 +994,15 @@ public class StripeController : Controller
         }
     }
 
-    private bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
-    {
-        return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
-               invoice.BillingReason is "subscription_cycle" or "automatic_pending_invoice_item_invoice" && invoice.SubscriptionId != null;
-    }
+    private static bool ShouldAttemptToPayInvoice(Invoice invoice) =>
+        invoice is
+        {
+            AmountDue: > 0,
+            Paid: false,
+            CollectionMethod: "charge_automatically",
+            BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
+            SubscriptionId: not null
+        };
 
     private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
     {
@@ -1034,7 +1048,7 @@ public class StripeController : Controller
     /// <param name="invoice"></param>
     private async Task HandlePaymentFailedEventAsync(Invoice invoice)
     {
-        if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+        if (!invoice.Paid && invoice.AttemptCount > 1 && ShouldAttemptToPayInvoice(invoice))
         {
             var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
             // attempt count 4 = 11 days after initial failure
