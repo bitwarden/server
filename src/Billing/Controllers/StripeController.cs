@@ -258,11 +258,7 @@ public class StripeController : Controller
                         await VoidOpenInvoices(subscription.Id);
                     }
 
-                    var user = await _userService.GetUserByIdAsync(userId.Value);
-                    if (user?.Premium == true)
-                    {
-                        await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
-                    }
+                    await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
 
                     break;
                 }
@@ -296,14 +292,14 @@ public class StripeController : Controller
         }
     }
 
-    private async Task<bool> HandleCustomerSubscriptionDeletedEventAsync(Subscription subscription)
+    private async Task HandleCustomerSubscriptionDeletedEventAsync(Subscription subscription)
     {
         var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
         var subCanceled = subscription.Status == StripeSubscriptionStatus.Canceled;
 
         if (!subCanceled)
         {
-            return true;
+            return;
         }
 
         if (organizationId.HasValue)
@@ -312,14 +308,8 @@ public class StripeController : Controller
         }
         else if (userId.HasValue)
         {
-            var user = await _userService.GetUserByIdAsync(userId.Value);
-            if (user?.Premium == true)
-            {
-                await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
-            }
+            await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
         }
-
-        return false;
     }
 
     /// <summary>
