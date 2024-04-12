@@ -230,301 +230,314 @@ public class StripeController : Controller
                 }
             }
         }
-        else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
-        {
-            var invoice = await _stripeEventService.GetInvoice(parsedEvent);
-
-            if (string.IsNullOrEmpty(invoice.SubscriptionId))
+        else switch (parsedEvent.Type)
             {
-                _logger.LogWarning("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
-                return new OkResult();
-            }
-
-            var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-
-            if (subscription == null)
-            {
-                throw new Exception(
-                    $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
-            }
-
-            var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
-            if (pm5766AutomaticTaxIsEnabled)
-            {
-                var customerGetOptions = new CustomerGetOptions();
-                customerGetOptions.AddExpand("tax");
-                var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
-                if (!subscription.AutomaticTax.Enabled &&
-                    customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported)
-                {
-                    subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
-                        new SubscriptionUpdateOptions
-                        {
-                            DefaultTaxRates = [],
-                            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                        });
-                }
-            }
-
-            var updatedSubscription = pm5766AutomaticTaxIsEnabled
-                ? subscription
-                : await VerifyCorrectTaxRateForCharge(invoice, subscription);
-
-            var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
-
-            var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
-
-            async Task SendEmails(IEnumerable<string> emails)
-            {
-                var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
-
-                if (invoice.NextPaymentAttempt.HasValue)
-                {
-                    await _mailService.SendInvoiceUpcoming(
-                        validEmails,
-                        invoice.AmountDue / 100M,
-                        invoice.NextPaymentAttempt.Value,
-                        invoiceLineItemDescriptions,
-                        true);
-                }
-            }
-
-            if (organizationId.HasValue)
-            {
-                if (IsSponsoredSubscription(updatedSubscription))
-                {
-                    await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
-                }
-
-                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-
-                if (organization == null || !OrgPlanForInvoiceNotifications(organization))
-                {
-                    return new OkResult();
-                }
-
-                await SendEmails(new List<string> { organization.BillingEmail });
-
-                /*
-                 * TODO: https://bitwarden.atlassian.net/browse/PM-4862
-                 * Disabling this as part of a hot fix. It needs to check whether the organization
-                 * belongs to a Reseller provider and only send an email to the organization owners if it does.
-                 * It also requires a new email template as the current one contains too much billing information.
-                 */
-
-                // var ownerEmails = await _organizationRepository.GetOwnerEmailAddressesById(organization.Id);
-
-                // await SendEmails(ownerEmails);
-            }
-            else if (userId.HasValue)
-            {
-                var user = await _userService.GetUserByIdAsync(userId.Value);
-
-                if (user?.Premium == true)
-                {
-                    await SendEmails(new List<string> { user.Email });
-                }
-            }
-        }
-        else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
-        {
-            var charge = await _stripeEventService.GetCharge(parsedEvent);
-
-            var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
-            if (existingTransaction is not null)
-            {
-                _logger.LogInformation("Charge success already processed. {ChargeId}", charge.Id);
-                return new OkResult();
-            }
-
-            var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
-            if (!organizationId.HasValue && !userId.HasValue)
-            {
-                _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
-                return new OkResult();
-            }
-
-            var transaction = FromChargeToTransaction(charge, organizationId, userId);
-            if (!transaction.PaymentMethodType.HasValue)
-            {
-                _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);
-                return new OkResult();
-            }
-
-            try
-            {
-                await _transactionRepository.CreateAsync(transaction);
-            }
-            catch (SqlException e) when (e.Number == 547)
-            {
-                _logger.LogWarning(
-                    "Charge success could not create transaction as entity may have been deleted. {ChargeId}",
-                    charge.Id);
-                return new OkResult();
-            }
-        }
-        else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
-        {
-            var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
-            var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
-            if (parentTransaction == null)
-            {
-                // Attempt to create a transaction for the charge if it doesn't exist
-                var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
-                var tx = FromChargeToTransaction(charge, organizationId, userId);
-                try
-                {
-                    parentTransaction = await _transactionRepository.CreateAsync(tx);
-                }
-                catch (SqlException e) when (e.Number == 547)
-                {
-                    _logger.LogWarning(
-                        "Charge refund could not create transaction as entity may have been deleted. {ChargeId}",
-                        charge.Id);
-                    return new OkResult();
-                }
-            }
-
-            var amountRefunded = charge.AmountRefunded / 100M;
-
-            if (parentTransaction.Refunded.GetValueOrDefault() ||
-                parentTransaction.RefundedAmount.GetValueOrDefault() >= amountRefunded)
-            {
-                _logger.LogWarning(
-                    "Charge refund amount doesn't match parent transaction's amount or parent has already been refunded. {ChargeId}",
-                    charge.Id);
-                return new OkResult();
-            }
-
-            parentTransaction.RefundedAmount = amountRefunded;
-            if (charge.Refunded)
-            {
-                parentTransaction.Refunded = true;
-            }
-
-            await _transactionRepository.ReplaceAsync(parentTransaction);
-
-            foreach (var refund in charge.Refunds)
-            {
-                var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                    GatewayType.Stripe, refund.Id);
-                if (refundTransaction != null)
-                {
-                    continue;
-                }
-
-                await _transactionRepository.CreateAsync(new Transaction
-                {
-                    Amount = refund.Amount / 100M,
-                    CreationDate = refund.Created,
-                    OrganizationId = parentTransaction.OrganizationId,
-                    UserId = parentTransaction.UserId,
-                    Type = TransactionType.Refund,
-                    Gateway = GatewayType.Stripe,
-                    GatewayId = refund.Id,
-                    PaymentMethodType = parentTransaction.PaymentMethodType,
-                    Details = parentTransaction.Details
-                });
-            }
-        }
-        else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentSucceeded))
-        {
-            var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-            if (invoice.Paid && invoice.BillingReason == "subscription_create")
-            {
-                var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-                if (subscription?.Status == StripeSubscriptionStatus.Active)
-                {
-                    if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+                case HandledStripeWebhook.UpcomingInvoice:
                     {
-                        await Task.Delay(5000);
-                    }
+                        var invoice = await _stripeEventService.GetInvoice(parsedEvent);
 
-                    var ids = GetIdsFromMetaData(subscription.Metadata);
-                    // org
-                    if (ids.Item1.HasValue)
-                    {
-                        if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
+                        if (string.IsNullOrEmpty(invoice.SubscriptionId))
                         {
-                            await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
-
-                            var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
-                            await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
-                                {
-                                    PlanName = organization?.Plan,
-                                    PlanType = organization?.PlanType,
-                                    Seats = organization?.Seats,
-                                    Storage = organization?.MaxStorageGb,
-                                });
+                            _logger.LogWarning("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
+                            return new OkResult();
                         }
-                    }
-                    // user
-                    else if (ids.Item2.HasValue)
-                    {
-                        if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
+
+                        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+
+                        if (subscription == null)
                         {
-                            await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
-
-                            var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
-                            await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
-                                {
-                                    PlanName = PremiumPlanId,
-                                    Storage = user?.MaxStorageGb,
-                                });
+                            throw new Exception(
+                                $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
                         }
+
+                        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
+                        if (pm5766AutomaticTaxIsEnabled)
+                        {
+                            var customerGetOptions = new CustomerGetOptions();
+                            customerGetOptions.AddExpand("tax");
+                            var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
+                            if (!subscription.AutomaticTax.Enabled &&
+                                customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported)
+                            {
+                                subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
+                                    new SubscriptionUpdateOptions
+                                    {
+                                        DefaultTaxRates = [],
+                                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                                    });
+                            }
+                        }
+
+                        var updatedSubscription = pm5766AutomaticTaxIsEnabled
+                            ? subscription
+                            : await VerifyCorrectTaxRateForCharge(invoice, subscription);
+
+                        var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
+
+                        var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
+
+                        async Task SendEmails(IEnumerable<string> emails)
+                        {
+                            var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
+
+                            if (invoice.NextPaymentAttempt.HasValue)
+                            {
+                                await _mailService.SendInvoiceUpcoming(
+                                    validEmails,
+                                    invoice.AmountDue / 100M,
+                                    invoice.NextPaymentAttempt.Value,
+                                    invoiceLineItemDescriptions,
+                                    true);
+                            }
+                        }
+
+                        if (organizationId.HasValue)
+                        {
+                            if (IsSponsoredSubscription(updatedSubscription))
+                            {
+                                await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
+                            }
+
+                            var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+
+                            if (organization == null || !OrgPlanForInvoiceNotifications(organization))
+                            {
+                                return new OkResult();
+                            }
+
+                            await SendEmails(new List<string> { organization.BillingEmail });
+
+                            /*
+                         * TODO: https://bitwarden.atlassian.net/browse/PM-4862
+                         * Disabling this as part of a hot fix. It needs to check whether the organization
+                         * belongs to a Reseller provider and only send an email to the organization owners if it does.
+                         * It also requires a new email template as the current one contains too much billing information.
+                         */
+
+                            // var ownerEmails = await _organizationRepository.GetOwnerEmailAddressesById(organization.Id);
+
+                            // await SendEmails(ownerEmails);
+                        }
+                        else if (userId.HasValue)
+                        {
+                            var user = await _userService.GetUserByIdAsync(userId.Value);
+
+                            if (user?.Premium == true)
+                            {
+                                await SendEmails(new List<string> { user.Email });
+                            }
+                        }
+
+                        break;
                     }
-                }
+                case HandledStripeWebhook.ChargeSucceeded:
+                    {
+                        var charge = await _stripeEventService.GetCharge(parsedEvent);
+
+                        var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
+                        if (existingTransaction is not null)
+                        {
+                            _logger.LogInformation("Charge success already processed. {ChargeId}", charge.Id);
+                            return new OkResult();
+                        }
+
+                        var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
+                        if (!organizationId.HasValue && !userId.HasValue)
+                        {
+                            _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
+                            return new OkResult();
+                        }
+
+                        var transaction = FromChargeToTransaction(charge, organizationId, userId);
+                        if (!transaction.PaymentMethodType.HasValue)
+                        {
+                            _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);
+                            return new OkResult();
+                        }
+
+                        try
+                        {
+                            await _transactionRepository.CreateAsync(transaction);
+                        }
+                        catch (SqlException e) when (e.Number == 547)
+                        {
+                            _logger.LogWarning(
+                                "Charge success could not create transaction as entity may have been deleted. {ChargeId}",
+                                charge.Id);
+                            return new OkResult();
+                        }
+
+                        break;
+                    }
+                case HandledStripeWebhook.ChargeRefunded:
+                    {
+                        var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
+                        var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
+                        if (parentTransaction == null)
+                        {
+                            // Attempt to create a transaction for the charge if it doesn't exist
+                            var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
+                            var tx = FromChargeToTransaction(charge, organizationId, userId);
+                            try
+                            {
+                                parentTransaction = await _transactionRepository.CreateAsync(tx);
+                            }
+                            catch (SqlException e) when (e.Number == 547)
+                            {
+                                _logger.LogWarning(
+                                    "Charge refund could not create transaction as entity may have been deleted. {ChargeId}",
+                                    charge.Id);
+                                return new OkResult();
+                            }
+                        }
+
+                        var amountRefunded = charge.AmountRefunded / 100M;
+
+                        if (parentTransaction.Refunded.GetValueOrDefault() ||
+                            parentTransaction.RefundedAmount.GetValueOrDefault() >= amountRefunded)
+                        {
+                            _logger.LogWarning(
+                                "Charge refund amount doesn't match parent transaction's amount or parent has already been refunded. {ChargeId}",
+                                charge.Id);
+                            return new OkResult();
+                        }
+
+                        parentTransaction.RefundedAmount = amountRefunded;
+                        if (charge.Refunded)
+                        {
+                            parentTransaction.Refunded = true;
+                        }
+
+                        await _transactionRepository.ReplaceAsync(parentTransaction);
+
+                        foreach (var refund in charge.Refunds)
+                        {
+                            var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                                GatewayType.Stripe, refund.Id);
+                            if (refundTransaction != null)
+                            {
+                                continue;
+                            }
+
+                            await _transactionRepository.CreateAsync(new Transaction
+                            {
+                                Amount = refund.Amount / 100M,
+                                CreationDate = refund.Created,
+                                OrganizationId = parentTransaction.OrganizationId,
+                                UserId = parentTransaction.UserId,
+                                Type = TransactionType.Refund,
+                                Gateway = GatewayType.Stripe,
+                                GatewayId = refund.Id,
+                                PaymentMethodType = parentTransaction.PaymentMethodType,
+                                Details = parentTransaction.Details
+                            });
+                        }
+
+                        break;
+                    }
+                case HandledStripeWebhook.PaymentSucceeded:
+                    {
+                        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
+                        if (invoice.Paid && invoice.BillingReason == "subscription_create")
+                        {
+                            var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+                            if (subscription?.Status == StripeSubscriptionStatus.Active)
+                            {
+                                if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+                                {
+                                    await Task.Delay(5000);
+                                }
+
+                                var ids = GetIdsFromMetaData(subscription.Metadata);
+                                // org
+                                if (ids.Item1.HasValue)
+                                {
+                                    if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
+                                    {
+                                        await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+
+                                        var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
+                                        await _referenceEventService.RaiseEventAsync(
+                                            new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
+                                            {
+                                                PlanName = organization?.Plan,
+                                                PlanType = organization?.PlanType,
+                                                Seats = organization?.Seats,
+                                                Storage = organization?.MaxStorageGb,
+                                            });
+                                    }
+                                }
+                                // user
+                                else if (ids.Item2.HasValue)
+                                {
+                                    if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
+                                    {
+                                        await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+
+                                        var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
+                                        await _referenceEventService.RaiseEventAsync(
+                                            new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
+                                            {
+                                                PlanName = PremiumPlanId,
+                                                Storage = user?.MaxStorageGb,
+                                            });
+                                    }
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                case HandledStripeWebhook.PaymentFailed:
+                    await HandlePaymentFailed(await _stripeEventService.GetInvoice(parsedEvent, true));
+                    break;
+                case HandledStripeWebhook.InvoiceCreated:
+                    {
+                        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
+                        if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+                        {
+                            await AttemptToPayInvoiceAsync(invoice);
+                        }
+
+                        break;
+                    }
+                case HandledStripeWebhook.PaymentMethodAttached:
+                    {
+                        var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
+                        await HandlePaymentMethodAttachedAsync(paymentMethod);
+                        break;
+                    }
+                case HandledStripeWebhook.CustomerUpdated:
+                    {
+                        var customer =
+                            await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
+
+                        if (customer.Subscriptions == null || !customer.Subscriptions.Any())
+                        {
+                            return new OkResult();
+                        }
+
+                        var subscription = customer.Subscriptions.First();
+
+                        var (organizationId, _) = GetIdsFromMetaData(subscription.Metadata);
+
+                        if (!organizationId.HasValue)
+                        {
+                            return new OkResult();
+                        }
+
+                        var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+                        organization.BillingEmail = customer.Email;
+                        await _organizationRepository.ReplaceAsync(organization);
+
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.OrganizationEditedInStripe, organization, _currentContext));
+                        break;
+                    }
+                default:
+                    _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
+                    break;
             }
-        }
-        else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
-        {
-            await HandlePaymentFailed(await _stripeEventService.GetInvoice(parsedEvent, true));
-        }
-        else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
-        {
-            var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-            if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
-            {
-                await AttemptToPayInvoiceAsync(invoice);
-            }
-        }
-        else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentMethodAttached))
-        {
-            var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
-            await HandlePaymentMethodAttachedAsync(paymentMethod);
-        }
-        else if (parsedEvent.Type.Equals(HandledStripeWebhook.CustomerUpdated))
-        {
-            var customer =
-                await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
-
-            if (customer.Subscriptions == null || !customer.Subscriptions.Any())
-            {
-                return new OkResult();
-            }
-
-            var subscription = customer.Subscriptions.First();
-
-            var (organizationId, _) = GetIdsFromMetaData(subscription.Metadata);
-
-            if (!organizationId.HasValue)
-            {
-                return new OkResult();
-            }
-
-            var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-            organization.BillingEmail = customer.Email;
-            await _organizationRepository.ReplaceAsync(organization);
-
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.OrganizationEditedInStripe, organization, _currentContext));
-        }
-        else
-        {
-            _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
-        }
 
         return new OkResult();
     }
