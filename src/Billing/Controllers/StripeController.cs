@@ -253,55 +253,8 @@ public class StripeController : Controller
                 case HandledStripeWebhook.PaymentSucceeded:
                     {
                         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-                        if (invoice.Paid && invoice.BillingReason == "subscription_create")
-                        {
-                            var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-                            if (subscription?.Status == StripeSubscriptionStatus.Active)
-                            {
-                                if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
-                                {
-                                    await Task.Delay(5000);
-                                }
-
-                                var ids = GetIdsFromMetaData(subscription.Metadata);
-                                // org
-                                if (ids.Item1.HasValue)
-                                {
-                                    if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
-                                    {
-                                        await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
-
-                                        var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
-                                        await _referenceEventService.RaiseEventAsync(
-                                            new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
-                                            {
-                                                PlanName = organization?.Plan,
-                                                PlanType = organization?.PlanType,
-                                                Seats = organization?.Seats,
-                                                Storage = organization?.MaxStorageGb,
-                                            });
-                                    }
-                                }
-                                // user
-                                else if (ids.Item2.HasValue)
-                                {
-                                    if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
-                                    {
-                                        await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
-
-                                        var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
-                                        await _referenceEventService.RaiseEventAsync(
-                                            new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
-                                            {
-                                                PlanName = PremiumPlanId,
-                                                Storage = user?.MaxStorageGb,
-                                            });
-                                    }
-                                }
-                            }
-                        }
-
-                        break;
+                        await HandlePaymentSucceededEventAsync(invoice);
+                        return Ok();
                     }
                 case HandledStripeWebhook.PaymentFailed:
                     await HandlePaymentFailed(await _stripeEventService.GetInvoice(parsedEvent, true));
@@ -355,6 +308,61 @@ public class StripeController : Controller
             }
 
         return new OkResult();
+    }
+
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.PaymentSucceeded"/> event type from Stripe.
+    /// </summary>
+    /// <param name="invoice"></param>
+    private async Task HandlePaymentSucceededEventAsync(Invoice invoice)
+    {
+        if (invoice.Paid && invoice.BillingReason == "subscription_create")
+        {
+            var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+            if (subscription?.Status == StripeSubscriptionStatus.Active)
+            {
+                if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+                {
+                    await Task.Delay(5000);
+                }
+
+                var ids = GetIdsFromMetaData(subscription.Metadata);
+                // org
+                if (ids.Item1.HasValue)
+                {
+                    if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
+                    {
+                        await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+
+                        var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
+                            {
+                                PlanName = organization?.Plan,
+                                PlanType = organization?.PlanType,
+                                Seats = organization?.Seats,
+                                Storage = organization?.MaxStorageGb,
+                            });
+                    }
+                }
+                // user
+                else if (ids.Item2.HasValue)
+                {
+                    if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
+                    {
+                        await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+
+                        var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
+                            {
+                                PlanName = PremiumPlanId,
+                                Storage = user?.MaxStorageGb,
+                            });
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
