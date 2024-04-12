@@ -241,41 +241,8 @@ public class StripeController : Controller
                 case HandledStripeWebhook.ChargeSucceeded:
                     {
                         var charge = await _stripeEventService.GetCharge(parsedEvent);
-
-                        var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
-                        if (existingTransaction is not null)
-                        {
-                            _logger.LogInformation("Charge success already processed. {ChargeId}", charge.Id);
-                            return new OkResult();
-                        }
-
-                        var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
-                        if (!organizationId.HasValue && !userId.HasValue)
-                        {
-                            _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
-                            return new OkResult();
-                        }
-
-                        var transaction = FromChargeToTransaction(charge, organizationId, userId);
-                        if (!transaction.PaymentMethodType.HasValue)
-                        {
-                            _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);
-                            return new OkResult();
-                        }
-
-                        try
-                        {
-                            await _transactionRepository.CreateAsync(transaction);
-                        }
-                        catch (SqlException e) when (e.Number == 547)
-                        {
-                            _logger.LogWarning(
-                                "Charge success could not create transaction as entity may have been deleted. {ChargeId}",
-                                charge.Id);
-                            return new OkResult();
-                        }
-
-                        break;
+                        await HandleChargeSucceededEventAsync(charge);
+                        return Ok();
                     }
                 case HandledStripeWebhook.ChargeRefunded:
                     {
@@ -448,6 +415,45 @@ public class StripeController : Controller
             }
 
         return new OkResult();
+    }
+
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.ChargeSucceeded"/> event type from Stripe.
+    /// </summary>
+    /// <param name="charge"></param>
+    private async Task HandleChargeSucceededEventAsync(Charge charge)
+    {
+        var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
+        if (existingTransaction is not null)
+        {
+            _logger.LogInformation("Charge success already processed. {ChargeId}", charge.Id);
+            return;
+        }
+
+        var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
+        if (!organizationId.HasValue && !userId.HasValue)
+        {
+            _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
+            return;
+        }
+
+        var transaction = FromChargeToTransaction(charge, organizationId, userId);
+        if (!transaction.PaymentMethodType.HasValue)
+        {
+            _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);
+            return;
+        }
+
+        try
+        {
+            await _transactionRepository.CreateAsync(transaction);
+        }
+        catch (SqlException e) when (e.Number == 547)
+        {
+            _logger.LogWarning(
+                "Charge success could not create transaction as entity may have been deleted. {ChargeId}",
+                charge.Id);
+        }
     }
 
     /// <summary>
