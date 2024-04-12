@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -22,6 +23,7 @@ public class ProviderClientsController(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
+    IScaleSeatsCommand scaleSeatsCommand,
     IUserService userService) : Controller
 {
     [HttpPost]
@@ -57,7 +59,9 @@ public class ProviderClientsController(
         {
             Name = requestBody.Name,
             Plan = requestBody.PlanType,
+            AdditionalSeats = requestBody.Seats,
             Owner = user,
+            BillingEmail = provider.BillingEmail,
             OwnerKey = requestBody.UserKey,
             PublicKey = requestBody.Keys.PublicKey,
             PrivateKey = requestBody.Keys.EncryptedPrivateKey,
@@ -79,14 +83,18 @@ public class ProviderClientsController(
             return TypedResults.Problem();
         }
 
-        await assignSeatsToClientOrganizationCommand.AssignSeatsToClientOrganization(
+        await scaleSeatsCommand.ScalePasswordManagerSeats(
             provider,
-            clientOrganization,
+            requestBody.PlanType,
             requestBody.Seats);
 
         await createCustomerCommand.CreateCustomer(
             provider,
             clientOrganization);
+
+        clientOrganization.Status = OrganizationStatusType.Managed;
+
+        await organizationRepository.ReplaceAsync(clientOrganization);
 
         return TypedResults.Ok();
     }

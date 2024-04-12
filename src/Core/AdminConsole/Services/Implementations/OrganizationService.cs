@@ -445,6 +445,7 @@ public class OrganizationService : IOrganizationService
             // Pre-generate the org id so that we can save it with the Stripe subscription..
             Id = CoreHelpers.GenerateComb(),
             Name = signup.Name,
+            BillingEmail = signup.BillingEmail,
             PlanType = plan!.Type,
             Seats = signup.AdditionalSeats,
             MaxCollections = plan.PasswordManager.MaxCollections,

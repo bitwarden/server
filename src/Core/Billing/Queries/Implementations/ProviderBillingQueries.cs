@@ -44,7 +44,7 @@ public class ProviderBillingQueries(
         var plan = StaticStore.GetPlan(planType);
 
         return providerOrganizations
-            .Where(providerOrganization => providerOrganization.Plan == plan.Name)
+            .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
             .Sum(providerOrganization => providerOrganization.Seats ?? 0);
     }
 

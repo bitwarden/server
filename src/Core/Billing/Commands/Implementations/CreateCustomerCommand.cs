@@ -7,8 +7,6 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
-using static Bit.Core.Billing.Utilities;
-
 namespace Bit.Core.Billing.Commands.Implementations;
 
 public class CreateCustomerCommand(
@@ -39,16 +37,6 @@ public class CreateCustomerCommand(
 
         var providerTaxId = providerCustomer.TaxIds.FirstOrDefault();
 
-        var organizationOwnerEmail = (await organizationRepository.GetOwnerEmailAddressesById(organization.Id))
-            .MinBy(email => email);
-
-        if (string.IsNullOrEmpty(organizationOwnerEmail))
-        {
-            logger.LogError("Cannot create a Stripe customer for a client organization ({OrganizationID}) that does not have an owner", organization.Id);
-
-            throw ContactSupport();
-        }
-
         var organizationDisplayName = organization.DisplayName();
 
         var customerCreateOptions = new CustomerCreateOptions
@@ -62,8 +50,9 @@ public class CreateCustomerCommand(
                 City = providerCustomer.Address?.City,
                 State = providerCustomer.Address?.State
             },
-            Description = organization.DisplayBusinessName(),
-            Email = organizationOwnerEmail,
+            Name = organizationDisplayName,
+            Description = $"{provider.Name} Client Organization",
+            Email = provider.BillingEmail,
             InvoiceSettings = new CustomerInvoiceSettingsOptions
             {
                 CustomFields =
@@ -81,7 +70,7 @@ public class CreateCustomerCommand(
             {
                 { "region", globalSettings.BaseServiceUri.CloudRegion }
             },
-            TaxIdData = providerTaxId == null ? [] :
+            TaxIdData = providerTaxId == null ? null :
             [
                 new CustomerTaxIdDataOptions
                 {
@@ -91,6 +80,10 @@ public class CreateCustomerCommand(
             ]
         };
 
-        await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+
+        organization.GatewayCustomerId = customer.Id;
+
+        await organizationRepository.ReplaceAsync(organization);
     }
 }
