@@ -281,11 +281,13 @@ public class StripeController : Controller
                         return Ok();
                     }
                 default:
-                    _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
-                    break;
+                    {
+                        _logger.LogWarning("Unsupported event received. {EventType}", parsedEvent.Type);
+                        return Ok();
+                    }
             }
 
-        return new OkResult();
+        return Ok();
     }
 
     /// <summary>
