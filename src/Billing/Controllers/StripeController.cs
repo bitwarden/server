@@ -247,68 +247,8 @@ public class StripeController : Controller
                 case HandledStripeWebhook.ChargeRefunded:
                     {
                         var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
-                        var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
-                        if (parentTransaction == null)
-                        {
-                            // Attempt to create a transaction for the charge if it doesn't exist
-                            var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
-                            var tx = FromChargeToTransaction(charge, organizationId, userId);
-                            try
-                            {
-                                parentTransaction = await _transactionRepository.CreateAsync(tx);
-                            }
-                            catch (SqlException e) when (e.Number == 547)
-                            {
-                                _logger.LogWarning(
-                                    "Charge refund could not create transaction as entity may have been deleted. {ChargeId}",
-                                    charge.Id);
-                                return new OkResult();
-                            }
-                        }
-
-                        var amountRefunded = charge.AmountRefunded / 100M;
-
-                        if (parentTransaction.Refunded.GetValueOrDefault() ||
-                            parentTransaction.RefundedAmount.GetValueOrDefault() >= amountRefunded)
-                        {
-                            _logger.LogWarning(
-                                "Charge refund amount doesn't match parent transaction's amount or parent has already been refunded. {ChargeId}",
-                                charge.Id);
-                            return new OkResult();
-                        }
-
-                        parentTransaction.RefundedAmount = amountRefunded;
-                        if (charge.Refunded)
-                        {
-                            parentTransaction.Refunded = true;
-                        }
-
-                        await _transactionRepository.ReplaceAsync(parentTransaction);
-
-                        foreach (var refund in charge.Refunds)
-                        {
-                            var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                                GatewayType.Stripe, refund.Id);
-                            if (refundTransaction != null)
-                            {
-                                continue;
-                            }
-
-                            await _transactionRepository.CreateAsync(new Transaction
-                            {
-                                Amount = refund.Amount / 100M,
-                                CreationDate = refund.Created,
-                                OrganizationId = parentTransaction.OrganizationId,
-                                UserId = parentTransaction.UserId,
-                                Type = TransactionType.Refund,
-                                Gateway = GatewayType.Stripe,
-                                GatewayId = refund.Id,
-                                PaymentMethodType = parentTransaction.PaymentMethodType,
-                                Details = parentTransaction.Details
-                            });
-                        }
-
-                        break;
+                        await HandleChargeRefundedEventAsync(charge);
+                        return Ok();
                     }
                 case HandledStripeWebhook.PaymentSucceeded:
                     {
@@ -415,6 +355,74 @@ public class StripeController : Controller
             }
 
         return new OkResult();
+    }
+
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.ChargeRefunded"/> event type from Stripe.
+    /// </summary>
+    /// <param name="charge"></param>
+    private async Task HandleChargeRefundedEventAsync(Charge charge)
+    {
+        var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
+        if (parentTransaction == null)
+        {
+            // Attempt to create a transaction for the charge if it doesn't exist
+            var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
+            var tx = FromChargeToTransaction(charge, organizationId, userId);
+            try
+            {
+                parentTransaction = await _transactionRepository.CreateAsync(tx);
+            }
+            catch (SqlException e) when (e.Number == 547) // FK constraint violation
+            {
+                _logger.LogWarning(
+                    "Charge refund could not create transaction as entity may have been deleted. {ChargeId}",
+                    charge.Id);
+                return;
+            }
+        }
+
+        var amountRefunded = charge.AmountRefunded / 100M;
+
+        if (parentTransaction.Refunded.GetValueOrDefault() ||
+            parentTransaction.RefundedAmount.GetValueOrDefault() >= amountRefunded)
+        {
+            _logger.LogWarning(
+                "Charge refund amount doesn't match parent transaction's amount or parent has already been refunded. {ChargeId}",
+                charge.Id);
+            return;
+        }
+
+        parentTransaction.RefundedAmount = amountRefunded;
+        if (charge.Refunded)
+        {
+            parentTransaction.Refunded = true;
+        }
+
+        await _transactionRepository.ReplaceAsync(parentTransaction);
+
+        foreach (var refund in charge.Refunds)
+        {
+            var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                GatewayType.Stripe, refund.Id);
+            if (refundTransaction != null)
+            {
+                continue;
+            }
+
+            await _transactionRepository.CreateAsync(new Transaction
+            {
+                Amount = refund.Amount / 100M,
+                CreationDate = refund.Created,
+                OrganizationId = parentTransaction.OrganizationId,
+                UserId = parentTransaction.UserId,
+                Type = TransactionType.Refund,
+                Gateway = GatewayType.Stripe,
+                GatewayId = refund.Id,
+                PaymentMethodType = parentTransaction.PaymentMethodType,
+                Details = parentTransaction.Details
+            });
+        }
     }
 
     /// <summary>
