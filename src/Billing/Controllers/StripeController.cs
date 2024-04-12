@@ -113,20 +113,9 @@ public class StripeController : Controller
             return new BadRequestResult();
         }
 
-        Event parsedEvent;
-        using (var sr = new StreamReader(HttpContext.Request.Body))
+        if (!TryParseEvent(out var parsedEvent))
         {
-            var json = await sr.ReadToEndAsync();
-            var webhookSecret = PickStripeWebhookSecret(json);
-
-            if (string.IsNullOrEmpty(webhookSecret))
-            {
-                return new OkResult();
-            }
-
-            parsedEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
-                webhookSecret,
-                throwOnApiVersionMismatch: false);
+            return Ok();
         }
 
         if (StripeConfiguration.ApiVersion != parsedEvent.ApiVersion)
@@ -1131,5 +1120,38 @@ public class StripeController : Controller
 
             return null;
         }
+    }
+
+    /// <summary>
+    /// Attempts to pick the Stripe webhook secret from the JSON payload.
+    /// </summary>
+    /// <param name="parsedEvent">The parsed event. Null if unable to parse</param>
+    /// <returns>true if the event was parsed, otherwise, false</returns>
+    private bool TryParseEvent(out Event parsedEvent)
+    {
+        using var sr = new StreamReader(HttpContext.Request.Body);
+        var json = sr.ReadToEnd();
+        var webhookSecret = PickStripeWebhookSecret(json);
+
+        if (string.IsNullOrEmpty(webhookSecret))
+        {
+            _logger.LogDebug("Unable to parse event. No webhook secret.");
+            parsedEvent = null;
+            return false;
+        }
+
+        parsedEvent = EventUtility.ConstructEvent(
+            json,
+            Request.Headers["Stripe-Signature"],
+            webhookSecret,
+            throwOnApiVersionMismatch: false);
+
+        if (parsedEvent is not null)
+        {
+            return true;
+        }
+
+        _logger.LogDebug("Stripe-Signature request header doesn't match configured Stripe webhook secret");
+        return false;
     }
 }
