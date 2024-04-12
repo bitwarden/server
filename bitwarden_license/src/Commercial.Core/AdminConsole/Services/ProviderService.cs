@@ -363,8 +363,7 @@ public class ProviderService : IProviderService
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
 
-        // Consolidated Billing won't support adding existing organizations.
-        ThrowOnInvalidPlanType(organization.PlanType, false);
+        ThrowOnInvalidPlanType(organization.PlanType);
 
         if (organization.UseSecretsManager)
         {
@@ -619,7 +618,7 @@ public class ProviderService : IProviderService
         return confirmedOwnersIds.Except(providerUserIds).Any();
     }
 
-    private void ThrowOnInvalidPlanType(PlanType requestedType, bool consolidatedBillingEnabled)
+    private void ThrowOnInvalidPlanType(PlanType requestedType, bool consolidatedBillingEnabled = false)
     {
         if (consolidatedBillingEnabled && requestedType is not (PlanType.TeamsMonthly or PlanType.EnterpriseMonthly))
         {
