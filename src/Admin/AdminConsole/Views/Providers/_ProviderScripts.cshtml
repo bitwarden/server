@@ -37,7 +37,8 @@
     }
 
     function initiateDeleteProvider(id) {
-            const providerEmail = $('#requestDeletionModal input#provider-email').val();
+            const email = $('#requestDeletionModal input#provider-email').val();
+            const providerEmail = encodeURIComponent(email);
             $.ajax({
                 type: "POST",
                 url: `@Url.Action("DeleteInitiation", "Providers")?id=${id}&providerEmail=${providerEmail}`,

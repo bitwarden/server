@@ -5,11 +5,12 @@ namespace Bit.Core.Auth.Models.Business.Tokenables;
 
 public class ProviderDeleteTokenable : Tokens.ExpiringTokenable
 {
-    public const string ClearTextPrefix = "";
-    public const string DataProtectorPurpose = "OrgDeleteDataProtector";
-    public const string TokenIdentifier = "OrgDelete";
+    public const string ClearTextPrefix = "BwProviderId";
+    public const string DataProtectorPurpose = "ProviderDeleteDataProtector";
+    public const string TokenIdentifier = "ProviderDelete";
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid Id { get; set; }
+
     [JsonConstructor]
     public ProviderDeleteTokenable(DateTime expirationDate)
     {

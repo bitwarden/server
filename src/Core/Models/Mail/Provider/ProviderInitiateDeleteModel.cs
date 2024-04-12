@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Models.Mail.Provider;
 
-public class ProviderInitiateDeleteModel
+public class ProviderInitiateDeleteModel : BaseMailModel
 {
     public string Url => string.Format("{0}/verify-recover-delete-provider?providerId={1}&token={2}&name={3}",
         WebVaultUrl,
