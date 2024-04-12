@@ -62,9 +62,9 @@ public class ProviderClientsController(
             AdditionalSeats = requestBody.Seats,
             Owner = user,
             BillingEmail = provider.BillingEmail,
-            OwnerKey = requestBody.UserKey,
-            PublicKey = requestBody.Keys.PublicKey,
-            PrivateKey = requestBody.Keys.EncryptedPrivateKey,
+            OwnerKey = requestBody.Key,
+            PublicKey = requestBody.KeyPair.PublicKey,
+            PrivateKey = requestBody.KeyPair.EncryptedPrivateKey,
             CollectionName = requestBody.CollectionName
         };
 

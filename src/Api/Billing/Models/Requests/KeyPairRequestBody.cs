@@ -2,7 +2,8 @@
 
 namespace Bit.Api.Billing.Models.Requests;
 
-public class KeysRequestBody
+// ReSharper disable once ClassNeverInstantiated.Global
+public class KeyPairRequestBody
 {
     [Required(ErrorMessage = "'publicKey' must be provided")]
     public string PublicKey { get; set; }

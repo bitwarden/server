@@ -165,9 +165,9 @@ public class ProviderClientsControllerTests
                     signup.Name == requestBody.Name &&
                     signup.Plan == requestBody.PlanType &&
                     signup.AdditionalSeats == requestBody.Seats &&
-                    signup.OwnerKey == requestBody.UserKey &&
-                    signup.PublicKey == requestBody.Keys.PublicKey &&
-                    signup.PrivateKey == requestBody.Keys.EncryptedPrivateKey &&
+                    signup.OwnerKey == requestBody.Key &&
+                    signup.PublicKey == requestBody.KeyPair.PublicKey &&
+                    signup.PrivateKey == requestBody.KeyPair.EncryptedPrivateKey &&
                     signup.CollectionName == requestBody.CollectionName),
                 requestBody.OwnerEmail,
                 user)
