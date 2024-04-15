@@ -29,8 +29,10 @@ public class AccessPoliciesController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
     private readonly IUpdateServiceAccountGrantedPoliciesCommand _updateServiceAccountGrantedPoliciesCommand;
+    private readonly IUpdateProjectServiceAccountsPoliciesCommand _updateProjectServiceAccountsPoliciesCommand;
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly IServiceAccountGrantedPolicyUpdatesQuery _serviceAccountGrantedPolicyUpdatesQuery;
+    private readonly IProjectServiceAccountsPoliciesUpdatesQuery _projectServiceAccountsPoliciesUpdatesQuery;
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
 
@@ -43,9 +45,11 @@ public class AccessPoliciesController : Controller
         IProjectRepository projectRepository,
         IAccessClientQuery accessClientQuery,
         IServiceAccountGrantedPolicyUpdatesQuery serviceAccountGrantedPolicyUpdatesQuery,
+        IProjectServiceAccountsPoliciesUpdatesQuery projectServiceAccountsPoliciesUpdatesQuery,
         IUpdateServiceAccountGrantedPoliciesCommand updateServiceAccountGrantedPoliciesCommand,
         ICreateAccessPoliciesCommand createAccessPoliciesCommand,
         IDeleteAccessPolicyCommand deleteAccessPolicyCommand,
+        IUpdateProjectServiceAccountsPoliciesCommand updateProjectServiceAccountsPoliciesCommand,
         IUpdateAccessPolicyCommand updateAccessPolicyCommand)
     {
         _authorizationService = authorizationService;
@@ -60,6 +64,8 @@ public class AccessPoliciesController : Controller
         _updateServiceAccountGrantedPoliciesCommand = updateServiceAccountGrantedPoliciesCommand;
         _accessClientQuery = accessClientQuery;
         _serviceAccountGrantedPolicyUpdatesQuery = serviceAccountGrantedPolicyUpdatesQuery;
+        _projectServiceAccountsPoliciesUpdatesQuery = projectServiceAccountsPoliciesUpdatesQuery;
+        _updateProjectServiceAccountsPoliciesCommand = updateProjectServiceAccountsPoliciesCommand;
     }
 
     [HttpPost("/projects/{id}/access-policies")]
@@ -294,6 +300,46 @@ public class AccessPoliciesController : Controller
 
         await _updateServiceAccountGrantedPoliciesCommand.UpdateAsync(grantedPoliciesUpdates);
         return await GetServiceAccountGrantedPoliciesAsync(serviceAccount);
+    }
+
+
+    [HttpGet("/projects/{id}/access-policies/service-accounts")]
+    public async Task<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>
+        GetProjectServiceAccountsAccessPoliciesAsync(
+            [FromRoute] Guid id)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        var (accessClient, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
+        var results =
+            await _accessPolicyRepository.GetProjectServiceAccountsPoliciesPermissionDetailsAsync(id, userId,
+                accessClient);
+        return new ProjectServiceAccountsPoliciesPermissionDetailsResponseModel(results);
+    }
+
+    [HttpPut("/projects/{id}/access-policies/service-accounts")]
+    public async Task<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>
+        PutServiceAccountGrantedPoliciesAsync([FromRoute] Guid id,
+            [FromBody] ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        var project = await _projectRepository.GetByIdAsync(id) ?? throw new NotFoundException();
+        var policiesUpdates =
+            await _projectServiceAccountsPoliciesUpdatesQuery.GetAsync(
+                request.ToProjectServiceAccountsAccessPolicies(project));
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, policiesUpdates,
+            ProjectServiceAccountsPoliciesOperations.Updates);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        await _updateProjectServiceAccountsPoliciesCommand.UpdateAsync(policiesUpdates);
+
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, project.OrganizationId);
+        var results =
+            await _accessPolicyRepository.GetProjectServiceAccountsPoliciesPermissionDetailsAsync(id, userId,
+                accessClient);
+        return new ProjectServiceAccountsPoliciesPermissionDetailsResponseModel(results);
     }
 
     private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)
