@@ -574,6 +574,10 @@ public class CiphersController : Controller
             model.CollectionIds.Select(c => new Guid(c)), userId, false);
 
         var updatedCipherCollections = await GetByIdAsync(id, userId);
+        // If user cannot access cipher after update return an error to client
+        if (updatedCipherCollections == null){
+            throw new NotFoundException();
+        }
         var response = new CipherResponseModel(updatedCipherCollections, _globalSettings);
         return response;
     }
