@@ -74,7 +74,7 @@ IF COL_LENGTH('[dbo].[CollectionGroup]', 'Manage') IS NULL
     END
 GO
 
--- BEGIN Update procedures that support backwards compatability in place
+-- BEGIN Update procedures that support backwards compatibility in place
 -- These procedures can be safely used by server in case of rollback and do not require V2 versions
 
 -- Readonly query that adds [Manage] column to result, safely ignored by rolled back server
@@ -317,7 +317,7 @@ BEGIN
 END
 GO
 
--- END Update procedures that support backwards compatability in place
+-- END Update procedures that support backwards compatibility in place
 
 -- BEGIN Create V2 of existing procedures to support new [Manage] column and new CollectionAccessSelectionType
 
