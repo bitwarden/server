@@ -14,7 +14,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
 
@@ -90,8 +89,12 @@ public class GroupsControllerTests
         sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(group);
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false,
-            FlexibleCollections = true});
+            new OrganizationAbility
+            {
+                Id = organization.Id,
+                AllowAdminAccessToAllCollectionItems = false,
+                FlexibleCollections = true
+            });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, Arg.Any<Guid>())
@@ -127,8 +130,12 @@ public class GroupsControllerTests
         sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(group);
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false,
-            FlexibleCollections = true});
+            new OrganizationAbility
+            {
+                Id = organization.Id,
+                AllowAdminAccessToAllCollectionItems = false,
+                FlexibleCollections = true
+            });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, Arg.Any<Guid>())
