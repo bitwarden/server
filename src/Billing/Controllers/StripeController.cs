@@ -275,7 +275,8 @@ public class StripeController : Controller
     }
 
     /// <summary>
-    ///
+    /// Removes the Password Manager coupon if the organization is removing the Secrets Manager trial.
+    /// Only applies to organizations that have a subscription from the Secrets Manager trial.
     /// </summary>
     /// <param name="parsedEvent"></param>
     /// <param name="subscription"></param>
@@ -306,6 +307,11 @@ public class StripeController : Controller
                 p.SecretsManager is not null &&
                 p.SecretsManager.StripeSeatPlanId == i.Plan.Id));
 
+        if (!previousSubscriptionHasSecretsManager || currentSubscriptionHasSecretsManager)
+        {
+            return;
+        }
+
         var customerHasSecretsManagerTrial = subscription.Customer
             ?.Discount
             ?.Coupon
@@ -315,17 +321,14 @@ public class StripeController : Controller
             ?.Coupon
             ?.Id == "sm-standalone";
 
-        if (previousSubscriptionHasSecretsManager && !currentSubscriptionHasSecretsManager)
+        if (customerHasSecretsManagerTrial)
         {
-            if (customerHasSecretsManagerTrial)
-            {
-                await _stripeFacade.DeleteCustomerDiscount(subscription.CustomerId);
-            }
+            await _stripeFacade.DeleteCustomerDiscount(subscription.CustomerId);
+        }
 
-            if (subscriptionHasSecretsManagerTrial)
-            {
-                await _stripeFacade.DeleteSubscriptionDiscount(subscription.Id);
-            }
+        if (subscriptionHasSecretsManagerTrial)
+        {
+            await _stripeFacade.DeleteSubscriptionDiscount(subscription.Id);
         }
     }
 
