@@ -40,11 +40,13 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IAuthorizationHandler, ProjectPeopleAccessPoliciesAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountPeopleAccessPoliciesAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountGrantedPoliciesAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, ProjectServiceAccountsPoliciesAuthorizationHandler>();
         services.AddScoped<IAccessClientQuery, AccessClientQuery>();
         services.AddScoped<IMaxProjectsQuery, MaxProjectsQuery>();
         services.AddScoped<ISameOrganizationQuery, SameOrganizationQuery>();
         services.AddScoped<IServiceAccountSecretsDetailsQuery, ServiceAccountSecretsDetailsQuery>();
         services.AddScoped<IServiceAccountGrantedPolicyUpdatesQuery, ServiceAccountGrantedPolicyUpdatesQuery>();
+        services.AddScoped<IProjectServiceAccountsPoliciesUpdatesQuery, ProjectServiceAccountsPoliciesUpdatesQuery>();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
         services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();
@@ -64,5 +66,6 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IEmptyTrashCommand, EmptyTrashCommand>();
         services.AddScoped<IRestoreTrashCommand, RestoreTrashCommand>();
         services.AddScoped<IUpdateServiceAccountGrantedPoliciesCommand, UpdateServiceAccountGrantedPoliciesCommand>();
+        services.AddScoped<IUpdateProjectServiceAccountsPoliciesCommand, UpdateProjectServiceAccountsPoliciesCommand>();
     }
 }
