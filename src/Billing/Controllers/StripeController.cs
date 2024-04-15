@@ -23,7 +23,6 @@ using Stripe;
 using Customer = Stripe.Customer;
 using Event = Stripe.Event;
 using JsonSerializer = System.Text.Json.JsonSerializer;
-using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 using TaxRate = Bit.Core.Entities.TaxRate;
 using Transaction = Bit.Core.Entities.Transaction;
@@ -113,7 +112,8 @@ public class StripeController : Controller
             return new BadRequestResult();
         }
 
-        if (!TryParseEvent(out var parsedEvent))
+        var parsedEvent = await TryParseEventFromRequestBodyAsync();
+        if (parsedEvent is null)
         {
             return Ok();
         }
@@ -151,62 +151,52 @@ public class StripeController : Controller
         {
             case HandledStripeWebhook.SubscriptionDeleted:
                 {
-                    var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-                    await HandleCustomerSubscriptionDeletedEventAsync(subscription);
+                    await HandleCustomerSubscriptionDeletedEventAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.SubscriptionUpdated:
                 {
-                    var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-                    await HandleCustomerSubscriptionUpdatedEventAsync(subscription);
+                    await HandleCustomerSubscriptionUpdatedEventAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.UpcomingInvoice:
                 {
-                    var invoice = await _stripeEventService.GetInvoice(parsedEvent);
-                    await HandleUpcomingInvoiceEventAsync(invoice, parsedEvent.Id);
+                    await HandleUpcomingInvoiceEventAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.ChargeSucceeded:
                 {
-                    var charge = await _stripeEventService.GetCharge(parsedEvent);
-                    await HandleChargeSucceededEventAsync(charge);
+                    await HandleChargeSucceededEventAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.ChargeRefunded:
                 {
-                    var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
-                    await HandleChargeRefundedEventAsync(charge);
+                    await HandleChargeRefundedEventAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.PaymentSucceeded:
                 {
-                    var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-                    await HandlePaymentSucceededEventAsync(invoice);
+                    await HandlePaymentSucceededEventAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.PaymentFailed:
                 {
-                    var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-                    await HandlePaymentFailedEventAsync(invoice);
+                    await HandlePaymentFailedEventAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.InvoiceCreated:
                 {
-                    var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-                    await HandleInvoiceCreatedEventAsync(invoice);
+                    await HandleInvoiceCreatedEventAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.PaymentMethodAttached:
                 {
-                    var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
-                    await HandlePaymentMethodAttachedAsync(paymentMethod);
+                    await HandlePaymentMethodAttachedAsync(parsedEvent);
                     return Ok();
                 }
             case HandledStripeWebhook.CustomerUpdated:
                 {
-                    var customer = await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
-                    await HandleCustomerUpdatedEventAsync(customer);
+                    await HandleCustomerUpdatedEventAsync(parsedEvent);
                     return Ok();
                 }
             default:
@@ -220,9 +210,10 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.SubscriptionUpdated"/> event type from Stripe.
     /// </summary>
-    /// <param name="subscription"></param>
-    private async Task HandleCustomerSubscriptionUpdatedEventAsync(Subscription subscription)
+    /// <param name="parsedEvent"></param>
+    private async Task HandleCustomerSubscriptionUpdatedEventAsync(Event parsedEvent)
     {
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
         var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
 
         switch (subscription.Status)
@@ -281,8 +272,13 @@ public class StripeController : Controller
         }
     }
 
-    private async Task HandleCustomerSubscriptionDeletedEventAsync(Subscription subscription)
+    /// <summary>
+    /// Handles the <see cref="HandledStripeWebhook.SubscriptionDeleted"/> event type from Stripe.
+    /// </summary>
+    /// <param name="parsedEvent"></param>
+    private async Task HandleCustomerSubscriptionDeletedEventAsync(Event parsedEvent)
     {
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
         var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
         var subCanceled = subscription.Status == StripeSubscriptionStatus.Canceled;
 
@@ -304,9 +300,10 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.CustomerUpdated"/> event type from Stripe.
     /// </summary>
-    /// <param name="customer"></param>
-    private async Task HandleCustomerUpdatedEventAsync(Customer customer)
+    /// <param name="parsedEvent"></param>
+    private async Task HandleCustomerUpdatedEventAsync(Event parsedEvent)
     {
+        var customer = await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
         if (customer.Subscriptions == null || !customer.Subscriptions.Any())
         {
             return;
@@ -332,9 +329,10 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.InvoiceCreated"/> event type from Stripe.
     /// </summary>
-    /// <param name="invoice"></param>
-    private async Task HandleInvoiceCreatedEventAsync(Invoice invoice)
+    /// <param name="parsedEvent"></param>
+    private async Task HandleInvoiceCreatedEventAsync(Event parsedEvent)
     {
+        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
         if (invoice.Paid || !ShouldAttemptToPayInvoice(invoice))
         {
             return;
@@ -346,9 +344,10 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.PaymentSucceeded"/> event type from Stripe.
     /// </summary>
-    /// <param name="invoice"></param>
-    private async Task HandlePaymentSucceededEventAsync(Invoice invoice)
+    /// <param name="parsedEvent"></param>
+    private async Task HandlePaymentSucceededEventAsync(Event parsedEvent)
     {
+        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
         if (invoice.Paid && invoice.BillingReason == "subscription_create")
         {
             var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
@@ -401,9 +400,10 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.ChargeRefunded"/> event type from Stripe.
     /// </summary>
-    /// <param name="charge"></param>
-    private async Task HandleChargeRefundedEventAsync(Charge charge)
+    /// <param name="parsedEvent"></param>
+    private async Task HandleChargeRefundedEventAsync(Event parsedEvent)
     {
+        var charge = await _stripeEventService.GetCharge(parsedEvent, true, ["refunds"]);
         var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
         if (parentTransaction == null)
         {
@@ -469,9 +469,10 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.ChargeSucceeded"/> event type from Stripe.
     /// </summary>
-    /// <param name="charge"></param>
-    private async Task HandleChargeSucceededEventAsync(Charge charge)
+    /// <param name="parsedEvent"></param>
+    private async Task HandleChargeSucceededEventAsync(Event parsedEvent)
     {
+        var charge = await _stripeEventService.GetCharge(parsedEvent);
         var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
         if (existingTransaction is not null)
         {
@@ -508,14 +509,14 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.UpcomingInvoice"/> event type from Stripe.
     /// </summary>
-    /// <param name="invoice"></param>
-    /// <param name="eventId"></param>
+    /// <param name="parsedEvent"></param>
     /// <exception cref="Exception"></exception>
-    private async Task HandleUpcomingInvoiceEventAsync(Invoice invoice, string eventId)
+    private async Task HandleUpcomingInvoiceEventAsync(Event parsedEvent)
     {
+        var invoice = await _stripeEventService.GetInvoice(parsedEvent);
         if (string.IsNullOrEmpty(invoice.SubscriptionId))
         {
-            _logger.LogWarning("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", eventId);
+            _logger.LogWarning("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
             return;
         }
 
@@ -524,7 +525,7 @@ public class StripeController : Controller
         if (subscription == null)
         {
             throw new Exception(
-                $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{eventId}'");
+                $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
         }
 
         var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
@@ -755,9 +756,10 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.PaymentMethodAttached"/> event type from Stripe.
     /// </summary>
-    /// <param name="paymentMethod"></param>
-    private async Task HandlePaymentMethodAttachedAsync(PaymentMethod paymentMethod)
+    /// <param name="parsedEvent"></param>
+    private async Task HandlePaymentMethodAttachedAsync(Event parsedEvent)
     {
+        var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
         if (paymentMethod is null)
         {
             _logger.LogWarning("Attempted to handle the event payment_method.attached but paymentMethod was null");
@@ -1069,9 +1071,10 @@ public class StripeController : Controller
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.PaymentFailed"/> event type from Stripe.
     /// </summary>
-    /// <param name="invoice"></param>
-    private async Task HandlePaymentFailedEventAsync(Invoice invoice)
+    /// <param name="parsedEvent"></param>
+    private async Task HandlePaymentFailedEventAsync(Event parsedEvent)
     {
+        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
         if (!invoice.Paid && invoice.AttemptCount > 1 && ShouldAttemptToPayInvoice(invoice))
         {
             var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
@@ -1125,22 +1128,21 @@ public class StripeController : Controller
     /// <summary>
     /// Attempts to pick the Stripe webhook secret from the JSON payload.
     /// </summary>
-    /// <param name="parsedEvent">The parsed event. Null if unable to parse</param>
-    /// <returns>true if the event was parsed, otherwise, false</returns>
-    private bool TryParseEvent(out Event parsedEvent)
+    /// <returns>Returns the event if the event was parsed, otherwise, null</returns>
+    private async Task<Event> TryParseEventFromRequestBodyAsync()
     {
         using var sr = new StreamReader(HttpContext.Request.Body);
-        var json = sr.ReadToEnd();
+
+        var json = await sr.ReadToEndAsync();
         var webhookSecret = PickStripeWebhookSecret(json);
 
         if (string.IsNullOrEmpty(webhookSecret))
         {
             _logger.LogDebug("Unable to parse event. No webhook secret.");
-            parsedEvent = null;
-            return false;
+            return null;
         }
 
-        parsedEvent = EventUtility.ConstructEvent(
+        var parsedEvent = EventUtility.ConstructEvent(
             json,
             Request.Headers["Stripe-Signature"],
             webhookSecret,
@@ -1148,10 +1150,10 @@ public class StripeController : Controller
 
         if (parsedEvent is not null)
         {
-            return true;
+            return parsedEvent;
         }
 
         _logger.LogDebug("Stripe-Signature request header doesn't match configured Stripe webhook secret");
-        return false;
+        return null;
     }
 }
