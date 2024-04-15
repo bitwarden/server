@@ -1,7 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
-namespace Bit.Core.Auth.Models.Business.Tokenables;
+namespace Bit.Core.AdminConsole.Models.Business.Tokenables;
 
 public class ProviderDeleteTokenable : Tokens.ExpiringTokenable
 {
@@ -23,13 +22,13 @@ public class ProviderDeleteTokenable : Tokens.ExpiringTokenable
         ExpirationDate = expirationDate;
     }
 
-    public ProviderDeleteTokenable(Provider provider, int hoursTillExpiration)
+    public ProviderDeleteTokenable(Entities.Provider.Provider provider, int hoursTillExpiration)
     {
         Id = provider.Id;
         ExpirationDate = DateTime.UtcNow.AddHours(hoursTillExpiration);
     }
 
-    public bool IsValid(Provider provider)
+    public bool IsValid(Entities.Provider.Provider provider)
     {
         return Id == provider.Id;
     }
