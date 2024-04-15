@@ -318,7 +318,7 @@ public class AccessPoliciesController : Controller
 
     [HttpPut("/projects/{id}/access-policies/service-accounts")]
     public async Task<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>
-        PutServiceAccountGrantedPoliciesAsync([FromRoute] Guid id,
+        PutProjectServiceAccountsAccessPoliciesAsync([FromRoute] Guid id,
             [FromBody] ProjectServiceAccountsAccessPoliciesRequestModel request)
     {
         var project = await _projectRepository.GetByIdAsync(id) ?? throw new NotFoundException();
