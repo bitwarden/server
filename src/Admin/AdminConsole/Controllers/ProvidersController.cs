@@ -285,23 +285,20 @@ public class ProvidersController : Controller
     {
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
 
-        if (providerOrganizations.Count == 0)
+        if (providerOrganizations.Count > 0)
         {
-            var provider = await _providerRepository.GetByIdAsync(id);
-
-            if (provider is null)
-            {
-                return BadRequest("provider does not exist");
-            }
-
-            if (providerName.ToLower().Trim() != provider.Name.ToLower().Trim())
-            {
-                return BadRequest("Invalid provider name");
-            }
-
-            await _providerService.DeleteAsync(provider);
+            return BadRequest("You must unlink all clients before you can delete a provider");
         }
 
+        var provider = await _providerRepository.GetByIdAsync(id);
+
+        var validationError = ValidateProviderName(provider, providerName);
+        if (!string.IsNullOrEmpty(validationError))
+        {
+            return BadRequest(validationError);
+        }
+
+        await _providerService.DeleteAsync(provider);
         return NoContent();
     }
 
@@ -336,5 +333,20 @@ public class ProvidersController : Controller
         const string pattern = @"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$";
         var regex = new Regex(pattern);
         return regex.IsMatch(email);
+    }
+
+    private string ValidateProviderName(Provider provider, string providerName)
+    {
+        if (provider is null)
+        {
+            return "Provider does not exist";
+        }
+
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return "Invalid provider name";
+        }
+
+        return !string.Equals(providerName.Trim(), provider.Name, StringComparison.OrdinalIgnoreCase) ? "Invalid provider name" : null;
     }
 }
