@@ -609,6 +609,11 @@ public class ProviderService : IProviderService
         {
             throw new BadRequestException("Provider admin not found.");
         }
+        if (string.IsNullOrWhiteSpace(provider.Name))
+        {
+            throw new BadRequestException("Provider name not found.");
+        }
+
         var providerAdminOrgUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, providerAdmin.Id);
         if (providerAdminOrgUser == null || providerAdminOrgUser.Status != ProviderUserStatusType.Confirmed ||
             providerAdminOrgUser.Type != ProviderUserType.ProviderAdmin)
