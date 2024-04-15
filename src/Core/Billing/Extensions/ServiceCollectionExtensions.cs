@@ -19,5 +19,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IAssignSeatsToClientOrganizationCommand, AssignSeatsToClientOrganizationCommand>();
         services.AddTransient<ICancelSubscriptionCommand, CancelSubscriptionCommand>();
         services.AddTransient<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
+        services.AddTransient<IStartSubscriptionCommand, StartSubscriptionCommand>();
     }
 }
