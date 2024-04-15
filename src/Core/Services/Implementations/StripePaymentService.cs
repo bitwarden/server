@@ -845,16 +845,20 @@ public class StripePaymentService : IPaymentService
             {
                 try
                 {
-                    if (chargeNow)
+                    if (!isPm5864DollarThresholdEnabled && !invoiceNow)
                     {
-                        paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(subscriber, invoice);
-                    }
-                    else
-                    {
-                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
-                            new InvoiceFinalizeOptions { AutoAdvance = false, });
-                        await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
-                        paymentIntentClientSecret = null;
+                        if (chargeNow)
+                        {
+                            paymentIntentClientSecret =
+                                await PayInvoiceAfterSubscriptionChangeAsync(subscriber, invoice);
+                        }
+                        else
+                        {
+                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
+                                new InvoiceFinalizeOptions { AutoAdvance = false, });
+                            await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
+                            paymentIntentClientSecret = null;
+                        }
                     }
                 }
                 catch
@@ -1923,7 +1927,7 @@ public class StripePaymentService : IPaymentService
     /// <param name="customer"></param>
     /// <returns></returns>
     private static bool CustomerHasTaxLocationVerified(Customer customer) =>
-        customer?.Tax?.AutomaticTax == StripeCustomerAutomaticTaxStatus.Supported;
+        customer?.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
 
     // We are taking only first 30 characters of the SubscriberName because stripe provide
     // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create

@@ -2,11 +2,11 @@
 
 namespace Bit.Core.Models.StaticStore.Plans;
 
-public record TeamsPlan : Plan
+public record Teams2023Plan : Plan
 {
-    public TeamsPlan(bool isAnnual)
+    public Teams2023Plan(bool isAnnual)
     {
-        Type = isAnnual ? PlanType.TeamsAnnually : PlanType.TeamsMonthly;
+        Type = isAnnual ? PlanType.TeamsAnnually2023 : PlanType.TeamsMonthly2023;
         Product = ProductType.Teams;
         Name = isAnnual ? "Teams (Annually)" : "Teams (Monthly)";
         IsAnnual = isAnnual;
@@ -27,17 +27,19 @@ public record TeamsPlan : Plan
         UpgradeSortOrder = 3;
         DisplaySortOrder = 3;
 
-        PasswordManager = new TeamsPasswordManagerFeatures(isAnnual);
-        SecretsManager = new TeamsSecretsManagerFeatures(isAnnual);
+        LegacyYear = 2024;
+
+        PasswordManager = new Teams2023PasswordManagerFeatures(isAnnual);
+        SecretsManager = new Teams2023SecretsManagerFeatures(isAnnual);
     }
 
-    private record TeamsSecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record Teams2023SecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public TeamsSecretsManagerFeatures(bool isAnnual)
+        public Teams2023SecretsManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 20;
+            BaseServiceAccount = 50;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -48,23 +50,23 @@ public record TeamsPlan : Plan
             if (isAnnual)
             {
                 StripeSeatPlanId = "secrets-manager-teams-seat-annually";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-annually";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-annually";
                 SeatPrice = 72;
-                AdditionalPricePerServiceAccount = 12;
+                AdditionalPricePerServiceAccount = 6;
             }
             else
             {
                 StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
                 SeatPrice = 7;
-                AdditionalPricePerServiceAccount = 1;
+                AdditionalPricePerServiceAccount = 0.5M;
             }
         }
     }
 
-    private record TeamsPasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record Teams2023PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public TeamsPasswordManagerFeatures(bool isAnnual)
+        public Teams2023PasswordManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BaseStorageGb = 1;
