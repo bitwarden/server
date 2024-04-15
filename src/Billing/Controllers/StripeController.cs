@@ -213,7 +213,7 @@ public class StripeController : Controller
     /// <param name="parsedEvent"></param>
     private async Task HandleCustomerSubscriptionUpdatedEventAsync(Event parsedEvent)
     {
-        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts"]);
         var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
 
         switch (subscription.Status)
@@ -265,10 +265,67 @@ public class StripeController : Controller
             {
                 await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, subscription.CurrentPeriodEnd);
             }
+
+            await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription);
         }
         else if (userId.HasValue)
         {
             await _userService.UpdatePremiumExpirationAsync(userId.Value, subscription.CurrentPeriodEnd);
+        }
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name="parsedEvent"></param>
+    /// <param name="subscription"></param>
+    private async Task RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(Event parsedEvent,
+        Subscription subscription)
+    {
+        if (parsedEvent.Data.PreviousAttributes?.items is null)
+        {
+            return;
+        }
+
+        var previousSubscription = parsedEvent.Data
+            .PreviousAttributes
+            .ToObject<Subscription>() as Subscription;
+
+        // This being false doesn't necessarily mean that the organization doesn't subscribe to Secrets Manager.
+        // If there are changes to any subscription item, Stripe sends every item in the subscription, both
+        // changed and unchanged.
+        var previousSubscriptionHasSecretsManager = previousSubscription?.Items is not null &&
+                                                    previousSubscription.Items.Any(previousItem =>
+                                                        StaticStore.Plans.Any(p =>
+                                                            p.SecretsManager is not null &&
+                                                            p.SecretsManager.StripeSeatPlanId ==
+                                                            previousItem.Plan.Id));
+
+        var currentSubscriptionHasSecretsManager = subscription.Items.Any(i =>
+            StaticStore.Plans.Any(p =>
+                p.SecretsManager is not null &&
+                p.SecretsManager.StripeSeatPlanId == i.Plan.Id));
+
+        var customerHasSecretsManagerTrial = subscription.Customer
+            ?.Discount
+            ?.Coupon
+            ?.Id == "sm-standalone";
+
+        var subscriptionHasSecretsManagerTrial = subscription.Discount
+            ?.Coupon
+            ?.Id == "sm-standalone";
+
+        if (previousSubscriptionHasSecretsManager && !currentSubscriptionHasSecretsManager)
+        {
+            if (customerHasSecretsManagerTrial)
+            {
+                await _stripeFacade.DeleteCustomerDiscount(subscription.CustomerId);
+            }
+
+            if (subscriptionHasSecretsManagerTrial)
+            {
+                await _stripeFacade.DeleteSubscriptionDiscount(subscription.Id);
+            }
         }
     }
 
