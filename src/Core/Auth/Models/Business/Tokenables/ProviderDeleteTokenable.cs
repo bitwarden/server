@@ -12,6 +12,12 @@ public class ProviderDeleteTokenable : Tokens.ExpiringTokenable
     public Guid Id { get; set; }
 
     [JsonConstructor]
+    public ProviderDeleteTokenable()
+    {
+
+    }
+
+    [JsonConstructor]
     public ProviderDeleteTokenable(DateTime expirationDate)
     {
         ExpirationDate = expirationDate;
