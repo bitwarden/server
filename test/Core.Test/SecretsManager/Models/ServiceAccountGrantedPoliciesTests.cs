@@ -4,7 +4,7 @@ using Bit.Core.SecretsManager.Enums.AccessPolicies;
 using Bit.Core.SecretsManager.Models.Data;
 using Xunit;
 
-namespace Bit.Api.Test.SecretsManager.Models;
+namespace Bit.Core.Test.SecretsManager.Models;
 
 public class ServiceAccountGrantedPoliciesTests
 {
