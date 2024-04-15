@@ -131,16 +131,19 @@
 
      <div class="d-flex mt-4">
          <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
-         <div class="ml-auto d-flex">
-             <button class="btn btn-danger" onclick="openRequestDeleteModal(@Model.ProviderOrganizations.Count())">Request Delete</button>
-             <button id="requestDeletionBtn" hidden="hidden" data-toggle="modal" data-target="#requestDeletionModal"></button>
+         @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableDeleteProvider))
+         {
+             <div class="ml-auto d-flex">
+                 <button class="btn btn-danger" onclick="openRequestDeleteModal(@Model.ProviderOrganizations.Count())">Request Delete</button>
+                 <button id="requestDeletionBtn" hidden="hidden" data-toggle="modal" data-target="#requestDeletionModal"></button>
 
-             <button class="btn btn-outline-danger ml-2" onclick="openDeleteModal(@Model.ProviderOrganizations.Count())">Delete</button>
-             <button id="deleteBtn"  hidden="hidden" data-toggle="modal" data-target="#DeleteModal"></button>
+                 <button class="btn btn-outline-danger ml-2" onclick="openDeleteModal(@Model.ProviderOrganizations.Count())">Delete</button>
+                 <button id="deleteBtn" hidden="hidden" data-toggle="modal" data-target="#DeleteModal"></button>
 
-             <button id="linkAccWarningBtn"  hidden="hidden" data-toggle="modal" data-target="#linkedWarningModal"></button>
+                 <button id="linkAccWarningBtn" hidden="hidden" data-toggle="modal" data-target="#linkedWarningModal"></button>
 
-         </div>
+             </div>
+         }
      </div>
 
  }
