@@ -348,52 +348,59 @@ public class StripeController : Controller
     private async Task HandlePaymentSucceededEventAsync(Event parsedEvent)
     {
         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-        if (invoice.Paid && invoice.BillingReason == "subscription_create")
+        if (!invoice.Paid || invoice.BillingReason != "subscription_create")
         {
-            var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-            if (subscription?.Status == StripeSubscriptionStatus.Active)
+            return;
+        }
+
+        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+        if (subscription?.Status != StripeSubscriptionStatus.Active)
+        {
+            return;
+        }
+
+        if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+        {
+            await Task.Delay(5000);
+        }
+
+        var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+        if (organizationId.HasValue)
+        {
+            if (!subscription.Items.Any(i =>
+                    StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
             {
-                if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
-                {
-                    await Task.Delay(5000);
-                }
-
-                var ids = GetIdsFromMetaData(subscription.Metadata);
-                // org
-                if (ids.Item1.HasValue)
-                {
-                    if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
-                    {
-                        await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
-
-                        var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
-                        await _referenceEventService.RaiseEventAsync(
-                            new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
-                            {
-                                PlanName = organization?.Plan,
-                                PlanType = organization?.PlanType,
-                                Seats = organization?.Seats,
-                                Storage = organization?.MaxStorageGb,
-                            });
-                    }
-                }
-                // user
-                else if (ids.Item2.HasValue)
-                {
-                    if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
-                    {
-                        await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
-
-                        var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
-                        await _referenceEventService.RaiseEventAsync(
-                            new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
-                            {
-                                PlanName = PremiumPlanId,
-                                Storage = user?.MaxStorageGb,
-                            });
-                    }
-                }
+                return;
             }
+
+            await _organizationService.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
+                {
+                    PlanName = organization?.Plan,
+                    PlanType = organization?.PlanType,
+                    Seats = organization?.Seats,
+                    Storage = organization?.MaxStorageGb,
+                });
+        }
+        else if (userId.HasValue)
+        {
+            if (subscription.Items.All(i => i.Plan.Id != PremiumPlanId))
+            {
+                return;
+            }
+
+            await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+
+            var user = await _userRepository.GetByIdAsync(userId.Value);
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
+                {
+                    PlanName = PremiumPlanId,
+                    Storage = user?.MaxStorageGb,
+                });
         }
     }
 
@@ -1075,15 +1082,17 @@ public class StripeController : Controller
     private async Task HandlePaymentFailedEventAsync(Event parsedEvent)
     {
         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-        if (!invoice.Paid && invoice.AttemptCount > 1 && ShouldAttemptToPayInvoice(invoice))
+        if (invoice.Paid || invoice.AttemptCount <= 1 || !ShouldAttemptToPayInvoice(invoice))
         {
-            var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-            // attempt count 4 = 11 days after initial failure
-            if (invoice.AttemptCount <= 3 ||
-                !subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
-            {
-                await AttemptToPayInvoiceAsync(invoice);
-            }
+            return;
+        }
+
+        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+        // attempt count 4 = 11 days after initial failure
+        if (invoice.AttemptCount <= 3 ||
+            !subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
+        {
+            await AttemptToPayInvoiceAsync(invoice);
         }
     }
 
