@@ -1,5 +1,6 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -636,6 +637,79 @@ public class ProviderServiceTests
                 t.First().Item1.AccessAll &&
                 !t.First().Item1.Collections.Any() &&
                 t.First().Item2 == null));
+    }
+
+    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
+    public async Task CreateOrganizationAsync_ConsolidatedBillingEnabled_InvalidPlanType_ThrowsBadRequestException(
+        Provider provider,
+        OrganizationSignup organizationSignup,
+        Organization organization,
+        string clientOwnerEmail,
+        User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
+
+        organizationSignup.Plan = PlanType.EnterpriseAnnually;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
+            .Returns((organization, null as OrganizationUser, new Collection()));
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user));
+
+        await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
+    public async Task CreateOrganizationAsync_ConsolidatedBillingEnabled_InvokeSignupClientAsync(
+        Provider provider,
+        OrganizationSignup organizationSignup,
+        Organization organization,
+        string clientOwnerEmail,
+        User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
+
+        organizationSignup.Plan = PlanType.EnterpriseMonthly;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
+            .Returns((organization, null as OrganizationUser, new Collection()));
+
+        var providerOrganization = await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
+
+        await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(
+            po =>
+                po.ProviderId == provider.Id &&
+                po.OrganizationId == organization.Id));
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received()
+            .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
+
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received()
+            .InviteUsersAsync(
+                organization.Id,
+                user.Id,
+                Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+                    t =>
+                        t.Count() == 1 &&
+                        t.First().Item1.Emails.Count() == 1 &&
+                        t.First().Item1.Emails.First() == clientOwnerEmail &&
+                        t.First().Item1.Type == OrganizationUserType.Owner &&
+                        t.First().Item1.AccessAll &&
+                        !t.First().Item1.Collections.Any() &&
+                        t.First().Item2 == null));
     }
 
     [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]

@@ -38,13 +38,14 @@ public class ProviderService : IProviderService
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IFeatureService _featureService;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IStripeAdapter stripeAdapter)
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -59,6 +60,7 @@ public class ProviderService : IProviderService
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
+        _featureService = featureService;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
@@ -360,6 +362,7 @@ public class ProviderService : IProviderService
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
         ThrowOnInvalidPlanType(organization.PlanType);
 
         if (organization.UseSecretsManager)
@@ -507,9 +510,13 @@ public class ProviderService : IProviderService
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
         OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
     {
-        ThrowOnInvalidPlanType(organizationSignup.Plan);
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
 
-        var (organization, _, defaultCollection) = await _organizationService.SignUpAsync(organizationSignup, true);
+        ThrowOnInvalidPlanType(organizationSignup.Plan, consolidatedBillingEnabled);
+
+        var (organization, _, defaultCollection) = consolidatedBillingEnabled
+            ? await _organizationService.SignupClientAsync(organizationSignup)
+            : await _organizationService.SignUpAsync(organizationSignup, true);
 
         var providerOrganization = new ProviderOrganization
         {
@@ -611,8 +618,13 @@ public class ProviderService : IProviderService
         return confirmedOwnersIds.Except(providerUserIds).Any();
     }
 
-    private void ThrowOnInvalidPlanType(PlanType requestedType)
+    private void ThrowOnInvalidPlanType(PlanType requestedType, bool consolidatedBillingEnabled = false)
     {
+        if (consolidatedBillingEnabled && requestedType is not (PlanType.TeamsMonthly or PlanType.EnterpriseMonthly))
+        {
+            throw new BadRequestException($"Providers cannot manage organizations with the plan type {requestedType}. Only Teams (Monthly) and Enterprise (Monthly) are allowed.");
+        }
+
         if (ProviderDisallowedOrganizationTypes.Contains(requestedType))
         {
             throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
