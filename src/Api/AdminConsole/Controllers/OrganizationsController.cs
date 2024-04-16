@@ -724,7 +724,7 @@ public class OrganizationsController : Controller
 
     [HttpPut("{id}/tax")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PutTaxInfo(string id, [FromBody] OrganizationTaxInfoUpdateRequestModel model)
+    public async Task PutTaxInfo(string id, [FromBody] ExpandedTaxInfoUpdateRequestModel model)
     {
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.OrganizationOwner(orgIdGuid))
