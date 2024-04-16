@@ -1000,8 +1000,8 @@ public class AccessPoliciesControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request));
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
+        await sutProvider.GetDependency<IUpdateServiceAccountGrantedPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     [Theory]
@@ -1019,8 +1019,8 @@ public class AccessPoliciesControllerTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request));
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
+        await sutProvider.GetDependency<IUpdateServiceAccountGrantedPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     [Theory]
@@ -1038,8 +1038,8 @@ public class AccessPoliciesControllerTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request));
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
+        await sutProvider.GetDependency<IUpdateServiceAccountGrantedPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     [Theory]
@@ -1053,14 +1053,14 @@ public class AccessPoliciesControllerTests
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ServiceAccountGrantedPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request));
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .UpdateServiceAccountGrantedPoliciesAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
+        await sutProvider.GetDependency<IUpdateServiceAccountGrantedPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ServiceAccountGrantedPoliciesUpdates>());
     }
 
     [Theory]
@@ -1074,8 +1074,8 @@ public class AccessPoliciesControllerTests
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ServiceAccountGrantedPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
 
         await sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request);
 
