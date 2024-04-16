@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -13,6 +14,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -681,6 +683,82 @@ public class ProviderServiceTests
 
         await providerRepository.Received().DeleteAsync(provider);
         await applicationCacheService.Received().DeleteProviderAbilityAsync(provider.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateDeleteAsync_ThrowsBadRequestException_WhenProviderNameIsEmpty(string providerAdminEmail, SutProvider<ProviderService> sutProvider)
+    {
+        var provider = new Provider { Name = "" };
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitiateDeleteAsync(provider, providerAdminEmail));
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateDeleteAsync_ThrowsBadRequestException_WhenProviderAdminNotFound(Provider provider, SutProvider<ProviderService> sutProvider)
+    {
+        var providerAdminEmail = "nonexistent@example.com";
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        userRepository.GetByEmailAsync(providerAdminEmail).Returns(Task.FromResult<User>(null));
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitiateDeleteAsync(provider, providerAdminEmail));
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateDeleteAsync_ThrowsBadRequestException_WhenProviderAdminStatusIsNotConfirmed(
+        Provider provider
+        , User providerAdmin
+        , ProviderUser providerUser
+        , SutProvider<ProviderService> sutProvider)
+    {
+        var providerAdminEmail = "nonexistent@example.com";
+        providerUser.Status = ProviderUserStatusType.Confirmed;
+        providerUser.Type = ProviderUserType.ServiceUser;
+
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        userRepository.GetByEmailAsync(providerAdminEmail).Returns(Task.FromResult<User>(providerAdmin));
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetByProviderUserAsync(provider.Id, providerAdmin.Id).Returns(providerUser);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitiateDeleteAsync(provider, providerAdminEmail));
+        Assert.Contains("Org admin not found.", exception.Message);
+
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateDeleteAsync_SendsInitiateDeleteProviderEmail(Provider provider, User providerAdmin
+        , ProviderUser providerUser, SutProvider<ProviderService> sutProvider)
+    {
+        var providerAdminEmail = providerAdmin.Email;
+        providerUser.Status = ProviderUserStatusType.Confirmed;
+        providerUser.Type = ProviderUserType.ProviderAdmin;
+
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        userRepository.GetByEmailAsync(providerAdminEmail).Returns(Task.FromResult<User>(providerAdmin));
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetByProviderUserAsync(provider.Id, providerAdmin.Id).Returns(providerUser);
+        var mailService = sutProvider.GetDependency<IMailService>();
+
+        await sutProvider.Sut.InitiateDeleteAsync(provider, providerAdminEmail);
+        await mailService.Received().SendInitiateDeletProviderEmailAsync(providerAdminEmail, provider, Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_ThrowsBadRequestException_WhenInvalidToken(Provider provider, string invalidToken
+    , SutProvider<ProviderService> sutProvider)
+    {
+        var providerDeleteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<ProviderDeleteTokenable>>();
+        providerDeleteTokenDataFactory.TryUnprotect(invalidToken, out Arg.Any<ProviderDeleteTokenable>()).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAsync(provider, invalidToken));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_ThrowsBadRequestException_WhenInvalidTokenData(Provider provider, string validToken
+, SutProvider<ProviderService> sutProvider)
+    {
+        var providerDeleteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<ProviderDeleteTokenable>>();
+        providerDeleteTokenDataFactory.TryUnprotect(validToken, out validTokenData).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAsync(provider, validToken));
     }
 
     private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
