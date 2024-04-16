@@ -3,10 +3,12 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -53,6 +55,8 @@ public class OrganizationsController : Controller
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
     private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IScaleSeatsCommand _scaleSeatsCommand;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -78,7 +82,9 @@ public class OrganizationsController : Controller
         IServiceAccountRepository serviceAccountRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IRemovePaymentMethodCommand removePaymentMethodCommand)
+        IRemovePaymentMethodCommand removePaymentMethodCommand,
+        IFeatureService featureService,
+        IScaleSeatsCommand scaleSeatsCommand)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -104,6 +110,8 @@ public class OrganizationsController : Controller
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
         _removePaymentMethodCommand = removePaymentMethodCommand;
+        _featureService = featureService;
+        _scaleSeatsCommand = scaleSeatsCommand;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -234,8 +242,24 @@ public class OrganizationsController : Controller
     public async Task<IActionResult> Delete(Guid id)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
+
         if (organization != null)
         {
+            var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+            if (consolidatedBillingEnabled && organization.IsValidClient())
+            {
+                var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+                if (provider.IsBillable())
+                {
+                    await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                        provider,
+                        organization.PlanType,
+                        -organization.Seats ?? 0);
+                }
+            }
+
             await _organizationRepository.DeleteAsync(organization);
             await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
         }
