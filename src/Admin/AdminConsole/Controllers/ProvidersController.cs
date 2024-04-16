@@ -1,5 +1,5 @@
-﻿using System.Net;
-using System.Text.RegularExpressions;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
@@ -283,6 +283,11 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Delete(Guid id, string providerName)
     {
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return BadRequest("Invalid provider name");
+        }
+
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
 
         if (providerOrganizations.Count > 0)
@@ -292,10 +297,14 @@ public class ProvidersController : Controller
 
         var provider = await _providerRepository.GetByIdAsync(id);
 
-        var validationError = ValidateProviderName(provider, providerName);
-        if (!string.IsNullOrEmpty(validationError))
+        if (provider is null)
         {
-            return BadRequest(validationError);
+            return BadRequest("Provider does not exist");
+        }
+
+        if (!string.Equals(providerName.Trim(), provider.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Invalid provider name");
         }
 
         await _providerService.DeleteAsync(provider);
@@ -307,7 +316,8 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> DeleteInitiation(Guid id, string providerEmail)
     {
-        if (!IsValidEmail(providerEmail))
+        var emailAttribute = new EmailAddressAttribute();
+        if (!emailAttribute.IsValid(providerEmail))
         {
             return BadRequest("Invalid provider admin email");
         }
@@ -326,27 +336,5 @@ public class ProvidersController : Controller
         }
 
         return NoContent();
-    }
-
-    private static bool IsValidEmail(string email)
-    {
-        const string pattern = @"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$";
-        var regex = new Regex(pattern);
-        return regex.IsMatch(email);
-    }
-
-    private string ValidateProviderName(Provider provider, string providerName)
-    {
-        if (provider is null)
-        {
-            return "Provider does not exist";
-        }
-
-        if (string.IsNullOrWhiteSpace(providerName))
-        {
-            return "Invalid provider name";
-        }
-
-        return !string.Equals(providerName.Trim(), provider.Name, StringComparison.OrdinalIgnoreCase) ? "Invalid provider name" : null;
     }
 }

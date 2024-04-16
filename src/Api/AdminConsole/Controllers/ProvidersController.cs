@@ -138,15 +138,14 @@ public class ProvidersController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
-    public async Task Delete(string id)
+    public async Task Delete(Guid id)
     {
-        var providerIdGuid = new Guid(id);
-        if (!_currentContext.ProviderProviderAdmin(providerIdGuid))
+        if (!_currentContext.ProviderProviderAdmin(id))
         {
             throw new NotFoundException();
         }
 
-        var provider = await _providerRepository.GetByIdAsync(providerIdGuid);
+        var provider = await _providerRepository.GetByIdAsync(id);
         if (provider == null)
         {
             throw new NotFoundException();

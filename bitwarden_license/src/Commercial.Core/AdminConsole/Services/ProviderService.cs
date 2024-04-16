@@ -604,14 +604,14 @@ public class ProviderService : IProviderService
 
     public async Task InitiateDeleteAsync(Provider provider, string providerAdminEmail)
     {
+        if (string.IsNullOrWhiteSpace(provider.Name))
+        {
+            throw new BadRequestException("Provider name not found.");
+        }
         var providerAdmin = await _userRepository.GetByEmailAsync(providerAdminEmail);
         if (providerAdmin == null)
         {
             throw new BadRequestException("Provider admin not found.");
-        }
-        if (string.IsNullOrWhiteSpace(provider.Name))
-        {
-            throw new BadRequestException("Provider name not found.");
         }
 
         var providerAdminOrgUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, providerAdmin.Id);
