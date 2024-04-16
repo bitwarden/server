@@ -44,11 +44,11 @@ public class ProviderBillingQueries(
         var plan = StaticStore.GetPlan(planType);
 
         return providerOrganizations
-            .Where(providerOrganization => providerOrganization.Plan == plan.Name)
+            .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
             .Sum(providerOrganization => providerOrganization.Seats ?? 0);
     }
 
-    public async Task<ProviderSubscriptionData> GetSubscriptionData(Guid providerId)
+    public async Task<ProviderSubscriptionDTO> GetSubscriptionDTO(Guid providerId)
     {
         var provider = await providerRepository.GetByIdAsync(providerId);
 
@@ -82,10 +82,10 @@ public class ProviderBillingQueries(
 
         var configuredProviderPlans = providerPlans
             .Where(providerPlan => providerPlan.IsConfigured())
-            .Select(ConfiguredProviderPlan.From)
+            .Select(ConfiguredProviderPlanDTO.From)
             .ToList();
 
-        return new ProviderSubscriptionData(
+        return new ProviderSubscriptionDTO(
             configuredProviderPlans,
             subscription);
     }
