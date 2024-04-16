@@ -151,7 +151,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var result = await dbContext.Project.CountAsync(sa =>
+        var result = await dbContext.ServiceAccount.CountAsync(sa =>
             sa.OrganizationId == organizationId && serviceAccountIds.Contains(sa.Id));
         return serviceAccountIds.Count == result;
     }
