@@ -74,7 +74,7 @@ public class PayPalIPNTransactionModel
         }
 
         if (metadata.TryGetValue("provider_id", out var providerIdStr) &&
-            Guid.TryParse(organizationIdStr, out var providerId))
+            Guid.TryParse(providerIdStr, out var providerId))
         {
             ProviderId = providerId;
         }
