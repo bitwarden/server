@@ -31,10 +31,6 @@ public class Configuration
         "Learn more: https://docs.docker.com/compose/compose-file/#ports")]
     public string HttpsPort { get; set; } = "443";
 
-    [Description("Docker compose file version. Leave empty for default.\n" +
-        "Learn more: https://docs.docker.com/compose/compose-file/compose-versioning/")]
-    public string ComposeVersion { get; set; }
-
     [Description("Configure Nginx for Captcha.")]
     public bool Captcha { get; set; } = false;
 
