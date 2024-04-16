@@ -1183,6 +1183,100 @@ public class AccessPoliciesControllerTests
         Assert.Equal(policies.ServiceAccountPoliciesDetails.Count(), result.ServiceAccountPolicies.Count);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectServiceAccountsAccessPoliciesAsync_ProjectDoesNotExist_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Project data,
+        ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(data.Id, request));
+
+        await sutProvider.GetDependency<IUpdateProjectServiceAccountsPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ProjectServiceAccountsPoliciesUpdates>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectServiceAccountsAccessPoliciesAsync_DuplicatePolicyRequest_ThrowsBadRequestException(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Project data,
+        ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        var dup = new AccessPolicyRequest { GranteeId = Guid.NewGuid(), Read = true, Write = true };
+        request.ServiceAccountPolicyRequests = new[] { dup, dup };
+
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(data.Id, request));
+
+        await sutProvider.GetDependency<IUpdateProjectServiceAccountsPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ProjectServiceAccountsPoliciesUpdates>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectServiceAccountsAccessPoliciesAsync_InvalidPolicyRequest_ThrowsBadRequestException(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Project data,
+        ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        var policyRequest = new AccessPolicyRequest { GranteeId = Guid.NewGuid(), Read = false, Write = true };
+        request.ServiceAccountPolicyRequests = new[] { policyRequest };
+
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(data.Id, request));
+
+        await sutProvider.GetDependency<IUpdateProjectServiceAccountsPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ProjectServiceAccountsPoliciesUpdates>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectServiceAccountsAccessPoliciesAsync_UserHasNoAccess_ThrowsNotFoundException(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Project data,
+        ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectServiceAccountsPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(data.Id, request));
+
+        await sutProvider.GetDependency<IUpdateProjectServiceAccountsPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ProjectServiceAccountsPoliciesUpdates>());
+        ;
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectServiceAccountsAccessPoliciesAsync_Success(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Project data,
+        ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectServiceAccountsPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(data.Id, request);
+
+        await sutProvider.GetDependency<IUpdateProjectServiceAccountsPoliciesCommand>().Received(1)
+            .UpdateAsync(Arg.Any<ProjectServiceAccountsPoliciesUpdates>());
+    }
+
     private static AccessPoliciesCreateRequest AddRequestsOverMax(AccessPoliciesCreateRequest request)
     {
         var newRequests = new List<AccessPolicyRequest>();
@@ -1263,6 +1357,16 @@ public class AccessPoliciesControllerTests
     private static ServiceAccountGrantedPoliciesRequestModel SetupValidRequest(ServiceAccountGrantedPoliciesRequestModel request)
     {
         foreach (var policyRequest in request.ProjectGrantedPolicyRequests)
+        {
+            policyRequest.Read = true;
+        }
+
+        return request;
+    }
+
+    private static ProjectServiceAccountsAccessPoliciesRequestModel SetupValidRequest(ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        foreach (var policyRequest in request.ServiceAccountPolicyRequests)
         {
             policyRequest.Read = true;
         }
