@@ -575,7 +575,8 @@ public class CiphersController : Controller
 
         var updatedCipherCollections = await GetByIdAsync(id, userId);
         // If user cannot access cipher after update return an error to client
-        if (updatedCipherCollections == null){
+        if (updatedCipherCollections == null)
+        {
             throw new NotFoundException();
         }
         var response = new CipherResponseModel(updatedCipherCollections, _globalSettings);
