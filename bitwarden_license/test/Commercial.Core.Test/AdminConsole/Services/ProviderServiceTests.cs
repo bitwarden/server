@@ -753,8 +753,9 @@ public class ProviderServiceTests
 
     [Theory, BitAutoData]
     public async Task DeleteAsync_ThrowsBadRequestException_WhenInvalidTokenData(Provider provider, string validToken
-, SutProvider<ProviderService> sutProvider)
+        , SutProvider<ProviderService> sutProvider)
     {
+        var validTokenData = new ProviderDeleteTokenable();
         var providerDeleteTokenDataFactory = sutProvider.GetDependency<IDataProtectorTokenFactory<ProviderDeleteTokenable>>();
         providerDeleteTokenDataFactory.TryUnprotect(validToken, out validTokenData).Returns(false);
 
