@@ -214,7 +214,7 @@ public class StripeController : Controller
     private async Task HandleCustomerSubscriptionUpdatedEventAsync(Event parsedEvent)
     {
         var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts"]);
-        var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+        var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
         switch (subscription.Status)
         {
@@ -339,7 +339,7 @@ public class StripeController : Controller
     private async Task HandleCustomerSubscriptionDeletedEventAsync(Event parsedEvent)
     {
         var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-        var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+        var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
         var subCanceled = subscription.Status == StripeSubscriptionStatus.Canceled;
 
         if (!subCanceled)
@@ -371,7 +371,7 @@ public class StripeController : Controller
 
         var subscription = customer.Subscriptions.First();
 
-        var (organizationId, _) = GetIdsFromMetaData(subscription.Metadata);
+        var (organizationId, _, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
         if (!organizationId.HasValue)
         {
@@ -424,7 +424,7 @@ public class StripeController : Controller
             await Task.Delay(5000);
         }
 
-        var (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+        var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
         if (organizationId.HasValue)
         {
             if (!subscription.Items.Any(i =>
@@ -617,7 +617,7 @@ public class StripeController : Controller
             ? subscription
             : await VerifyCorrectTaxRateForCharge(invoice, subscription);
 
-        var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
+        var (organizationId, userId, providerId) = GetIdsFromMetadata(updatedSubscription.Metadata);
 
         var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
 
@@ -688,6 +688,7 @@ public class StripeController : Controller
     {
         Guid? organizationId = null;
         Guid? userId = null;
+        Guid? providerId = null;
 
         if (charge.InvoiceId != null)
         {
@@ -695,7 +696,7 @@ public class StripeController : Controller
             if (invoice?.SubscriptionId != null)
             {
                 var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-                (organizationId, userId) = GetIdsFromMetaData(subscription?.Metadata);
+                (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
             }
         }
 
@@ -716,7 +717,7 @@ public class StripeController : Controller
                 continue;
             }
 
-            (organizationId, userId) = GetIdsFromMetaData(subscription.Metadata);
+            (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
             if (organizationId.HasValue || userId.HasValue)
             {
@@ -895,49 +896,36 @@ public class StripeController : Controller
         }
     }
 
-    private static Tuple<Guid?, Guid?> GetIdsFromMetaData(Dictionary<string, string> metaData)
+    /// <summary>
+    /// Gets the organizationId, userId, or providerId from the metadata of a Stripe Subscription object.
+    /// </summary>
+    /// <param name="metadata"></param>
+    /// <returns></returns>
+    private static Tuple<Guid?, Guid?, Guid?> GetIdsFromMetadata(Dictionary<string, string> metadata)
     {
-        if (metaData == null || metaData.Count == 0)
+        if (metadata == null || metadata.Count == 0)
         {
-            return new Tuple<Guid?, Guid?>(null, null);
+            return new Tuple<Guid?, Guid?, Guid?>(null, null, null);
         }
 
-        Guid? orgId = null;
-        Guid? userId = null;
+        metadata.TryGetValue("organizationId", out var orgIdString);
+        metadata.TryGetValue("userId", out var userIdString);
+        metadata.TryGetValue("providerId", out var providerIdString);
 
-        if (metaData.TryGetValue("organizationId", out var orgIdString))
-        {
-            orgId = new Guid(orgIdString);
-        }
-        else if (metaData.TryGetValue("userId", out var userIdString))
-        {
-            userId = new Guid(userIdString);
-        }
+        orgIdString ??= metadata.FirstOrDefault(x =>
+            x.Key.Equals("organizationId", StringComparison.OrdinalIgnoreCase)).Value;
 
-        if (userId != null && userId != Guid.Empty || orgId != null && orgId != Guid.Empty)
-        {
-            return new Tuple<Guid?, Guid?>(orgId, userId);
-        }
+        userIdString ??= metadata.FirstOrDefault(x =>
+            x.Key.Equals("userId", StringComparison.OrdinalIgnoreCase)).Value;
 
-        var orgIdKey = metaData.Keys
-            .FirstOrDefault(k => k.Equals("organizationid", StringComparison.InvariantCultureIgnoreCase));
+        providerIdString ??= metadata.FirstOrDefault(x =>
+            x.Key.Equals("providerId", StringComparison.OrdinalIgnoreCase)).Value;
 
-        if (!string.IsNullOrWhiteSpace(orgIdKey))
-        {
-            orgId = new Guid(metaData[orgIdKey]);
-        }
-        else
-        {
-            var userIdKey = metaData.Keys
-                .FirstOrDefault(k => k.Equals("userid", StringComparison.InvariantCultureIgnoreCase));
+        Guid? organizationId = string.IsNullOrWhiteSpace(orgIdString) ? null : new Guid(orgIdString);
+        Guid? userId = string.IsNullOrWhiteSpace(userIdString) ? null : new Guid(userIdString);
+        Guid? providerId = string.IsNullOrWhiteSpace(providerIdString) ? null : new Guid(providerIdString);
 
-            if (!string.IsNullOrWhiteSpace(userIdKey))
-            {
-                userId = new Guid(metaData[userIdKey]);
-            }
-        }
-
-        return new Tuple<Guid?, Guid?>(orgId, userId);
+        return new Tuple<Guid?, Guid?, Guid?>(organizationId, userId, providerId);
     }
 
     private static bool OrgPlanForInvoiceNotifications(Organization org) => StaticStore.GetPlan(org.PlanType).IsAnnual;
@@ -970,22 +958,22 @@ public class StripeController : Controller
         }
 
         var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-        var ids = GetIdsFromMetaData(subscription?.Metadata);
-        if (!ids.Item1.HasValue && !ids.Item2.HasValue)
+        var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
+        if (!organizationId.HasValue && !userId.HasValue)
         {
             _logger.LogWarning(
                 "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId");
             return false;
         }
 
-        var orgTransaction = ids.Item1.HasValue;
+        var orgTransaction = organizationId.HasValue;
         var btObjIdField = orgTransaction ? "organization_id" : "user_id";
-        var btObjId = ids.Item1 ?? ids.Item2.Value;
-        var btInvoiceAmount = (invoice.AmountDue / 100M);
+        var btObjId = organizationId ?? userId.Value;
+        var btInvoiceAmount = invoice.AmountDue / 100M;
 
         var existingTransactions = orgTransaction ?
-            await _transactionRepository.GetManyByOrganizationIdAsync(ids.Item1.Value) :
-            await _transactionRepository.GetManyByUserIdAsync(ids.Item2.Value);
+            await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value) :
+            await _transactionRepository.GetManyByUserIdAsync(userId.Value);
         var duplicateTimeSpan = TimeSpan.FromHours(24);
         var now = DateTime.UtcNow;
         var duplicateTransaction = existingTransactions?
