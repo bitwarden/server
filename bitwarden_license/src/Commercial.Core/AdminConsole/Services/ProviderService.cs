@@ -40,9 +40,9 @@ public class ProviderService : IProviderService
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IFeatureService _featureService;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -66,9 +66,9 @@ public class ProviderService : IProviderService
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
+        _featureService = featureService;
         _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
         _applicationCacheService = applicationCacheService;
-        _featureService = featureService;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
