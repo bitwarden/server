@@ -421,6 +421,89 @@ public class OrganizationService : IOrganizationService
         }
     }
 
+    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
+    {
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (!consolidatedBillingEnabled)
+        {
+            throw new InvalidOperationException($"{nameof(SignupClientAsync)} is only for use within Consolidated Billing");
+        }
+
+        var plan = StaticStore.GetPlan(signup.Plan);
+
+        ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
+
+        var flexibleCollectionsSignupEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
+
+        var flexibleCollectionsV1Enabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
+
+        var organization = new Organization
+        {
+            // Pre-generate the org id so that we can save it with the Stripe subscription..
+            Id = CoreHelpers.GenerateComb(),
+            Name = signup.Name,
+            BillingEmail = signup.BillingEmail,
+            PlanType = plan!.Type,
+            Seats = signup.AdditionalSeats,
+            MaxCollections = plan.PasswordManager.MaxCollections,
+            // Extra storage not available for purchase with Consolidated Billing.
+            MaxStorageGb = 0,
+            UsePolicies = plan.HasPolicies,
+            UseSso = plan.HasSso,
+            UseGroups = plan.HasGroups,
+            UseEvents = plan.HasEvents,
+            UseDirectory = plan.HasDirectory,
+            UseTotp = plan.HasTotp,
+            Use2fa = plan.Has2fa,
+            UseApi = plan.HasApi,
+            UseResetPassword = plan.HasResetPassword,
+            SelfHost = plan.HasSelfHost,
+            UsersGetPremium = plan.UsersGetPremium,
+            UseCustomPermissions = plan.HasCustomPermissions,
+            UseScim = plan.HasScim,
+            Plan = plan.Name,
+            Gateway = GatewayType.Stripe,
+            ReferenceData = signup.Owner.ReferenceData,
+            Enabled = true,
+            LicenseKey = CoreHelpers.SecureRandomString(20),
+            PublicKey = signup.PublicKey,
+            PrivateKey = signup.PrivateKey,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created,
+            UsePasswordManager = true,
+            // Secrets Manager not available for purchase with Consolidated Billing.
+            UseSecretsManager = false,
+
+            // This feature flag indicates that new organizations should be automatically onboarded to
+            // Flexible Collections enhancements
+            FlexibleCollections = flexibleCollectionsSignupEnabled,
+
+            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
+            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
+            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
+            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
+        };
+
+        var returnValue = await SignUpAsync(organization, default, signup.OwnerKey, signup.CollectionName, false);
+
+        await _referenceEventService.RaiseEventAsync(
+            new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
+            {
+                PlanName = plan.Name,
+                PlanType = plan.Type,
+                Seats = returnValue.Item1.Seats,
+                SignupInitiationPath = signup.InitiationPath,
+                Storage = returnValue.Item1.MaxStorageGb,
+            });
+
+        return returnValue;
+    }
+
     /// <summary>
     /// Create a new organization in a cloud environment
     /// </summary>

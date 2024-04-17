@@ -26,6 +26,8 @@ public interface IOrganizationService
     /// <returns>A tuple containing the new organization, the initial organizationUser (if any) and the default collection (if any)</returns>
 #nullable enable
     Task<(Organization organization, OrganizationUser? organizationUser, Collection? defaultCollection)> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
+
+    Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
 #nullable disable
     /// <summary>
     /// Create a new organization on a self-hosted instance
