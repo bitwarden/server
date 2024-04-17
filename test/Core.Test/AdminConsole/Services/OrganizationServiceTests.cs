@@ -410,7 +410,7 @@ public class OrganizationServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(signup));
-        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+        Assert.Contains("Plan does not allow additional Machine Accounts.", exception.Message);
     }
 
     [Theory]
@@ -444,7 +444,48 @@ public class OrganizationServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(signup));
-        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+        Assert.Contains("You can't subtract Machine Accounts!", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SignupClientAsync_Succeeds(
+        OrganizationSignup signup,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
+
+        signup.Plan = PlanType.TeamsMonthly;
+
+        var (organization, _, _) = await sutProvider.Sut.SignupClientAsync(signup);
+
+        var plan = StaticStore.GetPlan(signup.Plan);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(Arg.Is<Organization>(org =>
+            org.Id == organization.Id &&
+            org.Name == signup.Name &&
+            org.Plan == plan.Name &&
+            org.PlanType == plan.Type &&
+            org.UsePolicies == plan.HasPolicies &&
+            org.PublicKey == signup.PublicKey &&
+            org.PrivateKey == signup.PrivateKey &&
+            org.UseSecretsManager == false));
+
+        await sutProvider.GetDependency<IOrganizationApiKeyRepository>().Received(1)
+            .CreateAsync(Arg.Is<OrganizationApiKey>(orgApiKey =>
+                orgApiKey.OrganizationId == organization.Id));
+
+        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+            .UpsertOrganizationAbilityAsync(organization);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
+            .CreateAsync(Arg.Is<Collection>(c => c.Name == signup.CollectionName && c.OrganizationId == organization.Id), null, null);
+
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(
+            re =>
+                re.Type == ReferenceEventType.Signup &&
+                re.PlanType == plan.Type));
     }
 
     [Theory]
@@ -2208,7 +2249,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             AdditionalSeats = 3
         };
         var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
-        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+        Assert.Contains("Plan does not allow additional Machine Accounts.", exception.Message);
     }
 
     [Theory]
@@ -2249,7 +2290,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             AdditionalSeats = 5
         };
         var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
-        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+        Assert.Contains("You can't subtract Machine Accounts!", exception.Message);
     }
 
     [Theory]
