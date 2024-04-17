@@ -140,6 +140,7 @@ public class OrganizationUsersControllerTests
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationAbility.FlexibleCollections = true;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
             .Returns(organizationAbility);
