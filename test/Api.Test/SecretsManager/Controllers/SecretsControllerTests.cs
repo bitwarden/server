@@ -537,12 +537,6 @@ public class SecretsControllerTests
 
     private static DateTime? GetLastSyncedDate(bool nullLastSyncedDate)
     {
-        DateTime? lastSyncedDate = DateTime.UtcNow.AddDays(-1);
-        if (nullLastSyncedDate)
-        {
-            lastSyncedDate = null;
-        }
-
-        return lastSyncedDate;
+        return nullLastSyncedDate ? null : DateTime.UtcNow.AddDays(-1);
     }
 }
