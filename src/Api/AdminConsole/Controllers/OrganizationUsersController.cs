@@ -195,8 +195,7 @@ public class OrganizationUsersController : Controller
         }
 
         // Flexible Collections - check the user has permission to grant access to the collections for the new user
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-        if (organizationAbility?.FlexibleCollections ?? false)
+        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
@@ -358,7 +357,7 @@ public class OrganizationUsersController : Controller
     /// <summary>
     /// Put logic for Flexible Collections v1
     /// </summary>
-    public async Task Put_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
+    private async Task Put_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
