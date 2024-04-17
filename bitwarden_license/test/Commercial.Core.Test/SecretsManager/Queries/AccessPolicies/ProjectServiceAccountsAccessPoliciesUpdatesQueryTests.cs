@@ -15,12 +15,12 @@ namespace Bit.Commercial.Core.Test.SecretsManager.Queries.AccessPolicies;
 
 [SutProviderCustomize]
 [ProjectCustomize]
-public class ProjectServiceAccountsPoliciesUpdatesQueryTests
+public class ProjectServiceAccountsAccessPoliciesUpdatesQueryTests
 {
     [Theory]
     [BitAutoData]
     public async Task GetAsync_NoCurrentGrantedPolicies_ReturnsAllCreates(
-        SutProvider<ProjectServiceAccountsPoliciesUpdatesQuery> sutProvider,
+        SutProvider<ProjectServiceAccountsAccessPoliciesUpdatesQuery> sutProvider,
         ProjectServiceAccountsAccessPolicies data)
     {
         sutProvider.GetDependency<IAccessPolicyRepository>()
@@ -42,7 +42,7 @@ public class ProjectServiceAccountsPoliciesUpdatesQueryTests
     [Theory]
     [BitAutoData]
     public async Task GetAsync_CurrentGrantedPolicies_ReturnsChanges(
-        SutProvider<ProjectServiceAccountsPoliciesUpdatesQuery> sutProvider,
+        SutProvider<ProjectServiceAccountsAccessPoliciesUpdatesQuery> sutProvider,
         ProjectServiceAccountsAccessPolicies data, ServiceAccountProjectAccessPolicy currentPolicyToDelete)
     {
         foreach (var policy in data.ServiceAccountAccessPolicies)

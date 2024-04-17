@@ -7,16 +7,16 @@ using Bit.Core.SecretsManager.Repositories;
 
 namespace Bit.Commercial.Core.SecretsManager.Queries.AccessPolicies;
 
-public class ProjectServiceAccountsPoliciesUpdatesQuery : IProjectServiceAccountsPoliciesUpdatesQuery
+public class ProjectServiceAccountsAccessPoliciesUpdatesQuery : IProjectServiceAccountsAccessPoliciesUpdatesQuery
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
 
-    public ProjectServiceAccountsPoliciesUpdatesQuery(IAccessPolicyRepository accessPolicyRepository)
+    public ProjectServiceAccountsAccessPoliciesUpdatesQuery(IAccessPolicyRepository accessPolicyRepository)
     {
         _accessPolicyRepository = accessPolicyRepository;
     }
 
-    public async Task<ProjectServiceAccountsPoliciesUpdates> GetAsync(
+    public async Task<ProjectServiceAccountsAccessPoliciesUpdates> GetAsync(
         ProjectServiceAccountsAccessPolicies projectServiceAccountsAccessPolicies)
     {
         var currentPolicies =
@@ -25,7 +25,7 @@ public class ProjectServiceAccountsPoliciesUpdatesQuery : IProjectServiceAccount
 
         if (currentPolicies == null)
         {
-            return new ProjectServiceAccountsPoliciesUpdates
+            return new ProjectServiceAccountsAccessPoliciesUpdates
             {
                 ProjectId = projectServiceAccountsAccessPolicies.ProjectId,
                 OrganizationId = projectServiceAccountsAccessPolicies.OrganizationId,

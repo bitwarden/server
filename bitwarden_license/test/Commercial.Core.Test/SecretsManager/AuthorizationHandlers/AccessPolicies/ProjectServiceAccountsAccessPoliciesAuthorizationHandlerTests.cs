@@ -7,7 +7,6 @@ using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Enums.AccessPolicies;
-using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
@@ -22,7 +21,7 @@ namespace Bit.Commercial.Core.Test.SecretsManager.AuthorizationHandlers.AccessPo
 
 [SutProviderCustomize]
 [ProjectCustomize]
-public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
+public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
 {
     [Fact]
     public void ServiceAccountGrantedPoliciesOperations_OnlyPublicStatic()
@@ -36,8 +35,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [Theory]
     [BitAutoData]
     public async Task Handler_AccessSecretsManagerFalse_DoesNotSucceed(
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
@@ -56,8 +55,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.Organization)]
     public async Task Handler_UnsupportedClientTypes_DoesNotSucceed(
         AccessClientType accessClientType,
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
@@ -73,8 +72,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [Theory]
     [BitAutoData]
     public async Task Handler_UnsupportedServiceAccountGrantedPoliciesOperationRequirement_Throws(
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         ClaimsPrincipal claimsPrincipal)
     {
         var requirement = new ProjectServiceAccountsPoliciesOperationRequirement();
@@ -94,8 +93,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
         AccessClientType accessClientType,
         bool projectReadAccess,
         bool projectWriteAccess,
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -115,8 +114,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [Theory]
     [BitAutoData]
     public async Task Handler_ServiceAccountsInDifferentOrganization_DoesNotSucceed(
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -141,8 +140,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     public async Task Handler_UserHasAccessToProject_NoCreatesRequested_Success(
         AccessClientType accessClientType,
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -163,8 +162,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     public async Task Handler_UserHasNoAccessToCreateServiceAccounts_DoesNotSucceed(
         AccessClientType accessClientType,
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -194,8 +193,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     public async Task Handler_AccessResultsPartial_DoesNotSucceed(
         AccessClientType accessClientType,
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -228,8 +227,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     public async Task Handler_UserHasAccessToSomeCreateServiceAccounts_DoesNotSucceed(
         AccessClientType accessClientType,
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -261,8 +260,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     public async Task Handler_UserHasAccessToAllCreateServiceAccounts_Success(
         AccessClientType accessClientType,
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -289,9 +288,9 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     }
 
     private static void SetupUserSubstitutes(
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
         AccessClientType accessClientType,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId = new())
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
@@ -301,9 +300,9 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
     }
 
     private static void SetupServiceAccountsAccessTest(
-        SutProvider<ProjectServiceAccountsPoliciesAuthorizationHandler> sutProvider,
+        SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
         AccessClientType accessClientType,
-        ProjectServiceAccountsPoliciesUpdates resource,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         Guid userId = new())
     {
         SetupUserSubstitutes(sutProvider, accessClientType, resource, userId);
@@ -316,8 +315,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
             .Returns(true);
     }
 
-    private ProjectServiceAccountsPoliciesUpdates AddServiceAccountCreateUpdate(
-        ProjectServiceAccountsPoliciesUpdates resource)
+    private ProjectServiceAccountsAccessPoliciesUpdates AddServiceAccountCreateUpdate(
+        ProjectServiceAccountsAccessPoliciesUpdates resource)
     {
         resource.ServiceAccountAccessPolicyUpdates = resource.ServiceAccountAccessPolicyUpdates.Append(
             new ServiceAccountProjectAccessPolicyUpdate
@@ -333,8 +332,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandlerTests
         return resource;
     }
 
-    private ProjectServiceAccountsPoliciesUpdates RemoveAllCreates(
-        ProjectServiceAccountsPoliciesUpdates resource)
+    private ProjectServiceAccountsAccessPoliciesUpdates RemoveAllCreates(
+        ProjectServiceAccountsAccessPoliciesUpdates resource)
     {
         resource.ServiceAccountAccessPolicyUpdates =
             resource.ServiceAccountAccessPolicyUpdates.Where(x => x.Operation != AccessPolicyOperation.Create);

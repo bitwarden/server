@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 
 namespace Bit.Core.SecretsManager.Repositories;
 
@@ -23,5 +24,5 @@ public interface IAccessPolicyRepository
         Guid serviceAccountId, Guid userId, AccessClientType accessClientType);
     Task UpdateServiceAccountGrantedPoliciesAsync(ServiceAccountGrantedPoliciesUpdates policyUpdates);
     Task<ProjectServiceAccountsAccessPolicies?> GetProjectServiceAccountsAccessPoliciesAsync(Guid projectId);
-    Task UpdateProjectServiceAccountsAccessPoliciesAsync(ProjectServiceAccountsPoliciesUpdates updates);
+    Task UpdateProjectServiceAccountsAccessPoliciesAsync(ProjectServiceAccountsAccessPoliciesUpdates updates);
 }

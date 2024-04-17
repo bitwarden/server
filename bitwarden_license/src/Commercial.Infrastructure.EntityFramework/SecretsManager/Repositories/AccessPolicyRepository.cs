@@ -469,7 +469,8 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         return new ProjectServiceAccountsAccessPolicies(projectId, organizationId, entities.Select(MapToCore).ToList());
     }
 
-    public async Task UpdateProjectServiceAccountsAccessPoliciesAsync(ProjectServiceAccountsPoliciesUpdates updates)
+    public async Task UpdateProjectServiceAccountsAccessPoliciesAsync(
+        ProjectServiceAccountsAccessPoliciesUpdates updates)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);

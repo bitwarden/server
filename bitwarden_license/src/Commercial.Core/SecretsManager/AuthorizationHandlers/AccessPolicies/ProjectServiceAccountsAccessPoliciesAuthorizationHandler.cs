@@ -3,23 +3,23 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Enums.AccessPolicies;
-using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 
-public class ProjectServiceAccountsPoliciesAuthorizationHandler : AuthorizationHandler<
+public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : AuthorizationHandler<
     ProjectServiceAccountsPoliciesOperationRequirement,
-    ProjectServiceAccountsPoliciesUpdates>
+    ProjectServiceAccountsAccessPoliciesUpdates>
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public ProjectServiceAccountsPoliciesAuthorizationHandler(ICurrentContext currentContext,
+    public ProjectServiceAccountsAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository,
         IServiceAccountRepository serviceAccountRepository)
@@ -32,7 +32,7 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandler : AuthorizationH
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         ProjectServiceAccountsPoliciesOperationRequirement requirement,
-        ProjectServiceAccountsPoliciesUpdates resource)
+        ProjectServiceAccountsAccessPoliciesUpdates resource)
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -60,7 +60,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandler : AuthorizationH
     }
 
     private async Task CanUpdateAsync(AuthorizationHandlerContext context,
-        ProjectServiceAccountsPoliciesOperationRequirement requirement, ProjectServiceAccountsPoliciesUpdates resource,
+        ProjectServiceAccountsPoliciesOperationRequirement requirement,
+        ProjectServiceAccountsAccessPoliciesUpdates resource,
         AccessClientType accessClient, Guid userId)
     {
         var access =
@@ -75,7 +76,8 @@ public class ProjectServiceAccountsPoliciesAuthorizationHandler : AuthorizationH
             update.AccessPolicy.ServiceAccountId!.Value).ToList();
 
         var inSameOrganization =
-            await _serviceAccountRepository.ServiceAccountsAreInOrganizationAsync(serviceAccountIds, resource.OrganizationId);
+            await _serviceAccountRepository.ServiceAccountsAreInOrganizationAsync(serviceAccountIds,
+                resource.OrganizationId);
         if (!inSameOrganization)
         {
             return;

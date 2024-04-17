@@ -26,7 +26,7 @@ public class ProjectServiceAccountsAccessPolicies
 
     public IEnumerable<ServiceAccountProjectAccessPolicy> ServiceAccountAccessPolicies { get; set; } = [];
 
-    public ProjectServiceAccountsPoliciesUpdates GetPolicyUpdates(ProjectServiceAccountsAccessPolicies requested)
+    public ProjectServiceAccountsAccessPoliciesUpdates GetPolicyUpdates(ProjectServiceAccountsAccessPolicies requested)
     {
         var currentServiceAccountIds = GetServiceAccountIds(ServiceAccountAccessPolicies);
         var requestedServiceAccountIds = GetServiceAccountIds(requested.ServiceAccountAccessPolicies);
@@ -45,7 +45,7 @@ public class ProjectServiceAccountsAccessPolicies
             serviceAccountIdsToBeUpdated,
             AccessPolicyOperation.Update);
 
-        return new ProjectServiceAccountsPoliciesUpdates
+        return new ProjectServiceAccountsAccessPoliciesUpdates
         {
             OrganizationId = OrganizationId,
             ProjectId = ProjectId,
@@ -73,12 +73,4 @@ public class ProjectServiceAccountsAccessPolicies
 
     private static List<Guid> GetServiceAccountIds(IEnumerable<ServiceAccountProjectAccessPolicy> policies) =>
         policies.Select(ap => ap.ServiceAccountId!.Value).ToList();
-}
-
-public class ProjectServiceAccountsPoliciesUpdates
-{
-    public Guid ProjectId { get; set; }
-    public Guid OrganizationId { get; set; }
-
-    public IEnumerable<ServiceAccountProjectAccessPolicyUpdate> ServiceAccountAccessPolicyUpdates { get; set; } = [];
 }
