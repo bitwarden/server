@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
@@ -10,6 +11,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -274,5 +276,65 @@ public class ProvidersController : Controller
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
+    }
+
+    [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> Delete(Guid id, string providerName)
+    {
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return BadRequest("Invalid provider name");
+        }
+
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+
+        if (providerOrganizations.Count > 0)
+        {
+            return BadRequest("You must unlink all clients before you can delete a provider");
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(id);
+
+        if (provider is null)
+        {
+            return BadRequest("Provider does not exist");
+        }
+
+        if (!string.Equals(providerName.Trim(), provider.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Invalid provider name");
+        }
+
+        await _providerService.DeleteAsync(provider);
+        return NoContent();
+    }
+
+    [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> DeleteInitiation(Guid id, string providerEmail)
+    {
+        var emailAttribute = new EmailAddressAttribute();
+        if (!emailAttribute.IsValid(providerEmail))
+        {
+            return BadRequest("Invalid provider admin email");
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider != null)
+        {
+            try
+            {
+                await _providerService.InitiateDeleteAsync(provider, providerEmail);
+            }
+            catch (BadRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        return NoContent();
     }
 }
