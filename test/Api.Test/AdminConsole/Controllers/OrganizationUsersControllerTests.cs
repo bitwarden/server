@@ -160,7 +160,10 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, true);
+        organizationAbility.FlexibleCollections = false;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(false);
+
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
 
         // Save these for later - organizationUser object will be mutated
         var orgUserId = organizationUser.Id;
@@ -188,8 +191,8 @@ public class OrganizationUsersControllerTests
     {
         // Updating self
         organizationUser.UserId = savingUserId;
-        organizationAbility.FlexibleCollections = true;
         organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+        organizationAbility.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, true);
@@ -248,6 +251,8 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
+        organizationAbility.FlexibleCollections = true;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
 
         var editedCollectionId = CoreHelpers.GenerateComb();
@@ -336,11 +341,9 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
+        organizationAbility.FlexibleCollections = true;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
-
-        // Save these for later - organizationUser object will be mutated
-        var orgUserId = organizationUser.Id;
-        var orgUserEmail = organizationUser.Email;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdWithCollectionsAsync(organizationUser.Id)

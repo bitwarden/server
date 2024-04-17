@@ -331,6 +331,35 @@ public class OrganizationUsersController : Controller
     [HttpPost("{id}")]
     public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
+        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        {
+            // Use new Flexible Collections v1 logic
+            await Put_vNext(orgId, id, model);
+            return;
+        }
+
+        // Pre-Flexible Collections v1 code follows
+        if (!await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser == null || organizationUser.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User);
+        await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
+            model.Collections.Select(c => c.ToSelectionReadOnly()).ToList(), model.Groups);
+    }
+
+    /// <summary>
+    /// Put logic for Flexible Collections v1
+    /// </summary>
+    public async Task Put_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
+    {
         if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
@@ -346,19 +375,15 @@ public class OrganizationUsersController : Controller
         // In this case we just don't update groups
         var userId = _userService.GetProperUserId(User).Value;
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-        var restrictEditingGroups = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) &&
-                                    organizationAbility.FlexibleCollections &&
-                                    userId == organizationUser.UserId &&
-                                    !organizationAbility.AllowAdminAccessToAllCollectionItems;
+        var editingSelf = userId == organizationUser.UserId;
 
-        var groups = restrictEditingGroups
+        var groups = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
             ? null
             : model.Groups;
 
         // The client only sends collections that the saving user has permissions to edit.
         // On the server side, we need to (1) confirm this and (2) concat these with the collections that the user
         // can't edit before saving to the database.
-        // TODO: this doesn't return the Manage value - fix
         var (_, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
         var currentCollections = await _collectionRepository
             .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
