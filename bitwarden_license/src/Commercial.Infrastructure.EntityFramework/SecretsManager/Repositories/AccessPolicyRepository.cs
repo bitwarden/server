@@ -487,8 +487,13 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value)
                 .ToList();
 
+            var accessPolicyIdsToDelete = currentAccessPolicies
+                .Where(entity => serviceAccountIdsToDelete.Contains(entity.ServiceAccountId!.Value))
+                .Select(ap => ap.Id)
+                .ToList();
+
             await dbContext.ServiceAccountProjectAccessPolicy
-                .Where(ap => serviceAccountIdsToDelete.Contains(ap.Id))
+                .Where(ap => accessPolicyIdsToDelete.Contains(ap.Id))
                 .ExecuteDeleteAsync();
         }
 
