@@ -23,7 +23,6 @@ public class ProjectServiceAccountsAccessPolicies
 
     public Guid ProjectId { get; set; }
     public Guid OrganizationId { get; set; }
-
     public IEnumerable<ServiceAccountProjectAccessPolicy> ServiceAccountAccessPolicies { get; set; } = [];
 
     public ProjectServiceAccountsAccessPoliciesUpdates GetPolicyUpdates(ProjectServiceAccountsAccessPolicies requested)

@@ -308,7 +308,7 @@ public class AccessPoliciesController : Controller
             [FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
-        var (accessClient, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
+        await CheckUserHasWriteAccessToProjectAsync(project);
         var results =
             await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id);
         return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
@@ -320,18 +320,18 @@ public class AccessPoliciesController : Controller
             [FromBody] ProjectServiceAccountsAccessPoliciesRequestModel request)
     {
         var project = await _projectRepository.GetByIdAsync(id) ?? throw new NotFoundException();
-        var policiesUpdates =
+        var accessPoliciesUpdates =
             await _projectServiceAccountsAccessPoliciesUpdatesQuery.GetAsync(
                 request.ToProjectServiceAccountsAccessPolicies(project));
 
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, policiesUpdates,
-            ProjectServiceAccountsPoliciesOperations.Updates);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, accessPoliciesUpdates,
+            ProjectServiceAccountsAccessPoliciesOperations.Updates);
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        await _updateProjectServiceAccountsAccessPoliciesCommand.UpdateAsync(policiesUpdates);
+        await _updateProjectServiceAccountsAccessPoliciesCommand.UpdateAsync(accessPoliciesUpdates);
 
         var results = await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id);
         return new ProjectServiceAccountsAccessPoliciesResponseModel(results);

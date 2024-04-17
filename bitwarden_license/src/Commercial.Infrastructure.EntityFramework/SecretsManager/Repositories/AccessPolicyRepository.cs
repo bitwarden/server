@@ -480,9 +480,6 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             .Where(ap => ap.GrantedProjectId == updates.ProjectId)
             .ToListAsync();
 
-        var effectedServiceAccountIds = updates.ServiceAccountAccessPolicyUpdates
-            .Select(sa => sa.AccessPolicy.ServiceAccountId!.Value).ToList();
-
         if (currentAccessPolicies.Count != 0)
         {
             var serviceAccountIdsToDelete = updates.ServiceAccountAccessPolicyUpdates
@@ -490,20 +487,16 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value)
                 .ToList();
 
-            var accessPoliciesToDelete = currentAccessPolicies
-                .Where(entity => serviceAccountIdsToDelete.Contains(entity.ServiceAccountId!.Value)).ToList();
-
-            var accessPolicyIdsToDelete = accessPoliciesToDelete.Select(ap => ap.Id).ToList();
-            serviceAccountIdsToDelete.AddRange(accessPoliciesToDelete.Select(ap => ap.ServiceAccountId!.Value));
-
             await dbContext.ServiceAccountProjectAccessPolicy
-                .Where(ap => accessPolicyIdsToDelete.Contains(ap.Id))
+                .Where(ap => serviceAccountIdsToDelete.Contains(ap.Id))
                 .ExecuteDeleteAsync();
         }
 
         await UpsertServiceAccountProjectPoliciesAsync(dbContext, currentAccessPolicies,
             updates.ServiceAccountAccessPolicyUpdates.Where(update => update.Operation != AccessPolicyOperation.Delete)
                 .ToList());
+        var effectedServiceAccountIds = updates.ServiceAccountAccessPolicyUpdates
+            .Select(sa => sa.AccessPolicy.ServiceAccountId!.Value).ToList();
         await UpdateServiceAccountsRevisionAsync(dbContext, effectedServiceAccountIds);
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();

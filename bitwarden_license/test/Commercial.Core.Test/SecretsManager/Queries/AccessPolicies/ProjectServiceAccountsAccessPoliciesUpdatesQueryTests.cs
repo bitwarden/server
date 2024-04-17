@@ -19,7 +19,7 @@ public class ProjectServiceAccountsAccessPoliciesUpdatesQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetAsync_NoCurrentGrantedPolicies_ReturnsAllCreates(
+    public async Task GetAsync_NoCurrentAccessPolicies_ReturnsAllCreates(
         SutProvider<ProjectServiceAccountsAccessPoliciesUpdatesQuery> sutProvider,
         ProjectServiceAccountsAccessPolicies data)
     {
@@ -41,7 +41,7 @@ public class ProjectServiceAccountsAccessPoliciesUpdatesQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetAsync_CurrentGrantedPolicies_ReturnsChanges(
+    public async Task GetAsync_CurrentAccessPolicies_ReturnsChanges(
         SutProvider<ProjectServiceAccountsAccessPoliciesUpdatesQuery> sutProvider,
         ProjectServiceAccountsAccessPolicies data, ServiceAccountProjectAccessPolicy currentPolicyToDelete)
     {

@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 
 public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : AuthorizationHandler<
-    ProjectServiceAccountsPoliciesOperationRequirement,
+    ProjectServiceAccountsAccessPoliciesOperationRequirement,
     ProjectServiceAccountsAccessPoliciesUpdates>
 {
     private readonly IAccessClientQuery _accessClientQuery;
@@ -31,7 +31,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : Authoriz
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        ProjectServiceAccountsPoliciesOperationRequirement requirement,
+        ProjectServiceAccountsAccessPoliciesOperationRequirement requirement,
         ProjectServiceAccountsAccessPoliciesUpdates resource)
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
@@ -49,7 +49,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : Authoriz
 
         switch (requirement)
         {
-            case not null when requirement == ProjectServiceAccountsPoliciesOperations.Updates:
+            case not null when requirement == ProjectServiceAccountsAccessPoliciesOperations.Updates:
                 await CanUpdateAsync(context, requirement, resource, accessClient,
                     userId);
                 break;
@@ -60,7 +60,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : Authoriz
     }
 
     private async Task CanUpdateAsync(AuthorizationHandlerContext context,
-        ProjectServiceAccountsPoliciesOperationRequirement requirement,
+        ProjectServiceAccountsAccessPoliciesOperationRequirement requirement,
         ProjectServiceAccountsAccessPoliciesUpdates resource,
         AccessClientType accessClient, Guid userId)
     {

@@ -27,8 +27,8 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
     public void ServiceAccountGrantedPoliciesOperations_OnlyPublicStatic()
     {
         var publicStaticFields =
-            typeof(ProjectServiceAccountsPoliciesOperations).GetFields(BindingFlags.Public | BindingFlags.Static);
-        var allFields = typeof(ProjectServiceAccountsPoliciesOperations).GetFields();
+            typeof(ProjectServiceAccountsAccessPoliciesOperations).GetFields(BindingFlags.Public | BindingFlags.Static);
+        var allFields = typeof(ProjectServiceAccountsAccessPoliciesOperations).GetFields();
         Assert.Equal(publicStaticFields.Length, allFields.Length);
     }
 
@@ -39,7 +39,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         ProjectServiceAccountsAccessPoliciesUpdates resource,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
@@ -59,7 +59,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         ProjectServiceAccountsAccessPoliciesUpdates resource,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         SetupUserSubstitutes(sutProvider, accessClientType, resource);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
@@ -71,12 +71,12 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Handler_UnsupportedServiceAccountGrantedPoliciesOperationRequirement_Throws(
+    public async Task Handler_UnsupportedProjectServiceAccountsPoliciesOperationRequirement_Throws(
         SutProvider<ProjectServiceAccountsAccessPoliciesAuthorizationHandler> sutProvider,
         ProjectServiceAccountsAccessPoliciesUpdates resource,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = new ProjectServiceAccountsPoliciesOperationRequirement();
+        var requirement = new ProjectServiceAccountsAccessPoliciesOperationRequirement();
         SetupUserSubstitutes(sutProvider, AccessClientType.NoAccessCheck, resource);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
@@ -98,7 +98,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         SetupUserSubstitutes(sutProvider, accessClientType, resource, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(resource.ProjectId, userId, accessClientType)
@@ -119,7 +119,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         SetupUserSubstitutes(sutProvider, AccessClientType.NoAccessCheck, resource, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(resource.ProjectId, userId, AccessClientType.NoAccessCheck)
@@ -145,7 +145,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         resource = RemoveAllCreates(resource);
         SetupServiceAccountsAccessTest(sutProvider, accessClientType, resource, userId);
 
@@ -167,7 +167,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         resource = AddServiceAccountCreateUpdate(resource);
         SetupServiceAccountsAccessTest(sutProvider, accessClientType, resource, userId);
         var accessResult = resource.ServiceAccountAccessPolicyUpdates
@@ -198,7 +198,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         resource = AddServiceAccountCreateUpdate(resource);
         SetupServiceAccountsAccessTest(sutProvider, accessClientType, resource, userId);
 
@@ -232,7 +232,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         resource = AddServiceAccountCreateUpdate(resource);
         SetupServiceAccountsAccessTest(sutProvider, accessClientType, resource, userId);
 
@@ -265,7 +265,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = ProjectServiceAccountsPoliciesOperations.Updates;
+        var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         resource = AddServiceAccountCreateUpdate(resource);
         SetupServiceAccountsAccessTest(sutProvider, accessClientType, resource, userId);
 
@@ -315,7 +315,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
             .Returns(true);
     }
 
-    private ProjectServiceAccountsAccessPoliciesUpdates AddServiceAccountCreateUpdate(
+    private static ProjectServiceAccountsAccessPoliciesUpdates AddServiceAccountCreateUpdate(
         ProjectServiceAccountsAccessPoliciesUpdates resource)
     {
         resource.ServiceAccountAccessPolicyUpdates = resource.ServiceAccountAccessPolicyUpdates.Append(
@@ -332,7 +332,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         return resource;
     }
 
-    private ProjectServiceAccountsAccessPoliciesUpdates RemoveAllCreates(
+    private static ProjectServiceAccountsAccessPoliciesUpdates RemoveAllCreates(
         ProjectServiceAccountsAccessPoliciesUpdates resource)
     {
         resource.ServiceAccountAccessPolicyUpdates =

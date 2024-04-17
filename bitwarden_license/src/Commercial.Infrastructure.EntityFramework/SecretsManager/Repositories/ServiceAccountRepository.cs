@@ -149,7 +149,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
 
     public async Task<bool> ServiceAccountsAreInOrganizationAsync(List<Guid> serviceAccountIds, Guid organizationId)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         var result = await dbContext.ServiceAccount.CountAsync(sa =>
             sa.OrganizationId == organizationId && serviceAccountIds.Contains(sa.Id));
