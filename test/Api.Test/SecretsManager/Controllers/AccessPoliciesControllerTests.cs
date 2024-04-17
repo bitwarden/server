@@ -1205,7 +1205,7 @@ public class AccessPoliciesControllerTests
         ProjectServiceAccountsAccessPoliciesRequestModel request)
     {
         var dup = new AccessPolicyRequest { GranteeId = Guid.NewGuid(), Read = true, Write = true };
-        request.ServiceAccountPolicyRequests = new[] { dup, dup };
+        request.ServiceAccountAccessPolicyRequests = [dup, dup];
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
 
@@ -1224,7 +1224,7 @@ public class AccessPoliciesControllerTests
         ProjectServiceAccountsAccessPoliciesRequestModel request)
     {
         var policyRequest = new AccessPolicyRequest { GranteeId = Guid.NewGuid(), Read = false, Write = true };
-        request.ServiceAccountPolicyRequests = new[] { policyRequest };
+        request.ServiceAccountAccessPolicyRequests = [policyRequest];
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
 
@@ -1366,7 +1366,7 @@ public class AccessPoliciesControllerTests
 
     private static ProjectServiceAccountsAccessPoliciesRequestModel SetupValidRequest(ProjectServiceAccountsAccessPoliciesRequestModel request)
     {
-        foreach (var policyRequest in request.ServiceAccountPolicyRequests)
+        foreach (var policyRequest in request.ServiceAccountAccessPolicyRequests)
         {
             policyRequest.Read = true;
         }

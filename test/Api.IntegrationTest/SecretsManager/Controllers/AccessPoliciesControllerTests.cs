@@ -1278,10 +1278,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var request = new ProjectServiceAccountsAccessPoliciesRequestModel
         {
-            ServiceAccountPolicyRequests = new AccessPolicyRequest[]
-            {
-                new() { GranteeId = serviceAccountId, Read = true, Write = true }
-            }
+            ServiceAccountAccessPolicyRequests =
+            [
+                new AccessPolicyRequest { GranteeId = serviceAccountId, Read = true, Write = true }
+            ]
         };
 
         var response = await _client.PutAsJsonAsync($"/projects/{projectId}/access-policies/service-accounts", request);
@@ -1300,10 +1300,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var request = new ProjectServiceAccountsAccessPoliciesRequestModel
         {
-            ServiceAccountPolicyRequests = new AccessPolicyRequest[]
-            {
-                new() { GranteeId = serviceAccountId, Read = true, Write = true }
-            }
+            ServiceAccountAccessPolicyRequests =
+            [
+                new AccessPolicyRequest { GranteeId = serviceAccountId, Read = true, Write = true }
+            ]
         };
 
         var response = await _client.PutAsJsonAsync($"/projects/{projectId}/access-policies/service-accounts", request);
@@ -1331,10 +1331,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             Name = _mockEncryptedString,
             OrganizationId = newOrg.Id
         });
-        request.ServiceAccountPolicyRequests = new List<AccessPolicyRequest>
-        {
-            new() { GranteeId = serviceAccount.Id, Read = true, Write = true }
-        };
+        request.ServiceAccountAccessPolicyRequests =
+        [
+            new AccessPolicyRequest { GranteeId = serviceAccount.Id, Read = true, Write = true }
+        ];
 
         var response =
             await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/service-accounts", request);
@@ -1365,7 +1365,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             .ReadFromJsonAsync<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Equal(request.ServiceAccountPolicyRequests.First().GranteeId,
+        Assert.Equal(request.ServiceAccountAccessPolicyRequests.First().GranteeId,
             result.ServiceAccountPolicies.First().AccessPolicy.ServiceAccountId);
         Assert.True(result.ServiceAccountPolicies.First().AccessPolicy.Read);
         Assert.True(result.ServiceAccountPolicies.First().AccessPolicy.Write);
@@ -1388,13 +1388,15 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         });
 
         var accessPolicy = await _accessPolicyRepository.CreateManyAsync(
-            new List<BaseAccessPolicy>
+        [
+            new ServiceAccountProjectAccessPolicy
             {
-                new ServiceAccountProjectAccessPolicy
-                {
-                    Read = true, Write = true, ServiceAccountId = serviceAccount.Id, GrantedProjectId = project.Id,
-                },
-            });
+                Read = true,
+                Write = true,
+                ServiceAccountId = serviceAccount.Id,
+                GrantedProjectId = project.Id,
+            }
+        ]);
 
         return new RequestSetupData
         {
@@ -1623,10 +1625,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var request = new ProjectServiceAccountsAccessPoliciesRequestModel
         {
-            ServiceAccountPolicyRequests = new List<AccessPolicyRequest>
-            {
+            ServiceAccountAccessPolicyRequests =
+            [
                 new() { GranteeId = serviceAccount.Id, Read = true, Write = true }
-            }
+            ]
         };
 
         if (createPreviousAccessPolicy)

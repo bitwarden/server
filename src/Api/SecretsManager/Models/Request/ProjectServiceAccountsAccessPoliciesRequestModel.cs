@@ -7,11 +7,11 @@ namespace Bit.Api.SecretsManager.Models.Request;
 
 public class ProjectServiceAccountsAccessPoliciesRequestModel
 {
-    public required IEnumerable<AccessPolicyRequest> ServiceAccountPolicyRequests { get; set; }
+    public required IEnumerable<AccessPolicyRequest> ServiceAccountAccessPolicyRequests { get; set; }
 
     public ProjectServiceAccountsAccessPolicies ToProjectServiceAccountsAccessPolicies(Project project)
     {
-        var serviceAccountAccessPolicies = ServiceAccountPolicyRequests
+        var serviceAccountAccessPolicies = ServiceAccountAccessPolicyRequests
             .Select(x => x.ToServiceAccountProjectAccessPolicy(project.Id, project.OrganizationId))
             .ToList();
 
