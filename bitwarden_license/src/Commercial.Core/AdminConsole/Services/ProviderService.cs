@@ -40,13 +40,14 @@ public class ProviderService : IProviderService
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IFeatureService _featureService;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IStripeAdapter stripeAdapter)
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -61,6 +62,7 @@ public class ProviderService : IProviderService
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
+        _featureService = featureService;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
