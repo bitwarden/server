@@ -2,9 +2,9 @@
 using Bit.Core.Utilities;
 using Stripe;
 
-namespace Bit.Api.Billing.Models;
+namespace Bit.Api.Billing.Models.Responses;
 
-public record ProviderSubscriptionDTO(
+public record ProviderSubscriptionResponse(
     string Status,
     DateTime CurrentPeriodEndDate,
     decimal? DiscountPercentage,
@@ -13,8 +13,8 @@ public record ProviderSubscriptionDTO(
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
 
-    public static ProviderSubscriptionDTO From(
-        IEnumerable<ConfiguredProviderPlan> providerPlans,
+    public static ProviderSubscriptionResponse From(
+        IEnumerable<ConfiguredProviderPlanDTO> providerPlans,
         Subscription subscription)
     {
         var providerPlansDTO = providerPlans
@@ -32,7 +32,7 @@ public record ProviderSubscriptionDTO(
                     cadence);
             });
 
-        return new ProviderSubscriptionDTO(
+        return new ProviderSubscriptionResponse(
             subscription.Status,
             subscription.CurrentPeriodEnd,
             subscription.Customer?.Discount?.Coupon?.PercentOff,
