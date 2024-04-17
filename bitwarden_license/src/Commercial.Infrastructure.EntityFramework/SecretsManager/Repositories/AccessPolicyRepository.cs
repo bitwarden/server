@@ -469,32 +469,6 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         return new ProjectServiceAccountsAccessPolicies(projectId, organizationId, entities.Select(MapToCore).ToList());
     }
 
-    public async Task<ProjectServiceAccountsPoliciesPermissionDetails?>
-        GetProjectServiceAccountsPoliciesPermissionDetailsAsync(Guid projectId, Guid userId,
-            AccessClientType accessClientType)
-    {
-        await using var scope = ServiceScopeFactory.CreateAsyncScope();
-        var dbContext = GetDatabaseContext(scope);
-        var accessPolicyQuery = dbContext.ServiceAccountProjectAccessPolicy
-            .Where(ap => ap.GrantedProjectId == projectId)
-            .Include(ap => ap.ServiceAccount)
-            .Include(ap => ap.GrantedProject);
-
-        var accessPoliciesPermissionDetails =
-            await ToPermissionDetails(accessPolicyQuery, userId, accessClientType).ToListAsync();
-        if (accessPoliciesPermissionDetails.Count == 0)
-        {
-            return null;
-        }
-
-        return new ProjectServiceAccountsPoliciesPermissionDetails
-        {
-            ProjectId = projectId,
-            OrganizationId = accessPoliciesPermissionDetails.First().AccessPolicy.GrantedProject!.OrganizationId,
-            ServiceAccountPoliciesDetails = accessPoliciesPermissionDetails
-        };
-    }
-
     public async Task UpdateProjectServiceAccountsAccessPoliciesAsync(ProjectServiceAccountsPoliciesUpdates updates)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();

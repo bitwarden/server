@@ -304,20 +304,19 @@ public class AccessPoliciesController : Controller
 
 
     [HttpGet("/projects/{id}/access-policies/service-accounts")]
-    public async Task<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>
+    public async Task<ProjectServiceAccountsAccessPoliciesResponseModel>
         GetProjectServiceAccountsAccessPoliciesAsync(
             [FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
         var (accessClient, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
         var results =
-            await _accessPolicyRepository.GetProjectServiceAccountsPoliciesPermissionDetailsAsync(id, userId,
-                accessClient);
-        return new ProjectServiceAccountsPoliciesPermissionDetailsResponseModel(results);
+            await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id);
+        return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
     }
 
     [HttpPut("/projects/{id}/access-policies/service-accounts")]
-    public async Task<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>
+    public async Task<ProjectServiceAccountsAccessPoliciesResponseModel>
         PutProjectServiceAccountsAccessPoliciesAsync([FromRoute] Guid id,
             [FromBody] ProjectServiceAccountsAccessPoliciesRequestModel request)
     {
@@ -335,11 +334,8 @@ public class AccessPoliciesController : Controller
 
         await _updateProjectServiceAccountsPoliciesCommand.UpdateAsync(policiesUpdates);
 
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, project.OrganizationId);
-        var results =
-            await _accessPolicyRepository.GetProjectServiceAccountsPoliciesPermissionDetailsAsync(id, userId,
-                accessClient);
-        return new ProjectServiceAccountsPoliciesPermissionDetailsResponseModel(results);
+        var results = await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id);
+        return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
     }
 
     private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)

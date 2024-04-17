@@ -1202,10 +1202,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/service-accounts");
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectServiceAccountsAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Empty(result.ServiceAccountPolicies);
+        Assert.Empty(result.ServiceAccountAccessPolicies);
     }
 
     [Fact]
@@ -1250,13 +1250,13 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content
-            .ReadFromJsonAsync<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>();
+            .ReadFromJsonAsync<ProjectServiceAccountsAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.NotEmpty(result.ServiceAccountPolicies);
-        Assert.Equal(initData.ServiceAccountId, result.ServiceAccountPolicies.First().AccessPolicy.ServiceAccountId);
-        Assert.NotNull(result.ServiceAccountPolicies.First().AccessPolicy.ServiceAccountName);
-        Assert.NotNull(result.ServiceAccountPolicies.First().AccessPolicy.GrantedProjectName);
+        Assert.NotEmpty(result.ServiceAccountAccessPolicies);
+        Assert.Equal(initData.ServiceAccountId, result.ServiceAccountAccessPolicies.First().ServiceAccountId);
+        Assert.NotNull(result.ServiceAccountAccessPolicies.First().ServiceAccountName);
+        Assert.NotNull(result.ServiceAccountAccessPolicies.First().GrantedProjectName);
     }
 
     [Theory]
@@ -1362,15 +1362,14 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content
-            .ReadFromJsonAsync<ProjectServiceAccountsPoliciesPermissionDetailsResponseModel>();
+            .ReadFromJsonAsync<ProjectServiceAccountsAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.ServiceAccountAccessPolicyRequests.First().GranteeId,
-            result.ServiceAccountPolicies.First().AccessPolicy.ServiceAccountId);
-        Assert.True(result.ServiceAccountPolicies.First().AccessPolicy.Read);
-        Assert.True(result.ServiceAccountPolicies.First().AccessPolicy.Write);
-        Assert.True(result.ServiceAccountPolicies.First().HasPermission);
-        Assert.Single(result.ServiceAccountPolicies);
+            result.ServiceAccountAccessPolicies.First().ServiceAccountId);
+        Assert.True(result.ServiceAccountAccessPolicies.First().Read);
+        Assert.True(result.ServiceAccountAccessPolicies.First().Write);
+        Assert.Single(result.ServiceAccountAccessPolicies);
     }
 
     private async Task<RequestSetupData> SetupAccessPolicyRequest(Guid organizationId)

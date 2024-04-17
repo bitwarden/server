@@ -1095,8 +1095,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(data.Id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(0)
-            .GetProjectServiceAccountsPoliciesPermissionDetailsAsync(Arg.Any<Guid>(), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+            .GetProjectServiceAccountsAccessPoliciesAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1114,8 +1113,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(data.Id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(0)
-            .GetProjectServiceAccountsPoliciesPermissionDetailsAsync(Arg.Any<Guid>(), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+            .GetProjectServiceAccountsAccessPoliciesAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1134,8 +1132,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(data.Id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(0)
-            .GetProjectServiceAccountsPoliciesPermissionDetailsAsync(Arg.Any<Guid>(), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+            .GetProjectServiceAccountsAccessPoliciesAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1151,20 +1148,19 @@ public class AccessPoliciesControllerTests
 
 
         sutProvider.GetDependency<IAccessPolicyRepository>()
-            .GetProjectServiceAccountsPoliciesPermissionDetailsAsync(Arg.Any<Guid>(), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>())
+            .GetProjectServiceAccountsAccessPoliciesAsync(Arg.Any<Guid>())
             .ReturnsNullForAnyArgs();
 
         var result = await sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(data.Id);
 
-        Assert.Empty(result.ServiceAccountPolicies);
+        Assert.Empty(result.ServiceAccountAccessPolicies);
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetProjectServiceAccountsAccessPoliciesAsync_HasAccess_Success(
         SutProvider<AccessPoliciesController> sutProvider,
-        ProjectServiceAccountsPoliciesPermissionDetails policies,
+        ProjectServiceAccountsAccessPolicies policies,
         Project data)
     {
         SetupUserWithoutPermission(sutProvider, data.OrganizationId);
@@ -1173,14 +1169,13 @@ public class AccessPoliciesControllerTests
             .ReturnsForAnyArgs((true, true));
 
         sutProvider.GetDependency<IAccessPolicyRepository>()
-            .GetProjectServiceAccountsPoliciesPermissionDetailsAsync(Arg.Any<Guid>(), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>())
+            .GetProjectServiceAccountsAccessPoliciesAsync(Arg.Any<Guid>())
             .ReturnsForAnyArgs(policies);
 
         var result = await sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(data.Id);
 
-        Assert.NotEmpty(result.ServiceAccountPolicies);
-        Assert.Equal(policies.ServiceAccountPoliciesDetails.Count(), result.ServiceAccountPolicies.Count);
+        Assert.NotEmpty(result.ServiceAccountAccessPolicies);
+        Assert.Equal(policies.ServiceAccountAccessPolicies.Count(), result.ServiceAccountAccessPolicies.Count);
     }
 
     [Theory]
