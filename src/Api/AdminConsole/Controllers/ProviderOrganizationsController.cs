@@ -112,6 +112,10 @@ public class ProviderOrganizationsController : Controller
             providerOrganization,
             organization);
 
-        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+        if (!string.IsNullOrEmpty(organization.GatewayCustomerId) &&
+            !string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        {
+            await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+        }
     }
 }

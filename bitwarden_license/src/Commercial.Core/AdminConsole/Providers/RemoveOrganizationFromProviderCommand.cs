@@ -67,27 +67,31 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         await _organizationRepository.ReplaceAsync(organization);
 
-        var customerUpdateOptions = new CustomerUpdateOptions
+        if (!string.IsNullOrEmpty(organization.GatewayCustomerId) &&
+            !string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
-            Coupon = string.Empty,
-            Email = organization.BillingEmail
-        };
+            var customerUpdateOptions = new CustomerUpdateOptions
+            {
+                Coupon = string.Empty,
+                Email = organization.BillingEmail
+            };
 
-        await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
 
-        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
-        {
-            CollectionMethod = "send_invoice",
-            DaysUntilDue = 30
-        };
+            var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+            {
+                CollectionMethod = "send_invoice",
+                DaysUntilDue = 30
+            };
 
-        await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
 
-        await _mailService.SendProviderUpdatePaymentMethod(
-            organization.Id,
-            organization.Name,
-            provider.Name,
-            organizationOwnerEmails);
+            await _mailService.SendProviderUpdatePaymentMethod(
+                organization.Id,
+                organization.Name,
+                provider.Name,
+                organizationOwnerEmails);
+        }
 
         await _providerOrganizationRepository.DeleteAsync(providerOrganization);
 
