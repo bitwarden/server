@@ -35,7 +35,7 @@ public class ConfigResponseModel : ResponseModel
             Notifications = globalSettings.BaseServiceUri.Notifications,
             Sso = globalSettings.BaseServiceUri.Sso
         };
-        FeatureScountdowntates = featureStates;
+        FeatureStates = featureStates;
     }
 }
 
