@@ -48,5 +48,6 @@ public abstract class SubscriptionUpdate
         => plan.Type is
             >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
             or PlanType.FamiliesAnnually
+            or PlanType.TeamsStarter2023
             or PlanType.TeamsStarter;
 }
