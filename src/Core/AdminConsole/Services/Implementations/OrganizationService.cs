@@ -1037,7 +1037,6 @@ public class OrganizationService : IOrganizationService
         {
             smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true)
                 .AdjustSeats(additionalSmSeatsRequired);
-            await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
@@ -1133,12 +1132,14 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
 
+            await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
+
             if (additionalSmSeatsRequired > 0)
             {
                 smSubscriptionUpdate.ProrationDate = prorationDate;
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
-            await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
+
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
             await _referenceEventService.RaiseEventAsync(
