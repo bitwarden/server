@@ -16,6 +16,11 @@ public class UpdateServiceAccountGrantedPoliciesCommand : IUpdateServiceAccountG
 
     public async Task UpdateAsync(ServiceAccountGrantedPoliciesUpdates grantedPoliciesUpdates)
     {
+        if (!grantedPoliciesUpdates.ProjectGrantedPolicyUpdates.Any())
+        {
+            return;
+        }
+
         await _accessPolicyRepository.UpdateServiceAccountGrantedPoliciesAsync(grantedPoliciesUpdates);
     }
 }
