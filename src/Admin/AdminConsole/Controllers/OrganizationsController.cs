@@ -243,26 +243,28 @@ public class OrganizationsController : Controller
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
 
-        if (organization != null)
+        if (organization == null)
         {
-            var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-            if (consolidatedBillingEnabled && organization.IsValidClient())
-            {
-                var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
-
-                if (provider.IsBillable())
-                {
-                    await _scaleSeatsCommand.ScalePasswordManagerSeats(
-                        provider,
-                        organization.PlanType,
-                        -organization.Seats ?? 0);
-                }
-            }
-
-            await _organizationRepository.DeleteAsync(organization);
-            await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+            return RedirectToAction("Index");
         }
+
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (consolidatedBillingEnabled && organization.IsValidClient())
+        {
+            var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+            if (provider.IsBillable())
+            {
+                await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                    provider,
+                    organization.PlanType,
+                    -organization.Seats ?? 0);
+            }
+        }
+
+        await _organizationRepository.DeleteAsync(organization);
+        await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
 
         return RedirectToAction("Index");
     }
