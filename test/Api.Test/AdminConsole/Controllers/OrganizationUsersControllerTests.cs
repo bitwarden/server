@@ -5,6 +5,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -121,12 +122,12 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.Put(orgId, organizationUser.Id, model);
 
-        sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
-            ou.Type == model.Type &&
-            ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
-            ou.AccessSecretsManager == model.AccessSecretsManager &&
-            ou.Id == orgUserId &&
-            ou.Email == orgUserEmail),
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Type == model.Type &&
+                ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
+                ou.AccessSecretsManager == model.AccessSecretsManager &&
+                ou.Id == orgUserId &&
+                ou.Email == orgUserEmail),
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
@@ -157,7 +158,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.Put(orgId, organizationUser.Id, model);
 
-        sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
             ou.Type == model.Type &&
             ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
             ou.AccessSecretsManager == model.AccessSecretsManager &&
@@ -193,7 +194,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.Put(orgId, organizationUser.Id, model);
 
-        sutProvider.GetDependency<IOrganizationService>().Received(1).SaveUserAsync(Arg.Is<OrganizationUser>(ou =>
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
             ou.Type == model.Type &&
             ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
             ou.AccessSecretsManager == model.AccessSecretsManager &&

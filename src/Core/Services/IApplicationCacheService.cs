@@ -15,4 +15,5 @@ public interface IApplicationCacheService
     Task UpsertOrganizationAbilityAsync(Organization organization);
     Task UpsertProviderAbilityAsync(Provider provider);
     Task DeleteOrganizationAbilityAsync(Guid organizationId);
+    Task DeleteProviderAbilityAsync(Guid providerId);
 }

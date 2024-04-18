@@ -6,7 +6,6 @@
 @model ProviderEditModel
 @{
     ViewData["Title"] = "Provider: " + Model.Provider.DisplayName();
-
     var canEdit = AccessControlService.UserHasPermission(Permission.Provider_Edit);
 }
 
@@ -62,10 +61,89 @@
     }
 </form>
 @await Html.PartialAsync("Organizations", Model)
-@if (canEdit)
-{
-    <div class="d-flex mt-4">
-        <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
-    </div>
-}
+ @if (canEdit)
+ {
+     <!-- Modals -->
+     <div class="modal fade rounded" id="requestDeletionModal" tabindex="-1" aria-labelledby="requestDeletionModal" aria-hidden="true">
+         <div class="modal-dialog">
+             <div class="modal-content rounded">
+                 <div class="p-3">
+                     <h3 class="font-weight-bolder" id="exampleModalLabel">Request provider deletion</h3>
+                 </div>
+                 <div class="modal-body">
+                     <span class="font-weight-light">
+                         Enter the email of the provider admin that will receive the request to delete the provider portal.
+                     </span>
+                     <form>
+                         <div class="form-group">
+                             <label for="provider-email" class="col-form-label">Provider email</label>
+                             <input type="email" class="form-control" id="provider-email">
+                         </div>
+                     </form>
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-outline-primary btn-pill" data-dismiss="modal">Cancel</button>
+                     <button type="button" class="btn btn-danger btn-pill" onclick="initiateDeleteProvider('@Model.Provider.Id')">Send email request</button>
+                 </div>
+             </div>
+         </div>
+     </div>
+     <div class="modal fade" id="DeleteModal" tabindex="-1" aria-labelledby="DeleteModal" aria-hidden="true">
+         <div class="modal-dialog">
+             <div class="modal-content rounded">
+                 <div class="p-3">
+                     <h3 class="font-weight-bolder" id="exampleModalLabel">Delete provider</h3>
+                 </div>
+                 <div class="modal-body">
+                     <span class="font-weight-light">
+                         This action is permanent and irreversible. Enter the provide name to complete deletion of the provider and associated data.
+                     </span>
+                     <form>
+                         <div class="form-group">
+                             <label for="provider-name" class="col-form-label">Provider name</label>
+                             <input type="text" class="form-control" id="provider-name">
+                         </div>
+                     </form>
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-outline-primary btn-pill" data-dismiss="modal">Cancel</button>
+                     <button type="button" class="btn btn-danger btn-pill" onclick="deleteProvider('@Model.Provider.Id');">Delete provider</button>
+                 </div>
+             </div>
+         </div>
+     </div>
+     <div class="modal fade" id="linkedWarningModal" tabindex="-1" role="dialog" aria-labelledby="linkedWarningModal" aria-hidden="true">
+         <div class="modal-dialog" role="document">
+             <div class="modal-content rounded">
+                 <div class="modal-body">
+                     <h4 class="font-weight-bolder">Cannot Delete @Model.Name</h4>
+                     <p class="font-weight-lighter">you must unlink all clients before deleting @Model.Name</p>
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-outline-primary btn-pill" data-dismiss="modal">Cancel</button>
+                     <button type="button" class="btn btn-primary btn-pill" data-dismiss="modal">Ok</button>
+                 </div>
+             </div>
+         </div>
+     </div>
 
+     <!-- End of Modal Section -->
+
+     <div class="d-flex mt-4">
+         <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
+         @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableDeleteProvider))
+         {
+             <div class="ml-auto d-flex">
+                 <button class="btn btn-danger" onclick="openRequestDeleteModal(@Model.ProviderOrganizations.Count())">Request Delete</button>
+                 <button id="requestDeletionBtn" hidden="hidden" data-toggle="modal" data-target="#requestDeletionModal"></button>
+
+                 <button class="btn btn-outline-danger ml-2" onclick="openDeleteModal(@Model.ProviderOrganizations.Count())">Delete</button>
+                 <button id="deleteBtn" hidden="hidden" data-toggle="modal" data-target="#DeleteModal"></button>
+
+                 <button id="linkAccWarningBtn" hidden="hidden" data-toggle="modal" data-target="#linkedWarningModal"></button>
+
+             </div>
+         }
+     </div>
+
+ }
