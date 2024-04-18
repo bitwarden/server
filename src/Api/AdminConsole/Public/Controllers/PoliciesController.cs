@@ -93,7 +93,7 @@ public class PoliciesController : Controller
             _currentContext.OrganizationId.Value, type);
         if (policy == null)
         {
-            policy = model.ToPolicy(_currentContext.OrganizationId.Value);
+            policy = model.ToPolicy(_currentContext.OrganizationId.Value, type);
         }
         else
         {
