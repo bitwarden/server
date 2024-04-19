@@ -465,8 +465,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             return null;
         }
 
-        var organizationId = entities.First().GrantedProject.OrganizationId;
-        return new ProjectServiceAccountsAccessPolicies(projectId, organizationId, entities.Select(MapToCore).ToList());
+        return new ProjectServiceAccountsAccessPolicies(projectId, entities.Select(MapToCore).ToList());
     }
 
     public async Task UpdateProjectServiceAccountsAccessPoliciesAsync(
