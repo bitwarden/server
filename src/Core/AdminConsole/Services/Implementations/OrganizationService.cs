@@ -421,6 +421,89 @@ public class OrganizationService : IOrganizationService
         }
     }
 
+    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
+    {
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (!consolidatedBillingEnabled)
+        {
+            throw new InvalidOperationException($"{nameof(SignupClientAsync)} is only for use within Consolidated Billing");
+        }
+
+        var plan = StaticStore.GetPlan(signup.Plan);
+
+        ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
+
+        var flexibleCollectionsSignupEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
+
+        var flexibleCollectionsV1Enabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
+
+        var organization = new Organization
+        {
+            // Pre-generate the org id so that we can save it with the Stripe subscription..
+            Id = CoreHelpers.GenerateComb(),
+            Name = signup.Name,
+            BillingEmail = signup.BillingEmail,
+            PlanType = plan!.Type,
+            Seats = signup.AdditionalSeats,
+            MaxCollections = plan.PasswordManager.MaxCollections,
+            // Extra storage not available for purchase with Consolidated Billing.
+            MaxStorageGb = 0,
+            UsePolicies = plan.HasPolicies,
+            UseSso = plan.HasSso,
+            UseGroups = plan.HasGroups,
+            UseEvents = plan.HasEvents,
+            UseDirectory = plan.HasDirectory,
+            UseTotp = plan.HasTotp,
+            Use2fa = plan.Has2fa,
+            UseApi = plan.HasApi,
+            UseResetPassword = plan.HasResetPassword,
+            SelfHost = plan.HasSelfHost,
+            UsersGetPremium = plan.UsersGetPremium,
+            UseCustomPermissions = plan.HasCustomPermissions,
+            UseScim = plan.HasScim,
+            Plan = plan.Name,
+            Gateway = GatewayType.Stripe,
+            ReferenceData = signup.Owner.ReferenceData,
+            Enabled = true,
+            LicenseKey = CoreHelpers.SecureRandomString(20),
+            PublicKey = signup.PublicKey,
+            PrivateKey = signup.PrivateKey,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created,
+            UsePasswordManager = true,
+            // Secrets Manager not available for purchase with Consolidated Billing.
+            UseSecretsManager = false,
+
+            // This feature flag indicates that new organizations should be automatically onboarded to
+            // Flexible Collections enhancements
+            FlexibleCollections = flexibleCollectionsSignupEnabled,
+
+            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
+            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
+            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
+            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
+        };
+
+        var returnValue = await SignUpAsync(organization, default, signup.OwnerKey, signup.CollectionName, false);
+
+        await _referenceEventService.RaiseEventAsync(
+            new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
+            {
+                PlanName = plan.Name,
+                PlanType = plan.Type,
+                Seats = returnValue.Item1.Seats,
+                SignupInitiationPath = signup.InitiationPath,
+                Storage = returnValue.Item1.MaxStorageGb,
+            });
+
+        return returnValue;
+    }
+
     /// <summary>
     /// Create a new organization in a cloud environment
     /// </summary>
@@ -954,7 +1037,6 @@ public class OrganizationService : IOrganizationService
         {
             smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true)
                 .AdjustSeats(additionalSmSeatsRequired);
-            await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
@@ -1050,12 +1132,14 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
 
+            await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
+
             if (additionalSmSeatsRequired > 0)
             {
                 smSubscriptionUpdate.ProrationDate = prorationDate;
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
-            await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
+
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
             await _referenceEventService.RaiseEventAsync(
@@ -1382,84 +1466,6 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("User is a member of another organization.");
             }
         }
-    }
-
-    public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,
-        ICollection<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
-    {
-        if (user.Id.Equals(default(Guid)))
-        {
-            throw new BadRequestException("Invite the user first.");
-        }
-
-        var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-        if (user.Equals(originalUser))
-        {
-            throw new BadRequestException("Please make changes before saving.");
-        }
-
-        if (savingUserId.HasValue)
-        {
-            await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
-        }
-
-        await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
-
-        if (user.Type != OrganizationUserType.Owner &&
-            !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-        if (organization.FlexibleCollections && user.Type == OrganizationUserType.Manager)
-        {
-            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
-        }
-
-        if (organization.FlexibleCollections && user.AccessAll)
-        {
-            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
-        }
-
-        if (organization.FlexibleCollections && collections?.Any() == true)
-        {
-            var invalidAssociations = collections.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-            if (invalidAssociations.Any())
-            {
-                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-            }
-        }
-        // End Flexible Collections
-
-        // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
-        // updating Stripe
-        if (!originalUser.AccessSecretsManager && user.AccessSecretsManager)
-        {
-            var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
-            if (additionalSmSeatsRequired > 0)
-            {
-                var update = new SecretsManagerSubscriptionUpdate(organization, true)
-                    .AdjustSeats(additionalSmSeatsRequired);
-                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
-            }
-        }
-
-        if (user.AccessAll)
-        {
-            // We don't need any collections if we're flagged to have all access.
-            collections = new List<CollectionAccessSelection>();
-        }
-        await _organizationUserRepository.ReplaceAsync(user, collections);
-
-        if (groups != null)
-        {
-            await _organizationUserRepository.UpdateGroupsAsync(user.Id, groups);
-        }
-
-        await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
     }
 
     [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
@@ -2099,7 +2105,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
+    public async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
     {
         if (newType != OrganizationUserType.Custom)
         {
