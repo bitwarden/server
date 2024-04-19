@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <PackageReference Include="MessagePack" Version="2.5.140" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.5.0" />
   </ItemGroup>
 
 </Project>

@@ -5,7 +5,6 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +21,7 @@ public class MembersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
+    private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IApplicationCacheService _applicationCacheService;
 
@@ -31,6 +31,7 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
+        IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IApplicationCacheService applicationCacheService)
     {
@@ -39,6 +40,7 @@ public class MembersController : Controller
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
+        _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _applicationCacheService = applicationCacheService;
     }
@@ -62,8 +64,9 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
+        var flexibleCollectionsIsEnabled = await FlexibleCollectionsIsEnabledAsync(orgUser.OrganizationId);
         var response = new MemberResponseModel(orgUser, await _userService.TwoFactorIsEnabledAsync(orgUser),
-            userDetails.Item2);
+            userDetails.Item2, flexibleCollectionsIsEnabled);
         return new JsonResult(response);
     }
 
@@ -102,9 +105,10 @@ public class MembersController : Controller
     {
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
             _currentContext.OrganizationId.Value);
+        var flexibleCollectionsIsEnabled = await FlexibleCollectionsIsEnabledAsync(_currentContext.OrganizationId.Value);
         // TODO: Get all CollectionUser associations for the organization and marry them up here for the response.
         var memberResponsesTasks = users.Select(async u => new MemberResponseModel(u,
-            await _userService.TwoFactorIsEnabledAsync(u), null));
+            await _userService.TwoFactorIsEnabledAsync(u), null, flexibleCollectionsIsEnabled));
         var memberResponses = await Task.WhenAll(memberResponsesTasks);
         var response = new ListResponseModel<MemberResponseModel>(memberResponses);
         return new JsonResult(response);
@@ -122,18 +126,11 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(_currentContext.OrganizationId.Value);
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
-        var invite = new OrganizationUserInvite
-        {
-            Emails = new List<string> { model.Email },
-            Type = model.Type.Value,
-            AccessAll = model.AccessAll.Value,
-            Collections = associations
-        };
+        var flexibleCollectionsIsEnabled = await FlexibleCollectionsIsEnabledAsync(_currentContext.OrganizationId.Value);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(flexibleCollectionsIsEnabled)).ToList();
         var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
             model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
-        var response = new MemberResponseModel(user, associations);
+        var response = new MemberResponseModel(user, associations, flexibleCollectionsIsEnabled);
         return new JsonResult(response);
     }
 
@@ -158,19 +155,19 @@ public class MembersController : Controller
             return new NotFoundResult();
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(_currentContext.OrganizationId.Value);
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(organizationAbility?.FlexibleCollections ?? false));
-        await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
+        var flexibleCollectionsIsEnabled = await FlexibleCollectionsIsEnabledAsync(_currentContext.OrganizationId.Value);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(flexibleCollectionsIsEnabled)).ToList();
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {
             var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
             response = new MemberResponseModel(existingUserDetails,
-                await _userService.TwoFactorIsEnabledAsync(existingUserDetails), associations);
+                await _userService.TwoFactorIsEnabledAsync(existingUserDetails), associations, flexibleCollectionsIsEnabled);
         }
         else
         {
-            response = new MemberResponseModel(updatedUser, associations);
+            response = new MemberResponseModel(updatedUser, associations, flexibleCollectionsIsEnabled);
         }
         return new JsonResult(response);
     }
@@ -240,5 +237,11 @@ public class MembersController : Controller
         }
         await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
         return new OkResult();
+    }
+
+    private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
+    {
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        return organizationAbility?.FlexibleCollections ?? false;
     }
 }

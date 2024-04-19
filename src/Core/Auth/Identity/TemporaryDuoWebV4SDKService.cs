@@ -1,12 +1,15 @@
 ﻿using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
+using Microsoft.Extensions.Logging;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Identity;
 
-/* 
+/*
     PM-5156 addresses tech debt
     Interface to allow for DI, will end up being removed as part of the removal of the old Duo SDK v2 flows.
     This service is to support SDK v4 flows for Duo. At some time in the future we will need
@@ -22,6 +25,8 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
 {
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
+    private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory;
+    private readonly ILogger<TemporaryDuoWebV4SDKService> _logger;
 
     /// <summary>
     /// Constructor for the DuoUniversalPromptService. Used to supplement v2 implementation of Duo with v4 SDK
@@ -30,10 +35,14 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     /// <param name="globalSettings">used to fetch vault URL for Redirect URL</param>
     public TemporaryDuoWebV4SDKService(
         ICurrentContext currentContext,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
+        ILogger<TemporaryDuoWebV4SDKService> logger)
     {
         _currentContext = currentContext;
         _globalSettings = globalSettings;
+        _tokenDataFactory = tokenDataFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -56,7 +65,7 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
             return null;
         }
 
-        var state = Duo.Client.GenerateState(); //? Not sure on this yet. But required for GenerateAuthUrl
+        var state = _tokenDataFactory.Protect(new DuoUserStateTokenable(user));
         var authUrl = duoClient.GenerateAuthUri(user.Email, state);
 
         return authUrl;
@@ -82,8 +91,20 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
             return false;
         }
 
+        var parts = token.Split("|");
+        var authCode = parts[0];
+        var state = parts[1];
+
+        _tokenDataFactory.TryUnprotect(state, out var tokenable);
+        if (!tokenable.Valid || !tokenable.TokenIsValid(user))
+        {
+            return false;
+        }
+
+        // duoClient compares the email from the received IdToken with user.Email to verify a bad actor hasn't used
+        // their authCode with a victims credentials
+        var res = await duoClient.ExchangeAuthorizationCodeFor2faResult(authCode, user.Email);
         // If the result of the exchange doesn't throw an exception and it's not null, then it's valid
-        var res = await duoClient.ExchangeAuthorizationCodeFor2faResult(token, user.Email);
         return res.AuthResult.Result == "allow";
     }
 
@@ -100,7 +121,7 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     /// <returns>Duo.Client object or null</returns>
     private async Task<Duo.Client> BuildDuoClientAsync(TwoFactorProvider provider)
     {
-        // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want 
+        // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
         // to redirect back to the correct client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
         var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
@@ -112,8 +133,9 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
             (string)provider.MetaData["Host"],
             redirectUri).Build();
 
-        if (!await client.DoHealthCheck())
+        if (!await client.DoHealthCheck(true))
         {
+            _logger.LogError("Unable to connect to Duo. Health check failed.");
             return null;
         }
         return client;

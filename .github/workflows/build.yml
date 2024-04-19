@@ -14,21 +14,6 @@ env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
 jobs:
-  cloc:
-    name: Count lines of code
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
-
-      - name: Install cloc
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install cloc
-
-      - name: Print lines of code
-        run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
-
   lint:
     name: Lint
     runs-on: ubuntu-22.04
@@ -134,6 +119,8 @@ jobs:
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-22.04
+    permissions:
+      security-events: write
     needs: build-artifacts
     strategy:
       fail-fast: false
@@ -188,7 +175,7 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
-      - name: Check Branch to Publish
+      - name: Check branch to publish
         env:
           PUBLISH_BRANCHES: "main,rc,hotfix-rc"
         id: publish-branch-check
@@ -207,7 +194,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to PROD ACR
+      - name: Log in to ACR - production subscription
         run: az acr login -n bitwardenprod
 
       - name: Log in to Azure - CI subscription
@@ -215,7 +202,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-      - name: Retrieve github PAT secrets
+      - name: Retrieve GitHub PAT secrets
         id: retrieve-secret-pat
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
@@ -247,19 +234,20 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Generate image name(s)
-        id: image-names
+      - name: Generate image tags(s)
+        id: image-tags
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
         run: |
-          NAMES="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          TAGS="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          echo "primary_tag=$TAGS" >> $GITHUB_OUTPUT
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short ${SHA})
-            NAMES=$NAMES",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
+            TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
-          echo "names=$NAMES" >> $GITHUB_OUTPUT
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
@@ -281,9 +269,22 @@ jobs:
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.image-names.outputs.names }}
+          tags: ${{ steps.image-tags.outputs.tags }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
+
+      - name: Scan Docker image
+        id: container-scan
+        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
+        with:
+          image: ${{ steps.image-tags.outputs.primary_tag }}
+          fail-build: false
+          output-format: sarif
+
+      - name: Upload Grype results to GitHub
+        uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+        with:
+          sarif_file: ${{ steps.container-scan.outputs.sarif }}
 
   upload:
     name: Upload
@@ -301,7 +302,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to PROD ACR
+      - name: Log in to ACR - production subscription
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
       - name: Make Docker stubs
@@ -468,7 +469,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-      - name: Retrieve github PAT secrets
+      - name: Retrieve GitHub PAT secrets
         id: retrieve-secret-pat
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
@@ -501,7 +502,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-      - name: Retrieve github PAT secrets
+      - name: Retrieve GitHub PAT secrets
         id: retrieve-secret-pat
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
@@ -529,7 +530,6 @@ jobs:
     if: always()
     runs-on: ubuntu-22.04
     needs:
-      - cloc
       - lint
       - build-artifacts
       - build-docker
@@ -540,39 +540,11 @@ jobs:
     steps:
       - name: Check if any job failed
         if: |
-          github.ref == 'refs/heads/main'
+          (github.ref == 'refs/heads/main'
           || github.ref == 'refs/heads/rc'
-          || github.ref == 'refs/heads/hotfix-rc'
-        env:
-          CLOC_STATUS: ${{ needs.cloc.result }}
-          LINT_STATUS: ${{ needs.lint.result }}
-          TESTING_STATUS: ${{ needs.testing.result }}
-          BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
-          BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
-          UPLOAD_STATUS: ${{ needs.upload.result }}
-          BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
-          TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.self-host-build.result }}
-          TRIGGER_K8S_DEPLOY_STATUS: ${{ needs.trigger-k8s-deploy.result }}
-        run: |
-          if [ "$CLOC_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$LINT_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$TESTING_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$BUILD_ARTIFACTS_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$BUILD_DOCKER_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$UPLOAD_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$BUILD_MSSQLMIGRATORUTILITY_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$TRIGGER_SELF_HOST_BUILD_STATUS" = "failure" ]; then
-              exit 1
-          elif [ "$TRIGGER_K8S_DEPLOY_STATUS" = "failure" ]; then
-              exit 1
-          fi
+          || github.ref == 'refs/heads/hotfix-rc')
+          && contains(needs.*.result, 'failure')
+        run: exit 1
 
       - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7

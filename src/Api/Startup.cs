@@ -170,7 +170,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
-        services.AddBillingCommands();
+        services.AddBillingOperations();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
