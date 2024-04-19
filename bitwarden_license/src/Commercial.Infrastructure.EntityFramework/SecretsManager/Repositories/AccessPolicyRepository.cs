@@ -391,9 +391,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         {
             return null;
         }
-
-        var organizationId = entities.First().GrantedProject.OrganizationId;
-        return new ServiceAccountGrantedPolicies(serviceAccountId, organizationId, entities.Select(MapToCore).ToList());
+        return new ServiceAccountGrantedPolicies(serviceAccountId, entities.Select(MapToCore).ToList());
     }
 
     public async Task<ServiceAccountGrantedPoliciesPermissionDetails?>

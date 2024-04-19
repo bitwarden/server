@@ -7,13 +7,17 @@ namespace Bit.Core.SecretsManager.Models.Data;
 
 public class ServiceAccountGrantedPolicies
 {
-    public ServiceAccountGrantedPolicies(Guid serviceAccountId, Guid organizationId,
-        IEnumerable<BaseAccessPolicy> policies)
+    public ServiceAccountGrantedPolicies(Guid serviceAccountId, IEnumerable<BaseAccessPolicy> policies)
     {
         ServiceAccountId = serviceAccountId;
-        OrganizationId = organizationId;
         ProjectGrantedPolicies = policies.Where(x => x is ServiceAccountProjectAccessPolicy)
             .Cast<ServiceAccountProjectAccessPolicy>().ToList();
+
+        var serviceAccount = ProjectGrantedPolicies.FirstOrDefault()?.ServiceAccount;
+        if (serviceAccount != null)
+        {
+            OrganizationId = serviceAccount.OrganizationId;
+        }
     }
 
     public ServiceAccountGrantedPolicies()
