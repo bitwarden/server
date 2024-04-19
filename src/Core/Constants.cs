@@ -114,7 +114,6 @@ public static class FeatureFlagKeys
     /// </summary>
     public const string FlexibleCollections = "flexible-collections-disabled-do-not-use";
     public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
-    public const string BulkCollectionAccess = "bulk-collection-access";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
@@ -127,11 +126,14 @@ public static class FeatureFlagKeys
     /// flexible collections
     /// </summary>
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
-    public const string AC1607_PresentUsersWithOffboardingSurvey = "AC-1607_present-user-offboarding-survey";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
-    public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
+    public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
+    public const string EnableConsolidatedBilling = "enable-consolidated-billing";
+    public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
+    public const string UnassignedItemsBanner = "unassigned-items-banner";
+    public const string EnableDeleteProvider = "AC-1218-delete-provider";
 
     public static List<string> GetAllKeys()
     {
@@ -148,7 +150,8 @@ public static class FeatureFlagKeys
         {
             { TrustedDeviceEncryption, "true" },
             { Fido2VaultCredentials, "true" },
-            { DuoRedirect, "true" }
+            { DuoRedirect, "true" },
+            { UnassignedItemsBanner, "true"}
         };
     }
 }
