@@ -47,7 +47,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
     {
-        await ValidateUpdate(update);
+        await ValidateUpdateAsync(update);
 
         await FinalizeSubscriptionAdjustmentAsync(update);
 
@@ -123,7 +123,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     }
 
-    public async Task ValidateUpdate(SecretsManagerSubscriptionUpdate update)
+    private async Task ValidateUpdateAsync(SecretsManagerSubscriptionUpdate update)
     {
         if (_globalSettings.SelfHosted)
         {
