@@ -29,7 +29,7 @@ public class ProviderBillingQueriesTests
 
         providerRepository.GetByIdAsync(providerId).ReturnsNull();
 
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionData(providerId);
+        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
 
         Assert.Null(subscriptionData);
 
@@ -50,7 +50,7 @@ public class ProviderBillingQueriesTests
 
         subscriberQueries.GetSubscription(provider).ReturnsNull();
 
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionData(providerId);
+        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
 
         Assert.Null(subscriptionData);
 
@@ -109,7 +109,7 @@ public class ProviderBillingQueriesTests
 
         providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
 
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionData(providerId);
+        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
 
         Assert.NotNull(subscriptionData);
 
@@ -140,7 +140,7 @@ public class ProviderBillingQueriesTests
 
         return;
 
-        void Compare(ProviderPlan providerPlan, ConfiguredProviderPlan configuredProviderPlan)
+        void Compare(ProviderPlan providerPlan, ConfiguredProviderPlanDTO configuredProviderPlan)
         {
             Assert.NotNull(configuredProviderPlan);
             Assert.Equal(providerPlan.Id, configuredProviderPlan.Id);
