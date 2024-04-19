@@ -5,5 +5,5 @@ namespace Bit.Core.Billing.Repositories;
 
 public interface IProviderPlanRepository : IRepository<ProviderPlan, Guid>
 {
-    Task<ProviderPlan> GetByProviderId(Guid providerId);
+    Task<ICollection<ProviderPlan>> GetByProviderId(Guid providerId);
 }

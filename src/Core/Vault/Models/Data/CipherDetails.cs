@@ -8,6 +8,26 @@ public class CipherDetails : CipherOrganizationDetails
     public bool Favorite { get; set; }
     public bool Edit { get; set; }
     public bool ViewPassword { get; set; }
+
+    public CipherDetails() { }
+
+    public CipherDetails(CipherOrganizationDetails cipher)
+    {
+        Id = cipher.Id;
+        UserId = cipher.UserId;
+        OrganizationId = cipher.OrganizationId;
+        Type = cipher.Type;
+        Data = cipher.Data;
+        Favorites = cipher.Favorites;
+        Folders = cipher.Folders;
+        Attachments = cipher.Attachments;
+        CreationDate = cipher.CreationDate;
+        RevisionDate = cipher.RevisionDate;
+        DeletedDate = cipher.DeletedDate;
+        Reprompt = cipher.Reprompt;
+        Key = cipher.Key;
+        OrganizationUseTotp = cipher.OrganizationUseTotp;
+    }
 }
 
 public class CipherDetailsWithCollections : CipherDetails

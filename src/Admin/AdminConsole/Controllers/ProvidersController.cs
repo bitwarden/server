@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
@@ -8,6 +9,9 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Repositories;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -34,6 +38,7 @@ public class ProvidersController : Controller
     private readonly IUserService _userService;
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IFeatureService _featureService;
+    private readonly IProviderPlanRepository _providerPlanRepository;
 
     public ProvidersController(
         IOrganizationRepository organizationRepository,
@@ -47,7 +52,8 @@ public class ProvidersController : Controller
         IReferenceEventService referenceEventService,
         IUserService userService,
         ICreateProviderCommand createProviderCommand,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IProviderPlanRepository providerPlanRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
@@ -61,6 +67,7 @@ public class ProvidersController : Controller
         _userService = userService;
         _createProviderCommand = createProviderCommand;
         _featureService = featureService;
+        _providerPlanRepository = providerPlanRepository;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -90,11 +97,13 @@ public class ProvidersController : Controller
         });
     }
 
-    public IActionResult Create(string ownerEmail = null)
+    public IActionResult Create(int teamsMinimumSeats, int enterpriseMinimumSeats, string ownerEmail = null)
     {
         return View(new CreateProviderModel
         {
-            OwnerEmail = ownerEmail
+            OwnerEmail = ownerEmail,
+            TeamsMinimumSeats = teamsMinimumSeats,
+            EnterpriseMinimumSeats = enterpriseMinimumSeats
         });
     }
 
@@ -112,7 +121,8 @@ public class ProvidersController : Controller
         switch (provider.Type)
         {
             case ProviderType.Msp:
-                await _createProviderCommand.CreateMspAsync(provider, model.OwnerEmail);
+                await _createProviderCommand.CreateMspAsync(provider, model.OwnerEmail, model.TeamsMinimumSeats,
+                    model.EnterpriseMinimumSeats);
                 break;
             case ProviderType.Reseller:
                 await _createProviderCommand.CreateResellerAsync(provider);
@@ -139,6 +149,7 @@ public class ProvidersController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id)
     {
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
         var provider = await _providerRepository.GetByIdAsync(id);
         if (provider == null)
         {
@@ -147,7 +158,12 @@ public class ProvidersController : Controller
 
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        return View(new ProviderEditModel(provider, users, providerOrganizations));
+        if (isConsolidatedBillingEnabled)
+        {
+            var providerPlan = await _providerPlanRepository.GetByProviderId(id);
+            return View(new ProviderEditModel(provider, users, providerOrganizations, providerPlan));
+        }
+        return View(new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>()));
     }
 
     [HttpPost]
@@ -156,6 +172,8 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
     {
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
         var provider = await _providerRepository.GetByIdAsync(id);
         if (provider == null)
         {
@@ -165,6 +183,15 @@ public class ProvidersController : Controller
         model.ToProvider(provider);
         await _providerRepository.ReplaceAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
+        if (isConsolidatedBillingEnabled)
+        {
+            model.ToProviderPlan(providerPlans);
+            foreach (var providerPlan in providerPlans)
+            {
+                await _providerPlanRepository.ReplaceAsync(providerPlan);
+            }
+        }
+
         return RedirectToAction("Edit", new { id });
     }
 
@@ -249,5 +276,65 @@ public class ProvidersController : Controller
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
+    }
+
+    [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> Delete(Guid id, string providerName)
+    {
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return BadRequest("Invalid provider name");
+        }
+
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+
+        if (providerOrganizations.Count > 0)
+        {
+            return BadRequest("You must unlink all clients before you can delete a provider");
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(id);
+
+        if (provider is null)
+        {
+            return BadRequest("Provider does not exist");
+        }
+
+        if (!string.Equals(providerName.Trim(), provider.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Invalid provider name");
+        }
+
+        await _providerService.DeleteAsync(provider);
+        return NoContent();
+    }
+
+    [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> DeleteInitiation(Guid id, string providerEmail)
+    {
+        var emailAttribute = new EmailAddressAttribute();
+        if (!emailAttribute.IsValid(providerEmail))
+        {
+            return BadRequest("Invalid provider admin email");
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider != null)
+        {
+            try
+            {
+                await _providerService.InitiateDeleteAsync(provider, providerEmail);
+            }
+            catch (BadRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        return NoContent();
     }
 }

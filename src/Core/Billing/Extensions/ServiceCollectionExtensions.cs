@@ -9,14 +9,18 @@ using Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddBillingCommands(this IServiceCollection services)
+    public static void AddBillingOperations(this IServiceCollection services)
     {
-        services.AddSingleton<ICancelSubscriptionCommand, CancelSubscriptionCommand>();
-        services.AddSingleton<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
-    }
+        // Queries
+        services.AddTransient<IProviderBillingQueries, ProviderBillingQueries>();
+        services.AddTransient<ISubscriberQueries, SubscriberQueries>();
 
-    public static void AddBillingQueries(this IServiceCollection services)
-    {
-        services.AddSingleton<IGetSubscriptionQuery, GetSubscriptionQuery>();
+        // Commands
+        services.AddTransient<IAssignSeatsToClientOrganizationCommand, AssignSeatsToClientOrganizationCommand>();
+        services.AddTransient<ICancelSubscriptionCommand, CancelSubscriptionCommand>();
+        services.AddTransient<ICreateCustomerCommand, CreateCustomerCommand>();
+        services.AddTransient<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
+        services.AddTransient<IScaleSeatsCommand, ScaleSeatsCommand>();
+        services.AddTransient<IStartSubscriptionCommand, StartSubscriptionCommand>();
     }
 }

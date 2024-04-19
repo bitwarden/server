@@ -38,7 +38,6 @@ public class OrganizationEditModel : OrganizationViewModel
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
         Name = org.DisplayName();
-        BusinessName = org.DisplayBusinessName();
         BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
@@ -81,8 +80,6 @@ public class OrganizationEditModel : OrganizationViewModel
     [Required]
     [Display(Name = "Organization Name")]
     public string Name { get; set; }
-    [Display(Name = "Business Name")]
-    public string BusinessName { get; set; }
     [Display(Name = "Billing Email")]
     public string BillingEmail { get; set; }
     [Required]
@@ -146,9 +143,9 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmSeats { get; set; }
     [Display(Name = "Max Autoscale Seats")]
     public int? MaxAutoscaleSmSeats { get; set; }
-    [Display(Name = "Service Accounts")]
+    [Display(Name = "Machine Accounts")]
     public int? SmServiceAccounts { get; set; }
-    [Display(Name = "Max Autoscale Service Accounts")]
+    [Display(Name = "Max Autoscale Machine Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
 
     /**
@@ -186,7 +183,6 @@ public class OrganizationEditModel : OrganizationViewModel
     public Organization ToOrganization(Organization existingOrganization)
     {
         existingOrganization.Name = WebUtility.HtmlEncode(Name.Trim());
-        existingOrganization.BusinessName = WebUtility.HtmlEncode(BusinessName.Trim());
         existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
         existingOrganization.PlanType = PlanType.Value;
         existingOrganization.Plan = Plan;

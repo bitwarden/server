@@ -64,4 +64,19 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
     {
         await base.DeleteOrganizationAbilityAsync(organizationId);
     }
+
+    public override async Task DeleteProviderAbilityAsync(Guid providerId)
+    {
+        await base.DeleteProviderAbilityAsync(providerId);
+        var message = new ServiceBusMessage
+        {
+            Subject = _subName,
+            ApplicationProperties =
+            {
+                { "type", (byte)ApplicationCacheMessageType.DeleteProviderAbility },
+                { "id", providerId },
+            }
+        };
+        var task = _topicMessageSender.SendMessageAsync(message);
+    }
 }
