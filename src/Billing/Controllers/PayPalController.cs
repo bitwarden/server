@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using Bit.Billing.Models;
-using Bit.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -20,7 +19,6 @@ public class PayPalController : Controller
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPaymentService _paymentService;
-    private readonly IPayPalIPNClient _payPalIPNClient;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
 
@@ -30,7 +28,6 @@ public class PayPalController : Controller
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         IPaymentService paymentService,
-        IPayPalIPNClient payPalIPNClient,
         ITransactionRepository transactionRepository,
         IUserRepository userRepository)
     {
@@ -39,7 +36,6 @@ public class PayPalController : Controller
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
-        _payPalIPNClient = payPalIPNClient;
         _transactionRepository = transactionRepository;
         _userRepository = userRepository;
     }
@@ -75,19 +71,19 @@ public class PayPalController : Controller
 
         var transactionModel = new PayPalIPNTransactionModel(requestContent);
 
+        _logger.LogInformation("PayPal IPN: Transaction Type = {Type}", transactionModel.TransactionType);
+
+        if (string.IsNullOrEmpty(transactionModel.TransactionId))
+        {
+            _logger.LogWarning("PayPal IPN: Transaction ID is missing");
+            return Ok();
+        }
+
         var entityId = transactionModel.UserId ?? transactionModel.OrganizationId;
 
         if (!entityId.HasValue)
         {
             _logger.LogError("PayPal IPN ({Id}): 'custom' did not contain a User ID or Organization ID", transactionModel.TransactionId);
-            return BadRequest();
-        }
-
-        var verified = await _payPalIPNClient.VerifyIPN(entityId.Value, requestContent);
-
-        if (!verified)
-        {
-            _logger.LogError("PayPal IPN ({Id}): Verification failed", transactionModel.TransactionId);
             return BadRequest();
         }
 
@@ -196,8 +192,8 @@ public class PayPalController : Controller
 
                     if (parentTransaction == null)
                     {
-                        _logger.LogError("PayPal IPN ({Id}): Could not find parent transaction", transactionModel.TransactionId);
-                        return BadRequest();
+                        _logger.LogWarning("PayPal IPN ({Id}): Could not find parent transaction", transactionModel.TransactionId);
+                        return Ok();
                     }
 
                     var refundAmount = Math.Abs(transactionModel.MerchantGross);

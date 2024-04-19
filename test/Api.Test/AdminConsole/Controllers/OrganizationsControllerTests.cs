@@ -2,15 +2,21 @@
 using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -21,6 +27,8 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Services;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -50,6 +58,13 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IScaleSeatsCommand _scaleSeatsCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -75,6 +90,13 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
+        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
+        _subscriberQueries = Substitute.For<ISubscriberQueries>();
+        _referenceEventService = Substitute.For<IReferenceEventService>();
+        _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
+        _providerRepository = Substitute.For<IProviderRepository>();
+        _scaleSeatsCommand = Substitute.For<IScaleSeatsCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -96,7 +118,14 @@ public class OrganizationsControllerTests : IDisposable
             _licensingService,
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
-            _addSecretsManagerSubscriptionCommand);
+            _addSecretsManagerSubscriptionCommand,
+            _pushNotificationService,
+            _cancelSubscriptionCommand,
+            _subscriberQueries,
+            _referenceEventService,
+            _organizationEnableCollectionEnhancementsCommand,
+            _providerRepository,
+            _scaleSeatsCommand);
     }
 
     public void Dispose()
@@ -358,16 +387,29 @@ public class OrganizationsControllerTests : IDisposable
     public async Task EnableCollectionEnhancements_Success(Organization organization)
     {
         organization.FlexibleCollections = false;
+        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin, Status = OrganizationUserStatusType.Confirmed };
+        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner, Status = OrganizationUserStatusType.Confirmed };
+        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User, Status = OrganizationUserStatusType.Confirmed };
+        var invited = new OrganizationUser
+        {
+            UserId = null,
+            Type = OrganizationUserType.Admin,
+            Email = "invited@example.com",
+            Status = OrganizationUserStatusType.Invited
+        };
+        var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
+
         _currentContext.OrganizationOwner(organization.Id).Returns(true);
         _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null).Returns(orgUsers);
 
         await _sut.EnableCollectionEnhancements(organization.Id);
 
-        await _organizationRepository.Received(1).EnableCollectionEnhancements(organization.Id);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(
-            Arg.Is<Organization>(o =>
-                o.Id == organization.Id &&
-                o.FlexibleCollections));
+        await _organizationEnableCollectionEnhancementsCommand.Received(1).EnableCollectionEnhancements(organization);
+        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(admin.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(owner.UserId.Value);
+        await _pushNotificationService.DidNotReceive().PushSyncOrganizationsAsync(user.UserId.Value);
+        // Invited orgUser does not have a UserId we can use to assert here, but sut will throw if that null isn't handled
     }
 
     [Theory, AutoData]
@@ -379,21 +421,42 @@ public class OrganizationsControllerTests : IDisposable
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
 
-        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
-        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncOrganizationsAsync(Arg.Any<Guid>());
     }
 
     [Theory, AutoData]
-    public async Task EnableCollectionEnhancements_WhenAlreadyMigrated_Throws(Organization organization)
+    public async Task Delete_OrganizationIsConsolidatedBillingClient_ScalesProvidersSeats(
+        Provider provider,
+        Organization organization,
+        User user,
+        Guid organizationId,
+        SecretVerificationRequestModel requestModel)
     {
-        organization.FlexibleCollections = true;
-        _currentContext.OrganizationOwner(organization.Id).Returns(true);
-        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        organization.Status = OrganizationStatusType.Managed;
+        organization.PlanType = PlanType.TeamsMonthly;
+        organization.Seats = 10;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
-        Assert.Contains("has already been migrated", exception.Message);
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
 
-        await _organizationRepository.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Guid>());
-        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        _currentContext.OrganizationOwner(organizationId).Returns(true);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        _userService.VerifySecretAsync(user, requestModel.Secret).Returns(true);
+
+        _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
+
+        _providerRepository.GetByOrganizationIdAsync(organization.Id).Returns(provider);
+
+        await _sut.Delete(organizationId.ToString(), requestModel);
+
+        await _scaleSeatsCommand.Received(1)
+            .ScalePasswordManagerSeats(provider, organization.PlanType, -organization.Seats.Value);
+
+        await _organizationService.Received(1).DeleteAsync(organization);
     }
 }

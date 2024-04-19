@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Commands.Implementations;
+using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Queries.Implementations;
 
 namespace Bit.Core.Billing.Extensions;
 
@@ -7,8 +9,18 @@ using Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddBillingCommands(this IServiceCollection services)
+    public static void AddBillingOperations(this IServiceCollection services)
     {
-        services.AddSingleton<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
+        // Queries
+        services.AddTransient<IProviderBillingQueries, ProviderBillingQueries>();
+        services.AddTransient<ISubscriberQueries, SubscriberQueries>();
+
+        // Commands
+        services.AddTransient<IAssignSeatsToClientOrganizationCommand, AssignSeatsToClientOrganizationCommand>();
+        services.AddTransient<ICancelSubscriptionCommand, CancelSubscriptionCommand>();
+        services.AddTransient<ICreateCustomerCommand, CreateCustomerCommand>();
+        services.AddTransient<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
+        services.AddTransient<IScaleSeatsCommand, ScaleSeatsCommand>();
+        services.AddTransient<IStartSubscriptionCommand, StartSubscriptionCommand>();
     }
 }

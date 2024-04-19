@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Enums;
@@ -69,9 +70,44 @@ public class ProfileOrganizationResponseModel : ResponseModel
             KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
         }
+
+        if (FlexibleCollections)
+        {
+            // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+            if (Type == OrganizationUserType.Custom && Permissions is not null)
+            {
+                if ((Permissions.EditAssignedCollections || Permissions.DeleteAssignedCollections) &&
+                    Permissions is
+                    {
+                        AccessEventLogs: false,
+                        AccessImportExport: false,
+                        AccessReports: false,
+                        CreateNewCollections: false,
+                        EditAnyCollection: false,
+                        DeleteAnyCollection: false,
+                        ManageGroups: false,
+                        ManagePolicies: false,
+                        ManageSso: false,
+                        ManageUsers: false,
+                        ManageResetPassword: false,
+                        ManageScim: false
+                    })
+                {
+                    organization.Type = OrganizationUserType.User;
+                }
+            }
+
+            // Set 'Edit/Delete Assigned Collections' custom permissions to false
+            if (Permissions is not null)
+            {
+                Permissions.EditAssignedCollections = false;
+                Permissions.DeleteAssignedCollections = false;
+            }
+        }
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
@@ -104,6 +140,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public Guid? UserId { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
     public Guid? ProviderId { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }

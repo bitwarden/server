@@ -1,0 +1,13 @@
+version: 1
+
+# Checkmarx configuration file
+#
+# https://checkmarx.com/resource/documents/en/34965-68549-configuring-projects-using-config-as-code-files.html
+checkmarx:
+  scan:
+    configs:
+      sast:
+        # Exclude test directory
+        filter: "!test"
+      kics:
+        filter: "!dev,!.devcontainer"
