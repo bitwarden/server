@@ -19,17 +19,26 @@ public class OrganizationCustomization : ICustomization
 {
     public bool UseGroups { get; set; }
     public bool FlexibleCollections { get; set; }
+    public PlanType PlanType { get; set; }
 
     public void Customize(IFixture fixture)
     {
         var organizationId = Guid.NewGuid();
         var maxCollections = (short)new Random().Next(10, short.MaxValue);
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == PlanType);
+        var seats = (short)new Random().Next(plan.PasswordManager.BaseSeats, plan.PasswordManager.MaxSeats ?? short.MaxValue);
+        var smSeats = plan.SupportsSecretsManager
+            ? (short?)new Random().Next(plan.SecretsManager.BaseSeats, plan.SecretsManager.MaxSeats ?? short.MaxValue)
+            : null;
 
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.MaxCollections, maxCollections)
             .With(o => o.UseGroups, UseGroups)
-            .With(o => o.FlexibleCollections, FlexibleCollections));
+            .With(o => o.FlexibleCollections, FlexibleCollections)
+            .With(o => o.PlanType, PlanType)
+            .With(o => o.Seats, seats)
+            .With(o => o.SmSeats, smSeats));
 
         fixture.Customize<Collection>(composer =>
             composer
@@ -186,10 +195,12 @@ public class OrganizationCustomizeAttribute : BitCustomizeAttribute
 {
     public bool UseGroups { get; set; }
     public bool FlexibleCollections { get; set; }
+    public PlanType PlanType { get; set; } = PlanType.EnterpriseAnnually;
     public override ICustomization GetCustomization() => new OrganizationCustomization()
     {
         UseGroups = UseGroups,
-        FlexibleCollections = FlexibleCollections
+        FlexibleCollections = FlexibleCollections,
+        PlanType = PlanType
     };
 }
 

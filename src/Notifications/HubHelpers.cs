@@ -50,6 +50,7 @@ public static class HubHelpers
                 break;
             case PushType.SyncCiphers:
             case PushType.SyncVault:
+            case PushType.SyncOrganizations:
             case PushType.SyncOrgKeys:
             case PushType.SyncSettings:
             case PushType.LogOut:

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Settings;
+using Bit.Core.Enums;
 using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
@@ -55,17 +56,16 @@ public class GlobalSettings : IGlobalSettings
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
-    public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
+    public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
-    public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
     public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
     public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
     public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
-    public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
+    public virtual List<NotificationHubSettings> NotificationHubs { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
@@ -147,6 +147,7 @@ public class GlobalSettings : IGlobalSettings
         public string CloudRegion { get; set; }
         public string Vault { get; set; }
         public string VaultWithHash => $"{Vault}/#";
+        public string VaultWithHashAndSecretManagerProduct => $"{Vault}/#/sm";
 
         public string Api
         {
@@ -221,6 +222,8 @@ public class GlobalSettings : IGlobalSettings
         private string _connectionString;
         private string _readOnlyConnectionString;
         private string _jobSchedulerConnectionString;
+        public bool SkipDatabasePreparation { get; set; }
+        public bool DisableDatabaseMaintenanceJobs { get; set; }
 
         public string ConnectionString
         {
@@ -351,12 +354,6 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
-    public class DocumentDbSettings
-    {
-        public string Uri { get; set; }
-        public string Key { get; set; }
-    }
-
     public class SentrySettings
     {
         public string Dsn { get; set; }
@@ -420,12 +417,16 @@ public class GlobalSettings : IGlobalSettings
             set => _connectionString = value.Trim('"');
         }
         public string HubName { get; set; }
-
         /// <summary>
         /// Enables TestSend on the Azure Notification Hub, which allows tracing of the request through the hub and to the platform-specific push notification service (PNS).
         /// Enabling this will result in delayed responses because the Hub must wait on delivery to the PNS.  This should ONLY be enabled in a non-production environment, as results are throttled.
         /// </summary>
         public bool EnableSendTracing { get; set; } = false;
+        /// <summary>
+        /// At least one hub configuration should have registration enabled, preferably the General hub as a safety net.
+        /// </summary>
+        public bool EnableRegistration { get; set; }
+        public NotificationHubType HubType { get; set; }
     }
 
     public class YubicoSettings
@@ -520,6 +521,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class DistributedIpRateLimitingSettings
     {
+        public string RedisConnectionString { get; set; }
         public bool Enabled { get; set; } = true;
 
         /// <summary>
@@ -555,5 +557,11 @@ public class GlobalSettings : IGlobalSettings
         public string SdkKey { get; set; }
         public string FlagDataFilePath { get; set; } = "flags.json";
         public Dictionary<string, string> FlagValues { get; set; } = new Dictionary<string, string>();
+    }
+
+    public class DistributedCacheSettings
+    {
+        public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
     }
 }
