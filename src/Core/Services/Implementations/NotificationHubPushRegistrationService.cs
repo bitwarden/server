@@ -75,7 +75,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                if(_featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                if (_featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
                 {
                     payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
                     messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
