@@ -2,10 +2,12 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -20,6 +22,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IScaleSeatsCommand _scaleSeatsCommand;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -28,7 +31,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
-        IStripeAdapter stripeAdapter)
+        IStripeAdapter stripeAdapter,
+        IScaleSeatsCommand scaleSeatsCommand)
     {
         _eventService = eventService;
         _logger = logger;
@@ -37,6 +41,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
+        _scaleSeatsCommand = scaleSeatsCommand;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -65,8 +70,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         organization.BillingEmail = organizationOwnerEmails.MinBy(email => email);
 
-        await _organizationRepository.ReplaceAsync(organization);
-
         var customerUpdateOptions = new CustomerUpdateOptions
         {
             Coupon = string.Empty,
@@ -75,13 +78,22 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
 
-        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+        var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
+        var subscription = await _stripeAdapter.SubscriptionCreateAsync(new SubscriptionCreateOptions
         {
+            Customer = organization.GatewayCustomerId,
             CollectionMethod = "send_invoice",
-            DaysUntilDue = 30
-        };
+            DaysUntilDue = 30,
+            Items = new List<SubscriptionItemOptions>
+            {
+                new SubscriptionItemOptions { Plan = plan.StripeSeatPlanId, Quantity = organization.Seats }
+            }
+        });
+        organization.GatewaySubscriptionId = subscription.Id;
+        await _organizationRepository.ReplaceAsync(organization);
 
-        await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+        await _scaleSeatsCommand.ScalePasswordManagerSeats(provider, organization.PlanType,
+            -(int)organization.Seats);
 
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
