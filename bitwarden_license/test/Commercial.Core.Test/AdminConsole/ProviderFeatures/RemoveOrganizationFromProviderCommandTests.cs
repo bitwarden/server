@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -100,21 +101,21 @@ public class RemoveOrganizationFromProviderCommandTests
         var organizationOwnerEmails = new List<string> { "a@gmail.com", "b@gmail.com" };
 
         organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns(organizationOwnerEmails);
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        {
+            Id = "S-1",
+            CurrentPeriodEnd = DateTime.Today.AddDays(10),
+        });
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.Id == organization.Id && org.BillingEmail == "a@gmail.com"));
 
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
         await stripeAdapter.Received(1).CustomerUpdateAsync(
             organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
                 options => options.Coupon == string.Empty && options.Email == "a@gmail.com"));
-
-        await stripeAdapter.Received(1).SubscriptionUpdateAsync(
-            organization.GatewaySubscriptionId, Arg.Is<SubscriptionUpdateOptions>(
-                options => options.CollectionMethod == "send_invoice" && options.DaysUntilDue == 30));
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendProviderUpdatePaymentMethod(
             organization.Id,
@@ -128,5 +129,64 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventAsync(
             providerOrganization,
             EventType.ProviderOrganization_Removed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveOrganizationFromProvider_CreatesSubscriptionAndScalesSeats(Provider provider,
+        ProviderOrganization providerOrganization,
+        Organization organization,
+        SutProvider<RemoveOrganizationFromProviderCommand> sutProvider)
+    {
+        providerOrganization.ProviderId = provider.Id;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+                providerOrganization.OrganizationId,
+                Array.Empty<Guid>(),
+                includeProvider: false)
+            .Returns(true);
+
+        var organizationOwnerEmails = new List<string> { "a@gmail.com", "b@gmail.com" };
+
+        organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns(organizationOwnerEmails);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        {
+            Id = "S-1",
+            CurrentPeriodEnd = DateTime.Today.AddDays(10),
+        });
+
+        await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
+
+        await stripeAdapter.Received(1).CustomerUpdateAsync(
+            organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
+                options => options.Coupon == string.Empty && options.Email == "a@gmail.com"));
+
+        await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(c =>
+            c.Customer == organization.GatewayCustomerId &&
+            c.CollectionMethod == "send_invoice" &&
+            c.DaysUntilDue == 30 &&
+            c.Items.Count == 1
+        ));
+
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+            org => org.Id == organization.Id && org.BillingEmail == "a@gmail.com" && org.GatewaySubscriptionId == "S-1"));
+
+        await sutProvider.GetDependency<IMailService>().Received(1).SendProviderUpdatePaymentMethod(
+            organization.Id,
+            organization.Name,
+            provider.Name,
+            Arg.Is<IEnumerable<string>>(emails => emails.Contains("a@gmail.com") && emails.Contains("b@gmail.com")));
+
+        await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
+            .DeleteAsync(providerOrganization);
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventAsync(
+            providerOrganization,
+            EventType.ProviderOrganization_Removed);
+
+        await sutProvider.GetDependency<IScaleSeatsCommand>().Received(1)
+            .ScalePasswordManagerSeats(provider, organization.PlanType, -(int)organization.Seats);
     }
 }
