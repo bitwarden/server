@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Core.Auth.Models.Business.Tokenables;
+namespace Bit.Core.AdminConsole.Models.Business.Tokenables;
 
 public class OrgDeleteTokenable : Tokens.ExpiringTokenable
 {
