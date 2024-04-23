@@ -1788,6 +1788,8 @@ public class OrganizationService : IOrganizationService
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
 
+            var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+
             var userInvites = new List<(OrganizationUserInvite, string)>();
             foreach (var user in newUsers)
             {
@@ -1804,6 +1806,7 @@ public class OrganizationService : IOrganizationService
                         Type = OrganizationUserType.User,
                         AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
+                        AccessSecretsManager = hasStandaloneSecretsManager
                     };
                     userInvites.Add((invite, user.ExternalId));
                 }
