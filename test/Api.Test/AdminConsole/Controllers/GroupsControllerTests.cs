@@ -56,14 +56,14 @@ public class GroupsControllerTests
     {
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true});
+            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
-       sutProvider.GetDependency<IAuthorizationService>()
-           .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<IEnumerable<Collection>>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
-            .Returns(AuthorizationResult.Success());
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                 Arg.Any<IEnumerable<Collection>>(),
+                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
@@ -89,7 +89,7 @@ public class GroupsControllerTests
     {
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true});
+            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -117,7 +117,7 @@ public class GroupsControllerTests
 
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true, FlexibleCollections = true});
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true, FlexibleCollections = true });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -371,7 +371,7 @@ public class GroupsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, savingUserId).Returns(new OrganizationUser
         {
-           Id = savingUserId
+            Id = savingUserId
         });
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
