@@ -57,8 +57,11 @@
             case '@((byte)PlanType.TeamsAnnually2019)':
             case '@((byte)PlanType.TeamsMonthly2020)':
             case '@((byte)PlanType.TeamsAnnually2020)':
+            case '@((byte)PlanType.TeamsMonthly2023)':
+            case '@((byte)PlanType.TeamsAnnually2023)':
             case '@((byte)PlanType.TeamsMonthly)':
             case '@((byte)PlanType.TeamsAnnually)':
+            case '@((byte)PlanType.TeamsStarter2023)':
             case '@((byte)PlanType.TeamsStarter)':
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
                 document.getElementById('@(nameof(Model.UseSso))').checked = false;
@@ -79,6 +82,8 @@
             case '@((byte)PlanType.EnterpriseAnnually2019)':
             case '@((byte)PlanType.EnterpriseMonthly2020)':
             case '@((byte)PlanType.EnterpriseAnnually2020)':
+            case '@((byte)PlanType.EnterpriseMonthly2023)':
+            case '@((byte)PlanType.EnterpriseAnnually2023)':
             case '@((byte)PlanType.EnterpriseMonthly)':
             case '@((byte)PlanType.EnterpriseAnnually)':
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
