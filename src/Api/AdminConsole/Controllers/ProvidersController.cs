@@ -123,4 +123,40 @@ public class ProvidersController : Controller
 
         return new ProviderResponseModel(response);
     }
+
+    [HttpPost("{id}/delete-recover-token")]
+    [AllowAnonymous]
+    public async Task PostDeleteRecoverToken(Guid id, [FromBody] ProviderVerifyDeleteRecoverRequestModel model)
+    {
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider == null)
+        {
+            throw new NotFoundException();
+        }
+        await _providerService.DeleteAsync(provider, model.Token);
+    }
+
+    [HttpDelete("{id}")]
+    [HttpPost("{id}/delete")]
+    public async Task Delete(Guid id)
+    {
+        if (!_currentContext.ProviderProviderAdmin(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _providerService.DeleteAsync(provider);
+    }
 }

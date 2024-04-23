@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -15,6 +16,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
@@ -39,13 +41,17 @@ public class ProviderService : IProviderService
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IFeatureService _featureService;
+    private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService)
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
+        IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
+        IApplicationCacheService applicationCacheService)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -61,6 +67,8 @@ public class ProviderService : IProviderService
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
         _featureService = featureService;
+        _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
+        _applicationCacheService = applicationCacheService;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
@@ -599,6 +607,44 @@ public class ProviderService : IProviderService
         {
             await _eventService.LogOrganizationEventAsync(organization, EventType.Organization_VaultAccessed);
         }
+    }
+
+    public async Task InitiateDeleteAsync(Provider provider, string providerAdminEmail)
+    {
+        if (string.IsNullOrWhiteSpace(provider.Name))
+        {
+            throw new BadRequestException("Provider name not found.");
+        }
+        var providerAdmin = await _userRepository.GetByEmailAsync(providerAdminEmail);
+        if (providerAdmin == null)
+        {
+            throw new BadRequestException("Provider admin not found.");
+        }
+
+        var providerAdminOrgUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, providerAdmin.Id);
+        if (providerAdminOrgUser == null || providerAdminOrgUser.Status != ProviderUserStatusType.Confirmed ||
+            providerAdminOrgUser.Type != ProviderUserType.ProviderAdmin)
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+
+        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider, 1));
+        await _mailService.SendInitiateDeletProviderEmailAsync(providerAdminEmail, provider, token);
+    }
+
+    public async Task DeleteAsync(Provider provider, string token)
+    {
+        if (!_providerDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.IsValid(provider))
+        {
+            throw new BadRequestException("Invalid token.");
+        }
+        await DeleteAsync(provider);
+    }
+
+    public async Task DeleteAsync(Provider provider)
+    {
+        await _providerRepository.DeleteAsync(provider);
+        await _applicationCacheService.DeleteProviderAbilityAsync(provider.Id);
     }
 
     private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
