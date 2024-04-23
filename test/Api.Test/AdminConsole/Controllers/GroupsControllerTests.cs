@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
@@ -25,12 +26,12 @@ public class GroupsControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async Task Post_Success(Organization organization, GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
+    public async Task Post_PreFCv1_Success(Organization organization, GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
 
-        var response = await sutProvider.Sut.Post(organization.Id.ToString(), groupRequestModel);
+        var response = await sutProvider.Sut.Post(organization.Id, groupRequestModel);
 
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
@@ -52,10 +53,12 @@ public class GroupsControllerTests
         group.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(group);
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, new List<CollectionAccessSelection>()));
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true });
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true, FlexibleCollections = true});
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 
@@ -86,7 +89,8 @@ public class GroupsControllerTests
         groupRequestModel.Users = updatedUsers;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(group);
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, new List<CollectionAccessSelection>()));
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
             new OrganizationAbility
@@ -127,7 +131,8 @@ public class GroupsControllerTests
         currentGroupUsers.Add(savingOrganizationUser.Id);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(group);
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, new List<CollectionAccessSelection>()));
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
             new OrganizationAbility
@@ -144,6 +149,9 @@ public class GroupsControllerTests
             .Returns(savingOrganizationUser.UserId);
         sutProvider.GetDependency<IGroupRepository>().GetManyUserIdsByIdAsync(group.Id)
             .Returns(currentGroupUsers);
+
+        // Make collection authorization pass, it's not being tested here
+        groupRequestModel.Collections = Array.Empty<SelectionReadOnlyRequestModel>();
 
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 

@@ -185,7 +185,7 @@ public class GroupsController : Controller
     /// </summary>
     private async Task<GroupResponseModel> Put_vNext(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
-        var group = await _groupRepository.GetByIdAsync(id);
+        var (group, currentAccess) = await _groupRepository.GetByIdWithCollectionsAsync(id);
         if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
         {
             throw new NotFoundException();
@@ -207,7 +207,6 @@ public class GroupsController : Controller
         // The client only sends collections that the saving user has permissions to edit.
         // On the server side, we need to (1) confirm this and (2) concat these with the collections that the user
         // can't edit before saving to the database.
-        var (_, currentAccess) = await _groupRepository.GetByIdWithCollectionsAsync(id);
         var currentCollections = await _collectionRepository
             .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
 
