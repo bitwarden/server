@@ -1110,6 +1110,32 @@ public class CiphersController : Controller
         });
     }
 
+    /// <summary>
+    /// Returns true if the user is an admin or owner of an organization with unassigned ciphers (i.e. ciphers that
+    /// are not assigned to a collection).
+    /// </summary>
+    /// <returns></returns>
+    [HttpGet("has-unassigned-ciphers")]
+    public async Task<bool> HasUnassignedCiphers()
+    {
+        // We don't filter for organization.FlexibleCollections here, it's shown for all orgs, and the client determines
+        // whether the message is shown in future tense (not yet migrated) or present tense (already migrated)
+        var adminOrganizations = _currentContext.Organizations
+            .Where(o => o.Type is OrganizationUserType.Admin or OrganizationUserType.Owner);
+
+        foreach (var org in adminOrganizations)
+        {
+            var unassignedCiphers = await _cipherRepository.GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(org.Id);
+            // We only care about non-deleted ciphers
+            if (unassignedCiphers.Any(c => c.DeletedDate == null))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void ValidateAttachment()
     {
         if (!Request?.ContentType.Contains("multipart/") ?? true)

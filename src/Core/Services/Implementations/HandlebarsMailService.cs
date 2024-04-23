@@ -267,6 +267,28 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token)
+    {
+        var message = CreateDefaultMessage("Request to Delete Your Provider", email);
+        var model = new ProviderInitiateDeleteModel
+        {
+            Token = WebUtility.UrlEncode(token),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            ProviderId = provider.Id,
+            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName(), false),
+            ProviderNameUrlEncoded = WebUtility.UrlEncode(provider.Name),
+            ProviderBillingEmail = provider.BillingEmail,
+            ProviderCreationDate = provider.CreationDate.ToLongDateString(),
+            ProviderCreationTime = provider.CreationDate.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+        };
+        await AddMessageContentAsync(message, "Provider.InitiateDeleteProvider", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "InitiateDeleteProvider";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendPasswordlessSignInAsync(string returnUrl, string token, string email)
     {
         var message = CreateDefaultMessage("[Admin] Continue Logging In", email);
