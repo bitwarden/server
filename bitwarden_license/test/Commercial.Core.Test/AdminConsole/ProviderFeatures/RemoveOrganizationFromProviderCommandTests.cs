@@ -1,6 +1,8 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Enums;
@@ -158,20 +160,28 @@ public class RemoveOrganizationFromProviderCommandTests
         });
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
-
         await stripeAdapter.Received(1).CustomerUpdateAsync(
             organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
                 options => options.Coupon == string.Empty && options.Email == "a@gmail.com"));
 
-        await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(c =>
-            c.Customer == organization.GatewayCustomerId &&
-            c.CollectionMethod == "send_invoice" &&
-            c.DaysUntilDue == 30 &&
-            c.Items.Count == 1
-        ));
+        var featureService = sutProvider.GetDependency<IFeatureService>();
+        var isConsolidatedBillingEnabled = featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (isConsolidatedBillingEnabled && provider.Status == ProviderStatusType.Billable)
+        {
+            await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(c =>
+                c.Customer == organization.GatewayCustomerId &&
+                c.CollectionMethod == "send_invoice" &&
+                c.DaysUntilDue == 30 &&
+                c.Items.Count == 1
+            ));
+
+            await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+                org => org.Id == organization.Id && org.BillingEmail == "a@gmail.com" && org.GatewaySubscriptionId == "S-1"));
+        }
 
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
-            org => org.Id == organization.Id && org.BillingEmail == "a@gmail.com" && org.GatewaySubscriptionId == "S-1"));
+            org => org.Id == organization.Id && org.BillingEmail == "a@gmail.com"));
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendProviderUpdatePaymentMethod(
             organization.Id,

@@ -1,8 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -23,6 +26,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IFeatureService _featureService;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -32,7 +36,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
-        IScaleSeatsCommand scaleSeatsCommand)
+        IScaleSeatsCommand scaleSeatsCommand,
+        IFeatureService featureService)
     {
         _eventService = eventService;
         _logger = logger;
@@ -42,6 +47,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
         _scaleSeatsCommand = scaleSeatsCommand;
+        _featureService = featureService;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -78,22 +84,44 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
 
-        var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
-        var subscription = await _stripeAdapter.SubscriptionCreateAsync(new SubscriptionCreateOptions
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (isConsolidatedBillingEnabled && provider.Status == ProviderStatusType.Billable)
         {
-            Customer = organization.GatewayCustomerId,
-            CollectionMethod = "send_invoice",
-            DaysUntilDue = 30,
-            Items = new List<SubscriptionItemOptions>
+            var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
+            var subscription = await _stripeAdapter.SubscriptionCreateAsync(new SubscriptionCreateOptions
             {
-                new SubscriptionItemOptions { Plan = plan.StripeSeatPlanId, Quantity = organization.Seats }
-            }
-        });
-        organization.GatewaySubscriptionId = subscription.Id;
+                Customer = organization.GatewayCustomerId,
+                CollectionMethod = "send_invoice",
+                DaysUntilDue = 30,
+                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
+                Metadata = new Dictionary<string, string>
+                {
+                    { "organizationId", organization.Id.ToString() }
+                },
+                OffSession = true,
+                ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
+                Items = new List<SubscriptionItemOptions>
+                {
+                    new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }
+                }
+            });
+            organization.GatewaySubscriptionId = subscription.Id;
+        }
+        else
+        {
+            var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+            {
+                CollectionMethod = "send_invoice",
+                DaysUntilDue = 30
+            };
+            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+        }
+
         await _organizationRepository.ReplaceAsync(organization);
 
         await _scaleSeatsCommand.ScalePasswordManagerSeats(provider, organization.PlanType,
-            -(int)organization.Seats);
+            -(organization.Seats ?? 0));
 
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
