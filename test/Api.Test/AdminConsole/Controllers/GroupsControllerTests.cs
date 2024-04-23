@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.Models.Request;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
@@ -15,6 +16,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
 
@@ -44,6 +46,66 @@ public class GroupsControllerTests
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
         Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Post_AuthorizedToGiveAccessToCollections_Success(Organization organization,
+        GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
+    {
+        // Enable FC and v1
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
+            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true});
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+       sutProvider.GetDependency<IAuthorizationService>()
+           .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
+
+        var response = await sutProvider.Sut.Post(organization.Id, groupRequestModel);
+
+        await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
+        await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
+            Arg.Is<Group>(g =>
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
+                g.AccessAll == groupRequestModel.AccessAll),
+            organization,
+            Arg.Any<ICollection<CollectionAccessSelection>>(),
+            Arg.Any<IEnumerable<Guid>>());
+        Assert.Equal(groupRequestModel.Name, response.Name);
+        Assert.Equal(organization.Id, response.OrganizationId);
+        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Post_NotAuthorizedToGiveAccessToCollections_Throws(Organization organization, GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
+    {
+        // Enable FC and v1
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
+            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true});
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+           .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+            .Returns(AuthorizationResult.Failed());
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Post(organization.Id, groupRequestModel));
+
+        Assert.Contains("You are not authorized to grant access to these collections.", exception.Message);
+
+        await sutProvider.GetDependency<ICreateGroupCommand>().DidNotReceiveWithAnyArgs()
+            .CreateGroupAsync(default, default, default, default);
     }
 
     [Theory]
@@ -116,7 +178,7 @@ public class GroupsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_AdminsCannotAccessAllCollections_Success(Organization organization, Group group,
+    public async Task Put_AdminsCannotAccessAllCollections_AlreadyInGroup_Success(Organization organization, Group group,
         GroupRequestModel groupRequestModel, OrganizationUser savingOrganizationUser, List<Guid> currentGroupUsers,
         SutProvider<GroupsController> sutProvider)
     {
