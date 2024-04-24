@@ -36,7 +36,6 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IAuthorizationHandler, ProjectAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecretAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, AccessPolicyAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ProjectPeopleAccessPoliciesAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountPeopleAccessPoliciesAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountGrantedPoliciesAuthorizationHandler>();
@@ -59,9 +58,6 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<ICountNewServiceAccountSlotsRequiredQuery, CountNewServiceAccountSlotsRequiredQuery>();
         services.AddScoped<IRevokeAccessTokensCommand, RevokeAccessTokensCommand>();
         services.AddScoped<ICreateAccessTokenCommand, CreateAccessTokenCommand>();
-        services.AddScoped<ICreateAccessPoliciesCommand, CreateAccessPoliciesCommand>();
-        services.AddScoped<IUpdateAccessPolicyCommand, UpdateAccessPolicyCommand>();
-        services.AddScoped<IDeleteAccessPolicyCommand, DeleteAccessPolicyCommand>();
         services.AddScoped<IImportCommand, ImportCommand>();
         services.AddScoped<IEmptyTrashCommand, EmptyTrashCommand>();
         services.AddScoped<IRestoreTrashCommand, RestoreTrashCommand>();
