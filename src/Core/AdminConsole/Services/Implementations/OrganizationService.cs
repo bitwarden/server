@@ -832,15 +832,6 @@ public class OrganizationService : IOrganizationService
         await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
     }
 
-    public async Task DeleteAsync(Organization organization, string token)
-    {
-        if (!_orgDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.IsValid(organization))
-        {
-            throw new BadRequestException("Invalid token.");
-        }
-        await DeleteAsync(organization);
-    }
-
     public async Task DeleteAsync(Organization organization)
     {
         await ValidateDeleteOrganizationAsync(organization);
