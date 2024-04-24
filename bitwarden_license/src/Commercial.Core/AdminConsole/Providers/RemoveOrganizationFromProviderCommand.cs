@@ -89,7 +89,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         if (isConsolidatedBillingEnabled && provider.Status == ProviderStatusType.Billable)
         {
             var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
-            var subscription = await _stripeAdapter.SubscriptionCreateAsync(new SubscriptionCreateOptions
+            var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
@@ -101,11 +101,9 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 },
                 OffSession = true,
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-                Items = new List<SubscriptionItemOptions>
-                {
-                    new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }
-                }
-            });
+                Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
+            };
+            var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
             organization.GatewaySubscriptionId = subscription.Id;
             await _scaleSeatsCommand.ScalePasswordManagerSeats(provider, organization.PlanType,
                 -(organization.Seats ?? 0));
