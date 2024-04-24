@@ -11,14 +11,19 @@ public class ProjectServiceAccountsAccessPolicies
     {
     }
 
-    public ProjectServiceAccountsAccessPolicies(Guid projectId, Guid organizationId,
+    public ProjectServiceAccountsAccessPolicies(Guid projectId,
         IEnumerable<BaseAccessPolicy> policies)
     {
         ProjectId = projectId;
-        OrganizationId = organizationId;
         ServiceAccountAccessPolicies = policies
             .OfType<ServiceAccountProjectAccessPolicy>()
             .ToList();
+
+        var project = ServiceAccountAccessPolicies.FirstOrDefault()?.GrantedProject;
+        if (project != null)
+        {
+            OrganizationId = project.OrganizationId;
+        }
     }
 
     public Guid ProjectId { get; set; }

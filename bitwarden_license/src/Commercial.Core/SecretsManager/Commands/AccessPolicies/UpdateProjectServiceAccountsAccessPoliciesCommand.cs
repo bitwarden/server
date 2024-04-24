@@ -16,6 +16,11 @@ public class UpdateProjectServiceAccountsAccessPoliciesCommand : IUpdateProjectS
 
     public async Task UpdateAsync(ProjectServiceAccountsAccessPoliciesUpdates accessPoliciesUpdates)
     {
+        if (!accessPoliciesUpdates.ServiceAccountAccessPolicyUpdates.Any())
+        {
+            return;
+        }
+
         await _accessPolicyRepository.UpdateProjectServiceAccountsAccessPoliciesAsync(accessPoliciesUpdates);
     }
 }

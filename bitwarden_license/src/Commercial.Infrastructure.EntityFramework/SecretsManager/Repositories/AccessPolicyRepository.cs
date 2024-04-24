@@ -269,9 +269,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         {
             return null;
         }
-
-        var organizationId = entities.First().GrantedProject.OrganizationId;
-        return new ServiceAccountGrantedPolicies(serviceAccountId, organizationId, entities.Select(MapToCore).ToList());
+        return new ServiceAccountGrantedPolicies(serviceAccountId, entities.Select(MapToCore).ToList());
     }
 
     public async Task<ServiceAccountGrantedPoliciesPermissionDetails?>
@@ -343,8 +341,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             return null;
         }
 
-        var organizationId = entities.First().GrantedProject.OrganizationId;
-        return new ProjectServiceAccountsAccessPolicies(projectId, organizationId, entities.Select(MapToCore).ToList());
+        return new ProjectServiceAccountsAccessPolicies(projectId, entities.Select(MapToCore).ToList());
     }
 
     public async Task UpdateProjectServiceAccountsAccessPoliciesAsync(
@@ -365,8 +362,13 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value)
                 .ToList();
 
+            var accessPolicyIdsToDelete = currentAccessPolicies
+                .Where(entity => serviceAccountIdsToDelete.Contains(entity.ServiceAccountId!.Value))
+                .Select(ap => ap.Id)
+                .ToList();
+
             await dbContext.ServiceAccountProjectAccessPolicy
-                .Where(ap => serviceAccountIdsToDelete.Contains(ap.Id))
+                .Where(ap => accessPolicyIdsToDelete.Contains(ap.Id))
                 .ExecuteDeleteAsync();
         }
 
