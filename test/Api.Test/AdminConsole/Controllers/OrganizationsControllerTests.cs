@@ -7,6 +7,7 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -27,6 +28,7 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Core.Tools.Services;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
@@ -65,6 +67,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
 
     private readonly OrganizationsController _sut;
 
@@ -97,6 +100,7 @@ public class OrganizationsControllerTests : IDisposable
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _scaleSeatsCommand = Substitute.For<IScaleSeatsCommand>();
+        _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -125,7 +129,8 @@ public class OrganizationsControllerTests : IDisposable
             _referenceEventService,
             _organizationEnableCollectionEnhancementsCommand,
             _providerRepository,
-            _scaleSeatsCommand);
+            _scaleSeatsCommand,
+            _orgDeleteTokenDataFactory);
     }
 
     public void Dispose()
