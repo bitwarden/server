@@ -12,6 +12,7 @@ public static class ServiceCollectionExtensions
     public static void AddBillingOperations(this IServiceCollection services)
     {
         // Queries
+        services.AddTransient<IOrganizationBillingQueries, OrganizationBillingQueries>();
         services.AddTransient<IProviderBillingQueries, ProviderBillingQueries>();
         services.AddTransient<ISubscriberQueries, SubscriberQueries>();
 
