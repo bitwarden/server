@@ -29,7 +29,7 @@ public class Provider : ITableObject<Guid>, ISubscriber
     public ProviderType Type { get; set; }
     public bool Enabled { get; set; } = true;
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
-    public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+    public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public GatewayType? Gateway { get; set; }
     public string GatewayCustomerId { get; set; }
     public string GatewaySubscriptionId { get; set; }

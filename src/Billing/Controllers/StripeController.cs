@@ -3,6 +3,7 @@ using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -55,6 +56,7 @@ public class StripeController : Controller
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeFacade _stripeFacade;
     private readonly IFeatureService _featureService;
+    private readonly IProviderService _providerService;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -74,7 +76,8 @@ public class StripeController : Controller
         ICurrentContext currentContext,
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IProviderService providerService)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -102,6 +105,7 @@ public class StripeController : Controller
         _stripeEventService = stripeEventService;
         _stripeFacade = stripeFacade;
         _featureService = featureService;
+        _providerService = providerService;
     }
 
     [HttpPost("webhook")]
@@ -224,13 +228,8 @@ public class StripeController : Controller
                     await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
                     break;
                 }
-            case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired:
+            case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired when userId.HasValue:
                 {
-                    if (!userId.HasValue)
-                    {
-                        break;
-                    }
-
                     if (subscription.Status is StripeSubscriptionStatus.Unpaid &&
                         subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
                     {
@@ -242,17 +241,25 @@ public class StripeController : Controller
 
                     break;
                 }
+            case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired when providerId.HasValue:
+                {
+                    await _providerService.DisableAsync(providerId.Value);
+                    break;
+                }
             case StripeSubscriptionStatus.Active when organizationId.HasValue:
                 {
                     await _organizationService.EnableAsync(organizationId.Value);
                     break;
                 }
-            case StripeSubscriptionStatus.Active:
+            case StripeSubscriptionStatus.Active when userId.HasValue:
                 {
-                    if (userId.HasValue)
-                    {
-                        await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
-                    }
+                    await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+
+                    break;
+                }
+            case StripeSubscriptionStatus.Active when providerId.HasValue:
+                {
+                    await _providerService.EnableAsync(providerId.Value);
 
                     break;
                 }
@@ -272,6 +279,7 @@ public class StripeController : Controller
         {
             await _userService.UpdatePremiumExpirationAsync(userId.Value, subscription.CurrentPeriodEnd);
         }
+        // No need to update the expiration date for providers as they don't have one
     }
 
     /// <summary>
@@ -354,6 +362,10 @@ public class StripeController : Controller
         else if (userId.HasValue)
         {
             await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+        }
+        else if (providerId.HasValue)
+        {
+            await _providerService.DisableAsync(providerId.Value);
         }
     }
 

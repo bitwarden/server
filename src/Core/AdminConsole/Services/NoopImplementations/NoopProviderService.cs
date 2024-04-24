@@ -38,4 +38,6 @@ public class NoopProviderService : IProviderService
     public Task InitiateDeleteAsync(Provider provider, string providerAdminEmail) => throw new NotImplementedException();
     public Task DeleteAsync(Provider provider, string token) => throw new NotImplementedException();
     public Task DeleteAsync(Provider provider) => throw new NotImplementedException();
+    public Task EnableAsync(Guid providerId) => throw new NotImplementedException();
+    public Task DisableAsync(Guid providerId) => throw new NotImplementedException();
 }

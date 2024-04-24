@@ -647,6 +647,38 @@ public class ProviderService : IProviderService
         await _applicationCacheService.DeleteProviderAbilityAsync(provider.Id);
     }
 
+    public async Task EnableAsync(Guid providerId)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        if (provider is not { Enabled: false, Gateway: not null })
+        {
+            return;
+        }
+
+        provider.Enabled = true;
+        provider.RevisionDate = DateTime.UtcNow;
+
+        await _providerRepository.ReplaceAsync(provider);
+        await _applicationCacheService.UpsertProviderAbilityAsync(provider);
+    }
+
+    public async Task DisableAsync(Guid providerId)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        if (provider is not { Enabled: true })
+        {
+            return;
+        }
+
+        provider.Enabled = true;
+        provider.RevisionDate = DateTime.UtcNow;
+
+        await _providerRepository.ReplaceAsync(provider);
+        await _applicationCacheService.UpsertProviderAbilityAsync(provider);
+    }
+
     private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
     {
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);

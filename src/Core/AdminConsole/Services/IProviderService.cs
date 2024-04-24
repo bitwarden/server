@@ -29,5 +29,7 @@ public interface IProviderService
     Task InitiateDeleteAsync(Provider provider, string providerAdminEmail);
     Task DeleteAsync(Provider provider, string token);
     Task DeleteAsync(Provider provider);
+    Task EnableAsync(Guid providerId);
+    Task DisableAsync(Guid providerId);
 }
 
