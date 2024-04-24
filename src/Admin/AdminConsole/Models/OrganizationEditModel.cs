@@ -143,9 +143,9 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmSeats { get; set; }
     [Display(Name = "Max Autoscale Seats")]
     public int? MaxAutoscaleSmSeats { get; set; }
-    [Display(Name = "Service Accounts")]
+    [Display(Name = "Machine Accounts")]
     public int? SmServiceAccounts { get; set; }
-    [Display(Name = "Max Autoscale Service Accounts")]
+    [Display(Name = "Max Autoscale Machine Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
 
     /**
