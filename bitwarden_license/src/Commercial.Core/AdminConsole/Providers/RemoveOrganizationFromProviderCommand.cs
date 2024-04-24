@@ -92,7 +92,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(new SubscriptionCreateOptions
             {
                 Customer = organization.GatewayCustomerId,
-                CollectionMethod = "send_invoice",
+                CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
                 AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
                 Metadata = new Dictionary<string, string>
@@ -107,6 +107,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 }
             });
             organization.GatewaySubscriptionId = subscription.Id;
+            await _scaleSeatsCommand.ScalePasswordManagerSeats(provider, organization.PlanType,
+                -(organization.Seats ?? 0));
         }
         else
         {
@@ -119,9 +121,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         }
 
         await _organizationRepository.ReplaceAsync(organization);
-
-        await _scaleSeatsCommand.ScalePasswordManagerSeats(provider, organization.PlanType,
-            -(organization.Seats ?? 0));
 
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
