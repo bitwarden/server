@@ -1,10 +1,12 @@
 ﻿using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Billing.Queries;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Billing.Controllers;
 
 [Route("organizations/{organizationId:guid}/billing")]
+[Authorize("Application")]
 public class OrganizationBillingController(
     IOrganizationBillingQueries organizationBillingQueries) : Controller
 {
