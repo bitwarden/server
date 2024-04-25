@@ -70,23 +70,43 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var utcNow = DateTime.UtcNow;
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var projects = dbContext.Project
-            .Where(c => ids.Contains(c.Id))
-            .Include(p => p.Secrets);
-        await projects.ForEachAsync(project =>
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var serviceAccountIds = await dbContext.Project
+            .Where(p => ids.Contains(p.Id))
+            .Include(p => p.ServiceAccountAccessPolicies)
+            .SelectMany(p => p.ServiceAccountAccessPolicies.Select(ap => ap.ServiceAccountId!.Value))
+            .Distinct()
+            .ToListAsync();
+
+        var secretIds = await dbContext.Project
+            .Where(p => ids.Contains(p.Id))
+            .Include(p => p.Secrets)
+            .SelectMany(p => p.Secrets.Select(s => s.Id))
+            .Distinct()
+            .ToListAsync();
+
+        var utcNow = DateTime.UtcNow;
+        if (serviceAccountIds.Count > 0)
         {
-            foreach (var projectSecret in project.Secrets)
-            {
-                projectSecret.RevisionDate = utcNow;
-            }
+            await dbContext.ServiceAccount
+                .Where(sa => serviceAccountIds.Contains(sa.Id))
+                .ExecuteUpdateAsync(setters =>
+                    setters.SetProperty(sa => sa.RevisionDate, utcNow));
+        }
 
-            dbContext.Remove(project);
-        });
+        if (secretIds.Count > 0)
+        {
+            await dbContext.Secret
+                .Where(s => secretIds.Contains(s.Id))
+                .ExecuteUpdateAsync(setters =>
+                    setters.SetProperty(s => s.RevisionDate, utcNow));
+        }
 
-        await dbContext.SaveChangesAsync();
+        await dbContext.Project.Where(p => ids.Contains(p.Id)).ExecuteDeleteAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids)
@@ -220,8 +240,4 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
     private static Expression<Func<Project, bool>> ServiceAccountHasReadAccessToProject(Guid serviceAccountId) => p =>
         p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read);
-
-    private static Expression<Func<Project, bool>> ServiceAccountHasWriteAccessToProject(Guid serviceAccountId) => p =>
-        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Write);
-
 }

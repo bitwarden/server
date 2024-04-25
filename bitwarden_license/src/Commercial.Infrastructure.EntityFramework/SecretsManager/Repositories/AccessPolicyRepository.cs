@@ -22,8 +22,11 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
     public async Task<List<Core.SecretsManager.Entities.BaseAccessPolicy>> CreateManyAsync(List<Core.SecretsManager.Entities.BaseAccessPolicy> baseAccessPolicies)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var serviceAccountIds = new List<Guid>();
         foreach (var baseAccessPolicy in baseAccessPolicies)
         {
             baseAccessPolicy.SetNewId();
@@ -59,12 +62,22 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                     {
                         var entity = Mapper.Map<ServiceAccountProjectAccessPolicy>(accessPolicy);
                         await dbContext.AddAsync(entity);
+                        serviceAccountIds.Add(entity.ServiceAccountId!.Value);
                         break;
                     }
             }
         }
 
+        if (serviceAccountIds.Count > 0)
+        {
+            var utcNow = DateTime.UtcNow;
+            await dbContext.ServiceAccount
+                .Where(sa => serviceAccountIds.Contains(sa.Id))
+                .ExecuteUpdateAsync(setters => setters.SetProperty(sa => sa.RevisionDate, utcNow));
+        }
+
         await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
         return baseAccessPolicies;
     }
 
