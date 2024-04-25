@@ -377,7 +377,64 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var query = CollectionAdminDetailsQuery.ByOrganizationId(organizationId, userId).Run(dbContext);
-            var collections = await query.ToListAsync();
+
+            ICollection<CollectionAdminDetails> collections;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                collections = (await query.ToListAsync())
+                    .GroupBy(c => new
+                    {
+                        c.Id,
+                        c.OrganizationId,
+                        c.Name,
+                        c.CreationDate,
+                        c.RevisionDate,
+                        c.ExternalId
+                    }).Select(collectionGroup => new CollectionAdminDetails
+                    {
+                        Id = collectionGroup.Key.Id,
+                        OrganizationId = collectionGroup.Key.OrganizationId,
+                        Name = collectionGroup.Key.Name,
+                        CreationDate = collectionGroup.Key.CreationDate,
+                        RevisionDate = collectionGroup.Key.RevisionDate,
+                        ExternalId = collectionGroup.Key.ExternalId,
+                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                        HidePasswords =
+                            Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                        Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                        Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned)))
+                    }).ToList();
+            }
+            else
+            {
+                collections = await (from c in query
+                                     group c by new
+                                     {
+                                         c.Id,
+                                         c.OrganizationId,
+                                         c.Name,
+                                         c.CreationDate,
+                                         c.RevisionDate,
+                                         c.ExternalId
+                                     }
+                    into collectionGroup
+                                     select new CollectionAdminDetails
+                                     {
+                                         Id = collectionGroup.Key.Id,
+                                         OrganizationId = collectionGroup.Key.OrganizationId,
+                                         Name = collectionGroup.Key.Name,
+                                         CreationDate = collectionGroup.Key.CreationDate,
+                                         RevisionDate = collectionGroup.Key.RevisionDate,
+                                         ExternalId = collectionGroup.Key.ExternalId,
+                                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                                         HidePasswords =
+                                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned)))
+                                     }).ToListAsync();
+            }
 
             if (!includeAccessRelationships)
             {
@@ -427,7 +484,64 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var query = CollectionAdminDetailsQuery.ByCollectionId(collectionId, userId).Run(dbContext);
-            var collectionDetails = await query.FirstOrDefaultAsync();
+
+            CollectionAdminDetails collectionDetails;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                collectionDetails = (await query.ToListAsync())
+                    .GroupBy(c => new
+                    {
+                        c.Id,
+                        c.OrganizationId,
+                        c.Name,
+                        c.CreationDate,
+                        c.RevisionDate,
+                        c.ExternalId
+                    }).Select(collectionGroup => new CollectionAdminDetails
+                    {
+                        Id = collectionGroup.Key.Id,
+                        OrganizationId = collectionGroup.Key.OrganizationId,
+                        Name = collectionGroup.Key.Name,
+                        CreationDate = collectionGroup.Key.CreationDate,
+                        RevisionDate = collectionGroup.Key.RevisionDate,
+                        ExternalId = collectionGroup.Key.ExternalId,
+                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                        HidePasswords =
+                            Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                        Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                        Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned)))
+                    }).FirstOrDefault();
+            }
+            else
+            {
+                collectionDetails = await (from c in query
+                                           group c by new
+                                           {
+                                               c.Id,
+                                               c.OrganizationId,
+                                               c.Name,
+                                               c.CreationDate,
+                                               c.RevisionDate,
+                                               c.ExternalId
+                                           }
+                    into collectionGroup
+                                           select new CollectionAdminDetails
+                                           {
+                                               Id = collectionGroup.Key.Id,
+                                               OrganizationId = collectionGroup.Key.OrganizationId,
+                                               Name = collectionGroup.Key.Name,
+                                               CreationDate = collectionGroup.Key.CreationDate,
+                                               RevisionDate = collectionGroup.Key.RevisionDate,
+                                               ExternalId = collectionGroup.Key.ExternalId,
+                                               ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                                               HidePasswords =
+                                                   Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                                               Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                                               Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned)))
+                                           }).FirstOrDefaultAsync();
+            }
 
             if (!includeAccessRelationships)
             {
