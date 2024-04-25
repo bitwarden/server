@@ -4,6 +4,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
@@ -42,6 +43,20 @@ public class SubscriberQueriesTests
         sutProvider.GetDependency<IStripeAdapter>()
             .CustomerGetAsync(organization.GatewayCustomerId)
             .ReturnsNull();
+
+        var customer = await sutProvider.Sut.GetCustomer(organization);
+
+        Assert.Null(customer);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetCustomer_StripeException_ReturnsNull(
+        Organization organization,
+        SutProvider<SubscriberQueries> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(organization.GatewayCustomerId)
+            .ThrowsAsync<StripeException>();
 
         var customer = await sutProvider.Sut.GetCustomer(organization);
 
@@ -99,6 +114,20 @@ public class SubscriberQueriesTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetSubscription_StripeException_ReturnsNull(
+        Organization organization,
+        SutProvider<SubscriberQueries> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .ThrowsAsync<StripeException>();
+
+        var subscription = await sutProvider.Sut.GetSubscription(organization);
+
+        Assert.Null(subscription);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetSubscription_Succeeds(
         Organization organization,
         SutProvider<SubscriberQueries> sutProvider)
@@ -123,7 +152,7 @@ public class SubscriberQueriesTests
             async () => await sutProvider.Sut.GetCustomerOrThrow(null));
 
     [Theory, BitAutoData]
-    public async Task GetCustomerOrThrow_NoGatewaySubscriptionId_ThrowsGatewayException(
+    public async Task GetCustomerOrThrow_NoGatewayCustomerId_ContactSupport(
         Organization organization,
         SutProvider<SubscriberQueries> sutProvider)
     {
@@ -133,7 +162,7 @@ public class SubscriberQueriesTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_NoCustomer_ThrowsGatewayException(
+    public async Task GetCustomerOrThrow_NoCustomer_ContactSupport(
         Organization organization,
         SutProvider<SubscriberQueries> sutProvider)
     {
@@ -142,6 +171,23 @@ public class SubscriberQueriesTests
             .ReturnsNull();
 
         await ThrowsContactSupportAsync(async () => await sutProvider.Sut.GetCustomerOrThrow(organization));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetCustomerOrThrow_StripeException_ContactSupport(
+        Organization organization,
+        SutProvider<SubscriberQueries> sutProvider)
+    {
+        var stripeException = new StripeException();
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(organization.GatewayCustomerId)
+            .ThrowsAsync(stripeException);
+
+        await ThrowsContactSupportAsync(
+            async () => await sutProvider.Sut.GetCustomerOrThrow(organization),
+            "An error occurred while trying to retrieve a Stripe Customer",
+            stripeException);
     }
 
     [Theory, BitAutoData]
@@ -169,7 +215,7 @@ public class SubscriberQueriesTests
             async () => await sutProvider.Sut.GetSubscriptionOrThrow(null));
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_NoGatewaySubscriptionId_ThrowsGatewayException(
+    public async Task GetSubscriptionOrThrow_NoGatewaySubscriptionId_ContactSupport(
         Organization organization,
         SutProvider<SubscriberQueries> sutProvider)
     {
@@ -179,7 +225,7 @@ public class SubscriberQueriesTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_NoSubscription_ThrowsGatewayException(
+    public async Task GetSubscriptionOrThrow_NoSubscription_ContactSupport(
         Organization organization,
         SutProvider<SubscriberQueries> sutProvider)
     {
@@ -188,6 +234,23 @@ public class SubscriberQueriesTests
             .ReturnsNull();
 
         await ThrowsContactSupportAsync(async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetSubscriptionOrThrow_StripeException_ContactSupport(
+        Organization organization,
+        SutProvider<SubscriberQueries> sutProvider)
+    {
+        var stripeException = new StripeException();
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .ThrowsAsync(stripeException);
+
+        await ThrowsContactSupportAsync(
+            async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization),
+            "An error occurred while trying to retrieve a Stripe Subscription",
+            stripeException);
     }
 
     [Theory, BitAutoData]
