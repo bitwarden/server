@@ -1171,11 +1171,10 @@ public class CiphersController : Controller
     [HttpGet("has-unassigned-ciphers")]
     public async Task<bool> HasUnassignedCiphers()
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-
+        // We don't filter for organization.FlexibleCollections here, it's shown for all orgs, and the client determines
+        // whether the message is shown in future tense (not yet migrated) or present tense (already migrated)
         var adminOrganizations = _currentContext.Organizations
-            .Where(o => o.Type is OrganizationUserType.Admin or OrganizationUserType.Owner &&
-                        orgAbilities.ContainsKey(o.Id) && orgAbilities[o.Id].FlexibleCollections);
+            .Where(o => o.Type is OrganizationUserType.Admin or OrganizationUserType.Owner);
 
         foreach (var org in adminOrganizations)
         {
