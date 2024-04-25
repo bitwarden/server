@@ -199,8 +199,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         // If V1 is enabled, Owners and Admins can update any collection only if permitted by collection management settings
         var organizationAbility = await GetOrganizationAbilityAsync(org);
-        if ((organizationAbility is { AllowAdminAccessToAllCollectionItems: true } || !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)) &&
-            org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        var allowAdminAccessToAllCollectionItems = !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
+                                                   organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+        if (allowAdminAccessToAllCollectionItems && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             context.Succeed(requirement);
             return;
