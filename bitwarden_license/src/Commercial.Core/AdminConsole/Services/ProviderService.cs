@@ -551,7 +551,7 @@ public class ProviderService : IProviderService
             ]
             : Array.Empty<CollectionAccessSelection>();
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id,
+        await _organizationService.InviteUsersAsync(organization.Id, user.Id, systemUser: null,
             new (OrganizationUserInvite, string)[]
             {
                 (

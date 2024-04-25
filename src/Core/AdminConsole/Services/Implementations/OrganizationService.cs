@@ -949,12 +949,56 @@ public class OrganizationService : IOrganizationService
         await UpdateAsync(organization);
     }
 
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
+        string email, OrganizationUserType type, bool accessAll, string externalId, ICollection<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups)
+    {
+        // Validate Collection associations if org is using latest collection enhancements
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (organizationAbility?.FlexibleCollections ?? false)
+        {
+            var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            if (invalidAssociations?.Any() ?? false)
+            {
+                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+            }
+        }
+
+        var invite = new OrganizationUserInvite()
+        {
+            Emails = new List<string> { email },
+            Type = type,
+            AccessAll = accessAll,
+            Collections = collections,
+            Groups = groups
+        };
+        var results = await InviteUsersAsync(organizationId, invitingUserId, systemUser,
+            new (OrganizationUserInvite, string)[] { (invite, externalId) });
+
+        var result = results.FirstOrDefault();
+        if (result == null)
+        {
+            throw new BadRequestException("This user has already been invited.");
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Invite users to an organization.
+    /// </summary>
+    /// <param name="organizationId">The organization Id</param>
+    /// <param name="invitingUserId">The current authenticated user who is sending the invite. Only used when inviting via a client app; null if using SCIM or Public API.</param>
+    /// <param name="systemUser">The system user which is sending the invite. Only used when inviting via SCIM; null if using a client app or Public API</param>
+    /// <param name="invites">Details about the users being invited</param>
+    /// <returns></returns>
+    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
         var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
             .Select(i => i.invite.Type.Value));
 
+        // If authenticating via a client app, verify the inviting user has permissions
+        // cf. SCIM and Public API have superuser permissions here
         if (invitingUserId.HasValue && inviteTypes.Count > 0)
         {
             foreach (var (invite, _) in invites)
@@ -964,25 +1008,24 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser: null);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
 
-        await _eventService.LogOrganizationUserEventsAsync(events);
-
-        return organizationUsers;
-    }
-
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
-    {
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser);
-
-        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser, e.Item3)));
+        if (systemUser.HasValue)
+        {
+            // Log SCIM event
+            await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser.Value, e.Item3)));
+        }
+        else
+        {
+            // Log client app or Public Api event
+            await _eventService.LogOrganizationUserEventsAsync(events);
+        }
 
         return organizationUsers;
     }
 
     private async Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)> SaveUsersSendInvitesAsync(Guid organizationId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser)
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
         var organization = await GetOrgById(organizationId);
         var initialSeatCount = organization.Seats;
@@ -1653,54 +1696,6 @@ public class OrganizationService : IOrganizationService
             EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
     }
 
-    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, ICollection<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
-    {
-        // Validate Collection associations if org is using latest collection enhancements
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (organizationAbility?.FlexibleCollections ?? false)
-        {
-            var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-            if (invalidAssociations?.Any() ?? false)
-            {
-                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-            }
-        }
-
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId, systemUser: null, email, type, accessAll, externalId, collections, groups);
-    }
-
-    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
-    {
-        // Collection associations validation not required as they are always an empty list - created via system user (scim)
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups);
-    }
-
-    private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
-    {
-        var invite = new OrganizationUserInvite()
-        {
-            Emails = new List<string> { email },
-            Type = type,
-            AccessAll = accessAll,
-            Collections = collections,
-            Groups = groups
-        };
-        var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) });
-        var result = results.FirstOrDefault();
-        if (result == null)
-        {
-            throw new BadRequestException("This user has already been invited.");
-        }
-        return result;
-    }
-
     public async Task ImportAsync(Guid organizationId,
         Guid? importingUserId,
         IEnumerable<ImportedGroup> groups,
@@ -1813,7 +1808,7 @@ public class OrganizationService : IOrganizationService
                 }
             }
 
-            var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, userInvites);
+            var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, systemUser: null, userInvites);
             foreach (var invitedUser in invitedUsers)
             {
                 existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
