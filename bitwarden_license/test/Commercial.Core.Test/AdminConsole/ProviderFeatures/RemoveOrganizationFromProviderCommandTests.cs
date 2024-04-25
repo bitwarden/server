@@ -1,6 +1,8 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Enums;
@@ -132,13 +134,13 @@ public class RemoveOrganizationFromProviderCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveOrganizationFromProvider_CreatesSubscriptionAndScalesSeats_FeatureFlagOff(Provider provider,
+    public async Task RemoveOrganizationFromProvider_CreatesSubscriptionAndScalesSeats_FeatureFlagON(Provider provider,
         ProviderOrganization providerOrganization,
         Organization organization,
         SutProvider<RemoveOrganizationFromProviderCommand> sutProvider)
     {
         providerOrganization.ProviderId = provider.Id;
-
+        provider.Status = ProviderStatusType.Billable;
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
@@ -156,30 +158,25 @@ public class RemoveOrganizationFromProviderCommandTests
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
         });
-
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
         await stripeAdapter.Received(1).CustomerUpdateAsync(
             organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
                 options => options.Coupon == string.Empty && options.Email == "a@example.com"));
 
-        var featureService = sutProvider.GetDependency<IFeatureService>();
-
-        await stripeAdapter.DidNotReceive().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(c =>
+        await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(c =>
             c.Customer == organization.GatewayCustomerId &&
             c.CollectionMethod == "send_invoice" &&
             c.DaysUntilDue == 30 &&
             c.Items.Count == 1
         ));
 
-        await sutProvider.GetDependency<IScaleSeatsCommand>().DidNotReceive()
+        await sutProvider.GetDependency<IScaleSeatsCommand>().Received(1)
             .ScalePasswordManagerSeats(provider, organization.PlanType, -(int)organization.Seats);
 
-        await organizationRepository.DidNotReceive().ReplaceAsync(Arg.Is<Organization>(
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.Id == organization.Id && org.BillingEmail == "a@example.com" &&
                    org.GatewaySubscriptionId == "S-1"));
-
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
-            org => org.Id == organization.Id && org.BillingEmail == "a@example.com"));
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendProviderUpdatePaymentMethod(
             organization.Id,
