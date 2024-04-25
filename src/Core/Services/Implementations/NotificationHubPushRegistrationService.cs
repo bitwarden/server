@@ -11,19 +11,16 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
     private readonly ILogger<NotificationHubPushRegistrationService> _logger;
     private Dictionary<NotificationHubType, NotificationHubClient> _clients = [];
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         GlobalSettings globalSettings,
-        IFeatureService featureService,
         ILogger<NotificationHubPushRegistrationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
-        _featureService = featureService;
         _logger = logger;
 
         // Is this dirty to do in the ctor?
@@ -75,20 +72,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                if (_featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
-                {
-                    payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
-                    messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-                    installation.Platform = NotificationPlatform.FcmV1;
-                }
-                else
-                {
-                    payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
-                    messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-                    installation.Platform = NotificationPlatform.Fcm;
-                }
+                payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
+                messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+
+                installation.Platform = NotificationPlatform.Fcm;
                 break;
             case DeviceType.iOS:
                 payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
