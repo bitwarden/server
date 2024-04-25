@@ -35,7 +35,7 @@ public class OrganizationBillingQueriesTests
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
-        Assert.Null(metadata);
+        Assert.False(metadata.IsOnSecretsManagerStandalone);
     }
 
     [Theory, BitAutoData]
@@ -50,7 +50,7 @@ public class OrganizationBillingQueriesTests
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
-        Assert.Null(metadata);
+        Assert.False(metadata.IsOnSecretsManagerStandalone);
     }
 
     [Theory, BitAutoData]
