@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 

@@ -19,7 +19,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NS = Newtonsoft.Json;
 using NSL = Newtonsoft.Json.Linq;
-using User = Bit.Core.Entities.User;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Repositories;
 
