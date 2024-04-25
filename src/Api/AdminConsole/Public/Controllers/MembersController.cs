@@ -21,6 +21,7 @@ public class MembersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
+    private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IApplicationCacheService _applicationCacheService;
 
@@ -30,6 +31,7 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
+        IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IApplicationCacheService applicationCacheService)
     {
@@ -38,6 +40,7 @@ public class MembersController : Controller
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
+        _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _applicationCacheService = applicationCacheService;
     }
@@ -154,7 +157,7 @@ public class MembersController : Controller
         var updatedUser = model.ToOrganizationUser(existingUser);
         var flexibleCollectionsIsEnabled = await FlexibleCollectionsIsEnabledAsync(_currentContext.OrganizationId.Value);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(flexibleCollectionsIsEnabled)).ToList();
-        await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {
