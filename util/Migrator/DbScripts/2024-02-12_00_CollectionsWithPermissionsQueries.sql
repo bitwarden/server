@@ -8,29 +8,29 @@ BEGIN
 
 	SELECT
 	    C.*,
-	    CASE
+	    MIN(CASE
 	        WHEN
 	            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
 	        THEN 0
 	        ELSE 1
-	    END [ReadOnly],
-	    CASE
+	    END) AS [ReadOnly],
+	    MIN (CASE
 	        WHEN
 	            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
 	        THEN 0
 	        ELSE 1
-	    END [HidePasswords],
-	    CASE
+	    END) AS [HidePasswords],
+	    MAX(CASE
 	        WHEN
 	            COALESCE(CU.[Manage], CG.[Manage], 0) = 0
 	        THEN 0
 	        ELSE 1
-	    END [Manage],
-	    CASE
+	    END) AS [Manage],
+	    MAX(CASE
 	    	WHEN CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
 	    	THEN 0
 	    	ELSE 1
-	    END [Assigned]
+	    END) AS [Assigned]
 	FROM
 	    [dbo].[CollectionView] C
 	LEFT JOIN
@@ -45,6 +45,13 @@ BEGIN
 	    [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
 	WHERE
 	    C.[Id] = @CollectionId
+    GROUP BY
+    	C.[Id],
+    	C.[OrganizationId],
+    	C.[Name],
+    	C.[CreationDate],
+    	C.[RevisionDate],
+    	C.[ExternalId]
 
    IF (@IncludeAccessRelationships = 1)
     BEGIN
@@ -64,29 +71,30 @@ BEGIN
 
 	SELECT
 	    C.*,
-	    CASE
+	    MIN(CASE
 	        WHEN
 	            COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
 	        THEN 0
 	        ELSE 1
-	    END [ReadOnly],
-	    CASE
+	    END) AS [ReadOnly],
+	    MIN(CASE
 	        WHEN
 	            COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
 	        THEN 0
 	        ELSE 1
-	    END [HidePasswords],
-	    CASE
+	    END) AS [HidePasswords],
+	    MAX(CASE
 	        WHEN
 	            COALESCE(CU.[Manage], CG.[Manage], 0) = 0
 	        THEN 0
 	        ELSE 1
-	    END [Manage],
-	    CASE
-	    	WHEN CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
+	    END) AS [Manage],
+	    MAX(CASE
+	    	WHEN
+	    	    CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
 	    	THEN 0
 	    	ELSE 1
-	    END [Assigned]
+	    END) AS [Assigned]
 	FROM
 	    [dbo].[CollectionView] C
 	LEFT JOIN
@@ -101,6 +109,13 @@ BEGIN
 	    [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
 	WHERE
 	    C.[OrganizationId] = @OrganizationId
+    GROUP BY
+    	C.[Id],
+    	C.[OrganizationId],
+    	C.[Name],
+    	C.[CreationDate],
+    	C.[RevisionDate],
+    	C.[ExternalId]
 
    IF (@IncludeAccessRelationships = 1)
     BEGIN
