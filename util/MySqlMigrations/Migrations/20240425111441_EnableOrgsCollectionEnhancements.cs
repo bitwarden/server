@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 public partial class EnableOrgsCollectionEnhancements : Migration
 {
-    private const string _enableOrgsCollectionEnhancementsScript = "PostgresMigrations.HelperScripts.2024-03-22_00_EnableOrgsCollectionEnhancements.psql";
+    private const string _enableOrgsCollectionEnhancementsScript = "MySqlMigrations.HelperScripts.2024-04-25_00_EnableOrgsCollectionEnhancements.sql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {

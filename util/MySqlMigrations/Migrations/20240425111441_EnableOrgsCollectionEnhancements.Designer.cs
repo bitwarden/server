@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240322155515_EnableOrgsCollectionEnhancements")]
+    [Migration("20240425111441_EnableOrgsCollectionEnhancements")]
     partial class EnableOrgsCollectionEnhancements
     {
         /// <inheritdoc />
