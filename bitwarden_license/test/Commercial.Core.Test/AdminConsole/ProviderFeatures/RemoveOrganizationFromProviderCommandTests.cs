@@ -84,7 +84,7 @@ public class RemoveOrganizationFromProviderCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveOrganizationFromProvider_MakesCorrectInvocations(
+    public async Task RemoveOrganizationFromProvider_MakesCorrectInvocations__FeatureFlagOff(
         Provider provider,
         ProviderOrganization providerOrganization,
         Organization organization,
