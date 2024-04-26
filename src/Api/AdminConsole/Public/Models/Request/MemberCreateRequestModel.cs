@@ -2,7 +2,6 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;

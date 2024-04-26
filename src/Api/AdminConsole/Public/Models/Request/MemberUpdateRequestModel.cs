@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;
