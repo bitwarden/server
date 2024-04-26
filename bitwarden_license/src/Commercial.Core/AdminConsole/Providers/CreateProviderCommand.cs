@@ -40,7 +40,6 @@ public class CreateProviderCommand : ICreateProviderCommand
 
     public async Task CreateMspAsync(Provider provider, string ownerEmail, int teamsMinimumSeats, int enterpriseMinimumSeats)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
         var owner = await _userRepository.GetByEmailAsync(ownerEmail);
         if (owner == null)
         {
@@ -56,6 +55,8 @@ public class CreateProviderCommand : ICreateProviderCommand
             Type = ProviderUserType.ProviderAdmin,
             Status = ProviderUserStatusType.Confirmed,
         };
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
 
         if (isConsolidatedBillingEnabled)
         {
@@ -73,7 +74,6 @@ public class CreateProviderCommand : ICreateProviderCommand
 
         await _providerUserRepository.CreateAsync(providerUser);
         await _providerService.SendProviderSetupInviteEmailAsync(provider, owner.Email);
-
     }
 
     public async Task CreateResellerAsync(Provider provider)
