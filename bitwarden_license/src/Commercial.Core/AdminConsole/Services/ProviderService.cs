@@ -672,7 +672,7 @@ public class ProviderService : IProviderService
             return;
         }
 
-        provider.Enabled = true;
+        provider.Enabled = false;
         provider.RevisionDate = DateTime.UtcNow;
 
         await _providerRepository.ReplaceAsync(provider);
