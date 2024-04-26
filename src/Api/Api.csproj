@@ -36,6 +36,13 @@
     <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="8.0.0" />
     <PackageReference Include="Azure.Messaging.EventGrid" Version="4.10.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="HotChocolate.AspNetCore" Version="13.9.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Tools\Data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Tools\Data\" />
+  </ItemGroup>
 </Project>

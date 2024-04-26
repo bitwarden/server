@@ -30,6 +30,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
+using Bit.Api.Tools.Data;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -206,6 +207,10 @@ public class Startup
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
+
+        // Add Hot Chocolate services
+        services.AddGraphQLServer()
+                .AddQueryType<ReportQuery>();
     }
 
     public void Configure(
@@ -251,6 +256,7 @@ public class Startup
         app.UseAuthentication();
         app.UseAuthorization();
 
+
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
 
@@ -268,6 +274,7 @@ public class Startup
                     ResponseWriter = HealthCheckServiceExtensions.WriteResponse
                 });
             }
+            endpoints.MapGraphQL();
         });
 
         // Add Swagger

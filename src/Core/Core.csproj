@@ -58,6 +58,7 @@
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.25" />
     <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.4.0" />
+    <PackageReference Include="HotChocolate.AspNetCore" Version="13.9.0" />
   </ItemGroup>
 
   <ItemGroup>
