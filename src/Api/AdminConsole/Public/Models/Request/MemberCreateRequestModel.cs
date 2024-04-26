@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;
@@ -23,7 +25,7 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
 
     public OrganizationUserInvite ToOrganizationUserInvite(bool flexibleCollectionsIsEnabled)
     {
-        return new OrganizationUserInvite
+        var invite = new OrganizationUserInvite
         {
             Emails = new[] { Email },
             Type = Type.Value,
@@ -32,5 +34,12 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
             Groups = Groups
         };
 
+        // Permissions property is optional for backwards compatibility with existing usage
+        if (Type is OrganizationUserType.Custom && Permissions is not null)
+        {
+            invite.Permissions = Permissions.ToData();
+        }
+
+        return invite;
     }
 }

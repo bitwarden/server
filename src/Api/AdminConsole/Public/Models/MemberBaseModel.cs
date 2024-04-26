@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -21,6 +23,11 @@ public abstract class MemberBaseModel
         AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
+
+        if (user.Type == OrganizationUserType.Custom)
+        {
+            Permissions = new PermissionsModel(user.GetPermissions());
+        }
     }
 
     public MemberBaseModel(OrganizationUserUserDetails user, bool flexibleCollectionsEnabled)
@@ -34,6 +41,11 @@ public abstract class MemberBaseModel
         AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
+
+        if (user.Type == OrganizationUserType.Custom)
+        {
+            Permissions = new PermissionsModel(user.GetPermissions());
+        }
     }
 
     /// <summary>
@@ -59,6 +71,10 @@ public abstract class MemberBaseModel
     /// </summary>
     [Required]
     public bool ResetPasswordEnrolled { get; set; }
+    /// <summary>
+    /// The member's custom permissions if the member has a Custom role.
+    /// </summary>
+    public PermissionsModel? Permissions { get; set; }
 
     // TODO: AC-2188 - Remove this method when the custom users with no other permissions than 'Edit/Delete Assigned Collections' are migrated
     private OrganizationUserType GetFlexibleCollectionsUserType(OrganizationUserType type, Permissions permissions)
