@@ -64,13 +64,4 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
         base.Dispose(disposing);
         SqliteConnection.Dispose();
     }
-
-    /// <summary>
-    /// Helper for logging in via client secret.
-    /// Currently used for Secrets Manager service accounts
-    /// </summary>
-    public async Task<string> LoginWithClientSecretAsync(Guid clientId, string clientSecret)
-    {
-        return await _identityApplicationFactory.TokenFromAccessTokenAsync(clientId, clientSecret);
-    }
 }

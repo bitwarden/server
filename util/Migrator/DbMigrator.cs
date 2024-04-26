@@ -13,14 +13,11 @@ public class DbMigrator
 {
     private readonly string _connectionString;
     private readonly ILogger<DbMigrator> _logger;
-    private readonly bool _skipDatabasePreparation;
 
-    public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
-        bool skipDatabasePreparation = false)
+    public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null)
     {
         _connectionString = connectionString;
         _logger = logger ?? CreateLogger();
-        _skipDatabasePreparation = skipDatabasePreparation;
     }
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
@@ -34,10 +31,7 @@ public class DbMigrator
         {
             try
             {
-                if (!_skipDatabasePreparation)
-                {
-                    PrepareDatabase(cancellationToken);
-                }
+                PrepareDatabase(cancellationToken);
 
                 var success = MigrateDatabase(enableLogging, repeatable, folderName, dryRun, cancellationToken);
                 return success;

@@ -67,7 +67,7 @@ public class OrganizationsController : Controller
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
@@ -96,7 +96,7 @@ public class OrganizationsController : Controller
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
         IPushNotificationService pushNotificationService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
-        ISubscriberQueries subscriberQueries,
+        IGetSubscriptionQuery getSubscriptionQuery,
         IReferenceEventService referenceEventService,
         IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
         IProviderRepository providerRepository,
@@ -124,7 +124,7 @@ public class OrganizationsController : Controller
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
         _pushNotificationService = pushNotificationService;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
-        _subscriberQueries = subscriberQueries;
+        _getSubscriptionQuery = getSubscriptionQuery;
         _referenceEventService = referenceEventService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
         _providerRepository = providerRepository;
@@ -486,7 +486,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(organization);
+        var subscription = await _getSubscriptionQuery.GetSubscription(organization);
 
         await _cancelSubscriptionCommand.CancelSubscription(subscription,
             new OffboardingSurveyResponse

@@ -1,13 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands.Implementations;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using static Bit.Core.Test.Billing.Utilities;
 using BT = Braintree;
 using S = Stripe;
 
@@ -354,5 +354,14 @@ public class RemovePaymentMethodCommandTests
         braintreeGateway.PaymentMethod.Returns(paymentMethodGateway);
 
         return (braintreeGateway, customerGateway, paymentMethodGateway);
+    }
+
+    private static async Task ThrowsContactSupportAsync(Func<Task> function)
+    {
+        const string message = "Could not remove your payment method. Please contact support for assistance.";
+
+        var exception = await Assert.ThrowsAsync<GatewayException>(function);
+
+        Assert.Equal(message, exception.Message);
     }
 }

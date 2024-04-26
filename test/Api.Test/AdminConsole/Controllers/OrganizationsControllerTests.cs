@@ -60,7 +60,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
@@ -92,7 +92,7 @@ public class OrganizationsControllerTests : IDisposable
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
-        _subscriberQueries = Substitute.For<ISubscriberQueries>();
+        _getSubscriptionQuery = Substitute.For<IGetSubscriptionQuery>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
@@ -121,7 +121,7 @@ public class OrganizationsControllerTests : IDisposable
             _addSecretsManagerSubscriptionCommand,
             _pushNotificationService,
             _cancelSubscriptionCommand,
-            _subscriberQueries,
+            _getSubscriptionQuery,
             _referenceEventService,
             _organizationEnableCollectionEnhancementsCommand,
             _providerRepository,
