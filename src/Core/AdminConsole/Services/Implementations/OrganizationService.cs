@@ -1119,9 +1119,9 @@ public class OrganizationService : IOrganizationService
                         RevisionDate = DateTime.UtcNow,
                     };
 
-                    if (invite.Permissions != null)
+                    if (invite.Type == OrganizationUserType.Custom)
                     {
-                        orgUser.Permissions = JsonSerializer.Serialize(invite.Permissions, JsonHelpers.CamelCase);
+                        orgUser.SetPermissions(invite.Permissions ?? new Permissions());
                     }
 
                     if (!orgUser.AccessAll && invite.Collections.Any())
