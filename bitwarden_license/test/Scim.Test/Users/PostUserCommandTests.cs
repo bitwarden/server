@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -34,15 +35,25 @@ public class PostUserCommandTests
             .Returns(organizationUsers);
 
         sutProvider.GetDependency<IOrganizationService>()
-            .InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
-                OrganizationUserType.User, false, externalId, Arg.Any<List<CollectionAccessSelection>>(),
-                Arg.Any<List<Guid>>())
+            .InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
+                Arg.Is<OrganizationUserInvite>(i =>
+                    i.Emails.Single().Equals(scimUserRequestModel.PrimaryEmail.ToLowerInvariant()) &&
+                    i.Type == OrganizationUserType.User &&
+                    !i.AccessAll &&
+                    !i.Collections.Any() &&
+                    !i.Groups.Any()), externalId)
             .Returns(newUser);
 
         var user = await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
-            OrganizationUserType.User, false, scimUserRequestModel.ExternalId, Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<List<Guid>>());
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUserAsync(organizationId,
+            invitingUserId: null, EventSystemUser.SCIM,
+            Arg.Is<OrganizationUserInvite>(i =>
+                i.Emails.Single().Equals(scimUserRequestModel.PrimaryEmail.ToLowerInvariant()) &&
+                i.Type == OrganizationUserType.User &&
+                !i.AccessAll &&
+                !i.Collections.Any() &&
+                !i.Groups.Any()), externalId);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetDetailsByIdAsync(newUser.Id);
     }
 

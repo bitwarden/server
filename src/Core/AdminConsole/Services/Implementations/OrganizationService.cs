@@ -950,28 +950,25 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
-        string email, OrganizationUserType type, bool accessAll, string externalId, ICollection<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
+        OrganizationUserInvite invite, string externalId)
     {
+        // Ideally OrganizationUserInvite should represent a single user so that this doesn't have to be a runtime check
+        if (invite.Emails.Count() > 1)
+        {
+            throw new Exception("This method can only be used to invite a single user.");
+        }
+
         // Validate Collection associations if org is using latest collection enhancements
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
         if (organizationAbility?.FlexibleCollections ?? false)
         {
-            var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            var invalidAssociations = invite.Collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations?.Any() ?? false)
             {
                 throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
             }
         }
 
-        var invite = new OrganizationUserInvite()
-        {
-            Emails = new List<string> { email },
-            Type = type,
-            AccessAll = accessAll,
-            Collections = collections,
-            Groups = groups
-        };
         var results = await InviteUsersAsync(organizationId, invitingUserId, systemUser,
             new (OrganizationUserInvite, string)[] { (invite, externalId) });
 
