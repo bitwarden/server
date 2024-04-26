@@ -1,6 +1,6 @@
 ﻿@using Bit.Admin.Enums;
 @using Bit.Core
-@using Bit.Core.AdminConsole.Enums.Provider
+@using Bit.Core.Billing.Extensions
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @inject Bit.Core.Services.IFeatureService FeatureService
 
@@ -43,7 +43,7 @@
             </div>
         </div>
     </div>
-    @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && Model.Provider.Type == ProviderType.Msp)
+    @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && Model.Provider.IsBillable())
     {
         <div class="row">
             <div class="col-sm">
