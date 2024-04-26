@@ -29,7 +29,7 @@ public class OrganizationBillingQueries(
 
         if (customer == null || subscription == null)
         {
-            return null;
+            return OrganizationMetadataDTO.Default();
         }
 
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
