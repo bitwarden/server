@@ -1,6 +1,6 @@
 ﻿-- Step 1: AccessAll migration for Groups
     -- Create a temporary table to store the groups with AccessAll = 1
-    CREATE TEMPORARY TABLE IF NOT EXISTS "TempGroupsAccessAll" AS
+    CREATE TEMPORARY TABLE "TempGroupsAccessAll" AS
     SELECT "G"."Id" AS "GroupId",
            "G"."OrganizationId"
     FROM "Group" "G"
@@ -9,7 +9,7 @@
 
 -- Step 2: AccessAll migration for OrganizationUsers
     -- Create a temporary table to store the OrganizationUsers with AccessAll = 1
-    CREATE TEMPORARY TABLE IF NOT EXISTS "TempUsersAccessAll" AS
+    CREATE TEMPORARY TABLE "TempUsersAccessAll" AS
     SELECT "OU"."Id" AS "OrganizationUserId",
            "OU"."OrganizationId"
     FROM "OrganizationUser" "OU"
@@ -19,8 +19,9 @@
 -- Step 3: For all OrganizationUsers with Manager role or 'EditAssignedCollections' permission update their existing CollectionUsers rows and insert new rows with [Manage] = 1
 -- and finally update all OrganizationUsers with Manager role to User role
     -- Create a temporary table to store the OrganizationUsers with Manager role or 'EditAssignedCollections' permission
-    CREATE TEMPORARY TABLE IF NOT EXISTS "TempUserManagers" AS
+    CREATE TEMPORARY TABLE "TempUserManagers" AS
     SELECT "OU"."Id" AS "OrganizationUserId",
+           "OU"."OrganizationId",
            CASE WHEN "OU"."Type" = 3 THEN 1 ELSE 0 END AS "IsManager"
     FROM "OrganizationUser" "OU"
     INNER JOIN "Organization" "O" ON "OU"."OrganizationId" = "O"."Id"
@@ -64,10 +65,12 @@
         "ReadOnly" = 0,
         "HidePasswords" = 0,
         "Manage" = 0
-    WHERE "CollectionId" IN (
-        SELECT "C"."Id"
-        FROM "Collection" "C"
-        INNER JOIN "TempUsersAccessAll" "TU" ON "C"."OrganizationId" = "TU"."OrganizationId"
+    WHERE EXISTS (
+        SELECT 1
+        FROM "Collection" AS "C"
+        INNER JOIN "TempUsersAccessAll" AS "TU"
+            ON "CollectionUsers"."OrganizationUserId" = "TU"."OrganizationUserId" AND "C"."OrganizationId" = "TU"."OrganizationId"
+        WHERE "CollectionUsers"."CollectionId" = "C"."Id"
     );
 
     -- Insert new rows into "CollectionUsers"
@@ -118,7 +121,7 @@
     WHERE "Id" IN (
         SELECT DISTINCT "OU"."UserId"
         FROM "OrganizationUser" "OU"
-                 INNER JOIN (
+        INNER JOIN (
             -- Step 1
             SELECT "GU"."OrganizationUserId"
             FROM "GroupUser" "GU"
@@ -138,12 +141,10 @@
         ) AS "CombinedOrgUsers" ON "OU"."Id" = "CombinedOrgUsers"."OrganizationUserId"
     );
 
--- Step 5
-    -- Set "FlexibleCollections" = 1 for all organizations that have not yet been migrated.
+-- Step 5: Set "FlexibleCollections" = 1 for all organizations that have not yet been migrated.
     UPDATE "Organization"
     SET "FlexibleCollections" = 1
     WHERE "FlexibleCollections" = 0;
-
 
 -- Step 6: Drop the temporary tables
 DROP TABLE IF EXISTS "TempGroupsAccessAll";
