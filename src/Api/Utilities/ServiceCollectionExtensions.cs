@@ -8,6 +8,7 @@ using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
+using Path = System.IO.Path;
 
 namespace Bit.Api.Utilities;
 

@@ -10,6 +10,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Path = System.IO.Path;
 
 namespace Bit.Core.Services;
 

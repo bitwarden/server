@@ -3,6 +3,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
+using Path = System.IO.Path;
 
 namespace Bit.Core.Vault.Services;
 

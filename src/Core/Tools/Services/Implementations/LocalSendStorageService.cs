@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Path = System.IO.Path;
 
 namespace Bit.Core.Tools.Services;
 

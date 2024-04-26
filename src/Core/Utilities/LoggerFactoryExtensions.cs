@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Syslog;
+using Path = System.IO.Path;
 
 namespace Bit.Core.Utilities;
 

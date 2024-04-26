@@ -29,6 +29,7 @@ using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using Path = System.IO.Path;
 
 namespace Bit.Core.Services;
 

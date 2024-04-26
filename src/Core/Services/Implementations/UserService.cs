@@ -30,6 +30,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using File = System.IO.File;
 using JsonSerializer = System.Text.Json.JsonSerializer;
+using Path = System.IO.Path;
 
 namespace Bit.Core.Services;
 

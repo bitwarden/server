@@ -9,6 +9,7 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Path = System.IO.Path;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
 
