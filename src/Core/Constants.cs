@@ -151,7 +151,8 @@ public static class FeatureFlagKeys
             { TrustedDeviceEncryption, "true" },
             { Fido2VaultCredentials, "true" },
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"}
+            { UnassignedItemsBanner, "true"},
+            { FlexibleCollectionsSignup, "true" }
         };
     }
 }
