@@ -7,14 +7,17 @@ public class BulkCollectionOperationRequirement : OperationAuthorizationRequirem
 public static class BulkCollectionOperations
 {
     public static readonly BulkCollectionOperationRequirement Create = new() { Name = nameof(Create) };
+    /// <summary>
+    /// Represents reading the Collection object. Does not include reading user and group access - see ReadAccess.
+    /// </summary>
     public static readonly BulkCollectionOperationRequirement Read = new() { Name = nameof(Read) };
+    /// <summary>
+    /// Represents reading the user and group access to a collection.
+    /// </summary>
     public static readonly BulkCollectionOperationRequirement ReadAccess = new() { Name = nameof(ReadAccess) };
-    public static readonly BulkCollectionOperationRequirement ReadWithAccess = new() { Name = nameof(ReadWithAccess) };
     public static readonly BulkCollectionOperationRequirement Update = new() { Name = nameof(Update) };
     /// <summary>
-    /// The operation that represents creating, updating, or removing collection access.
-    /// Combined together to allow for a single requirement to be used for each operation
-    /// as they all currently share the same underlying authorization logic.
+    /// Represents creating, updating, or removing collection access.
     /// </summary>
     public static readonly BulkCollectionOperationRequirement ModifyAccess = new() { Name = nameof(ModifyAccess) };
     public static readonly BulkCollectionOperationRequirement Delete = new() { Name = nameof(Delete) };

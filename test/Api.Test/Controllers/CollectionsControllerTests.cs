@@ -142,7 +142,8 @@ public class CollectionsControllerTests
                 Arg.Any<object>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
                     requirements.Cast<BulkCollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(BulkCollectionOperations.ReadWithAccess))))
+                        operation.Name == nameof(BulkCollectionOperations.Read) ||
+                            operation.Name == nameof(BulkCollectionOperations.ReadAccess))))
             .Returns(AuthorizationResult.Success());
 
         await sutProvider.Sut.GetManyWithDetails(organizationAbility.Id);
