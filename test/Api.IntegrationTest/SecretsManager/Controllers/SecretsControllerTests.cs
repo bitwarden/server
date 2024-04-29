@@ -22,6 +22,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly ApiApplicationFactory _factory;
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly LoginHelper _loginHelper;
 
@@ -35,6 +36,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         _secretRepository = _factory.GetService<ISecretRepository>();
         _projectRepository = _factory.GetService<IProjectRepository>();
         _accessPolicyRepository = _factory.GetService<IAccessPolicyRepository>();
+        _serviceAccountRepository = _factory.GetService<IServiceAccountRepository>();
         _loginHelper = new LoginHelper(_factory, _client);
     }
 
@@ -264,6 +266,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
             await _loginHelper.LoginAsync(email);
+            await _loginHelper.LoginAsync(email);
             accessType = AccessClientType.User;
 
             var accessPolicies = new List<BaseAccessPolicy>
@@ -288,7 +291,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         secretResponse.EnsureSuccessStatusCode();
         var secretResult = await secretResponse.Content.ReadFromJsonAsync<SecretResponseModel>();
 
-        var result = (await _secretRepository.GetManyByProjectIdAsync(project.Id, orgUserId, accessType)).First();
+        var result = (await _secretRepository.GetManyDetailsByProjectIdAsync(project.Id, orgUserId, accessType)).First();
         var secret = result.Secret;
 
         Assert.NotNull(secretResult);
@@ -391,6 +394,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task GetSecretsByProject_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await _loginHelper.LoginAsync(_email);
         await _loginHelper.LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
@@ -784,6 +788,106 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(secretIds.Count, result.Data.Count());
     }
 
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task GetSecretsSyncAsync_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets,
+        bool organizationEnabled)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await _loginHelper.LoginAsync(_email);
+
+        var response = await _client.GetAsync($"/organizations/{org.Id}/secrets/sync");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSecretsSyncAsync_UserClient_BadRequest()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        var response = await _client.GetAsync($"/organizations/{org.Id}/secrets/sync");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetSecretsSyncAsync_NoSecrets_ReturnsEmptyList(bool useLastSyncedDate)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+        await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+
+        var requestUrl = $"/organizations/{org.Id}/secrets/sync";
+        if (useLastSyncedDate)
+        {
+            requestUrl = $"/organizations/{org.Id}/secrets/sync?lastSyncedDate={DateTime.UtcNow.AddDays(-1)}";
+        }
+
+        var response = await _client.GetAsync(requestUrl);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<SecretsSyncResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.True(result.HasChanges);
+        Assert.NotNull(result.Secrets);
+        Assert.Empty(result.Secrets.Data);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetSecretsSyncAsync_HasSecrets_ReturnsAll(bool useLastSyncedDate)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+        await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+        var secretIds = await SetupSecretsSyncRequestAsync(org.Id, apiKeyDetails.ApiKey.ServiceAccountId!.Value);
+
+        var requestUrl = $"/organizations/{org.Id}/secrets/sync";
+        if (useLastSyncedDate)
+        {
+            requestUrl = $"/organizations/{org.Id}/secrets/sync?lastSyncedDate={DateTime.UtcNow.AddDays(-1)}";
+        }
+
+        var response = await _client.GetAsync(requestUrl);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<SecretsSyncResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.True(result.HasChanges);
+        Assert.NotNull(result.Secrets);
+        Assert.NotEmpty(result.Secrets.Data);
+        Assert.Equal(secretIds.Count, result.Secrets.Data.Count());
+        Assert.All(result.Secrets.Data, item => Assert.Contains(item.Id, secretIds));
+    }
+
+    [Fact]
+    public async Task GetSecretsSyncAsync_ServiceAccountNotRevised_ReturnsNoChanges()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+        var serviceAccountId = apiKeyDetails.ApiKey.ServiceAccountId!.Value;
+        await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+        await SetupSecretsSyncRequestAsync(org.Id, serviceAccountId);
+        await UpdateServiceAccountRevisionAsync(serviceAccountId, DateTime.UtcNow.AddDays(-1));
+
+        var response = await _client.GetAsync($"/organizations/{org.Id}/secrets/sync?lastSyncedDate={DateTime.UtcNow}");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<SecretsSyncResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.False(result.HasChanges);
+        Assert.Null(result.Secrets);
+    }
+
     private async Task<(Project Project, List<Guid> secretIds)> CreateSecretsAsync(Guid orgId, int numberToCreate = 3)
     {
         var project = await _projectRepository.CreateAsync(new Project
@@ -852,5 +956,26 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }
+    }
+
+    private async Task<List<Guid>> SetupSecretsSyncRequestAsync(Guid organizationId, Guid serviceAccountId)
+    {
+        var (project, secretIds) = await CreateSecretsAsync(organizationId);
+        var accessPolicies = new List<BaseAccessPolicy>
+        {
+            new ServiceAccountProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id, ServiceAccountId = serviceAccountId, Read = true, Write = true
+            }
+        };
+        await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+        return secretIds;
+    }
+
+    private async Task UpdateServiceAccountRevisionAsync(Guid serviceAccountId, DateTime revisionDate)
+    {
+        var sa = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
+        sa.RevisionDate = revisionDate;
+        await _serviceAccountRepository.ReplaceAsync(sa);
     }
 }
