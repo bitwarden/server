@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -536,7 +537,7 @@ public class BulkCollectionAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanUpdateCollection_WhenAdminOrOwner_Success(
+    public async Task CanUpdateCollection_WhenAdminOrOwner_WithoutV1Enabled_Success(
         OrganizationUserType userType,
         Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
@@ -563,6 +564,88 @@ public class BulkCollectionAuthorizationHandlerTests
             await sutProvider.Sut.HandleAsync(context);
 
             Assert.True(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanUpdateCollection_WhenAdminOrOwner_WithV1Enabled_PermittedByCollectionManagementSettings_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections, CurrentContextOrganization organization,
+        OrganizationAbility organizationAbility)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+        organizationAbility.Id = organization.Id;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = true;
+
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+            sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
+                .Returns(organizationAbility);
+            sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections);
+
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.True(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanUpdateCollection_WhenAdminOrOwner_WithV1Enabled_NotPermittedByCollectionManagementSettings_Failure(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections, CurrentContextOrganization organization,
+        OrganizationAbility organizationAbility)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+        organizationAbility.Id = organization.Id;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+            sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
+                .Returns(organizationAbility);
+            sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections);
+
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.False(context.HasSucceeded);
 
             // Recreate the SUT to reset the mocks/dependencies between tests
             sutProvider.Recreate();
@@ -966,6 +1049,39 @@ public class BulkCollectionAuthorizationHandlerTests
             // Recreate the SUT to reset the mocks/dependencies between tests
             sutProvider.Recreate();
         }
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CachesCollectionsWithCanManagePermissions(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        CollectionDetails collection1, CollectionDetails collection2,
+        CurrentContextOrganization organization, Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(actingUserId, Arg.Any<bool>())
+            .Returns(new List<CollectionDetails>() { collection1, collection2 });
+
+        var context1 = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Update },
+            new ClaimsPrincipal(),
+            collection1);
+
+        await sutProvider.Sut.HandleAsync(context1);
+
+        var context2 = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Update },
+            new ClaimsPrincipal(),
+            collection2);
+
+        await sutProvider.Sut.HandleAsync(context2);
+
+        // Expect: only calls the database once
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(Arg.Any<Guid>(), Arg.Any<bool>());
     }
 
     private static void ArrangeOrganizationAbility(
