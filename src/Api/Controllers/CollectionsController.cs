@@ -556,7 +556,7 @@ public class CollectionsController : Controller
         var authorizationResult = await _authorizationService.AuthorizeAsync(
             User,
             collection,
-            new []{ BulkCollectionOperations.Read, BulkCollectionOperations.ReadAccess});
+            new[] { BulkCollectionOperations.Read, BulkCollectionOperations.ReadAccess });
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
