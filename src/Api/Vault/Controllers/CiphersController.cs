@@ -573,8 +573,9 @@ public class CiphersController : Controller
         await _cipherService.SaveCollectionsAsync(cipher,
             model.CollectionIds.Select(c => new Guid(c)), userId, false);
 
+        var updatedCipher = await GetByIdAsync(id, userId);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
-        return new CipherDetailsResponseModel(cipher, _globalSettings, collectionCiphers);
+        return new CipherDetailsResponseModel(updatedCipher, _globalSettings, collectionCiphers);
     }
 
     [HttpPut("{id}/collections-admin")]
