@@ -23,6 +23,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
     private Guid _targetOrganizationId;
+    private HashSet<Guid>? _managedCollectionsIds;
 
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
@@ -133,7 +134,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have access for the collection being read
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources, org);
+            var canManageCollections = await CanManageCollectionsAsync(resources);
             if (canManageCollections)
             {
                 context.Succeed(requirement);
@@ -166,7 +167,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have access with manage permission for the collection being read
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources, org);
+            var canManageCollections = await CanManageCollectionsAsync(resources);
             if (canManageCollections)
             {
                 context.Succeed(requirement);
@@ -188,10 +189,19 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         IAuthorizationRequirement requirement, ICollection<Collection> resources,
         CurrentContextOrganization? org)
     {
-        // Owners, Admins, and users with EditAnyCollection permission can always manage collection access
+        // Users with EditAnyCollection permission can always update a collection
         if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.EditAnyCollection: true })
+            { Permissions.EditAnyCollection: true })
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
+        // If V1 is enabled, Owners and Admins can update any collection only if permitted by collection management settings
+        var organizationAbility = await GetOrganizationAbilityAsync(org);
+        var allowAdminAccessToAllCollectionItems = !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
+                                                   organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+        if (allowAdminAccessToAllCollectionItems && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             context.Succeed(requirement);
             return;
@@ -201,7 +211,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have manage permission for the collection being managed
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources, org);
+            var canManageCollections = await CanManageCollectionsAsync(resources);
             if (canManageCollections)
             {
                 context.Succeed(requirement);
@@ -241,7 +251,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure acting user has manage permissions for all collections being deleted
         if (organizationAbility is { LimitCollectionCreationDeletion: false })
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources, org);
+            var canManageCollections = await CanManageCollectionsAsync(resources);
             if (canManageCollections)
             {
                 context.Succeed(requirement);
@@ -256,21 +266,19 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
     }
 
-    private async Task<bool> CanManageCollectionsAsync(
-        ICollection<Collection> targetCollections,
-        CurrentContextOrganization org)
+    private async Task<bool> CanManageCollectionsAsync(ICollection<Collection> targetCollections)
     {
-        // List of collection Ids the acting user has access to
-        var assignedCollectionIds =
-            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value, useFlexibleCollections: true))
-            .Where(c =>
-                // Check Collections with Manage permission
-                c.Manage && c.OrganizationId == org.Id)
-            .Select(c => c.Id)
-            .ToHashSet();
+        if (_managedCollectionsIds == null)
+        {
+            var allUserCollections = await _collectionRepository
+                .GetManyByUserIdAsync(_currentContext.UserId!.Value, useFlexibleCollections: true);
+            _managedCollectionsIds = allUserCollections
+                .Where(c => c.Manage)
+                .Select(c => c.Id)
+                .ToHashSet();
+        }
 
-        // Check if the acting user has access to all target collections
-        return targetCollections.All(tc => assignedCollectionIds.Contains(tc.Id));
+        return targetCollections.All(tc => _managedCollectionsIds.Contains(tc.Id));
     }
 
     private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(CurrentContextOrganization? organization)
