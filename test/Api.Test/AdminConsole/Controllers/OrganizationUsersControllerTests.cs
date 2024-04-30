@@ -186,6 +186,36 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task Put_UpdateSelf_WithoutAllowAdminAccessToAllCollectionItems_CannotAddSelfToCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        // Updating self
+        organizationUser.UserId = savingUserId;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+        organizationAbility.FlexibleCollections = true;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
+
+        // User is not currently assigned to any collections, which means they're adding themselves
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(organizationUser,
+                new List<CollectionAccessSelection>()));
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>());
+
+        var orgUserId = organizationUser.Id;
+        var orgUserEmail = organizationUser.Email;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+        Assert.Contains("You cannot add yourself to a collection.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task Put_UpdateSelf_WithoutAllowAdminAccessToAllCollectionItems_DoesNotUpdateGroups(OrganizationUserUpdateRequestModel model,
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
