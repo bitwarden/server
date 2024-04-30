@@ -548,7 +548,9 @@ public class BulkCollectionAuthorizationHandlerTests
 
         var operationsToTest = new[]
         {
-            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
         };
 
         foreach (var op in operationsToTest)
@@ -586,7 +588,9 @@ public class BulkCollectionAuthorizationHandlerTests
 
         var operationsToTest = new[]
         {
-            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
         };
 
         foreach (var op in operationsToTest)
@@ -627,7 +631,9 @@ public class BulkCollectionAuthorizationHandlerTests
 
         var operationsToTest = new[]
         {
-            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
         };
 
         foreach (var op in operationsToTest)
@@ -668,7 +674,9 @@ public class BulkCollectionAuthorizationHandlerTests
 
         var operationsToTest = new[]
         {
-            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
         };
 
         foreach (var op in operationsToTest)
@@ -708,7 +716,9 @@ public class BulkCollectionAuthorizationHandlerTests
 
         var operationsToTest = new[]
         {
-            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
         };
 
         foreach (var op in operationsToTest)
@@ -760,7 +770,9 @@ public class BulkCollectionAuthorizationHandlerTests
 
         var operationsToTest = new[]
         {
-            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
         };
 
         foreach (var op in operationsToTest)
@@ -790,7 +802,9 @@ public class BulkCollectionAuthorizationHandlerTests
     {
         var operationsToTest = new[]
         {
-            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
         };
 
         foreach (var op in operationsToTest)
@@ -1023,7 +1037,8 @@ public class BulkCollectionAuthorizationHandlerTests
             BulkCollectionOperations.Read,
             BulkCollectionOperations.ReadAccess,
             BulkCollectionOperations.Update,
-            BulkCollectionOperations.ModifyAccess,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
             BulkCollectionOperations.Delete,
         };
 

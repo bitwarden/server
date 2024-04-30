@@ -80,9 +80,16 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
                 break;
 
             case not null when requirement == BulkCollectionOperations.Update:
-            case not null when requirement == BulkCollectionOperations.ModifyAccess:
             case not null when requirement == BulkCollectionOperations.ImportCiphers:
                 await CanUpdateCollectionAsync(context, requirement, resources, org);
+                break;
+
+            case not null when requirement == BulkCollectionOperations.ModifyUserAccess:
+                await CanUpdateUserAccessAsync(context, requirement, resources, org);
+                break;
+
+            case not null when requirement == BulkCollectionOperations.ModifyGroupAccess:
+                await CanUpdateGroupAccessAsync(context, requirement, resources, org);
                 break;
 
             case not null when requirement == BulkCollectionOperations.Delete:
@@ -221,6 +228,42 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         // Allow providers to manage collections if they are a provider for the target organization
         if (await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId))
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task CanUpdateUserAccessAsync(AuthorizationHandlerContext context,
+        IAuthorizationRequirement requirement, ICollection<Collection> resources,
+        CurrentContextOrganization? org)
+    {
+        await CanUpdateCollectionAsync(context, requirement, resources, org);
+        if (context.HasSucceeded)
+        {
+            // If the user can update the collection, they can update its users
+            return;
+        }
+
+        // Additionally, the Manage Users custom permission can update users
+        if (org?.Permissions.ManageUsers == true)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task CanUpdateGroupAccessAsync(AuthorizationHandlerContext context,
+        IAuthorizationRequirement requirement, ICollection<Collection> resources,
+        CurrentContextOrganization? org)
+    {
+        await CanUpdateCollectionAsync(context, requirement, resources, org);
+        if (context.HasSucceeded)
+        {
+            // If the user can update the collection, they can update its groups
+            return;
+        }
+
+        // Additionally, the Manage Groups custom permission can update groups
+        if (org?.Permissions.ManageGroups == true)
         {
             context.Succeed(requirement);
         }
