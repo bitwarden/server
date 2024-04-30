@@ -62,7 +62,7 @@ public class GroupsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                  Arg.Any<IEnumerable<Collection>>(),
-                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
              .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -98,7 +98,7 @@ public class GroupsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 Arg.Any<IEnumerable<Collection>>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
             .Returns(AuthorizationResult.Failed());
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Post(organization.Id, groupRequestModel));
@@ -296,13 +296,13 @@ public class GroupsControllerTests
         // Authorize the editedCollection
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => c.Id == editedCollectionId),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
             .Returns(AuthorizationResult.Success());
 
         // Do not authorize the readonly collections
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => c.Id == readonlyCollectionId1 || c.Id == readonlyCollectionId2),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
             .Returns(AuthorizationResult.Failed());
 
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
@@ -346,7 +346,7 @@ public class GroupsControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
             .Returns(AuthorizationResult.Failed());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel));
@@ -389,7 +389,7 @@ public class GroupsControllerTests
 
             sutProvider.GetDependency<IAuthorizationService>()
                 .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ModifyGroupAccess)))
                 .Returns(AuthorizationResult.Success());
         }
     }

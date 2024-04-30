@@ -141,7 +141,7 @@ public class GroupsController : Controller
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
-                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess))
+                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyGroupAccess))
                 .Succeeded;
             if (!authorized)
             {
@@ -213,7 +213,7 @@ public class GroupsController : Controller
         var readonlyCollectionIds = new HashSet<Guid>();
         foreach (var collection in currentCollections)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess))
+            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyGroupAccess))
                 .Succeeded)
             {
                 readonlyCollectionIds.Add(collection.Id);
