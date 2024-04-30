@@ -652,6 +652,9 @@ public class ProviderServiceTests
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
 
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
+
         organizationSignup.Plan = PlanType.EnterpriseAnnually;
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
@@ -677,6 +680,9 @@ public class ProviderServiceTests
         SutProvider<ProviderService> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
+
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
 
         organizationSignup.Plan = PlanType.EnterpriseMonthly;
 
