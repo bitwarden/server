@@ -174,7 +174,9 @@ public class CiphersController : Controller
     public async Task<CipherMiniResponseModel> PostAdmin([FromBody] CipherCreateRequestModel model)
     {
         var cipher = model.Cipher.ToOrganizationCipher();
-        if (!await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
+        // Only users that can edit all ciphers can create new ciphers via the admin endpoint
+        // Other users should use the regular POST/create endpoint
+        if (!await CanEditAllCiphersAsync(cipher.OrganizationId.Value))
         {
             throw new NotFoundException();
         }
@@ -226,7 +228,7 @@ public class CiphersController : Controller
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
@@ -316,6 +318,28 @@ public class CiphersController : Controller
             );
 
         return new ListResponseModel<CipherMiniDetailsResponseModel>(allOrganizationCipherResponses);
+    }
+
+    /// <summary>
+    /// Permission helper to determine if the current user can use the "/admin" variants of the cipher endpoints.
+    /// Allowed for custom users with EditAnyCollection, providers, unrestricted owners and admins (allowAdminAccess setting is ON).
+    /// Falls back to original EditAnyCollection permission check for when V1 flag is disabled.
+    /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
+    /// </summary>
+    private async Task<bool> CanEditCipherAsAdminAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
+    {
+        // Pre-Flexible collections V1 only needs to check EditAnyCollection
+        if (!await UseFlexibleCollectionsV1Async(organizationId))
+        {
+            return await _currentContext.EditAnyCollection(organizationId);
+        }
+
+        if (await CanEditCiphersAsync(organizationId, cipherIds))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -584,14 +608,23 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
 
-        await _cipherService.SaveCollectionsAsync(cipher,
-            model.CollectionIds.Select(c => new Guid(c)), userId, true);
+        var collectionIds = model.CollectionIds.Select(c => new Guid(c)).ToList();
+
+        // In V1, we still need to check if the user can edit the collections they're submitting
+        // This should only happen for unassigned ciphers (otherwise restricted admins would use the normal collections endpoint)
+        if (await UseFlexibleCollectionsV1Async(cipher.OrganizationId.Value) && !await CanEditItemsInCollections(cipher.OrganizationId.Value, collectionIds))
+        {
+            throw new NotFoundException();
+        }
+
+        await _cipherService.SaveCollectionsAsync(cipher, collectionIds, userId, true);
     }
 
     [HttpPost("bulk-collections")]
@@ -642,7 +675,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
@@ -674,14 +707,21 @@ public class CiphersController : Controller
                 "Consider using the \"Purge Vault\" option instead.");
         }
 
-        if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
-            !await _currentContext.EditAnyCollection(new Guid(model.OrganizationId)))
+        if (model == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var cipherIds = model.Ids.Select(i => new Guid(i)).ToList();
+
+        if (string.IsNullOrWhiteSpace(model.OrganizationId) ||
+            !await CanEditCipherAsAdminAsync(new Guid(model.OrganizationId), cipherIds))
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        await _cipherService.DeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId, new Guid(model.OrganizationId), true);
+        await _cipherService.DeleteManyAsync(cipherIds, userId, new Guid(model.OrganizationId), true);
     }
 
     [HttpPut("{id}/delete")]
@@ -702,7 +742,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
@@ -730,14 +770,21 @@ public class CiphersController : Controller
             throw new BadRequestException("You can only delete up to 500 items at a time.");
         }
 
-        if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
-            !await _currentContext.EditAnyCollection(new Guid(model.OrganizationId)))
+        if (model == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var cipherIds = model.Ids.Select(i => new Guid(i)).ToList();
+
+        if (string.IsNullOrWhiteSpace(model.OrganizationId) ||
+            !await CanEditCipherAsAdminAsync(new Guid(model.OrganizationId), cipherIds))
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        await _cipherService.SoftDeleteManyAsync(model.Ids.Select(i => new Guid(i)), userId, new Guid(model.OrganizationId), true);
+        await _cipherService.SoftDeleteManyAsync(cipherIds, userId, new Guid(model.OrganizationId), true);
     }
 
     [HttpPut("{id}/restore")]
@@ -760,7 +807,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
@@ -793,13 +840,19 @@ public class CiphersController : Controller
             throw new BadRequestException("You can only restore up to 500 items at a time.");
         }
 
-        if (model == null || model.OrganizationId == default || !await _currentContext.EditAnyCollection(model.OrganizationId))
+        if (model == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+
+        if (model.OrganizationId == default || !await CanEditCipherAsAdminAsync(model.OrganizationId, cipherIdsToRestore))
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
 
         var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId, model.OrganizationId, true);
         var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
@@ -894,7 +947,7 @@ public class CiphersController : Controller
             await GetByIdAsync(id, userId);
 
         if (cipher == null || (request.AdminRequest && (!cipher.OrganizationId.HasValue ||
-            !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))))
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))))
         {
             throw new NotFoundException();
         }
@@ -998,7 +1051,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(idGuid);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
@@ -1064,7 +1117,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetByIdAsync(idGuid);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
