@@ -236,9 +236,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return;
         }
 
-        // Check for non-null org here: the user must be apart of the organization for these settings to take affect
-        // If V1 is enabled, Owners and Admins can delete any collection only if permitted by collection management settings
         var organizationAbility = await GetOrganizationAbilityAsync(org);
+
+        // If AllowAdminAccessToAllCollectionItems is true, Owners and Admins can delete any collection, regardless of LimitCollectionCreationDeletion setting
         if ((organizationAbility is { AllowAdminAccessToAllCollectionItems: true } ||
              !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)) &&
             org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
@@ -247,12 +247,22 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return;
         }
 
-        // The limit collection management setting is disabled,
-        // ensure acting user has manage permissions for all collections being deleted
+        var canManageCollections = await CanManageCollectionsAsync(resources);
+
+        // LimitCollectionCreationDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
+        // Ensure acting user has manage permissions for all collections being deleted
         if (organizationAbility is { LimitCollectionCreationDeletion: false })
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
             if (canManageCollections)
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+        else
+        // LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
+        {
+            if (org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } && canManageCollections)
             {
                 context.Succeed(requirement);
                 return;
