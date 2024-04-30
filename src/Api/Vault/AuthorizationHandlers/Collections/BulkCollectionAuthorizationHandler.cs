@@ -75,10 +75,6 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
                 await CanReadAsync(context, requirement, resources, org);
                 break;
 
-            case not null when requirement == BulkCollectionOperations.ReadWithAccess:
-                await CanReadWithAccessAsync(context, requirement, resources, org);
-                break;
-
             case not null when requirement == BulkCollectionOperations.Update:
             case not null when requirement == BulkCollectionOperations.ModifyAccess:
             case not null when requirement == BulkCollectionOperations.ImportCiphers:
@@ -124,38 +120,6 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         if (org is
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.EditAnyCollection: true } or
-        { Permissions.DeleteAnyCollection: true })
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
-        // The acting user is a member of the target organization,
-        // ensure they have access for the collection being read
-        if (org is not null)
-        {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
-            if (canManageCollections)
-            {
-                context.Succeed(requirement);
-                return;
-            }
-        }
-
-        // Allow provider users to read collections if they are a provider for the target organization
-        if (await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId))
-        {
-            context.Succeed(requirement);
-        }
-    }
-
-    private async Task CanReadWithAccessAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement,
-        ICollection<Collection> resources, CurrentContextOrganization? org)
-    {
-        // Owners, Admins, and users with EditAnyCollection, DeleteAnyCollection or ManageUsers permission can always read a collection
-        if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.EditAnyCollection: true } or
         { Permissions.DeleteAnyCollection: true } or
         { Permissions.ManageUsers: true })
         {
@@ -164,7 +128,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
 
         // The acting user is a member of the target organization,
-        // ensure they have access with manage permission for the collection being read
+        // ensure they have access for the collection being read
         if (org is not null)
         {
             var canManageCollections = await CanManageCollectionsAsync(resources);
