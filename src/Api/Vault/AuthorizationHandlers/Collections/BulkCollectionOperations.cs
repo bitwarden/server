@@ -14,7 +14,7 @@ public static class BulkCollectionOperations
     public static readonly BulkCollectionOperationRequirement ReadAccess = new() { Name = nameof(ReadAccess) };
     public static readonly BulkCollectionOperationRequirement ReadWithAccess = new() { Name = nameof(ReadWithAccess) };
     /// <summary>
-    /// Update a Collection. This does not include modifying user or group access - see ModifyUserAccess and ModifyGroupAccess
+    /// Update a collection, including its user and group associations
     /// </summary>
     public static readonly BulkCollectionOperationRequirement Update = new() { Name = nameof(Update) };
     /// <summary>
@@ -26,11 +26,11 @@ public static class BulkCollectionOperations
     /// </summary>
     public static readonly BulkCollectionOperationRequirement ImportCiphers = new() { Name = nameof(ImportCiphers) };
     /// <summary>
-    /// Create, update or delete a user's access to this collection
+    /// Create, update or delete Collection-User associations
     /// </summary>
     public static readonly BulkCollectionOperationRequirement ModifyUserAccess = new() { Name = nameof(ModifyUserAccess) };
     /// <summary>
-    /// Create, update or delete a group's access to this collection
+    /// Create, update or delete Collection-Group associations
     /// </summary>
     public static readonly BulkCollectionOperationRequirement ModifyGroupAccess = new() { Name = nameof(ModifyGroupAccess) };
 }

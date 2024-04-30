@@ -661,11 +661,8 @@ public class CollectionsController : Controller
     private async Task<CollectionResponseModel> Put_vNext(Guid id, CollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, collection,
-            new[]{ BulkCollectionOperations.Update,
-                BulkCollectionOperations.ModifyUserAccess,
-                BulkCollectionOperations.ModifyGroupAccess});
-        if (!authorizationResult.Succeeded)
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
+        if (!authorized)
         {
             throw new NotFoundException();
         }
