@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -28,6 +29,9 @@ public class GroupsController : Controller
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IUserService _userService;
+    private readonly IFeatureService _featureService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -38,7 +42,10 @@ public class GroupsController : Controller
         IUpdateGroupCommand updateGroupCommand,
         IDeleteGroupCommand deleteGroupCommand,
         IAuthorizationService authorizationService,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService,
+        IUserService userService,
+        IFeatureService featureService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
@@ -49,6 +56,9 @@ public class GroupsController : Controller
         _deleteGroupCommand = deleteGroupCommand;
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
+        _userService = userService;
+        _featureService = featureService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     [HttpGet("{id}")]
@@ -132,30 +142,32 @@ public class GroupsController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
-    public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody] GroupRequestModel model)
+    public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
+        var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
         {
             throw new NotFoundException();
         }
 
-        var orgIdGuid = new Guid(orgId);
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        // Flexible Collections v1 - a user may not be able to add themselves to a group
+        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        var flexibleCollectionsV1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
+        if (flexibleCollectionsV1Enabled && orgAbility.FlexibleCollections && !orgAbility.AllowAdminAccessToAllCollectionItems)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, userId);
+            var currentGroupUsers = await _groupRepository.GetManyUserIdsByIdAsync(id);
+            if (!currentGroupUsers.Contains(organizationUser.Id) && model.Users.Contains(organizationUser.Id))
+            {
+                throw new BadRequestException("You cannot add yourself to groups.");
+            }
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
 
         await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), model.Users);
         return new GroupResponseModel(group);
-    }
-
-    [HttpPut("{id}/users")]
-    public async Task PutUsers(string orgId, string id, [FromBody] IEnumerable<Guid> model)
-    {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-        await _groupRepository.UpdateUsersAsync(group.Id, model);
     }
 
     [HttpDelete("{id}")]

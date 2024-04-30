@@ -20,6 +20,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
@@ -69,6 +70,8 @@ public class OrganizationsController : Controller
     private readonly ISubscriberQueries _subscriberQueries;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IScaleSeatsCommand _scaleSeatsCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -95,7 +98,9 @@ public class OrganizationsController : Controller
         ICancelSubscriptionCommand cancelSubscriptionCommand,
         ISubscriberQueries subscriberQueries,
         IReferenceEventService referenceEventService,
-        IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand)
+        IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
+        IProviderRepository providerRepository,
+        IScaleSeatsCommand scaleSeatsCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -122,6 +127,8 @@ public class OrganizationsController : Controller
         _subscriberQueries = subscriberQueries;
         _referenceEventService = referenceEventService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
+        _providerRepository = providerRepository;
+        _scaleSeatsCommand = scaleSeatsCommand;
     }
 
     [HttpGet("{id}")]
@@ -560,10 +567,23 @@ public class OrganizationsController : Controller
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
-        else
+
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (consolidatedBillingEnabled && organization.IsValidClient())
         {
-            await _organizationService.DeleteAsync(organization);
+            var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+            if (provider.IsBillable())
+            {
+                await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                    provider,
+                    organization.PlanType,
+                    -organization.Seats ?? 0);
+            }
         }
+
+        await _organizationService.DeleteAsync(organization);
     }
 
     [HttpPost("{id}/import")]
