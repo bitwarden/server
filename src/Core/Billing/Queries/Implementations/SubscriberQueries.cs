@@ -24,16 +24,27 @@ public class SubscriberQueries(
             return null;
         }
 
-        var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
-
-        if (customer != null)
+        try
         {
-            return customer;
+            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
+
+            if (customer != null)
+            {
+                return customer;
+            }
+
+            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
+                subscriber.GatewayCustomerId, subscriber.Id);
+
+            return null;
         }
+        catch (StripeException exception)
+        {
+            logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
+                subscriber.GatewayCustomerId, subscriber.Id, exception.Message);
 
-        logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})", subscriber.GatewayCustomerId, subscriber.Id);
-
-        return null;
+            return null;
+        }
     }
 
     public async Task<Subscription> GetSubscription(
@@ -49,41 +60,28 @@ public class SubscriberQueries(
             return null;
         }
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
-
-        if (subscription != null)
+        try
         {
-            return subscription;
+            var subscription =
+                await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
+
+            if (subscription != null)
+            {
+                return subscription;
+            }
+
+            logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})",
+                subscriber.GatewaySubscriptionId, subscriber.Id);
+
+            return null;
         }
-
-        logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})", subscriber.GatewaySubscriptionId, subscriber.Id);
-
-        return null;
-    }
-
-    public async Task<Subscription> GetSubscriptionOrThrow(
-        ISubscriber subscriber,
-        SubscriptionGetOptions subscriptionGetOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        catch (StripeException exception)
         {
-            logger.LogError("Cannot retrieve subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
+            logger.LogError("An error occurred while trying to retrieve Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID}): {Error}",
+                subscriber.GatewaySubscriptionId, subscriber.Id, exception.Message);
 
-            throw ContactSupport();
+            return null;
         }
-
-        var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
-
-        if (subscription != null)
-        {
-            return subscription;
-        }
-
-        logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})", subscriber.GatewaySubscriptionId, subscriber.Id);
-
-        throw ContactSupport();
     }
 
     public async Task<Customer> GetCustomerOrThrow(
@@ -99,15 +97,63 @@ public class SubscriberQueries(
             throw ContactSupport();
         }
 
-        var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
-
-        if (customer != null)
+        try
         {
-            return customer;
+            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
+
+            if (customer != null)
+            {
+                return customer;
+            }
+
+            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
+                subscriber.GatewayCustomerId, subscriber.Id);
+
+            throw ContactSupport();
+        }
+        catch (StripeException exception)
+        {
+            logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
+                subscriber.GatewayCustomerId, subscriber.Id, exception.Message);
+
+            throw ContactSupport("An error occurred while trying to retrieve a Stripe Customer", exception);
+        }
+    }
+
+    public async Task<Subscription> GetSubscriptionOrThrow(
+        ISubscriber subscriber,
+        SubscriptionGetOptions subscriptionGetOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            logger.LogError("Cannot retrieve subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
+
+            throw ContactSupport();
         }
 
-        logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})", subscriber.GatewayCustomerId, subscriber.Id);
+        try
+        {
+            var subscription =
+                await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
 
-        throw ContactSupport();
+            if (subscription != null)
+            {
+                return subscription;
+            }
+
+            logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})",
+                subscriber.GatewaySubscriptionId, subscriber.Id);
+
+            throw ContactSupport();
+        }
+        catch (StripeException exception)
+        {
+            logger.LogError("An error occurred while trying to retrieve Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID}): {Error}",
+                subscriber.GatewaySubscriptionId, subscriber.Id, exception.Message);
+
+            throw ContactSupport("An error occurred while trying to retrieve a Stripe Subscription", exception);
+        }
     }
 }
