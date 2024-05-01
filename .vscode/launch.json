@@ -38,6 +38,7 @@
             "configurations": [
                 "run-Admin",
                 "run-API",
+                "run-Events",
                 "run-EventsProcessor",
                 "run-Identity",
                 "run-Sso",
@@ -58,6 +59,7 @@
             "configurations": [
                 "run-Admin-SelfHost",
                 "run-API-SelfHost",
+                "run-Events-SelfHost",
                 "run-EventsProcessor-SelfHost",
                 "run-Identity-SelfHost",
                 "run-Sso-SelfHost",
@@ -76,6 +78,7 @@
             "configurations": [
                 "run-Admin-SelfHost",
                 "run-API-SelfHost",
+                "run-Events-SelfHost",
                 "run-EventsProcessor-SelfHost",
                 "run-Identity-SelfHost",
             ],
@@ -119,6 +122,17 @@
                 "group": "cloud",
             },
             "preLaunchTask": "buildBilling",
+        },
+        {
+            "name": "Events",
+            "configurations": [
+                "run-Events"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildEvents",
         },
         {
             "name": "Events Processor",
@@ -342,6 +356,25 @@
             }
         },
         {
+            "name": "run-Events",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Events/bin/Debug/net8.0/Events.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Events",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
             "name": "run-EventsProcessor",
             "presentation": {
                 "hidden": true,
@@ -506,6 +539,27 @@
             }
         },
         {
+            "name": "run-Events-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Events/bin/Debug/net8.0/Events.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Events",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:46274",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
             "name": "run-EventsProcessor-SelfHost",
             "presentation": {
                 "hidden": true,
@@ -519,7 +573,7 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "ASPNETCORE_URLS": "http://localhost:46274",
+                "ASPNETCORE_URLS": "http://localhost:54103",
                 "developSelfHosted": "true",
             },
             "sourceFileMap": {
