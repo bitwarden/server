@@ -356,7 +356,9 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(), ExpectedCollectionAccess(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                    r => r.Contains(BulkCollectionOperations.ModifyAccess)
+                    reqs => reqs.All(r =>
+                        r == BulkCollectionOperations.ModifyUserAccess ||
+                        r == BulkCollectionOperations.ModifyGroupAccess)
                 ))
             .Returns(AuthorizationResult.Success());
 
@@ -370,8 +372,9 @@ public class CollectionsControllerTests
             Arg.Any<ClaimsPrincipal>(),
             ExpectedCollectionAccess(),
             Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                r => r.Contains(BulkCollectionOperations.ModifyAccess))
-            );
+                reqs => reqs.All(r =>
+                    r == BulkCollectionOperations.ModifyUserAccess ||
+                    r == BulkCollectionOperations.ModifyGroupAccess)));
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().Received()
             .AddAccessAsync(
                 Arg.Is<ICollection<Collection>>(g => g.SequenceEqual(collections)),
@@ -511,7 +514,9 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(), ExpectedCollectionAccess(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                    r => r.Contains(BulkCollectionOperations.ModifyAccess)
+                    reqs => reqs.All(r =>
+                        r == BulkCollectionOperations.ModifyUserAccess ||
+                        r == BulkCollectionOperations.ModifyGroupAccess)
                 ))
             .Returns(AuthorizationResult.Failed());
 
@@ -522,7 +527,9 @@ public class CollectionsControllerTests
             Arg.Any<ClaimsPrincipal>(),
             ExpectedCollectionAccess(),
             Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                r => r.Contains(BulkCollectionOperations.ModifyAccess))
+                    reqs => reqs.All(r =>
+                        r == BulkCollectionOperations.ModifyUserAccess ||
+                        r == BulkCollectionOperations.ModifyGroupAccess))
             );
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
             .AddAccessAsync(default, default, default);
