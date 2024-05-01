@@ -36,15 +36,14 @@ public class OrganizationBillingController(
 
     [HttpGet]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<BillingResponseModel> GetBilling(string id)
+    public async Task<BillingResponseModel> GetBilling(Guid organizationId)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.ViewBillingHistory(orgIdGuid))
+        if (!await currentContext.ViewBillingHistory(organizationId))
         {
             throw new NotFoundException();
         }
 
-        var organization = await organizationRepository.GetByIdAsync(orgIdGuid);
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
         if (organization == null)
         {
             throw new NotFoundException();
