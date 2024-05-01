@@ -12,6 +12,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -195,9 +196,25 @@ public class ProvidersController : Controller
         }
 
         model.ToProviderPlan(providerPlans);
-        foreach (var providerPlan in providerPlans)
+        if (providerPlans.Count == 0)
         {
-            await _providerPlanRepository.ReplaceAsync(providerPlan);
+            var newProviderPlans = new List<ProviderPlan>
+            {
+                new() {ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum= model.TeamsMinimumSeats, PurchasedSeats = 0, AllocatedSeats = 0},
+                new() {ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum= model.EnterpriseMinimumSeats, PurchasedSeats = 0, AllocatedSeats = 0}
+            };
+
+            foreach (var newProviderPlan in newProviderPlans)
+            {
+                await _providerPlanRepository.CreateAsync(newProviderPlan);
+            }
+        }
+        else
+        {
+            foreach (var providerPlan in providerPlans)
+            {
+                await _providerPlanRepository.ReplaceAsync(providerPlan);
+            }
         }
 
         return RedirectToAction("Edit", new { id });
