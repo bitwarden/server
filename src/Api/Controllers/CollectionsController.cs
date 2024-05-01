@@ -335,7 +335,8 @@ public class CollectionsController : Controller
             throw new NotFoundException("One or more collections not found.");
         }
 
-        var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess);
+        var result = await _authorizationService.AuthorizeAsync(User, collections,
+            new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
 
         if (!result.Succeeded)
         {
@@ -686,7 +687,7 @@ public class CollectionsController : Controller
     private async Task PutUsers_vNext(Guid id, IEnumerable<SelectionReadOnlyRequestModel> model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
@@ -710,7 +711,7 @@ public class CollectionsController : Controller
     private async Task DeleteUser_vNext(Guid id, Guid orgUserId)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
