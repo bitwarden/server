@@ -56,7 +56,7 @@ public class GroupsControllerTests
     {
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true });
+            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true, AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -70,13 +70,26 @@ public class GroupsControllerTests
 
         var response = await sutProvider.Sut.Post(organization.Id, groupRequestModel);
 
+        var requestModelCollectionIds = groupRequestModel.Collections.Select(c => c.Id).ToHashSet();
+
+        // Assert that it checked permissions
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
+        await sutProvider.GetDependency<IAuthorizationService>()
+            .Received(1)
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Is<IEnumerable<Collection>>(collections =>
+                    collections.All(c => requestModelCollectionIds.Contains(c.Id))),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Single() == BulkCollectionOperations.ModifyGroupAccess));
+
+        // Assert that it saved the data
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
                 g.AccessAll == groupRequestModel.AccessAll),
             organization,
-            Arg.Any<ICollection<CollectionAccessSelection>>(),
+            Arg.Is<ICollection<CollectionAccessSelection>>(access =>
+                access.All(c => requestModelCollectionIds.Contains(c.Id))),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
@@ -89,15 +102,16 @@ public class GroupsControllerTests
     {
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true });
+            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true, AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
 
+        var requestModelCollectionIds = groupRequestModel.Collections.Select(c => c.Id).ToHashSet();
         sutProvider.GetDependency<IAuthorizationService>()
            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<Collection>>(collections => collections.All(c => requestModelCollectionIds.Contains(c.Id))),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
             .Returns(AuthorizationResult.Failed());
 
@@ -111,19 +125,26 @@ public class GroupsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_AdminsCanAccessAllCollections_Success(Organization organization, Group group, GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
+    public async Task Put_AdminsCanAccessAllCollections_Success(Organization organization, Group group,
+        GroupRequestModel groupRequestModel, List<CollectionAccessSelection> existingCollectionAccess,
+        SutProvider<GroupsController> sutProvider)
     {
         group.OrganizationId = organization.Id;
 
-        // Enable FC and v1
+        // Enable FC and v1, set Collection Management Setting
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
             new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true, FlexibleCollections = true });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
-            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, new List<CollectionAccessSelection>()));
+            .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, existingCollectionAccess));
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(existingCollectionAccess.Select(c => c.Id))
+            .Returns(existingCollectionAccess.Select(c => new Collection { Id = c.Id }).ToList());
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
+
+        var requestModelCollectionIds = groupRequestModel.Collections.Select(c => c.Id).ToHashSet();
 
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 
@@ -133,7 +154,9 @@ public class GroupsControllerTests
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
                 g.AccessAll == groupRequestModel.AccessAll),
             Arg.Is<Organization>(o => o.Id == organization.Id),
-            Arg.Any<ICollection<CollectionAccessSelection>>(),
+            // Should overwrite any existing collections
+            Arg.Is<ICollection<CollectionAccessSelection>>(access =>
+                access.All(c => requestModelCollectionIds.Contains(c.Id))),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
@@ -245,7 +268,7 @@ public class GroupsControllerTests
     {
         organization.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
-        Put_Setup(sutProvider, organization, group, savingUserId, groupRequestModel, false);
+        Put_Setup(sutProvider, organization, group, savingUserId);
 
         var editedCollectionId = CoreHelpers.GenerateComb();
         var readonlyCollectionId1 = CoreHelpers.GenerateComb();
@@ -333,7 +356,7 @@ public class GroupsControllerTests
     {
         organization.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
-        Put_Setup(sutProvider, organization, group, savingUserId, groupRequestModel, false);
+        Put_Setup(sutProvider, organization, group, savingUserId);
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdWithCollectionsAsync(group.Id)
@@ -354,7 +377,7 @@ public class GroupsControllerTests
     }
 
     private void Put_Setup(SutProvider<GroupsController> sutProvider, Organization organization,
-        Group group, Guid savingUserId, GroupRequestModel model, bool authorizeAll)
+        Group group, Guid savingUserId)
     {
         var orgId = organization.Id = group.OrganizationId;
 
@@ -374,23 +397,5 @@ public class GroupsControllerTests
             Id = savingUserId
         });
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
-        if (authorizeAll)
-        {
-            // Simple case: saving user can edit all collections, all collection access is replaced
-            sutProvider.GetDependency<IGroupRepository>()
-                .GetByIdWithCollectionsAsync(group.Id)
-                .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group,
-                    model.Collections.Select(cas => cas.ToSelectionReadOnly()).ToList()));
-            var collections = model.Collections.Select(cas => new Collection { Id = cas.Id }).ToList();
-            sutProvider.GetDependency<ICollectionRepository>()
-                .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(guids => guids.SequenceEqual(collections.Select(c => c.Id))))
-                .Returns(collections);
-
-            sutProvider.GetDependency<IAuthorizationService>()
-                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ModifyGroupAccess)))
-                .Returns(AuthorizationResult.Success());
-        }
     }
 }
