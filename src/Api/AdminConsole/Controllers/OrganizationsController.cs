@@ -11,6 +11,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
@@ -398,8 +399,38 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
+        organization = await AdjustOrganizationSeatsForSmTrialAsync(id, organization, model);
+
         var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization);
+
         await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
+    }
+
+    /// <summary>
+    /// Adjusts the organization seats for the Secrets Manager trial to match the new seat count for secrets manager
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="organization"></param>
+    /// <param name="model"></param>
+    private async Task<Organization> AdjustOrganizationSeatsForSmTrialAsync(Guid id, Organization organization,
+        SecretsManagerSubscriptionUpdateRequestModel model)
+    {
+        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) ||
+            string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId) ||
+            model.SeatAdjustment == 0)
+        {
+            return organization;
+        }
+
+        var subscriptionInfo = await _paymentService.GetSubscriptionAsync(organization);
+        if (subscriptionInfo?.CustomerDiscount?.Id != "sm-standalone")
+        {
+            return organization;
+        }
+
+        await _organizationService.UpdateSubscription(id, model.SeatAdjustment, null);
+
+        return await _organizationRepository.GetByIdAsync(id);
     }
 
     [HttpPost("{id}/subscribe-secrets-manager")]
