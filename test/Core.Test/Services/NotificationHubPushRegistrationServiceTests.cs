@@ -12,21 +12,21 @@ public class NotificationHubPushRegistrationServiceTests
     private readonly NotificationHubPushRegistrationService _sut;
 
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly IFeatureService _featureService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationHubPushRegistrationService> _logger;
     private readonly GlobalSettings _globalSettings;
 
     public NotificationHubPushRegistrationServiceTests()
     {
         _installationDeviceRepository = Substitute.For<IInstallationDeviceRepository>();
-        _featureService = Substitute.For<IFeatureService>();
+        _serviceProvider = Substitute.For<IServiceProvider>();
         _logger = Substitute.For<ILogger<NotificationHubPushRegistrationService>>();
         _globalSettings = new GlobalSettings();
 
         _sut = new NotificationHubPushRegistrationService(
             _installationDeviceRepository,
             _globalSettings,
-            _featureService,
+            _serviceProvider,
             _logger
         );
     }
