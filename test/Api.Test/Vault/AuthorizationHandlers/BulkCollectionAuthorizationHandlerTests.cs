@@ -872,7 +872,7 @@ public class BulkCollectionAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanDeleteAsync_WhenAdminOrOwner_AllowAdminAccessToAllCollectionItemsFalse_V1FlagDisabled_Success(
+    public async Task CanDeleteAsync_WhenAdminOrOwner_V1FlagDisabled_Success(
         OrganizationUserType userType,
         Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
@@ -898,7 +898,7 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanDeleteAsync_WithManageCollectionPermission_LimitCollectionCreationDeletionFalse_Success(
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionCreationDeletionFalse_WithCanManagePermission_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
@@ -927,6 +927,145 @@ public class BulkCollectionAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.User)]
+    public async Task CanDeleteAsync_LimitCollectionCreationDeletionFalse_AllowAdminAccessToAllCollectionItemsFalse_WithCanManagePermission_Success(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility(sutProvider, organization, false, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collections);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanDeleteAsync_WhenAdminOrOwner_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithCanManagePermission_Success(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility(sutProvider, organization, true, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collections);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsTrue_Failure(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility(sutProvider, organization, true);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collections);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_Failure(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility(sutProvider, organization, true, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collections);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, CollectionCustomization]
