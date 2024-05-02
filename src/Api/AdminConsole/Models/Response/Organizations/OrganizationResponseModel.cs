@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Response;
+﻿using System.Text.Json.Serialization;
+using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -60,7 +61,9 @@ public class OrganizationResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     public string BusinessAddress1 { get; set; }
     public string BusinessAddress2 { get; set; }
@@ -123,8 +126,14 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         if (hideSensitiveData)
         {
             BillingEmail = null;
-            Subscription.Items = null;
-            UpcomingInvoice.Amount = null;
+            if (Subscription != null)
+            {
+                Subscription.Items = null;
+            }
+            if (UpcomingInvoice != null)
+            {
+                UpcomingInvoice.Amount = null;
+            }
         }
     }
 
@@ -133,12 +142,13 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     {
         if (license != null)
         {
-            // License expiration should always include grace period - See OrganizationLicense.cs
+            // License expiration should always include grace period (unless it's in a Trial) - See OrganizationLicense.cs.
             Expiration = license.Expires;
-            // Use license.ExpirationWithoutGracePeriod if available, otherwise assume license expiration minus grace period
-            ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ??
-                                             license.Expires?.AddDays(-Constants
-                                                 .OrganizationSelfHostSubscriptionGracePeriodDays);
+
+            // Use license.ExpirationWithoutGracePeriod if available, otherwise assume license expiration minus grace period unless it's in a Trial.
+            ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
+                ? license.Expires
+                : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
         }
     }
 

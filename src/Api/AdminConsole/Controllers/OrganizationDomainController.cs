@@ -80,7 +80,6 @@ public class OrganizationDomainController : Controller
         var organizationDomain = new OrganizationDomain
         {
             OrganizationId = orgId,
-            Txt = model.Txt,
             DomainName = model.DomainName.ToLower()
         };
 

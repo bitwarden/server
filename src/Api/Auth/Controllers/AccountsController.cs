@@ -69,7 +69,7 @@ public class AccountsController : Controller
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly ISubscriberQueries _subscriberQueries;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -104,7 +104,7 @@ public class AccountsController : Controller
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
-        IGetSubscriptionQuery getSubscriptionQuery,
+        ISubscriberQueries subscriberQueries,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
@@ -133,7 +133,7 @@ public class AccountsController : Controller
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
-        _getSubscriptionQuery = getSubscriptionQuery;
+        _subscriberQueries = subscriberQueries;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _cipherValidator = cipherValidator;
@@ -821,8 +821,7 @@ public class AccountsController : Controller
         await _userService.UpdateLicenseAsync(user, license);
     }
 
-    [HttpPost("cancel-premium")]
-    [SelfHosted(NotSelfHostedOnly = true)]
+    [HttpPost("cancel")]
     public async Task PostCancel([FromBody] SubscriptionCancellationRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -832,34 +831,24 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var presentUserWithOffboardingSurvey =
-            _featureService.IsEnabled(FeatureFlagKeys.AC1607_PresentUsersWithOffboardingSurvey);
+        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(user);
 
-        if (presentUserWithOffboardingSurvey)
-        {
-            var subscription = await _getSubscriptionQuery.GetSubscription(user);
-
-            await _cancelSubscriptionCommand.CancelSubscription(subscription,
-                new OffboardingSurveyResponse
-                {
-                    UserId = user.Id,
-                    Reason = request.Reason,
-                    Feedback = request.Feedback
-                },
-                user.IsExpired());
-
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
-                ReferenceEventType.CancelSubscription,
-                user,
-                _currentContext)
+        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+            new OffboardingSurveyResponse
             {
-                EndOfPeriod = user.IsExpired()
-            });
-        }
-        else
+                UserId = user.Id,
+                Reason = request.Reason,
+                Feedback = request.Feedback
+            },
+            user.IsExpired());
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+            ReferenceEventType.CancelSubscription,
+            user,
+            _currentContext)
         {
-            await _userService.CancelPremiumAsync(user);
-        }
+            EndOfPeriod = user.IsExpired()
+        });
     }
 
     [HttpPost("reinstate-premium")]

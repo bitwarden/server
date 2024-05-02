@@ -2,6 +2,7 @@
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
+using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
@@ -27,6 +28,9 @@ public class DatabaseContext : DbContext
     public DbSet<ServiceAccountProjectAccessPolicy> ServiceAccountProjectAccessPolicy { get; set; }
     public DbSet<UserServiceAccountAccessPolicy> UserServiceAccountAccessPolicy { get; set; }
     public DbSet<GroupServiceAccountAccessPolicy> GroupServiceAccountAccessPolicy { get; set; }
+    public DbSet<UserSecretAccessPolicy> UserSecretAccessPolicy { get; set; }
+    public DbSet<GroupSecretAccessPolicy> GroupSecretAccessPolicy { get; set; }
+    public DbSet<ServiceAccountSecretAccessPolicy> ServiceAccountSecretAccessPolicy { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
@@ -62,6 +66,7 @@ public class DatabaseContext : DbContext
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
+    public DbSet<ProviderPlan> ProviderPlans { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

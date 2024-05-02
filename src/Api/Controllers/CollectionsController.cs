@@ -2,7 +2,6 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,7 +10,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -253,7 +251,18 @@ public class CollectionsController : Controller
 
         await _collectionService.SaveAsync(collection, groups, users);
 
-        return new CollectionResponseModel(collection);
+        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(orgId))
+        {
+            return new CollectionResponseModel(collection);
+        }
+
+        // If we have a user, fetch the collection to get the latest permission details
+        var userCollectionDetails = await _collectionRepository.GetByIdAsync(collection.Id,
+            _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
+
+        return userCollectionDetails == null
+            ? new CollectionResponseModel(collection)
+            : new CollectionDetailsResponseModel(userCollectionDetails);
     }
 
     [HttpPut("{id}")]
@@ -276,7 +285,18 @@ public class CollectionsController : Controller
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
         await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
-        return new CollectionResponseModel(collection);
+
+        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId))
+        {
+            return new CollectionResponseModel(collection);
+        }
+
+        // If we have a user, fetch the collection details to get the latest permission details for the user
+        var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
+
+        return updatedCollectionDetails == null
+            ? new CollectionResponseModel(collection)
+            : new CollectionDetailsResponseModel(updatedCollectionDetails);
     }
 
     [HttpPut("{id}/users")]
@@ -300,7 +320,6 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("bulk-access")]
-    [RequireFeature(FeatureFlagKeys.BulkCollectionAccess)]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
         // Authorization logic assumes flexible collections is enabled
@@ -316,7 +335,8 @@ public class CollectionsController : Controller
             throw new NotFoundException("One or more collections not found.");
         }
 
-        var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess);
+        var result = await _authorizationService.AuthorizeAsync(User, collections,
+            new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
 
         if (!result.Succeeded)
         {
@@ -667,7 +687,7 @@ public class CollectionsController : Controller
     private async Task PutUsers_vNext(Guid id, IEnumerable<SelectionReadOnlyRequestModel> model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
@@ -691,7 +711,7 @@ public class CollectionsController : Controller
     private async Task DeleteUser_vNext(Guid id, Guid orgUserId)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();

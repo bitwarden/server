@@ -15,7 +15,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Tools.Repositories;
 public class SendRepositoryTests
 {
     [CiSkippedTheory, EfUserSendAutoData, EfOrganizationSendAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         Send send,
         User user,
         Organization org,

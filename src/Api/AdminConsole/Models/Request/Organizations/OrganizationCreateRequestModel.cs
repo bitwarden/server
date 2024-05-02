@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -9,9 +10,11 @@ namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 public class OrganizationCreateRequestModel : IValidatableObject
 {
     [Required]
-    [StringLength(50)]
+    [StringLength(50, ErrorMessage = "The field Name exceeds the maximum length.")]
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
-    [StringLength(50)]
+    [StringLength(50, ErrorMessage = "The field Business Name exceeds the maximum length.")]
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     [Required]
     [StringLength(256)]
@@ -48,6 +51,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
     public bool UseSecretsManager { get; set; }
     public bool IsFromSecretsManagerTrial { get; set; }
 
+    public string InitiationPath { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -79,6 +84,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 BillingAddressPostalCode = BillingAddressPostalCode,
                 BillingAddressCountry = BillingAddressCountry,
             },
+            InitiationPath = InitiationPath,
         };
 
         Keys?.ToOrganizationSignup(orgSignup);
