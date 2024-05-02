@@ -465,10 +465,66 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             dbContext.RemoveRange(policiesToDelete);
         }
 
-        await UpsertServiceAccountGrantedPoliciesAsync(dbContext, currentAccessPolicies,
+        await UpsertServiceAccountProjectPoliciesAsync(dbContext, currentAccessPolicies,
             updates.ProjectGrantedPolicyUpdates.Where(pu => pu.Operation != AccessPolicyOperation.Delete).ToList());
         await UpdateServiceAccountRevisionAsync(dbContext, updates.ServiceAccountId);
         await dbContext.SaveChangesAsync();
+    }
+
+    public async Task<ProjectServiceAccountsAccessPolicies?> GetProjectServiceAccountsAccessPoliciesAsync(Guid projectId)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entities = await dbContext.ServiceAccountProjectAccessPolicy
+            .Where(ap => ap.GrantedProjectId == projectId)
+            .Include(ap => ap.ServiceAccount)
+            .Include(ap => ap.GrantedProject)
+            .ToListAsync();
+
+        if (entities.Count == 0)
+        {
+            return null;
+        }
+
+        return new ProjectServiceAccountsAccessPolicies(projectId, entities.Select(MapToCore).ToList());
+    }
+
+    public async Task UpdateProjectServiceAccountsAccessPoliciesAsync(
+        ProjectServiceAccountsAccessPoliciesUpdates updates)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var currentAccessPolicies = await dbContext.ServiceAccountProjectAccessPolicy
+            .Where(ap => ap.GrantedProjectId == updates.ProjectId)
+            .ToListAsync();
+
+        if (currentAccessPolicies.Count != 0)
+        {
+            var serviceAccountIdsToDelete = updates.ServiceAccountAccessPolicyUpdates
+                .Where(pu => pu.Operation == AccessPolicyOperation.Delete)
+                .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value)
+                .ToList();
+
+            var accessPolicyIdsToDelete = currentAccessPolicies
+                .Where(entity => serviceAccountIdsToDelete.Contains(entity.ServiceAccountId!.Value))
+                .Select(ap => ap.Id)
+                .ToList();
+
+            await dbContext.ServiceAccountProjectAccessPolicy
+                .Where(ap => accessPolicyIdsToDelete.Contains(ap.Id))
+                .ExecuteDeleteAsync();
+        }
+
+        await UpsertServiceAccountProjectPoliciesAsync(dbContext, currentAccessPolicies,
+            updates.ServiceAccountAccessPolicyUpdates.Where(update => update.Operation != AccessPolicyOperation.Delete)
+                .ToList());
+        var effectedServiceAccountIds = updates.ServiceAccountAccessPolicyUpdates
+            .Select(sa => sa.AccessPolicy.ServiceAccountId!.Value).ToList();
+        await UpdateServiceAccountsRevisionAsync(dbContext, effectedServiceAccountIds);
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     private static async Task UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
@@ -506,7 +562,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    private async Task UpsertServiceAccountGrantedPoliciesAsync(DatabaseContext dbContext,
+    private async Task UpsertServiceAccountProjectPoliciesAsync(DatabaseContext dbContext,
         IReadOnlyCollection<ServiceAccountProjectAccessPolicy> currentPolices,
         List<ServiceAccountProjectAccessPolicyUpdate> policyUpdates)
     {
@@ -515,7 +571,8 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         {
             var updatedEntity = MapToEntity(policyUpdate.AccessPolicy);
             var currentEntity = currentPolices.FirstOrDefault(e =>
-                e.GrantedProjectId == policyUpdate.AccessPolicy.GrantedProjectId!.Value);
+                e.GrantedProjectId == policyUpdate.AccessPolicy.GrantedProjectId!.Value &&
+                e.ServiceAccountId == policyUpdate.AccessPolicy.ServiceAccountId!.Value);
 
             switch (policyUpdate.Operation)
             {
@@ -627,5 +684,14 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         {
             entity.RevisionDate = DateTime.UtcNow;
         }
+    }
+
+    private static async Task UpdateServiceAccountsRevisionAsync(DatabaseContext dbContext, List<Guid> serviceAccountIds)
+    {
+        var utcNow = DateTime.UtcNow;
+        await dbContext.ServiceAccount
+            .Where(sa => serviceAccountIds.Contains(sa.Id))
+            .ExecuteUpdateAsync(setters =>
+                setters.SetProperty(sa => sa.RevisionDate, utcNow));
     }
 }

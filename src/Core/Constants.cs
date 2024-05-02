@@ -135,6 +135,7 @@ public static class FeatureFlagKeys
     public const string UnassignedItemsBanner = "unassigned-items-banner";
     public const string EnableDeleteProvider = "AC-1218-delete-provider";
     public const string EmailVerification = "email-verification";
+    public const string AnhFcmv1Migration = "anh-fcmv1-migration";
     public const string ExtensionRefresh = "extension-refresh";
 
     public static List<string> GetAllKeys()
