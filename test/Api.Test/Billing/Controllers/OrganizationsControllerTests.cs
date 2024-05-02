@@ -132,7 +132,7 @@ public class OrganizationsControllerTests : IDisposable
     {
         _currentContext.EditSubscription(organizationId).Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostUpgrade(organizationId.ToString(), model));
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostUpgrade(organizationId, model));
     }
 
     [Theory, AutoData]
@@ -149,7 +149,7 @@ public class OrganizationsControllerTests : IDisposable
         _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
-        var response = await _sut.PostUpgrade(organizationId.ToString(), model);
+        var response = await _sut.PostUpgrade(organizationId, model);
 
         Assert.Equal(success, response.Success);
         Assert.Equal(paymentIntentClientSecret, response.PaymentIntentClientSecret);
@@ -176,7 +176,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _organizationUserRepository.GetByOrganizationAsync(organizationId, userId).Returns(organizationUser);
 
-        var response = await _sut.PostUpgrade(organizationId.ToString(), model);
+        var response = await _sut.PostUpgrade(organizationId, model);
 
         Assert.Equal(success, response.Success);
         Assert.Equal(paymentIntentClientSecret, response.PaymentIntentClientSecret);
@@ -204,7 +204,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _organizationUserRepository.GetByOrganizationAsync(organizationId, userId).ReturnsNull();
 
-        var response = await _sut.PostUpgrade(organizationId.ToString(), model);
+        var response = await _sut.PostUpgrade(organizationId, model);
 
         Assert.Equal(success, response.Success);
         Assert.Equal(paymentIntentClientSecret, response.PaymentIntentClientSecret);
