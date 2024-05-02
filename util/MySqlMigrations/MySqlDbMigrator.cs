@@ -35,7 +35,8 @@ public class MySqlDbMigrator : IDbMigrator
             _logger.LogInformation(Constants.BypassFiltersEventId, "Migration successful.");
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
+        
+		cancellationToken.ThrowIfCancellationRequested();
         return true;
     }
 }
