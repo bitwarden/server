@@ -238,8 +238,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
              !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)) &&
             org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
-            context.Succeed(requirement);
-            return;
+            return true;
         }
 
         var canManageCollections = await CanManageCollectionsAsync(resources);
@@ -258,8 +257,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         {
             if (org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } && canManageCollections)
             {
-                context.Succeed(requirement);
-                return;
+                return true;
             }
         }
 
