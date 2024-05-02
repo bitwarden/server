@@ -61,16 +61,15 @@ public class OrganizationsController(
         return new OrganizationBillingStatusResponseModel(organization, risksSubscriptionFailure);
     }
 
-    [HttpGet("{id}/subscription")]
-    public async Task<OrganizationSubscriptionResponseModel> GetSubscription(string id)
+    [HttpGet("{id:guid}/subscription")]
+    public async Task<OrganizationSubscriptionResponseModel> GetSubscription(Guid id)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.ViewSubscription(orgIdGuid))
+        if (!await currentContext.ViewSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        var organization = await organizationRepository.GetByIdAsync(orgIdGuid);
+        var organization = await organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {
             throw new NotFoundException();
@@ -84,7 +83,7 @@ public class OrganizationsController(
                 throw new NotFoundException();
             }
 
-            var hideSensitiveData = !await currentContext.EditSubscription(orgIdGuid);
+            var hideSensitiveData = !await currentContext.EditSubscription(id);
 
             return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, hideSensitiveData);
         }
@@ -98,17 +97,16 @@ public class OrganizationsController(
         return new OrganizationSubscriptionResponseModel(organization);
     }
 
-    [HttpGet("{id}/license")]
+    [HttpGet("{id:guid}/license")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<OrganizationLicense> GetLicense(string id, [FromQuery] Guid installationId)
+    public async Task<OrganizationLicense> GetLicense(Guid id, [FromQuery] Guid installationId)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.OrganizationOwner(orgIdGuid))
+        if (!await currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
 
-        var org = await organizationRepository.GetByIdAsync(new Guid(id));
+        var org = await organizationRepository.GetByIdAsync(id);
         var license = await cloudGetOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
         if (license == null)
         {
@@ -118,17 +116,16 @@ public class OrganizationsController(
         return license;
     }
 
-    [HttpPost("{id}/payment")]
+    [HttpPost("{id:guid}/payment")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostPayment(string id, [FromBody] PaymentRequestModel model)
+    public async Task PostPayment(Guid id, [FromBody] PaymentRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.EditPaymentMethods(orgIdGuid))
+        if (!await currentContext.EditPaymentMethods(id))
         {
             throw new NotFoundException();
         }
 
-        await organizationService.ReplacePaymentMethodAsync(orgIdGuid, model.PaymentToken,
+        await organizationService.ReplacePaymentMethodAsync(id, model.PaymentToken,
             model.PaymentMethodType.Value, new TaxInfo
             {
                 BillingAddressLine1 = model.Line1,
@@ -141,23 +138,22 @@ public class OrganizationsController(
             });
     }
 
-    [HttpPost("{id}/upgrade")]
+    [HttpPost("{id:guid}/upgrade")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody] OrganizationUpgradeRequestModel model)
+    public async Task<PaymentResponseModel> PostUpgrade(Guid id, [FromBody] OrganizationUpgradeRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.EditSubscription(orgIdGuid))
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(id, model.ToOrganizationUpgrade());
 
         if (model.UseSecretsManager && success)
         {
             var userId = userService.GetProperUserId(User).Value;
 
-            await TryGrantOwnerAccessToSecretsManagerAsync(orgIdGuid, userId);
+            await TryGrantOwnerAccessToSecretsManagerAsync(id, userId);
         }
 
         return new PaymentResponseModel { Success = success, PaymentIntentClientSecret = paymentIntentClientSecret };
@@ -185,19 +181,18 @@ public class OrganizationsController(
         await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
     }
 
-    [HttpPost("{id}/subscription")]
+    [HttpPost("{id:guid}/subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSubscription(string id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
+    public async Task PostSubscription(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.EditSubscription(orgIdGuid))
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
-        await organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
+        await organizationService.UpdateSubscription(id, model.SeatAdjustment, model.MaxAutoscaleSeats);
     }
 
-    [HttpPost("{id}/subscribe-secrets-manager")]
+    [HttpPost("{id:guid}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
     {
@@ -225,31 +220,29 @@ public class OrganizationsController(
         return new ProfileOrganizationResponseModel(organizationDetails);
     }
 
-    [HttpPost("{id}/seat")]
+    [HttpPost("{id:guid}/seat")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostSeat(string id, [FromBody] OrganizationSeatRequestModel model)
+    public async Task<PaymentResponseModel> PostSeat(Guid id, [FromBody] OrganizationSeatRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.EditSubscription(orgIdGuid))
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        var result = await organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
+        var result = await organizationService.AdjustSeatsAsync(id, model.SeatAdjustment.Value);
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
-    [HttpPost("{id}/verify-bank")]
+    [HttpPost("{id:guid}/verify-bank")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostVerifyBank(string id, [FromBody] OrganizationVerifyBankRequestModel model)
+    public async Task PostVerifyBank(Guid id, [FromBody] OrganizationVerifyBankRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.EditSubscription(orgIdGuid))
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        await organizationService.VerifyBankAsync(orgIdGuid, model.Amount1.Value, model.Amount2.Value);
+        await organizationService.VerifyBankAsync(id, model.Amount1.Value, model.Amount2.Value);
     }
 
     [HttpPost("{id}/cancel")]
@@ -287,30 +280,28 @@ public class OrganizationsController(
         });
     }
 
-    [HttpPost("{id}/reinstate")]
+    [HttpPost("{id:guid}/reinstate")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostReinstate(string id)
+    public async Task PostReinstate(Guid id)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.EditSubscription(orgIdGuid))
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        await organizationService.ReinstateSubscriptionAsync(orgIdGuid);
+        await organizationService.ReinstateSubscriptionAsync(id);
     }
 
-    [HttpGet("{id}/tax")]
+    [HttpGet("{id:guid}/tax")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<TaxInfoResponseModel> GetTaxInfo(string id)
+    public async Task<TaxInfoResponseModel> GetTaxInfo(Guid id)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.OrganizationOwner(orgIdGuid))
+        if (!await currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
 
-        var organization = await organizationRepository.GetByIdAsync(orgIdGuid);
+        var organization = await organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {
             throw new NotFoundException();
@@ -320,17 +311,16 @@ public class OrganizationsController(
         return new TaxInfoResponseModel(taxInfo);
     }
 
-    [HttpPut("{id}/tax")]
+    [HttpPut("{id:guid}/tax")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PutTaxInfo(string id, [FromBody] ExpandedTaxInfoUpdateRequestModel model)
+    public async Task PutTaxInfo(Guid id, [FromBody] ExpandedTaxInfoUpdateRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.OrganizationOwner(orgIdGuid))
+        if (!await currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
 
-        var organization = await organizationRepository.GetByIdAsync(orgIdGuid);
+        var organization = await organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {
             throw new NotFoundException();
