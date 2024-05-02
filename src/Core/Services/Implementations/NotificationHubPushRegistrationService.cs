@@ -3,6 +3,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Azure.NotificationHubs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
@@ -11,19 +12,19 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationHubPushRegistrationService> _logger;
     private Dictionary<NotificationHubType, NotificationHubClient> _clients = [];
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         GlobalSettings globalSettings,
-        IFeatureService featureService,
+        IServiceProvider serviceProvider,
         ILogger<NotificationHubPushRegistrationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
-        _featureService = featureService;
+        _serviceProvider = serviceProvider;
         _logger = logger;
 
         // Is this dirty to do in the ctor?
@@ -75,7 +76,8 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                if (_featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
+                if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
                 {
                     payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
                     messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
