@@ -6,6 +6,7 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
@@ -372,7 +373,7 @@ public class OrganizationsController(
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
-        if (subscriptionInfo?.CustomerDiscount?.Id != "sm-standalone")
+        if (subscriptionInfo?.CustomerDiscount?.Id != StripeConstants.CouponIDs.SecretsManagerStandalone)
         {
             return organization;
         }
