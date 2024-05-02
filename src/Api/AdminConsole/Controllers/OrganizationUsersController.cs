@@ -199,7 +199,7 @@ public class OrganizationUsersController : Controller
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
-                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess))
+                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyUserAccess))
                 .Succeeded;
             if (!authorized)
             {
@@ -364,33 +364,42 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        var (organizationUser, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
         if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        // If admins are not allowed access to all collections, you cannot add yourself to a group
-        // In this case we just don't update groups
         var userId = _userService.GetProperUserId(User).Value;
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
         var editingSelf = userId == organizationUser.UserId;
 
-        var groups = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
+        // If admins are not allowed access to all collections, you cannot add yourself to a group.
+        // In this case we just don't update groups.
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
             ? null
             : model.Groups;
 
+        // If admins are not allowed access to all collections, you cannot add yourself to collections.
+        // This is not caught by the requirement below that you can ModifyUserAccess and must be checked separately
+        var currentAccessIds = currentAccess.Select(c => c.Id).ToHashSet();
+        if (editingSelf &&
+            !organizationAbility.AllowAdminAccessToAllCollectionItems &&
+            model.Collections.Any(c => !currentAccessIds.Contains(c.Id)))
+        {
+            throw new BadRequestException("You cannot add yourself to a collection.");
+        }
+
         // The client only sends collections that the saving user has permissions to edit.
-        // On the server side, we need to (1) confirm this and (2) concat these with the collections that the user
-        // can't edit before saving to the database.
-        var (_, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
+        // On the server side, we need to (1) make sure the user has permissions for these collections, and
+        // (2) concat these with the collections that the user can't edit before saving to the database.
         var currentCollections = await _collectionRepository
             .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
 
         var readonlyCollectionIds = new HashSet<Guid>();
         foreach (var collection in currentCollections)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess))
+            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess))
                 .Succeeded)
             {
                 readonlyCollectionIds.Add(collection.Id);
@@ -411,7 +420,7 @@ public class OrganizationUsersController : Controller
             .ToList();
 
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId,
-            collectionsToSave, groups);
+            collectionsToSave, groupsToSave);
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]

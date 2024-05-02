@@ -17,4 +17,6 @@ public interface IProjectRepository
     Task<(bool Read, bool Write)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType);
     Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId);
     Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId);
+    Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds, Guid userId,
+        AccessClientType accessType);
 }
