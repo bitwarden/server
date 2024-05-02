@@ -26,5 +26,8 @@ public interface IProviderService
     Task LogProviderAccessToOrganizationAsync(Guid organizationId);
     Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail);
+    Task InitiateDeleteAsync(Provider provider, string providerAdminEmail);
+    Task DeleteAsync(Provider provider, string token);
+    Task DeleteAsync(Provider provider);
 }
 

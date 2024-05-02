@@ -1,5 +1,5 @@
 ﻿using Bit.Api.Billing.Controllers;
-using Bit.Api.Billing.Models;
+using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Queries;
@@ -61,7 +61,7 @@ public class ProviderBillingControllerTests
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(providerId)
             .Returns(true);
 
-        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionData(providerId).ReturnsNull();
+        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionDTO(providerId).ReturnsNull();
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
 
@@ -79,7 +79,7 @@ public class ProviderBillingControllerTests
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(providerId)
             .Returns(true);
 
-        var configuredPlans = new List<ConfiguredProviderPlan>
+        var configuredProviderPlanDTOList = new List<ConfiguredProviderPlanDTO>
         {
             new (Guid.NewGuid(), providerId, PlanType.TeamsMonthly, 50, 10, 30),
             new (Guid.NewGuid(), providerId, PlanType.EnterpriseMonthly, 100, 0, 90)
@@ -92,25 +92,25 @@ public class ProviderBillingControllerTests
             Customer = new Customer { Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } } }
         };
 
-        var providerSubscriptionData = new ProviderSubscriptionData(
-            configuredPlans,
+        var providerSubscriptionDTO = new ProviderSubscriptionDTO(
+            configuredProviderPlanDTOList,
             subscription);
 
-        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionData(providerId)
-            .Returns(providerSubscriptionData);
+        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionDTO(providerId)
+            .Returns(providerSubscriptionDTO);
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
 
-        Assert.IsType<Ok<ProviderSubscriptionDTO>>(result);
+        Assert.IsType<Ok<ProviderSubscriptionResponse>>(result);
 
-        var providerSubscriptionDTO = ((Ok<ProviderSubscriptionDTO>)result).Value;
+        var providerSubscriptionResponse = ((Ok<ProviderSubscriptionResponse>)result).Value;
 
-        Assert.Equal(providerSubscriptionDTO.Status, subscription.Status);
-        Assert.Equal(providerSubscriptionDTO.CurrentPeriodEndDate, subscription.CurrentPeriodEnd);
-        Assert.Equal(providerSubscriptionDTO.DiscountPercentage, subscription.Customer!.Discount!.Coupon!.PercentOff);
+        Assert.Equal(providerSubscriptionResponse.Status, subscription.Status);
+        Assert.Equal(providerSubscriptionResponse.CurrentPeriodEndDate, subscription.CurrentPeriodEnd);
+        Assert.Equal(providerSubscriptionResponse.DiscountPercentage, subscription.Customer!.Discount!.Coupon!.PercentOff);
 
         var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var providerTeamsPlan = providerSubscriptionDTO.Plans.FirstOrDefault(plan => plan.PlanName == teamsPlan.Name);
+        var providerTeamsPlan = providerSubscriptionResponse.Plans.FirstOrDefault(plan => plan.PlanName == teamsPlan.Name);
         Assert.NotNull(providerTeamsPlan);
         Assert.Equal(50, providerTeamsPlan.SeatMinimum);
         Assert.Equal(10, providerTeamsPlan.PurchasedSeats);
@@ -119,7 +119,7 @@ public class ProviderBillingControllerTests
         Assert.Equal("Monthly", providerTeamsPlan.Cadence);
 
         var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
-        var providerEnterprisePlan = providerSubscriptionDTO.Plans.FirstOrDefault(plan => plan.PlanName == enterprisePlan.Name);
+        var providerEnterprisePlan = providerSubscriptionResponse.Plans.FirstOrDefault(plan => plan.PlanName == enterprisePlan.Name);
         Assert.NotNull(providerEnterprisePlan);
         Assert.Equal(100, providerEnterprisePlan.SeatMinimum);
         Assert.Equal(0, providerEnterprisePlan.PurchasedSeats);

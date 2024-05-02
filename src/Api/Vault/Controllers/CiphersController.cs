@@ -584,7 +584,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/collections")]
     [HttpPost("{id}/collections")]
-    public async Task<CipherResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<CipherDetailsResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
@@ -597,9 +597,9 @@ public class CiphersController : Controller
         await _cipherService.SaveCollectionsAsync(cipher,
             model.CollectionIds.Select(c => new Guid(c)), userId, false);
 
-        var updatedCipherCollections = await GetByIdAsync(id, userId);
-        var response = new CipherResponseModel(updatedCipherCollections, _globalSettings);
-        return response;
+        var updatedCipher = await GetByIdAsync(id, userId);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
+        return new CipherDetailsResponseModel(updatedCipher, _globalSettings, collectionCiphers);
     }
 
     [HttpPut("{id}/collections-admin")]
@@ -1171,11 +1171,10 @@ public class CiphersController : Controller
     [HttpGet("has-unassigned-ciphers")]
     public async Task<bool> HasUnassignedCiphers()
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-
+        // We don't filter for organization.FlexibleCollections here, it's shown for all orgs, and the client determines
+        // whether the message is shown in future tense (not yet migrated) or present tense (already migrated)
         var adminOrganizations = _currentContext.Organizations
-            .Where(o => o.Type is OrganizationUserType.Admin or OrganizationUserType.Owner &&
-                        orgAbilities.ContainsKey(o.Id) && orgAbilities[o.Id].FlexibleCollections);
+            .Where(o => o.Type is OrganizationUserType.Admin or OrganizationUserType.Owner);
 
         foreach (var org in adminOrganizations)
         {
