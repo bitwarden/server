@@ -140,7 +140,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have access for the collection being read
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 return true;
@@ -167,7 +167,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have access with manage permission for the collection being read
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 return true;
@@ -202,7 +202,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have manage permission for the collection being managed
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 return true;
@@ -238,7 +238,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure acting user has manage permissions for all collections being deleted
         if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 return true;
@@ -248,16 +248,31 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // Allow providers to delete collections if they are a provider for the target organization
         return await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId);
     }
-
-    private async Task<bool> CanManageCollectionsAsync(ICollection<Collection> targetCollections)
+    private async Task<bool> CanManageCollectionsAsync(ICollection<Collection> targetCollections,
+        CurrentContextOrganization org)
     {
         if (_managedCollectionsIds == null)
         {
             var allUserCollections = await _collectionRepository
                 .GetManyByUserIdAsync(_currentContext.UserId!.Value, useFlexibleCollections: true);
-            _managedCollectionsIds = allUserCollections
+
+            var managedCollectionIds = allUserCollections
                 .Where(c => c.Manage)
-                .Select(c => c.Id)
+                .Select(c => c.Id);
+
+            // Owners and Admins and Customer users can manage orphaned collections
+            if (org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true })
+            {
+                var orgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(_targetOrganizationId);
+
+                var orphans = orgCollections.Where(c =>
+                    !c.Item2.Users.Any(u => u.Manage) && !c.Item2.Groups.Any(g => g.Manage))
+                    .Select(c => c.Item1.Id);
+                
+                managedCollectionIds = managedCollectionIds.Concat(orphans);
+            }
+            
+            _managedCollectionsIds = managedCollectionIds
                 .ToHashSet();
         }
 
