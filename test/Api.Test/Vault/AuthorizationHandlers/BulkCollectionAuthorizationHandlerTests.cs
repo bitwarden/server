@@ -1092,6 +1092,43 @@ public class BulkCollectionAuthorizationHandlerTests
         Assert.True(context.HasSucceeded);
     }
 
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanDeleteAsync_WhenAdminOrOwner_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithoutCanManagePermission_Failure(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility(sutProvider, organization, true, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collections);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+
+        foreach (var c in collections)
+        {
+            c.Manage = false;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
     [Theory, BitAutoData, CollectionCustomization]
     public async Task CanDeleteAsync_WhenUser_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsTrue_Failure(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
@@ -1109,6 +1146,7 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collections);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
         foreach (var c in collections)
         {
@@ -1142,6 +1180,7 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collections);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
         foreach (var c in collections)
         {
