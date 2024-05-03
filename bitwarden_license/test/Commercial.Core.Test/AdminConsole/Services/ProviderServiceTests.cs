@@ -842,6 +842,70 @@ public class ProviderServiceTests
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAsync(provider, validToken));
     }
 
+    [Theory, BitAutoData]
+    public async Task EnableAsync_Success(Provider provider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        provider.Enabled = false;
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+
+        // Act
+        await sutProvider.Sut.EnableAsync(provider.Id);
+
+        // Assert
+        Assert.True(provider.Enabled);
+        await providerRepository.Received().ReplaceAsync(provider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task EnableAsync_AlreadyEnabled_DoesNothing(Provider provider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        provider.Enabled = true;
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+
+        // Act
+        await sutProvider.Sut.EnableAsync(provider.Id);
+
+        // Assert
+        Assert.True(provider.Enabled);
+        await providerRepository.DidNotReceive().ReplaceAsync(provider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DisableAsync_Success(Provider provider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        provider.Enabled = true;
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+
+        // Act
+        await sutProvider.Sut.DisableAsync(provider.Id);
+
+        // Assert
+        Assert.False(provider.Enabled);
+        await providerRepository.Received().ReplaceAsync(provider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DisableAsync_AlreadyDisabled_DoesNothing(Provider provider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        provider.Enabled = false;
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+
+        // Act
+        await sutProvider.Sut.DisableAsync(provider.Id);
+
+        // Assert
+        Assert.False(provider.Enabled);
+        await providerRepository.DidNotReceive().ReplaceAsync(provider);
+    }
+
     private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
         new()
         {
