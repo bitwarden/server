@@ -72,6 +72,105 @@ public class AuthRequestRepositoryTests
         Assert.Equal(4, numberOfDeleted);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task UpdateManyAsync_Works(
+        IAuthRequestRepository authRequestRepository,
+        IUserRepository userRepository)
+    {
+        // Create two distinct real users for foreign key requirements
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "First Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var user2 = await userRepository.CreateAsync(new User
+        {
+            Name = "Second Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var user3 = await userRepository.CreateAsync(new User
+        {
+            Name = "Third Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Create two different and still valid (not expired or responded to) auth requests
+        var authRequests = new List<AuthRequest>
+        {
+            await authRequestRepository.CreateAsync(CreateAuthRequest(user1.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddMinutes(-5))),
+            await authRequestRepository.CreateAsync(CreateAuthRequest(user3.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddMinutes(-7))),
+            await authRequestRepository.CreateAsync(CreateAuthRequest(user2.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddMinutes(-10)))
+        };
+
+        // Update some properties on two auth request, but leave the other one
+        // alone to be a control value
+        var authRequestToBeUpdated1 = authRequests[0];
+        var authRequestToBeUpdated2 = authRequests[1];
+        var authRequestNotToBeUpdated = authRequests[2];
+        authRequests[0].Approved = true;
+        authRequests[0].ResponseDate = DateTime.UtcNow.AddMinutes(-1);
+        authRequests[0].Key = "UPDATED_KEY_1";
+        authRequests[0].MasterPasswordHash = "UPDATED_MASTERPASSWORDHASH_1";
+
+        authRequests[1].Approved = false;
+        authRequests[1].ResponseDate = DateTime.UtcNow.AddMinutes(-2);
+
+        // Run the method being tested
+        await authRequestRepository.UpdateManyAsync(authRequests);
+
+        // Define what "Equality" really means in this context
+        // This includes stripping milliseconds off of dates, because we can't
+        // reliably compare that deep
+        static DateTime? TrimMilliseconds(DateTime? dt)
+        {
+            if (!dt.HasValue)
+            {
+                return null;
+            }
+            return new DateTime(dt.Value.Year, dt.Value.Month, dt.Value.Day, dt.Value.Hour, dt.Value.Minute, dt.Value.Second, 0, dt.Value.Kind);
+        }
+
+        bool AuthRequestEquals(AuthRequest x, AuthRequest y)
+        {
+            return
+            x.Id == y.Id &&
+            x.UserId == y.UserId &&
+            x.Type == y.Type &&
+            x.RequestDeviceIdentifier == y.RequestDeviceIdentifier &&
+            x.RequestDeviceType == y.RequestDeviceType &&
+            x.RequestIpAddress == y.RequestIpAddress &&
+            x.ResponseDeviceId == y.ResponseDeviceId &&
+            x.AccessCode == y.AccessCode &&
+            x.PublicKey == y.PublicKey &&
+            x.Key == y.Key &&
+            x.MasterPasswordHash == y.MasterPasswordHash &&
+            x.Approved == y.Approved &&
+            TrimMilliseconds(x.CreationDate) == TrimMilliseconds(y.CreationDate) &&
+            TrimMilliseconds(x.ResponseDate) == TrimMilliseconds(y.ResponseDate) &&
+            TrimMilliseconds(x.AuthenticationDate) == TrimMilliseconds(y.AuthenticationDate) &&
+            x.OrganizationId == y.OrganizationId;
+        }
+
+        // Assert that the unchanged auth request is still unchanged
+        var skippedAuthRequest = await authRequestRepository.GetByIdAsync(authRequestNotToBeUpdated.Id);
+        Assert.True(AuthRequestEquals(skippedAuthRequest, authRequestNotToBeUpdated));
+        //Assert.Equal(skippedAuthRequest.CreationDate, authRequestNotToBeUpdated.CreationDate);
+
+        // Assert that the values updated on the changed auth requests were updated, and no others
+        var updatedAuthRequest1 = await authRequestRepository.GetByIdAsync(authRequestToBeUpdated1.Id);
+        Assert.True(AuthRequestEquals(authRequestToBeUpdated1, updatedAuthRequest1));
+        var updatedAuthRequest2 = await authRequestRepository.GetByIdAsync(authRequestToBeUpdated2.Id);
+        Assert.True(AuthRequestEquals(authRequestToBeUpdated2, updatedAuthRequest2));
+    }
+
     private static AuthRequest CreateAuthRequest(Guid userId, AuthRequestType authRequestType, DateTime creationDate, bool? approved = null, DateTime? responseDate = null)
     {
         return new AuthRequest
