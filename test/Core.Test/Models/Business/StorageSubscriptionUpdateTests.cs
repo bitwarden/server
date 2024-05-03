@@ -94,7 +94,7 @@ public class StorageSubscriptionUpdateTests
             }
         };
         var update = new StorageSubscriptionUpdate(plan.PasswordManager.StripeStoragePlanId, 100);
-        update.UpgradeItemsOptions(subscription); // Call UpgradeItemsOptions to set prevStorage
+        update.UpgradeItemsOptions(subscription);
 
         var options = update.RevertItemsOptions(subscription);
 
