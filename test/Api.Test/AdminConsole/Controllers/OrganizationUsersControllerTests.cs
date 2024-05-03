@@ -120,7 +120,7 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 Arg.Any<IEnumerable<Collection>>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
@@ -147,7 +147,7 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 Arg.Any<IEnumerable<Collection>>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
@@ -182,6 +182,36 @@ public class OrganizationUsersControllerTests
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
             model.Groups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_UpdateSelf_WithoutAllowAdminAccessToAllCollectionItems_CannotAddSelfToCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        // Updating self
+        organizationUser.UserId = savingUserId;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+        organizationAbility.FlexibleCollections = true;
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
+
+        // User is not currently assigned to any collections, which means they're adding themselves
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(organizationUser,
+                new List<CollectionAccessSelection>()));
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>());
+
+        var orgUserId = organizationUser.Id;
+        var orgUserEmail = organizationUser.Email;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+        Assert.Contains("You cannot add yourself to a collection.", exception.Message);
     }
 
     [Theory]
@@ -309,13 +339,13 @@ public class OrganizationUsersControllerTests
         // Authorize the editedCollection
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => c.Id == editedCollectionId),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Success());
 
         // Do not authorize the readonly collections
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => c.Id == readonlyCollectionId1 || c.Id == readonlyCollectionId2),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
         await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
@@ -357,7 +387,7 @@ public class OrganizationUsersControllerTests
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
@@ -466,7 +496,7 @@ public class OrganizationUsersControllerTests
 
             sutProvider.GetDependency<IAuthorizationService>()
                 .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => collections.Contains(c)),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ModifyAccess)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ModifyUserAccess)))
                 .Returns(AuthorizationResult.Success());
         }
     }
