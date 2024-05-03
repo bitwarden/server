@@ -3,6 +3,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Auth.Helpers;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -77,6 +78,18 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
 
     public async Task UpdateManyAsync(IEnumerable<AuthRequest> authRequests)
     {
-        throw new NotImplementedException();
+        if (!authRequests.Any())
+        {
+            return;
+        }
+
+        var authRequestsTVP = authRequests.ToDataTable();
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteAsync(
+                $"[dbo].[AuthRequest_UpdateMany]",
+                new { AuthRequestsInput = authRequestsTVP },
+                commandType: CommandType.StoredProcedure);
+        }
     }
 }
