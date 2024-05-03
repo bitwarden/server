@@ -74,4 +74,9 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
             return results.ToList();
         }
     }
+
+    public async Task UpdateManyAsync(IEnumerable<AuthRequest> authRequests)
+    {
+        throw new NotImplementedException();
+    }
 }

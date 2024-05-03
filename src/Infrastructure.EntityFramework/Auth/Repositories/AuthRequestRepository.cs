@@ -69,4 +69,9 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
             return orgUserAuthRequests;
         }
     }
+
+    public async Task UpdateManyAsync(IEnumerable<Core.Auth.Entities.AuthRequest> authRequests)
+    {
+        throw new NotImplementedException();
+    }
 }
