@@ -22,7 +22,7 @@ jobs:
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
       ########## Remove Docker images ##########
-      - name: Remove the Docker image from bitwardenprod ACR
+      - name: Remove the Docker image from ACR
         env:
           REF: ${{ github.event.pull_request.head.ref }}
           REGISTRY: bitwardenprod
