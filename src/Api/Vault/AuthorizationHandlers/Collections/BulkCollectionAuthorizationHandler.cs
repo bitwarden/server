@@ -241,24 +241,14 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return true;
         }
 
-        var canManageCollections = await CanManageCollectionsAsync(resources);
-
-        // LimitCollectionCreationDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
+        // If LimitCollectionCreationDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
         // Ensure acting user has manage permissions for all collections being deleted
-        if (organizationAbility is { LimitCollectionCreationDeletion: false })
+        // If LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
+        var canDeleteManagedCollections = organizationAbility is { LimitCollectionCreationDeletion: false } ||
+                                          org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
+        if (canDeleteManagedCollections && await CanManageCollectionsAsync(resources))
         {
-            if (canManageCollections)
-            {
-                return true;
-            }
-        }
-        else
-        // LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
-        {
-            if (org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } && canManageCollections)
-            {
-                return true;
-            }
+            return true;
         }
 
         // Allow providers to delete collections if they are a provider for the target organization
