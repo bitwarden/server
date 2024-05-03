@@ -134,6 +134,8 @@ public static class FeatureFlagKeys
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
     public const string UnassignedItemsBanner = "unassigned-items-banner";
     public const string EnableDeleteProvider = "AC-1218-delete-provider";
+    public const string EmailVerification = "email-verification";
+    public const string AnhFcmv1Migration = "anh-fcmv1-migration";
 
     public static List<string> GetAllKeys()
     {
@@ -151,7 +153,8 @@ public static class FeatureFlagKeys
             { TrustedDeviceEncryption, "true" },
             { Fido2VaultCredentials, "true" },
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"}
+            { UnassignedItemsBanner, "true"},
+            { FlexibleCollectionsSignup, "true" }
         };
     }
 }
