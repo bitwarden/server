@@ -618,9 +618,12 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (!string.IsNullOrWhiteSpace(user.PrivateKey) || !string.IsNullOrWhiteSpace(user.PublicKey))
+        if (_featureService.IsEnabled(FeatureFlagKeys.ReturnErrorOnExistingKeypair))
         {
-            throw new BadRequestException("User has existing keypair");
+            if (!string.IsNullOrWhiteSpace(user.PrivateKey) || !string.IsNullOrWhiteSpace(user.PublicKey))
+            {
+                throw new BadRequestException("User has existing keypair");
+            }
         }
 
         await _userService.SaveUserAsync(model.ToUser(user));
