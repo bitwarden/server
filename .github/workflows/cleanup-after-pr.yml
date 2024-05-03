@@ -50,8 +50,8 @@ jobs:
 
             echo "[*] Checking if remote exists: $_AZ_REGISTRY/$SERVICE_NAME:$IMAGE_TAG"
             TAG_EXISTS=$(
-            az acr repository show-tags --name $_AZ_REGISTRY --repository $SERVICE_NAME \
-            | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
+              az acr repository show-tags --name $_AZ_REGISTRY --repository $SERVICE_NAME \
+              | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
             )
 
             if [[ "$TAG_EXISTS" == "true" ]]; then
