@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Commercial.Core.Utilities;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -67,11 +67,7 @@ public class Startup
         // TODO: no longer be required - see PM-1880
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
-#if OSS
-        services.AddOosServices();
-#else
-        services.AddCommercialCoreServices();
-#endif
+        services.AddBillingOperations();
 
         // Mvc
         services.AddMvc(config =>
