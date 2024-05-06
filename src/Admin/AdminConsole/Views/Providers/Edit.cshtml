@@ -48,14 +48,54 @@
         <div class="row">
             <div class="col-sm">
                 <div class="form-group">
-                    <label asp-for="TeamsMinimumSeats"></label>
-                    <input type="number" class="form-control" asp-for="TeamsMinimumSeats">
+                    <label asp-for="TeamsMonthlySeatMinimum"></label>
+                    <input type="number" class="form-control" asp-for="TeamsMonthlySeatMinimum">
                 </div>
             </div>
             <div class="col-sm">
                 <div class="form-group">
-                    <label asp-for="EnterpriseMinimumSeats"></label>
-                    <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
+                    <label asp-for="EnterpriseMonthlySeatMinimum"></label>
+                    <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <div class="form-group">
+                        <label asp-for="Gateway"></label>
+                        <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                            <option value="">--</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="GatewayCustomerId"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewayCustomerId">
+                        <div class="input-group-append">
+                            <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="GatewaySubscriptionId"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
+                        <div class="input-group-append">
+                            <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

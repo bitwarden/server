@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Enums;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 
 namespace Bit.Admin.AdminConsole.Models;
 
@@ -10,16 +11,21 @@ public class ProviderEditModel : ProviderViewModel
 {
     public ProviderEditModel() { }
 
-    public ProviderEditModel(Provider provider, IEnumerable<ProviderUserUserDetails> providerUsers,
-        IEnumerable<ProviderOrganizationOrganizationDetails> organizations, IEnumerable<ProviderPlan> providerPlans)
-        : base(provider, providerUsers, organizations)
+    public ProviderEditModel(
+        Provider provider,
+        IEnumerable<ProviderUserUserDetails> providerUsers,
+        IEnumerable<ProviderOrganizationOrganizationDetails> organizations,
+        IReadOnlyCollection<ProviderPlan> providerPlans) : base(provider, providerUsers, organizations)
     {
         Name = provider.DisplayName();
         BusinessName = provider.DisplayBusinessName();
         BillingEmail = provider.BillingEmail;
         BillingPhone = provider.BillingPhone;
-        TeamsMinimumSeats = GetMinimumSeats(providerPlans, PlanType.TeamsMonthly);
-        EnterpriseMinimumSeats = GetMinimumSeats(providerPlans, PlanType.EnterpriseMonthly);
+        TeamsMonthlySeatMinimum = GetSeatMinimum(providerPlans, PlanType.TeamsMonthly);
+        EnterpriseMonthlySeatMinimum = GetSeatMinimum(providerPlans, PlanType.EnterpriseMonthly);
+        Gateway = provider.Gateway;
+        GatewayCustomerId = provider.GatewayCustomerId;
+        GatewaySubscriptionId = provider.GatewaySubscriptionId;
     }
 
     [Display(Name = "Billing Email")]
@@ -29,38 +35,18 @@ public class ProviderEditModel : ProviderViewModel
     [Display(Name = "Business Name")]
     public string BusinessName { get; set; }
     public string Name { get; set; }
-    [Display(Name = "Teams minimum seats")]
-    public int TeamsMinimumSeats { get; set; }
+    [Display(Name = "Teams (Monthly) Seat Minimum")]
+    public int TeamsMonthlySeatMinimum { get; set; }
 
-    [Display(Name = "Enterprise minimum seats")]
-    public int EnterpriseMinimumSeats { get; set; }
-    [Display(Name = "Events")]
+    [Display(Name = "Enterprise (Monthly) Seat Minimum")]
+    public int EnterpriseMonthlySeatMinimum { get; set; }
+    [Display(Name = "Gateway")]
+    public GatewayType? Gateway { get; set; }
+    [Display(Name = "Gateway Customer Id")]
+    public string GatewayCustomerId { get; set; }
+    [Display(Name = "Gateway Subscription Id")]
+    public string GatewaySubscriptionId { get; set; }
 
-    public IEnumerable<ProviderPlan> ToProviderPlan(IEnumerable<ProviderPlan> existingProviderPlans)
-    {
-        var providerPlans = existingProviderPlans.ToList();
-        foreach (var existingProviderPlan in providerPlans)
-        {
-            existingProviderPlan.SeatMinimum = existingProviderPlan.PlanType switch
-            {
-                PlanType.TeamsMonthly => TeamsMinimumSeats,
-                PlanType.EnterpriseMonthly => EnterpriseMinimumSeats,
-                _ => existingProviderPlan.SeatMinimum
-            };
-        }
-        return providerPlans;
-    }
-
-    public Provider ToProvider(Provider existingProvider)
-    {
-        existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
-        existingProvider.BillingPhone = BillingPhone?.ToLowerInvariant()?.Trim();
-        return existingProvider;
-    }
-
-
-    private int GetMinimumSeats(IEnumerable<ProviderPlan> providerPlans, PlanType planType)
-    {
-        return (from providerPlan in providerPlans where providerPlan.PlanType == planType select (int)providerPlan.SeatMinimum).FirstOrDefault();
-    }
+    private static int GetSeatMinimum(IEnumerable<ProviderPlan> providerPlans, PlanType planType)
+        => providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == planType)?.SeatMinimum ?? 0;
 }

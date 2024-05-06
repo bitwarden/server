@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Org.BouncyCastle.Crypto.Engines;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
 
@@ -46,6 +47,13 @@ public class CreateProviderCommand : ICreateProviderCommand
             throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
         }
 
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (isConsolidatedBillingEnabled)
+        {
+            provider.Gateway = GatewayType.Stripe;
+        }
+
         await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Pending);
 
         var providerUser = new ProviderUser
@@ -55,8 +63,6 @@ public class CreateProviderCommand : ICreateProviderCommand
             Type = ProviderUserType.ProviderAdmin,
             Status = ProviderUserStatusType.Confirmed,
         };
-
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
 
         if (isConsolidatedBillingEnabled)
         {
