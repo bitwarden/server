@@ -2,7 +2,6 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,7 +10,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -253,7 +251,18 @@ public class CollectionsController : Controller
 
         await _collectionService.SaveAsync(collection, groups, users);
 
-        return new CollectionResponseModel(collection);
+        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(orgId))
+        {
+            return new CollectionResponseModel(collection);
+        }
+
+        // If we have a user, fetch the collection to get the latest permission details
+        var userCollectionDetails = await _collectionRepository.GetByIdAsync(collection.Id,
+            _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
+
+        return userCollectionDetails == null
+            ? new CollectionResponseModel(collection)
+            : new CollectionDetailsResponseModel(userCollectionDetails);
     }
 
     [HttpPut("{id}")]
@@ -276,7 +285,18 @@ public class CollectionsController : Controller
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
         await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
-        return new CollectionResponseModel(collection);
+
+        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId))
+        {
+            return new CollectionResponseModel(collection);
+        }
+
+        // If we have a user, fetch the collection details to get the latest permission details for the user
+        var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
+
+        return updatedCollectionDetails == null
+            ? new CollectionResponseModel(collection)
+            : new CollectionDetailsResponseModel(updatedCollectionDetails);
     }
 
     [HttpPut("{id}/users")]
@@ -300,7 +320,6 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("bulk-access")]
-    [RequireFeature(FeatureFlagKeys.BulkCollectionAccess)]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
         // Authorization logic assumes flexible collections is enabled
@@ -316,7 +335,8 @@ public class CollectionsController : Controller
             throw new NotFoundException("One or more collections not found.");
         }
 
-        var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyAccess);
+        var result = await _authorizationService.AuthorizeAsync(User, collections,
+            new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
 
         if (!result.Succeeded)
         {
@@ -533,47 +553,38 @@ public class CollectionsController : Controller
     private async Task<CollectionAccessDetailsResponseModel> GetDetails_vNext(Guid id)
     {
         // New flexible collections logic
-        var (collection, access) = await _collectionRepository.GetByIdWithAccessAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ReadWithAccess)).Succeeded;
+        var collectionAdminDetails =
+            await _collectionRepository.GetByIdWithPermissionsAsync(id, _currentContext.UserId, true);
+
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collectionAdminDetails, BulkCollectionOperations.ReadWithAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
         }
 
-        return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
+        return new CollectionAccessDetailsResponseModel(collectionAdminDetails);
     }
 
     private async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails_vNext(Guid orgId)
     {
-        // We always need to know which collections the current user is assigned to
-        var assignedOrgCollections = await _collectionRepository
-            .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId, true);
+        var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithPermissionsAsync(
+            orgId, _currentContext.UserId.Value, true);
 
         var readAllAuthorized =
             (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAllWithAccess(orgId))).Succeeded;
         if (readAllAuthorized)
         {
-            // The user can view all collections, but they may not always be assigned to all of them
-            var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
-
-            return new ListResponseModel<CollectionAccessDetailsResponseModel>(allOrgCollections.Select(c =>
-                new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
-                {
-                    // Manually determine which collections they're assigned to
-                    Assigned = assignedOrgCollections.Any(ac => ac.Item1.Id == c.Item1.Id)
-                })
+            return new ListResponseModel<CollectionAccessDetailsResponseModel>(
+                allOrgCollections.Select(c => new CollectionAccessDetailsResponseModel(c))
             );
         }
 
-        // Filter the assigned collections to only return those where the user has Manage permission
-        var manageableOrgCollections = assignedOrgCollections.Where(c => c.Item1.Manage).ToList();
+        // Filter collections to only return those where the user has Manage permission
+        var manageableOrgCollections = allOrgCollections.Where(c => c.Manage).ToList();
 
         return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
-            new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
-            {
-                Assigned = true // Mapping from manageableOrgCollections implies they're all assigned
-            })
-        );
+            new CollectionAccessDetailsResponseModel(c)
+        ));
     }
 
     private async Task<ListResponseModel<CollectionResponseModel>> GetByOrgId_vNext(Guid orgId)
@@ -609,7 +620,7 @@ public class CollectionsController : Controller
         return responses;
     }
 
-    private async Task<CollectionResponseModel> Post_vNext(Guid orgId, [FromBody] CollectionRequestModel model)
+    private async Task<CollectionAccessDetailsResponseModel> Post_vNext(Guid orgId, [FromBody] CollectionRequestModel model)
     {
         var collection = model.ToCollection(orgId);
 
@@ -624,21 +635,18 @@ public class CollectionsController : Controller
 
         await _collectionService.SaveAsync(collection, groups, users);
 
-        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(orgId))
+        if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(orgId) == null && await _currentContext.ProviderUserForOrgAsync(orgId)))
         {
-            return new CollectionResponseModel(collection);
+            return new CollectionAccessDetailsResponseModel(collection);
         }
 
-        // If we have a user, fetch the collection to get the latest permission details
-        var userCollectionDetails = await _collectionRepository.GetByIdAsync(collection.Id,
-            _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
+        // If we have a user, fetch the latest collection permission details
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
-        return userCollectionDetails == null
-            ? new CollectionResponseModel(collection)
-            : new CollectionDetailsResponseModel(userCollectionDetails);
+        return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }
 
-    private async Task<CollectionResponseModel> Put_vNext(Guid id, CollectionRequestModel model)
+    private async Task<CollectionAccessDetailsResponseModel> Put_vNext(Guid id, CollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
@@ -651,23 +659,21 @@ public class CollectionsController : Controller
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
         await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
 
-        if (!_currentContext.UserId.HasValue || await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId))
+        if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(collection.OrganizationId) == null && await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId)))
         {
-            return new CollectionResponseModel(collection);
+            return new CollectionAccessDetailsResponseModel(collection);
         }
 
-        // If we have a user, fetch the collection details to get the latest permission details for the user
-        var updatedCollectionDetails = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value, await FlexibleCollectionsIsEnabledAsync(collection.OrganizationId));
+        // If we have a user, fetch the latest collection permission details
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
-        return updatedCollectionDetails == null
-            ? new CollectionResponseModel(collection)
-            : new CollectionDetailsResponseModel(updatedCollectionDetails);
+        return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }
 
     private async Task PutUsers_vNext(Guid id, IEnumerable<SelectionReadOnlyRequestModel> model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
@@ -691,7 +697,7 @@ public class CollectionsController : Controller
     private async Task DeleteUser_vNext(Guid id, Guid orgUserId)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyAccess)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();

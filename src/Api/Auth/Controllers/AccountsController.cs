@@ -21,6 +21,10 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Queries;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -31,6 +35,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -62,6 +68,10 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly ICurrentContext _currentContext;
 
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
@@ -93,6 +103,10 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
+        ICancelSubscriptionCommand cancelSubscriptionCommand,
+        ISubscriberQueries subscriberQueries,
+        IReferenceEventService referenceEventService,
+        ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
         IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
         IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
@@ -118,6 +132,10 @@ public class AccountsController : Controller
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
+        _cancelSubscriptionCommand = cancelSubscriptionCommand;
+        _subscriberQueries = subscriberQueries;
+        _referenceEventService = referenceEventService;
+        _currentContext = currentContext;
         _cipherValidator = cipherValidator;
         _folderValidator = folderValidator;
         _sendValidator = sendValidator;
@@ -600,6 +618,14 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.ReturnErrorOnExistingKeypair))
+        {
+            if (!string.IsNullOrWhiteSpace(user.PrivateKey) || !string.IsNullOrWhiteSpace(user.PublicKey))
+            {
+                throw new BadRequestException("User has existing keypair");
+            }
+        }
+
         await _userService.SaveUserAsync(model.ToUser(user));
         return new KeysResponseModel(user);
     }
@@ -803,17 +829,34 @@ public class AccountsController : Controller
         await _userService.UpdateLicenseAsync(user, license);
     }
 
-    [HttpPost("cancel-premium")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel()
+    [HttpPost("cancel")]
+    public async Task PostCancel([FromBody] SubscriptionCancellationRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
         if (user == null)
         {
             throw new UnauthorizedAccessException();
         }
 
-        await _userService.CancelPremiumAsync(user);
+        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(user);
+
+        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+            new OffboardingSurveyResponse
+            {
+                UserId = user.Id,
+                Reason = request.Reason,
+                Feedback = request.Feedback
+            },
+            user.IsExpired());
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+            ReferenceEventType.CancelSubscription,
+            user,
+            _currentContext)
+        {
+            EndOfPeriod = user.IsExpired()
+        });
     }
 
     [HttpPost("reinstate-premium")]

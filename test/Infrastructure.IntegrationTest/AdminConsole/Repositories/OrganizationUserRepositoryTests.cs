@@ -16,7 +16,7 @@ public class OrganizationUserRepositoryTests
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
+            Email = $"test+{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });

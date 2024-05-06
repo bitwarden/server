@@ -14,7 +14,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class FolderRepositoryTests
 {
     [CiSkippedTheory, EfFolderAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         Folder folder,
         User user,
         FolderCompare equalityComparer,

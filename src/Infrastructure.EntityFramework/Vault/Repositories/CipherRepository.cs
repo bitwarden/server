@@ -349,6 +349,17 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<ICollection<CipherOrganizationDetails>> GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new CipherOrganizationDetailsReadByOrganizationIdQuery(organizationId, true);
+            var data = await query.Run(dbContext).ToListAsync();
+            return data;
+        }
+    }
+
     public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

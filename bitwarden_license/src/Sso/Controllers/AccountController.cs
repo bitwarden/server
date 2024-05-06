@@ -19,13 +19,13 @@ using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using Duende.IdentityServer;
-using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
 using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
 using DIM = Duende.IdentityServer.Models;
 
 namespace Bit.Sso.Controllers;
@@ -209,6 +209,8 @@ public class AccountController : Controller
             returnUrl = "~/";
         }
 
+        // Clean the returnUrl
+        returnUrl = CoreHelpers.ReplaceWhiteSpace(returnUrl, string.Empty);
         if (!Url.IsLocalUrl(returnUrl) && !_interaction.IsValidReturnUrl(returnUrl))
         {
             throw new Exception(_i18nService.T("InvalidReturnUrl"));
@@ -481,7 +483,7 @@ public class AccountController : Controller
             if (orgUser.Status == OrganizationUserStatusType.Invited)
             {
                 // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name));
+                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.DisplayName()));
             }
 
             // Accepted or Confirmed - create SSO link and return;
@@ -514,7 +516,7 @@ public class AccountController : Controller
                         await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
                     }
                     _logger.LogInformation(e, "SSO auto provisioning failed");
-                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
+                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
                 }
             }
         }
@@ -701,8 +703,10 @@ public class AccountController : Controller
             var idp = User.FindFirst(JwtClaimTypes.IdentityProvider)?.Value;
             if (idp != null && idp != IdentityServerConstants.LocalIdentityProvider)
             {
-                var providerSupportsSignout = await HttpContext.GetSchemeSupportsSignOutAsync(idp);
-                if (providerSupportsSignout)
+                var provider = HttpContext.RequestServices.GetRequiredService<IAuthenticationHandlerProvider>();
+                var handler = await provider.GetHandlerAsync(HttpContext, idp);
+
+                if (handler is IAuthenticationSignOutHandler)
                 {
                     if (logoutId == null)
                     {

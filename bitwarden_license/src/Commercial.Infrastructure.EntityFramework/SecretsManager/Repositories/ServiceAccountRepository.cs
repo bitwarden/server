@@ -84,51 +84,57 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
+        var targetIds = ids.ToList();
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
         // Policies can't have a cascade delete, so we need to delete them manually.
-        var policies = dbContext.AccessPolicies.Where(ap =>
-            ((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId.HasValue && ids.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value) ||
-            ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue && ids.Contains(((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value) ||
-            ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue && ids.Contains(((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value));
-        dbContext.RemoveRange(policies);
+        await dbContext.AccessPolicies.Where(ap =>
+                targetIds.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value) ||
+                targetIds.Contains(((ServiceAccountSecretAccessPolicy)ap).ServiceAccountId!.Value) ||
+                targetIds.Contains(((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value) ||
+                targetIds.Contains(((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value))
+            .ExecuteDeleteAsync();
 
-        var apiKeys = dbContext.ApiKeys.Where(a => a.ServiceAccountId.HasValue && ids.Contains(a.ServiceAccountId!.Value));
-        dbContext.RemoveRange(apiKeys);
+        await dbContext.ApiKeys
+            .Where(a => targetIds.Contains(a.ServiceAccountId!.Value))
+            .ExecuteDeleteAsync();
 
-        var serviceAccounts = dbContext.ServiceAccount.Where(c => ids.Contains(c.Id));
-        dbContext.RemoveRange(serviceAccounts);
-        await dbContext.SaveChangesAsync();
+        await dbContext.ServiceAccount
+            .Where(c => targetIds.Contains(c.Id))
+            .ExecuteDeleteAsync();
+
+        await transaction.CommitAsync();
     }
 
     public async Task<(bool Read, bool Write)> AccessToServiceAccountAsync(Guid id, Guid userId,
         AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var serviceAccount = dbContext.ServiceAccount.Where(sa => sa.Id == id);
+        var serviceAccountQuery = dbContext.ServiceAccount.Where(sa => sa.Id == id);
 
-        var query = accessType switch
-        {
-            AccessClientType.NoAccessCheck => serviceAccount.Select(_ => new { Read = true, Write = true }),
-            AccessClientType.User => serviceAccount.Select(sa => new
-            {
-                Read = sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
-                       sa.GroupAccessPolicies.Any(ap =>
-                           ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
-                Write = sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                        sa.GroupAccessPolicies.Any(ap =>
-                            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
-            }),
-            AccessClientType.ServiceAccount => serviceAccount.Select(_ => new { Read = false, Write = false }),
-            _ => serviceAccount.Select(_ => new { Read = false, Write = false }),
-        };
+        var accessQuery = BuildServiceAccountAccessQuery(serviceAccountQuery, userId, accessType);
+        var access = await accessQuery.FirstOrDefaultAsync();
 
-        var policy = await query.FirstOrDefaultAsync();
+        return access == null ? (false, false) : (access.Read, access.Write);
+    }
 
-        return policy == null ? (false, false) : (policy.Read, policy.Write);
+    public async Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToServiceAccountsAsync(
+        IEnumerable<Guid> ids,
+        Guid userId,
+        AccessClientType accessType)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var serviceAccountsQuery = dbContext.ServiceAccount.Where(p => ids.Contains(p.Id));
+        var accessQuery = BuildServiceAccountAccessQuery(serviceAccountsQuery, userId, accessType);
+
+        return await accessQuery.ToDictionaryAsync(access => access.Id, access => (access.Read, access.Write));
     }
 
     public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
@@ -139,6 +145,15 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
             return await dbContext.ServiceAccount
                 .CountAsync(ou => ou.OrganizationId == organizationId);
         }
+    }
+
+    public async Task<bool> ServiceAccountsAreInOrganizationAsync(List<Guid> serviceAccountIds, Guid organizationId)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        var result = await dbContext.ServiceAccount.CountAsync(sa =>
+            sa.OrganizationId == organizationId && serviceAccountIds.Contains(sa.Id));
+        return serviceAccountIds.Count == result;
     }
 
     public async Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdWithSecretsDetailsAsync(
@@ -178,6 +193,27 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
 
         return results;
     }
+
+    private record ServiceAccountAccess(Guid Id, bool Read, bool Write);
+
+    private static IQueryable<ServiceAccountAccess> BuildServiceAccountAccessQuery(IQueryable<ServiceAccount> serviceAccountQuery, Guid userId,
+        AccessClientType accessType) =>
+        accessType switch
+        {
+            AccessClientType.NoAccessCheck => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, true, true)),
+            AccessClientType.User => serviceAccountQuery.Select(sa => new ServiceAccountAccess
+            (
+                sa.Id,
+                sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                sa.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
+                sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                sa.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))
+            )),
+            AccessClientType.ServiceAccount => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, false, false)),
+            _ => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, false, false))
+        };
 
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>
         sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
