@@ -1,4 +1,6 @@
-﻿using Bit.Core.Models.Data;
+﻿#nullable enable
+
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.AdminConsole.Public.Models;
 
@@ -7,7 +9,7 @@ namespace Bit.Api.AdminConsole.Public.Models;
 /// </summary>
 public class PermissionsModel
 {
-    public PermissionsModel(Permissions data)
+    public PermissionsModel(Permissions? data)
     {
         if (data is null)
         {
