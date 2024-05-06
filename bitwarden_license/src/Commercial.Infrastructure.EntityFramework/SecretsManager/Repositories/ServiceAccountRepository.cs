@@ -43,28 +43,6 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return Mapper.Map<List<Core.SecretsManager.Entities.ServiceAccount>>(serviceAccounts);
     }
 
-    public async Task<bool> UserHasReadAccessToServiceAccount(Guid id, Guid userId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.ServiceAccount
-            .Where(sa => sa.Id == id)
-            .Where(UserHasReadAccessToServiceAccount(userId));
-
-        return await query.AnyAsync();
-    }
-
-    public async Task<bool> UserHasWriteAccessToServiceAccount(Guid id, Guid userId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.ServiceAccount
-            .Where(sa => sa.Id == id)
-            .Where(UserHasWriteAccessToServiceAccount(userId));
-
-        return await query.AnyAsync();
-    }
-
     public async Task<IEnumerable<Core.SecretsManager.Entities.ServiceAccount>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
