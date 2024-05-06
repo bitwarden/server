@@ -45,13 +45,6 @@ public class StartSubscriptionCommand(
 
         var customer = await GetOrCreateCustomerAsync(provider, taxInfo);
 
-        if (taxInfo.BillingAddressCountry == "US" && customer.Tax is not { AutomaticTax: StripeConstants.AutomaticTaxStatus.Supported })
-        {
-            logger.LogError("Cannot start Provider subscription - Provider's ({ProviderID}) Stripe customer ({CustomerID}) is in the US and does not support automatic tax", provider.Id, customer.Id);
-
-            throw ContactSupport();
-        }
-
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
         if (providerPlans == null || providerPlans.Count == 0)
