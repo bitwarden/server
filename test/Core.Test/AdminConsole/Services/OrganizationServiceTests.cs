@@ -491,7 +491,7 @@ public class OrganizationServiceTests
     [Theory]
     [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
          InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_NoEmails_Throws(Organization organization, OrganizationUser invitor,
+    public async Task InviteUsers_NoEmails_Throws(Organization organization, OrganizationUser invitor,
         OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         invite.Emails = null;
@@ -504,7 +504,7 @@ public class OrganizationServiceTests
 
     [Theory]
     [OrganizationInviteCustomize, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_DuplicateEmails_PassesWithoutDuplicates(Organization organization, OrganizationUser invitor,
+    public async Task InviteUsers_DuplicateEmails_PassesWithoutDuplicates(Organization organization, OrganizationUser invitor,
                 [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
@@ -547,7 +547,7 @@ public class OrganizationServiceTests
 
     [Theory]
     [OrganizationInviteCustomize, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_SsoOrgWithNullSsoConfig_Passes(Organization organization, OrganizationUser invitor,
+    public async Task InviteUsers_SsoOrgWithNullSsoConfig_Passes(Organization organization, OrganizationUser invitor,
                 [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
@@ -591,12 +591,11 @@ public class OrganizationServiceTests
                 info.OrgUserTokenPairs.Count() == invite.Emails.Distinct().Count() &&
                 info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
                 info.OrganizationName == organization.Name));
-
     }
 
     [Theory]
     [OrganizationInviteCustomize, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_SsoOrgWithNeverEnabledRequireSsoPolicy_Passes(Organization organization, SsoConfig ssoConfig, OrganizationUser invitor,
+    public async Task InviteUsers_SsoOrgWithNeverEnabledRequireSsoPolicy_Passes(Organization organization, SsoConfig ssoConfig, OrganizationUser invitor,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
 OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
@@ -635,7 +634,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                 }
                 );
 
-
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) });
 
         await sutProvider.GetDependency<IMailService>().Received(1)
@@ -650,7 +648,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         InviteeUserType = OrganizationUserType.Admin,
         InvitorUserType = OrganizationUserType.Owner
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_NoOwner_Throws(Organization organization, OrganizationUser invitor,
+    public async Task InviteUsers_NoOwner_Throws(Organization organization, OrganizationUser invitor,
         OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -666,7 +664,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         InviteeUserType = OrganizationUserType.Owner,
         InvitorUserType = OrganizationUserType.Admin
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_NonOwnerConfiguringOwner_Throws(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUsers_NonOwnerConfiguringOwner_Throws(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -685,7 +683,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         InviteeUserType = OrganizationUserType.Custom,
         InvitorUserType = OrganizationUserType.User
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_NonAdminConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUsers_NonAdminConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         organization.UseCustomPermissions = true;
@@ -706,7 +704,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
          InviteeUserType = OrganizationUserType.Custom,
          InvitorUserType = OrganizationUserType.Admin
      ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_WithCustomType_WhenUseCustomPermissionsIsFalse_Throws(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUsers_WithCustomType_WhenUseCustomPermissionsIsFalse_Throws(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         organization.UseCustomPermissions = false;
@@ -733,7 +731,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
          InviteeUserType = OrganizationUserType.Custom,
          InvitorUserType = OrganizationUserType.Admin
      ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUsers_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         organization.Seats = 10;
@@ -763,7 +761,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.User)]
-    public async Task InviteUser_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUsers_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         organization.Seats = 10;
@@ -793,7 +791,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         InviteeUserType = OrganizationUserType.Manager,
         InvitorUserType = OrganizationUserType.Custom
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_CustomUserWithoutManageUsersConfiguringUser_Throws(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUsers_CustomUserWithoutManageUsersConfiguringUser_Throws(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = false },
@@ -821,7 +819,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         InviteeUserType = OrganizationUserType.Admin,
         InvitorUserType = OrganizationUserType.Custom
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_CustomUserConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUsers_CustomUserConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
@@ -847,7 +845,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         InviteeUserType = OrganizationUserType.User,
         InvitorUserType = OrganizationUserType.Owner
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_NoPermissionsObject_Passes(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUsers_NoPermissionsObject_Passes(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invite.Permissions = null;
@@ -873,7 +871,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         InviteeUserType = OrganizationUserType.User,
         InvitorUserType = OrganizationUserType.Custom
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_Passes(Organization organization, IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+    public async Task InviteUsers_Passes(Organization organization, IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
         OrganizationUser invitor,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         SutProvider<OrganizationService> sutProvider)
@@ -946,7 +944,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         InviteeUserType = OrganizationUserType.User,
         InvitorUserType = OrganizationUserType.Custom
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task InviteUser_WithEventSystemUser_Passes(Organization organization, EventSystemUser eventSystemUser, IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+    public async Task InviteUsers_WithEventSystemUser_Passes(Organization organization, EventSystemUser eventSystemUser, IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
         OrganizationUser invitor,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         SutProvider<OrganizationService> sutProvider)
@@ -996,7 +994,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData, OrganizationCustomize(FlexibleCollections = false), OrganizationInviteCustomize]
-    public async Task InviteUser_WithSecretsManager_Passes(Organization organization,
+    public async Task InviteUsers_WithSecretsManager_Passes(Organization organization,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
         OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
     {
@@ -1030,7 +1028,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData, OrganizationCustomize(FlexibleCollections = false), OrganizationInviteCustomize]
-    public async Task InviteUser_WithSecretsManager_WhenErrorIsThrown_RevertsAutoscaling(Organization organization,
+    public async Task InviteUsers_WithSecretsManager_WhenErrorIsThrown_RevertsAutoscaling(Organization organization,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
         OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
     {
@@ -1086,7 +1084,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task InviteUser_WithFlexibleCollections_WhenInvitingManager_Throws(Organization organization,
+    public async Task InviteUsers_WithFlexibleCollections_WhenInvitingManager_Throws(Organization organization,
         OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invite.Type = OrganizationUserType.Manager;
@@ -1108,7 +1106,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task InviteUser_WithFlexibleCollections_WithAccessAll_Throws(Organization organization,
+    public async Task InviteUsers_WithFlexibleCollections_WithAccessAll_Throws(Organization organization,
         OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invite.Type = OrganizationUserType.User;
