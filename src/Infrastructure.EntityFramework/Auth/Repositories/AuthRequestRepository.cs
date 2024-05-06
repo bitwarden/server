@@ -72,6 +72,26 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
 
     public async Task UpdateManyAsync(IEnumerable<Core.Auth.Entities.AuthRequest> authRequests)
     {
-        throw new NotImplementedException();
+        if (!authRequests.Any())
+        {
+            return;
+        }
+
+        var entities = new List<AuthRequest>();
+        foreach (var authRequest in authRequests)
+        {
+            if (!authRequest.Id.Equals(default))
+            {
+                var entity = Mapper.Map<AuthRequest>(authRequest);
+                entities.Add(entity);
+            }
+        }
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            dbContext.UpdateRange(entities);
+            await dbContext.SaveChangesAsync();
+        }
     }
 }
