@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Models.Business;
 
-public class SmSeatSubscriptionUpdateTests
+public class ServiceAccountSubscriptionUpdateTests
 {
     [Theory]
     [BitAutoData(PlanType.EnterpriseMonthly2019)]
@@ -29,7 +29,6 @@ public class SmSeatSubscriptionUpdateTests
     {
         var plan = StaticStore.GetPlan(planType);
         organization.PlanType = planType;
-        var quantity = 3;
         var subscription = new Subscription
         {
             Items = new StripeList<SubscriptionItem>
@@ -39,19 +38,19 @@ public class SmSeatSubscriptionUpdateTests
                     new ()
                     {
                         Id = "subscription_item",
-                        Price = new Price { Id = plan.SecretsManager.StripeSeatPlanId },
-                        Quantity = quantity
+                        Price = new Price { Id = plan.SecretsManager.StripeServiceAccountPlanId },
+                        Quantity = 1
                     }
                 }
             }
         };
-        var update = new SmSeatSubscriptionUpdate(organization, plan, quantity);
+        var update = new ServiceAccountSubscriptionUpdate(organization, plan, 3);
 
         var options = update.UpgradeItemsOptions(subscription);
 
         Assert.Single(options);
-        Assert.Equal(plan.SecretsManager.StripeSeatPlanId, options[0].Plan);
-        Assert.Equal(quantity, options[0].Quantity);
+        Assert.Equal(plan.SecretsManager.StripeServiceAccountPlanId, options[0].Plan);
+        Assert.Equal(3, options[0].Quantity);
         Assert.Null(options[0].Deleted);
     }
 
@@ -82,20 +81,20 @@ public class SmSeatSubscriptionUpdateTests
                     new ()
                     {
                         Id = "subscription_item",
-                        Price = new Price { Id = plan.SecretsManager.StripeSeatPlanId },
+                        Price = new Price { Id = plan.SecretsManager.StripeServiceAccountPlanId },
                         Quantity = quantity
                     }
                 }
             }
         };
-        var update = new SmSeatSubscriptionUpdate(organization, plan, quantity);
+        var update = new ServiceAccountSubscriptionUpdate(organization, plan, quantity);
         update.UpgradeItemsOptions(subscription);
 
         var options = update.RevertItemsOptions(subscription);
 
         Assert.Single(options);
-        Assert.Equal(plan.SecretsManager.StripeSeatPlanId, options[0].Plan);
-        Assert.Equal(organization.SmSeats, options[0].Quantity);
+        Assert.Equal(plan.SecretsManager.StripeServiceAccountPlanId, options[0].Plan);
+        Assert.Equal(quantity, options[0].Quantity);
         Assert.Null(options[0].Deleted);
     }
 }
