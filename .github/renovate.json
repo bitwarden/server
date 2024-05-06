@@ -41,6 +41,12 @@
       "reviewers": ["team:team-auth-dev"]
     },
     {
+      "matchPackageNames": ["bootstrap", "del", "gulp"],
+      "matchUpdateTypes": ["major"],
+      "description": "Lock bootstrap, del, and gulp major versions due to ASP.NET conflicts",
+      "enabled": false
+    },
+    {
       "matchPackageNames": [
         "AspNetCoreRateLimit",
         "AspNetCoreRateLimit.Redis",

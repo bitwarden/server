@@ -243,14 +243,7 @@ public class SecretsController : Controller
             }
         }
 
-        if (_currentContext.ClientType == ClientType.ServiceAccount)
-        {
-            var userId = _userService.GetProperUserId(User).Value;
-            var org = await _organizationRepository.GetByIdAsync(organizationId);
-            await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, EventType.Secret_Retrieved);
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org, _currentContext));
-        }
+        await LogSecretsRetrievalAsync(organizationId, secrets);
 
         var responses = secrets.Select(s => new BaseSecretResponseModel(s));
         return new ListResponseModel<BaseSecretResponseModel>(responses);
@@ -283,7 +276,25 @@ public class SecretsController : Controller
             ServiceAccountId = serviceAccountId,
             LastSyncedDate = lastSyncedDate
         };
-        var (hasChanges, secrets) = await _secretsSyncQuery.GetAsync(syncRequest);
-        return new SecretsSyncResponseModel(hasChanges, secrets);
+        var syncResult = await _secretsSyncQuery.GetAsync(syncRequest);
+
+        if (syncResult.HasChanges)
+        {
+            await LogSecretsRetrievalAsync(organizationId, syncResult.Secrets);
+        }
+
+        return new SecretsSyncResponseModel(syncResult.HasChanges, syncResult.Secrets);
+    }
+
+    private async Task LogSecretsRetrievalAsync(Guid organizationId, IEnumerable<Secret> secrets)
+    {
+        if (_currentContext.ClientType == ClientType.ServiceAccount)
+        {
+            var userId = _userService.GetProperUserId(User)!.Value;
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, EventType.Secret_Retrieved);
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org, _currentContext));
+        }
     }
 }

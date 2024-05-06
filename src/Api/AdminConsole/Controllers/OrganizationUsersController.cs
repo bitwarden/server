@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
@@ -186,16 +187,28 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPost("invite")]
-    public async Task Invite(string orgId, [FromBody] OrganizationUserInviteRequestModel model)
+    public async Task Invite(Guid orgId, [FromBody] OrganizationUserInviteRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
+        // Flexible Collections - check the user has permission to grant access to the collections for the new user
+        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        {
+            var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
+            var authorized =
+                (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.ModifyUserAccess))
+                .Succeeded;
+            if (!authorized)
+            {
+                throw new NotFoundException("You are not authorized to grant access to these collections.");
+            }
+        }
+
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.InviteUsersAsync(orgGuidId, userId.Value, systemUser: null,
+        await _organizationService.InviteUsersAsync(orgId, userId.Value, systemUser: null,
             new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
     }
 
@@ -317,6 +330,14 @@ public class OrganizationUsersController : Controller
     [HttpPost("{id}")]
     public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
+        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        {
+            // Use new Flexible Collections v1 logic
+            await Put_vNext(orgId, id, model);
+            return;
+        }
+
+        // Pre-Flexible Collections v1 code follows
         if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
@@ -328,21 +349,78 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        // If admins are not allowed access to all collections, you cannot add yourself to a group
-        // In this case we just don't update groups
-        var userId = _userService.GetProperUserId(User).Value;
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-        var restrictEditingGroups = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) &&
-                                    organizationAbility.FlexibleCollections &&
-                                    userId == organizationUser.UserId &&
-                                    !organizationAbility.AllowAdminAccessToAllCollectionItems;
+        var userId = _userService.GetProperUserId(User);
+        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
+            model.Collections.Select(c => c.ToSelectionReadOnly()).ToList(), model.Groups);
+    }
 
-        var groups = restrictEditingGroups
+    /// <summary>
+    /// Put logic for Flexible Collections v1
+    /// </summary>
+    private async Task Put_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
+    {
+        if (!await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var (organizationUser, currentAccess) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
+        if (organizationUser == null || organizationUser.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var editingSelf = userId == organizationUser.UserId;
+
+        // If admins are not allowed access to all collections, you cannot add yourself to a group.
+        // In this case we just don't update groups.
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+        var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
             ? null
             : model.Groups;
 
+        // If admins are not allowed access to all collections, you cannot add yourself to collections.
+        // This is not caught by the requirement below that you can ModifyUserAccess and must be checked separately
+        var currentAccessIds = currentAccess.Select(c => c.Id).ToHashSet();
+        if (editingSelf &&
+            !organizationAbility.AllowAdminAccessToAllCollectionItems &&
+            model.Collections.Any(c => !currentAccessIds.Contains(c.Id)))
+        {
+            throw new BadRequestException("You cannot add yourself to a collection.");
+        }
+
+        // The client only sends collections that the saving user has permissions to edit.
+        // On the server side, we need to (1) make sure the user has permissions for these collections, and
+        // (2) concat these with the collections that the user can't edit before saving to the database.
+        var currentCollections = await _collectionRepository
+            .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
+
+        var readonlyCollectionIds = new HashSet<Guid>();
+        foreach (var collection in currentCollections)
+        {
+            if (!(await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess))
+                .Succeeded)
+            {
+                readonlyCollectionIds.Add(collection.Id);
+            }
+        }
+
+        if (model.Collections.Any(c => readonlyCollectionIds.Contains(c.Id)))
+        {
+            throw new BadRequestException("You must have Can Manage permissions to edit a collection's membership");
+        }
+
+        var editedCollectionAccess = model.Collections
+            .Select(c => c.ToSelectionReadOnly());
+        var readonlyCollectionAccess = currentAccess
+            .Where(ca => readonlyCollectionIds.Contains(ca.Id));
+        var collectionsToSave = editedCollectionAccess
+            .Concat(readonlyCollectionAccess)
+            .ToList();
+
         await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()).ToList(), groups);
+            collectionsToSave, groupsToSave);
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
