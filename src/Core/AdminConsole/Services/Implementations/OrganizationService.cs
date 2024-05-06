@@ -955,7 +955,7 @@ public class OrganizationService : IOrganizationService
         // Ideally OrganizationUserInvite should represent a single user so that this doesn't have to be a runtime check
         if (invite.Emails.Count() > 1)
         {
-            throw new Exception("This method can only be used to invite a single user.");
+            throw new BadRequestException("This method can only be used to invite a single user.");
         }
 
         // Validate Collection associations if org is using latest collection enhancements
