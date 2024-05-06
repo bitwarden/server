@@ -24,8 +24,8 @@ public interface IMailService
     Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo);
     Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
-    Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);
-    Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
+    Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false);
+    Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false);
     Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
     Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
     Task SendInvoiceUpcoming(
@@ -60,6 +60,11 @@ public interface IMailService
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
     Task SendProviderConfirmedEmailAsync(string providerName, string email);
     Task SendProviderUserRemoved(string providerName, string email);
+    Task SendProviderUpdatePaymentMethod(
+        Guid organizationId,
+        string organizationName,
+        string providerName,
+        IEnumerable<string> emails);
     Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
     Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token);
     Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites);
@@ -72,5 +77,7 @@ public interface IMailService
     Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier);
+    Task SendTrialInitiationEmailAsync(string email);
+    Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
 }
 

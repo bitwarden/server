@@ -2,6 +2,7 @@
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
+using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
@@ -27,6 +28,9 @@ public class DatabaseContext : DbContext
     public DbSet<ServiceAccountProjectAccessPolicy> ServiceAccountProjectAccessPolicy { get; set; }
     public DbSet<UserServiceAccountAccessPolicy> UserServiceAccountAccessPolicy { get; set; }
     public DbSet<GroupServiceAccountAccessPolicy> GroupServiceAccountAccessPolicy { get; set; }
+    public DbSet<UserSecretAccessPolicy> UserSecretAccessPolicy { get; set; }
+    public DbSet<GroupSecretAccessPolicy> GroupSecretAccessPolicy { get; set; }
+    public DbSet<ServiceAccountSecretAccessPolicy> ServiceAccountSecretAccessPolicy { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
@@ -62,6 +66,7 @@ public class DatabaseContext : DbContext
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
+    public DbSet<ProviderPlan> ProviderPlans { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -77,25 +82,16 @@ public class DatabaseContext : DbContext
         var eCollectionCipher = builder.Entity<CollectionCipher>();
         var eCollectionUser = builder.Entity<CollectionUser>();
         var eCollectionGroup = builder.Entity<CollectionGroup>();
-        var eDevice = builder.Entity<Device>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
-        var eEvent = builder.Entity<Event>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
         var eGroupUser = builder.Entity<GroupUser>();
         var eInstallation = builder.Entity<Installation>();
-        var eOrganization = builder.Entity<Organization>();
-        var eOrganizationSponsorship = builder.Entity<OrganizationSponsorship>();
-        var eOrganizationUser = builder.Entity<OrganizationUser>();
-        var ePolicy = builder.Entity<Policy>();
         var eProvider = builder.Entity<Provider>();
         var eProviderUser = builder.Entity<ProviderUser>();
         var eProviderOrganization = builder.Entity<ProviderOrganization>();
-        var eSend = builder.Entity<Send>();
         var eSsoConfig = builder.Entity<SsoConfig>();
-        var eSsoUser = builder.Entity<SsoUser>();
         var eTaxRate = builder.Entity<TaxRate>();
-        var eTransaction = builder.Entity<Transaction>();
         var eUser = builder.Entity<User>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
@@ -105,26 +101,12 @@ public class DatabaseContext : DbContext
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
-        eEvent.Property(c => c.Id).ValueGeneratedNever();
         eFolder.Property(c => c.Id).ValueGeneratedNever();
         eGroup.Property(c => c.Id).ValueGeneratedNever();
         eInstallation.Property(c => c.Id).ValueGeneratedNever();
-        eOrganization.Property(c => c.Id).ValueGeneratedNever();
-        eOrganization.Property(c => c.LimitCollectionCreationDeletion)
-            .ValueGeneratedNever()
-            .HasDefaultValue(true);
-        eOrganization.Property(c => c.AllowAdminAccessToAllCollectionItems)
-            .ValueGeneratedNever()
-            .HasDefaultValue(true);
-        eOrganizationSponsorship.Property(c => c.Id).ValueGeneratedNever();
-        eOrganizationUser.Property(c => c.Id).ValueGeneratedNever();
-        ePolicy.Property(c => c.Id).ValueGeneratedNever();
         eProvider.Property(c => c.Id).ValueGeneratedNever();
         eProviderUser.Property(c => c.Id).ValueGeneratedNever();
         eProviderOrganization.Property(c => c.Id).ValueGeneratedNever();
-        eSend.Property(c => c.Id).ValueGeneratedNever();
-        eTransaction.Property(c => c.Id).ValueGeneratedNever();
-        eUser.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
@@ -147,34 +129,24 @@ public class DatabaseContext : DbContext
             // see https://www.npgsql.org/efcore/misc/collations-and-case-sensitivity.html#database-collation
             builder.HasCollation(postgresIndetermanisticCollation, locale: "en-u-ks-primary", provider: "icu", deterministic: false);
             eUser.Property(e => e.Email).UseCollation(postgresIndetermanisticCollation);
-            eSsoUser.Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
-            eOrganization.Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
+            builder.Entity<Organization>().Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
+            builder.Entity<SsoUser>().Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
             //
         }
 
         eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
-        eDevice.ToTable(nameof(Device));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
-        eEvent.ToTable(nameof(Event));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));
         eGroupUser.ToTable(nameof(GroupUser));
         eInstallation.ToTable(nameof(Installation));
-        eOrganization.ToTable(nameof(Organization));
-        eOrganizationSponsorship.ToTable(nameof(OrganizationSponsorship));
-        eOrganizationUser.ToTable(nameof(OrganizationUser));
-        ePolicy.ToTable(nameof(Policy));
         eProvider.ToTable(nameof(Provider));
         eProviderUser.ToTable(nameof(ProviderUser));
         eProviderOrganization.ToTable(nameof(ProviderOrganization));
-        eSend.ToTable(nameof(Send));
         eSsoConfig.ToTable(nameof(SsoConfig));
-        eSsoUser.ToTable(nameof(SsoUser));
         eTaxRate.ToTable(nameof(TaxRate));
-        eTransaction.ToTable(nameof(Transaction));
-        eUser.ToTable(nameof(User));
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));

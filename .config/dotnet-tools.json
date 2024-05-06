@@ -7,7 +7,7 @@
       "commands": ["swagger"]
     },
     "dotnet-ef": {
-      "version": "7.0.14",
+      "version": "8.0.2",
       "commands": ["dotnet-ef"]
     }
   }

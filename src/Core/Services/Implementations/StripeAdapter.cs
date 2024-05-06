@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.BitStripe;
+using Stripe;
 
 namespace Bit.Core.Services;
 
@@ -103,6 +104,9 @@ public class StripeAdapter : IStripeAdapter
         return invoices;
     }
 
+    public async Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options)
+        => (await _invoiceService.SearchAsync(options)).Data;
+
     public Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options)
     {
         return _invoiceService.UpdateAsync(id, options);
@@ -137,6 +141,9 @@ public class StripeAdapter : IStripeAdapter
     {
         return _paymentMethodService.ListAutoPaging(options);
     }
+
+    public IAsyncEnumerable<Stripe.PaymentMethod> PaymentMethodListAutoPagingAsync(Stripe.PaymentMethodListOptions options)
+        => _paymentMethodService.ListAutoPagingAsync(options);
 
     public Task<Stripe.PaymentMethod> PaymentMethodAttachAsync(string id, Stripe.PaymentMethodAttachOptions options = null)
     {

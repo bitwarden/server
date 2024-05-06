@@ -14,10 +14,15 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -27,6 +32,9 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +48,6 @@ public class OrganizationsController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IProviderRepository _providerRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IPaymentService _paymentService;
@@ -51,7 +58,6 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
@@ -59,12 +65,18 @@ public class OrganizationsController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IScaleSeatsCommand _scaleSeatsCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
-        IProviderRepository providerRepository,
         IOrganizationService organizationService,
         IUserService userService,
         IPaymentService paymentService,
@@ -75,19 +87,24 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IFeatureService featureService,
         GlobalSettings globalSettings,
         ILicensingService licensingService,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
-        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand)
+        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
+        IPushNotificationService pushNotificationService,
+        ICancelSubscriptionCommand cancelSubscriptionCommand,
+        ISubscriberQueries subscriberQueries,
+        IReferenceEventService referenceEventService,
+        IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
+        IProviderRepository providerRepository,
+        IScaleSeatsCommand scaleSeatsCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
-        _providerRepository = providerRepository;
         _organizationService = organizationService;
         _userService = userService;
         _paymentService = paymentService;
@@ -98,7 +115,6 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _featureService = featureService;
         _globalSettings = globalSettings;
@@ -106,6 +122,13 @@ public class OrganizationsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
+        _pushNotificationService = pushNotificationService;
+        _cancelSubscriptionCommand = cancelSubscriptionCommand;
+        _subscriberQueries = subscriberQueries;
+        _referenceEventService = referenceEventService;
+        _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
+        _providerRepository = providerRepository;
+        _scaleSeatsCommand = scaleSeatsCommand;
     }
 
     [HttpGet("{id}")]
@@ -245,6 +268,21 @@ public class OrganizationsController : Controller
         return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
     }
 
+    [HttpGet("{id}/billing-status")]
+    public async Task<OrganizationBillingStatusResponseModel> GetBillingStatus(Guid id)
+    {
+        if (!await _currentContext.EditPaymentMethods(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(id);
+
+        var risksSubscriptionFailure = await _paymentService.RisksSubscriptionFailure(organization);
+
+        return new OrganizationBillingStatusResponseModel(organization, risksSubscriptionFailure);
+    }
+
     [HttpPost("")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> Post([FromBody] OrganizationCreateRequestModel model)
@@ -272,7 +310,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
+        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.DisplayBusinessName() ||
                                                             model.BillingEmail != organization.BillingEmail);
 
         var hasRequiredPermissions = updateBilling
@@ -434,16 +472,38 @@ public class OrganizationsController : Controller
     }
 
     [HttpPost("{id}/cancel")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel(string id)
+    public async Task PostCancel(Guid id, [FromBody] SubscriptionCancellationRequestModel request)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.EditSubscription(orgIdGuid))
+        if (!await _currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        await _organizationService.CancelSubscriptionAsync(orgIdGuid);
+        var organization = await _organizationRepository.GetByIdAsync(id);
+
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(organization);
+
+        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+            new OffboardingSurveyResponse
+            {
+                UserId = _currentContext.UserId!.Value,
+                Reason = request.Reason,
+                Feedback = request.Feedback
+            },
+            organization.IsExpired());
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
+            ReferenceEventType.CancelSubscription,
+            organization,
+            _currentContext)
+        {
+            EndOfPeriod = organization.IsExpired()
+        });
     }
 
     [HttpPost("{id}/reinstate")]
@@ -507,10 +567,23 @@ public class OrganizationsController : Controller
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
-        else
+
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (consolidatedBillingEnabled && organization.IsValidClient())
         {
-            await _organizationService.DeleteAsync(organization);
+            var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+            if (provider.IsBillable())
+            {
+                await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                    provider,
+                    organization.PlanType,
+                    -organization.Seats ?? 0);
+            }
         }
+
+        await _organizationService.DeleteAsync(organization);
     }
 
     [HttpPost("{id}/import")]
@@ -671,7 +744,7 @@ public class OrganizationsController : Controller
 
     [HttpPut("{id}/tax")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PutTaxInfo(string id, [FromBody] OrganizationTaxInfoUpdateRequestModel model)
+    public async Task PutTaxInfo(string id, [FromBody] ExpandedTaxInfoUpdateRequestModel model)
     {
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -764,12 +837,6 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (model.Data.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption &&
-            !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
-        {
-            throw new BadRequestException(nameof(model.Data.MemberDecryptionType), "Invalid member decryption type.");
-        }
-
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
         organization.Identifier = model.Identifier;
@@ -781,7 +848,6 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{id}/collection-management")]
-    [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
@@ -796,7 +862,12 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+        if (!organization.FlexibleCollections)
+        {
+            throw new BadRequestException("Organization does not have collection enhancements enabled");
+        }
+
+        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
         if (!v1Enabled)
         {
@@ -806,6 +877,40 @@ public class OrganizationsController : Controller
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization), eventType: EventType.Organization_CollectionManagement_Updated);
         return new OrganizationResponseModel(organization);
+    }
+
+    /// <summary>
+    /// Migrates user, collection, and group data to the new Flexible Collections permissions scheme,
+    /// then sets organization.FlexibleCollections to true to enable these new features for the organization.
+    /// This is irreversible.
+    /// </summary>
+    /// <param name="organizationId"></param>
+    /// <exception cref="NotFoundException"></exception>
+    [HttpPost("{id}/enable-collection-enhancements")]
+    [RequireFeature(FeatureFlagKeys.FlexibleCollectionsMigration)]
+    public async Task EnableCollectionEnhancements(Guid id)
+    {
+        if (!await _currentContext.OrganizationOwner(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _organizationEnableCollectionEnhancementsCommand.EnableCollectionEnhancements(organization);
+
+        // Force a vault sync for all owners and admins of the organization so that changes show immediately
+        // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
+        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, null);
+        await Task.WhenAll(orgUsers
+            .Where(ou => ou.UserId.HasValue &&
+                         ou.Status == OrganizationUserStatusType.Confirmed &&
+                         ou.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+            .Select(ou => _pushNotificationService.PushSyncOrganizationsAsync(ou.UserId.Value)));
     }
 
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)

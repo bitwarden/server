@@ -1,6 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response.Providers;
 
@@ -68,5 +70,6 @@ public class ProviderOrganizationOrganizationDetailsResponseModel : ProviderOrga
         OrganizationName = providerOrganization.OrganizationName;
     }
 
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string OrganizationName { get; set; }
 }

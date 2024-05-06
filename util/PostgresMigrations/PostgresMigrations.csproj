@@ -6,7 +6,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.14">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.16">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -24,5 +24,6 @@
     <EmbeddedResource Include="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.psql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.psql" />
+    <EmbeddedResource Include="HelperScripts\2024-04-25_00_EnableOrgsCollectionEnhancements.psql" />
   </ItemGroup>
 </Project>

@@ -7,7 +7,6 @@ public class SubscriptionInfo
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingUpcomingInvoice UpcomingInvoice { get; set; }
-    public bool UsingInAppPurchase { get; set; }
 
     public class BillingCustomerDiscount
     {
@@ -15,14 +14,16 @@ public class SubscriptionInfo
 
         public BillingCustomerDiscount(Discount discount)
         {
-            Id = discount.Id;
-            Active = discount.Start != null && discount.End == null;
+            Id = discount.Coupon?.Id;
+            Active = discount.End == null;
             PercentOff = discount.Coupon?.PercentOff;
+            AppliesTo = discount.Coupon?.AppliesTo?.Products ?? [];
         }
 
-        public string Id { get; }
-        public bool Active { get; }
-        public decimal? PercentOff { get; }
+        public string Id { get; set; }
+        public bool Active { get; set; }
+        public decimal? PercentOff { get; set; }
+        public List<string> AppliesTo { get; set; }
     }
 
     public class BillingSubscription
@@ -41,6 +42,10 @@ public class SubscriptionInfo
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
             }
+            CollectionMethod = sub.CollectionMethod;
+            GracePeriod = sub.CollectionMethod == "charge_automatically"
+                ? 14
+                : 30;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -53,6 +58,10 @@ public class SubscriptionInfo
         public string Status { get; set; }
         public bool Cancelled { get; set; }
         public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
+        public string CollectionMethod { get; set; }
+        public DateTime? SuspensionDate { get; set; }
+        public DateTime? UnpaidPeriodEndDate { get; set; }
+        public int GracePeriod { get; set; }
 
         public class BillingSubscriptionItem
         {
@@ -60,6 +69,7 @@ public class SubscriptionInfo
             {
                 if (item.Plan != null)
                 {
+                    ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
                     Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                     Interval = item.Plan.Interval;
@@ -73,6 +83,7 @@ public class SubscriptionInfo
 
             public bool AddonSubscriptionItem { get; set; }
 
+            public string ProductId { get; set; }
             public string Name { get; set; }
             public decimal Amount { get; set; }
             public int Quantity { get; set; }

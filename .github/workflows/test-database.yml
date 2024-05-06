@@ -1,0 +1,185 @@
+---
+name: Database testing
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+      - "rc"
+      - "hotfix-rc"
+    paths:
+      - ".github/workflows/infrastructure-tests.yml" # This file
+      - "src/Sql/**" # SQL Server Database Changes
+      - "util/Migrator/**" # New SQL Server Migrations
+      - "util/MySqlMigrations/**" # Changes to MySQL
+      - "util/PostgresMigrations/**" # Changes to Postgres
+      - "util/SqliteMigrations/**" # Changes to Sqlite
+      - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
+      - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
+      - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+  pull_request:
+    paths:
+      - ".github/workflows/infrastructure-tests.yml" # This file
+      - "src/Sql/**" # SQL Server Database Changes
+      - "util/Migrator/**" # New SQL Server Migrations
+      - "util/MySqlMigrations/**" # Changes to MySQL
+      - "util/PostgresMigrations/**" # Changes to Postgres
+      - "util/SqliteMigrations/**" # Changes to Sqlite
+      - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
+      - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
+      - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Docker Compose databases
+        working-directory: "dev"
+        # We could think about not using profiles and pulling images directly to cover multiple versions
+        run: |
+          cp .env.example .env
+          docker compose --profile mssql --profile postgres --profile mysql up -d
+        shell: pwsh
+
+      # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
+      - name: Sleep
+        run: sleep 15s
+
+      - name: Migrate SQL Server
+        run: 'dotnet run --project util/MsSqlMigratorUtility/ "$CONN_STR"'
+        env:
+          CONN_STR: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+
+      - name: Migrate MySQL
+        working-directory: "util/MySqlMigrations"
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
+
+      - name: Migrate Postgres
+        working-directory: "util/PostgresMigrations"
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:PostgreSql:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
+
+      - name: Migrate SQLite
+        working-directory: "util/SqliteMigrations"
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:Sqlite:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "Data Source=${{ runner.temp }}/test.db"
+
+      - name: Run tests
+        working-directory: "test/Infrastructure.IntegrationTest"
+        env:
+          # Default Postgres:
+          BW_TEST_DATABASES__0__TYPE: "Postgres"
+          BW_TEST_DATABASES__0__CONNECTIONSTRING: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
+          # Default MySql
+          BW_TEST_DATABASES__1__TYPE: "MySql"
+          BW_TEST_DATABASES__1__CONNECTIONSTRING: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
+          # Default Dapper SqlServer
+          BW_TEST_DATABASES__2__TYPE: "SqlServer"
+          BW_TEST_DATABASES__2__CONNECTIONSTRING: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+          # Default Sqlite
+          BW_TEST_DATABASES__3__TYPE: "Sqlite"
+          BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
+        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
+        shell: pwsh
+
+      - name: Report test results
+        uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226 # v1.6.0
+        if: always()
+        with:
+          name: Test Results
+          path: "**/*-test-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: true
+
+      - name: Docker Compose down
+        if: always()
+        working-directory: "dev"
+        run: docker compose down
+        shell: pwsh
+
+  validate:
+    name: Run validation
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+
+      - name: Print environment
+        run: |
+          dotnet --info
+          nuget help | grep Version
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
+
+      - name: Build DACPAC
+        run: dotnet build src/Sql --configuration Release --verbosity minimal --output .
+        shell: pwsh
+
+      - name: Upload DACPAC
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        with:
+          name: sql.dacpac
+          path: Sql.dacpac
+
+      - name: Docker Compose up
+        working-directory: "dev"
+        run: |
+          cp .env.example .env
+          docker compose --profile mssql up -d
+        shell: pwsh
+
+      - name: Migrate
+        run: 'dotnet run --project util/MsSqlMigratorUtility/ "$CONN_STR"'
+        env:
+          CONN_STR: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+
+      - name: Diff .sqlproj to migrations
+        run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        shell: pwsh
+
+      - name: Generate SQL file
+        run: /usr/local/sqlpackage/sqlpackage /action:Script /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"diff.sql" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        shell: pwsh
+
+      - name: Report validation results
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        with:
+          name: report.xml
+          path: |
+            report.xml
+            diff.sql
+
+      - name: Validate XML
+        run: |
+          if grep -q "<Operations>" "report.xml"; then
+             echo
+             echo "Migrations are out of sync with sqlproj!"
+             exit 1
+           else
+             echo "Report looks good"
+           fi
+        shell: bash
+
+      - name: Docker Compose down
+        if: ${{ always() }}
+        working-directory: "dev"
+        run: docker compose down
+        shell: pwsh

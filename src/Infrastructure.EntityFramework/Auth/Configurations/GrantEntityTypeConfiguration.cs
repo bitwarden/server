@@ -10,11 +10,16 @@ public class GrantEntityTypeConfiguration : IEntityTypeConfiguration<Grant>
     {
         builder
             .HasKey(s => s.Id)
+            .HasName("PK_Grant")
             .IsClustered();
 
         builder
             .HasIndex(s => s.Key)
             .IsUnique(true);
+
+        builder
+            .HasIndex(s => s.ExpirationDate)
+            .IsClustered(false);
 
         builder.ToTable(nameof(Grant));
     }

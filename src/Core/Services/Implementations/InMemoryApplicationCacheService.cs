@@ -30,6 +30,15 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         return _orgAbilities;
     }
 
+#nullable enable
+    public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid organizationId)
+    {
+        (await GetOrganizationAbilitiesAsync())
+            .TryGetValue(organizationId, out var organizationAbility);
+        return organizationAbility;
+    }
+#nullable disable
+
     public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
         await InitProviderAbilitiesAsync();
@@ -71,6 +80,16 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         if (_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
         {
             _orgAbilities.Remove(organizationId);
+        }
+
+        return Task.FromResult(0);
+    }
+
+    public virtual Task DeleteProviderAbilityAsync(Guid providerId)
+    {
+        if (_providerAbilities != null && _providerAbilities.ContainsKey(providerId))
+        {
+            _providerAbilities.Remove(providerId);
         }
 
         return Task.FromResult(0);

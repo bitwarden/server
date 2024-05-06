@@ -4,6 +4,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
@@ -50,6 +52,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
+        services.AddOrganizationCollectionEnhancementsCommands();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -87,6 +90,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationUserCommands(this IServiceCollection services)
     {
         services.AddScoped<IDeleteOrganizationUserCommand, DeleteOrganizationUserCommand>();
+        services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
     }
 
@@ -142,6 +146,11 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddBaseOrganizationSubscriptionCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
+    }
+
+    private static void AddOrganizationCollectionEnhancementsCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationEnableCollectionEnhancementsCommand, OrganizationEnableCollectionEnhancementsCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

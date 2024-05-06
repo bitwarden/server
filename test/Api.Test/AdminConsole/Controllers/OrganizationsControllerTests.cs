@@ -2,15 +2,21 @@
 using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -21,10 +27,12 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
+using Bit.Core.Tools.Services;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -37,7 +45,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IProviderRepository _providerRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoConfigService _ssoConfigService;
     private readonly IUserService _userService;
@@ -46,12 +53,18 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
-    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly IFeatureService _featureService;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
+    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IScaleSeatsCommand _scaleSeatsCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -64,7 +77,6 @@ public class OrganizationsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _paymentService = Substitute.For<IPaymentService>();
         _policyRepository = Substitute.For<IPolicyRepository>();
-        _providerRepository = Substitute.For<IProviderRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _ssoConfigService = Substitute.For<ISsoConfigService>();
         _getOrganizationApiKeyQuery = Substitute.For<IGetOrganizationApiKeyQuery>();
@@ -73,19 +85,47 @@ public class OrganizationsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
-        _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
+        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
+        _subscriberQueries = Substitute.For<ISubscriberQueries>();
+        _referenceEventService = Substitute.For<IReferenceEventService>();
+        _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
+        _providerRepository = Substitute.For<IProviderRepository>();
+        _scaleSeatsCommand = Substitute.For<IScaleSeatsCommand>();
 
-        _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-            _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
-            _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
-            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
-            _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService,
-            _updateSecretsManagerSubscriptionCommand, _upgradeOrganizationPlanCommand, _addSecretsManagerSubscriptionCommand);
+        _sut = new OrganizationsController(
+            _organizationRepository,
+            _organizationUserRepository,
+            _policyRepository,
+            _organizationService,
+            _userService,
+            _paymentService,
+            _currentContext,
+            _ssoConfigRepository,
+            _ssoConfigService,
+            _getOrganizationApiKeyQuery,
+            _rotateOrganizationApiKeyCommand,
+            _createOrganizationApiKeyCommand,
+            _organizationApiKeyRepository,
+            _cloudGetOrganizationLicenseQuery,
+            _featureService,
+            _globalSettings,
+            _licensingService,
+            _updateSecretsManagerSubscriptionCommand,
+            _upgradeOrganizationPlanCommand,
+            _addSecretsManagerSubscriptionCommand,
+            _pushNotificationService,
+            _cancelSubscriptionCommand,
+            _subscriberQueries,
+            _referenceEventService,
+            _organizationEnableCollectionEnhancementsCommand,
+            _providerRepository,
+            _scaleSeatsCommand);
     }
 
     public void Dispose()
@@ -341,5 +381,82 @@ public class OrganizationsControllerTests : IDisposable
         await _addSecretsManagerSubscriptionCommand.Received(1)
             .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_Success(Organization organization)
+    {
+        organization.FlexibleCollections = false;
+        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin, Status = OrganizationUserStatusType.Confirmed };
+        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner, Status = OrganizationUserStatusType.Confirmed };
+        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User, Status = OrganizationUserStatusType.Confirmed };
+        var invited = new OrganizationUser
+        {
+            UserId = null,
+            Type = OrganizationUserType.Admin,
+            Email = "invited@example.com",
+            Status = OrganizationUserStatusType.Invited
+        };
+        var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
+
+        _currentContext.OrganizationOwner(organization.Id).Returns(true);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null).Returns(orgUsers);
+
+        await _sut.EnableCollectionEnhancements(organization.Id);
+
+        await _organizationEnableCollectionEnhancementsCommand.Received(1).EnableCollectionEnhancements(organization);
+        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(admin.UserId.Value);
+        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(owner.UserId.Value);
+        await _pushNotificationService.DidNotReceive().PushSyncOrganizationsAsync(user.UserId.Value);
+        // Invited orgUser does not have a UserId we can use to assert here, but sut will throw if that null isn't handled
+    }
+
+    [Theory, AutoData]
+    public async Task EnableCollectionEnhancements_WhenNotOwner_Throws(Organization organization)
+    {
+        organization.FlexibleCollections = false;
+        _currentContext.OrganizationOwner(organization.Id).Returns(false);
+        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
+
+        await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncOrganizationsAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, AutoData]
+    public async Task Delete_OrganizationIsConsolidatedBillingClient_ScalesProvidersSeats(
+        Provider provider,
+        Organization organization,
+        User user,
+        Guid organizationId,
+        SecretVerificationRequestModel requestModel)
+    {
+        organization.Status = OrganizationStatusType.Managed;
+        organization.PlanType = PlanType.TeamsMonthly;
+        organization.Seats = 10;
+
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
+
+        _currentContext.OrganizationOwner(organizationId).Returns(true);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        _userService.VerifySecretAsync(user, requestModel.Secret).Returns(true);
+
+        _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
+
+        _providerRepository.GetByOrganizationIdAsync(organization.Id).Returns(provider);
+
+        await _sut.Delete(organizationId.ToString(), requestModel);
+
+        await _scaleSeatsCommand.Received(1)
+            .ScalePasswordManagerSeats(provider, organization.PlanType, -organization.Seats.Value);
+
+        await _organizationService.Received(1).DeleteAsync(organization);
     }
 }

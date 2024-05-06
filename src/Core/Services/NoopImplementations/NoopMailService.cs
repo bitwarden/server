@@ -43,12 +43,13 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails)
+    public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
+        IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
+    public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
     {
         return Task.FromResult(0);
     }
@@ -197,6 +198,9 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendProviderUpdatePaymentMethod(Guid organizationId, string organizationName, string providerName,
+        IEnumerable<string> emails) => Task.FromResult(0);
+
     public Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
     {
         return Task.FromResult(0);
@@ -259,5 +263,12 @@ public class NoopMailService : IMailService
     {
         return Task.FromResult(0);
     }
+
+    public Task SendTrialInitiationEmailAsync(string email)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token) => throw new NotImplementedException();
 }
 

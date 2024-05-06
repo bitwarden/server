@@ -35,11 +35,30 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "grant_type", "password" },
             { "username", username },
             { "password", password },
-        }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
 
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
         return (root.GetProperty("access_token").GetString(), root.GetProperty("refresh_token").GetString());
+    }
+
+    public async Task<string> TokenFromAccessTokenAsync(Guid clientId, string clientSecret,
+        DeviceType deviceType = DeviceType.SDK)
+    {
+        var context = await Server.PostAsync("/connect/token",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "scope", "api.secrets" },
+                { "client_id", clientId.ToString() },
+                { "client_secret", clientSecret },
+                { "grant_type", "client_credentials" },
+                { "deviceType", ((int)deviceType).ToString() }
+            }));
+
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        return root.GetProperty("access_token").GetString();
     }
 }
