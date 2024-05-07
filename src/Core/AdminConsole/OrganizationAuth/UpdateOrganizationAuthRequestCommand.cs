@@ -16,17 +16,20 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
     private readonly ILogger<UpdateOrganizationAuthRequestCommand> _logger;
+    private readonly IAuthRequestRepository _authRequestRepository;
 
     public UpdateOrganizationAuthRequestCommand(
         IAuthRequestService authRequestService,
         IMailService mailService,
         IUserRepository userRepository,
-        ILogger<UpdateOrganizationAuthRequestCommand> logger)
+        ILogger<UpdateOrganizationAuthRequestCommand> logger,
+        IAuthRequestRepository authRequestRepository)
     {
         _authRequestService = authRequestService;
         _mailService = mailService;
         _userRepository = userRepository;
         _logger = logger;
+        _authRequestRepository = authRequestRepository;
     }
 
     public async Task UpdateAsync(Guid requestId, Guid userId, bool requestApproved, string encryptedUserKey)
