@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Enums;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 
 namespace Bit.Admin.AdminConsole.Models;
 
