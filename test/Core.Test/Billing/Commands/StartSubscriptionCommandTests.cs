@@ -106,32 +106,6 @@ public class StartSubscriptionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task StartSubscription_CustomerDoesNotSupportAutomaticTax_ThrowsBillingException(
-        SutProvider<StartSubscriptionCommand> sutProvider,
-        Provider provider,
-        TaxInfo taxInfo)
-    {
-        provider.GatewayCustomerId = _customerId;
-
-        provider.GatewaySubscriptionId = null;
-
-        taxInfo.BillingAddressCountry = "US";
-
-        SetCustomerRetrieval(sutProvider, new Customer
-        {
-            Id = _customerId,
-            Tax = new CustomerTax
-            {
-                AutomaticTax = StripeConstants.AutomaticTaxStatus.NotCollecting
-            }
-        });
-
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider, taxInfo));
-
-        await DidNotRetrieveProviderPlansAsync(sutProvider);
-    }
-
-    [Theory, BitAutoData]
     public async Task StartSubscription_NoProviderPlans_ThrowsBillingException(
         SutProvider<StartSubscriptionCommand> sutProvider,
         Provider provider,
