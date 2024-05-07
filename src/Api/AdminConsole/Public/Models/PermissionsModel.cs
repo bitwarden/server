@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
-using Bit.Core.Models.Data;
 using System.Text.Json.Serialization;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.AdminConsole.Public.Models;
 
@@ -11,7 +11,7 @@ namespace Bit.Api.AdminConsole.Public.Models;
 public class PermissionsModel
 {
     [JsonConstructor]
-    public PermissionsModel() {}
+    public PermissionsModel() { }
     public PermissionsModel(Permissions? data)
     {
         if (data is null)
