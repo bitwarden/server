@@ -25,7 +25,6 @@ jobs:
       - name: Remove the Docker image from ACR
         env:
           REF: ${{ github.event.pull_request.head.ref }}
-          REGISTRY: bitwardenprod
           SERVICES: |
             services:
               - Admin
