@@ -140,27 +140,8 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         var projectQuery = dbContext.Project
             .Where(s => s.Id == id);
 
-        var query = accessType switch
-        {
-            AccessClientType.NoAccessCheck => projectQuery.Select(_ => new { Read = true, Write = true }),
-            AccessClientType.User => projectQuery.Select(p => new
-            {
-                Read = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read)
-                       || p.GroupAccessPolicies.Any(ap =>
-                           ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
-                Write = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                        p.GroupAccessPolicies.Any(ap =>
-                            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
-            }),
-            AccessClientType.ServiceAccount => projectQuery.Select(p => new
-            {
-                Read = p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read),
-                Write = p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write),
-            }),
-            _ => projectQuery.Select(_ => new { Read = false, Write = false }),
-        };
-
-        var policy = await query.FirstOrDefaultAsync();
+        var accessQuery = BuildProjectAccessQuery(projectQuery, userId, accessType);
+        var policy = await accessQuery.FirstOrDefaultAsync();
 
         return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
@@ -173,6 +154,46 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
         return projectIds.Count == results.Count;
     }
+
+    public async Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToProjectsAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        AccessClientType accessType)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var projectsQuery = dbContext.Project.Where(p => projectIds.Contains(p.Id));
+        var accessQuery = BuildProjectAccessQuery(projectsQuery, userId, accessType);
+
+        return await accessQuery.ToDictionaryAsync(pa => pa.Id, pa => (pa.Read, pa.Write));
+    }
+
+    private record ProjectAccess(Guid Id, bool Read, bool Write);
+
+    private static IQueryable<ProjectAccess> BuildProjectAccessQuery(IQueryable<Project> projectQuery, Guid userId,
+        AccessClientType accessType) =>
+        accessType switch
+        {
+            AccessClientType.NoAccessCheck => projectQuery.Select(p => new ProjectAccess(p.Id, true, true)),
+            AccessClientType.User => projectQuery.Select(p => new ProjectAccess
+            (
+                p.Id,
+                p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                p.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
+                p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                p.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))
+            )),
+            AccessClientType.ServiceAccount => projectQuery.Select(p => new ProjectAccess
+            (
+                p.Id,
+                p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read),
+                p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)
+            )),
+            _ => projectQuery.Select(p => new ProjectAccess(p.Id, false, false))
+        };
 
     private IQueryable<ProjectPermissionDetails> ProjectToPermissionDetails(IQueryable<Project> query, Guid userId, AccessClientType accessType)
     {

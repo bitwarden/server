@@ -38,14 +38,17 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IAuthorizationHandler, ProjectAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecretAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, AccessPolicyAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ProjectPeopleAccessPoliciesAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountPeopleAccessPoliciesAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, ServiceAccountGrantedPoliciesAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, ProjectServiceAccountsAccessPoliciesAuthorizationHandler>();
         services.AddScoped<IAccessClientQuery, AccessClientQuery>();
         services.AddScoped<IMaxProjectsQuery, MaxProjectsQuery>();
         services.AddScoped<ISameOrganizationQuery, SameOrganizationQuery>();
         services.AddScoped<IServiceAccountSecretsDetailsQuery, ServiceAccountSecretsDetailsQuery>();
+        services.AddScoped<IServiceAccountGrantedPolicyUpdatesQuery, ServiceAccountGrantedPolicyUpdatesQuery>();
         services.AddScoped<ISecretsSyncQuery, SecretsSyncQuery>();
+        services.AddScoped<IProjectServiceAccountsAccessPoliciesUpdatesQuery, ProjectServiceAccountsAccessPoliciesUpdatesQuery>();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
         services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();
@@ -58,11 +61,10 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<ICountNewServiceAccountSlotsRequiredQuery, CountNewServiceAccountSlotsRequiredQuery>();
         services.AddScoped<IRevokeAccessTokensCommand, RevokeAccessTokensCommand>();
         services.AddScoped<ICreateAccessTokenCommand, CreateAccessTokenCommand>();
-        services.AddScoped<ICreateAccessPoliciesCommand, CreateAccessPoliciesCommand>();
-        services.AddScoped<IUpdateAccessPolicyCommand, UpdateAccessPolicyCommand>();
-        services.AddScoped<IDeleteAccessPolicyCommand, DeleteAccessPolicyCommand>();
         services.AddScoped<IImportCommand, ImportCommand>();
         services.AddScoped<IEmptyTrashCommand, EmptyTrashCommand>();
         services.AddScoped<IRestoreTrashCommand, RestoreTrashCommand>();
+        services.AddScoped<IUpdateServiceAccountGrantedPoliciesCommand, UpdateServiceAccountGrantedPoliciesCommand>();
+        services.AddScoped<IUpdateProjectServiceAccountsAccessPoliciesCommand, UpdateProjectServiceAccountsAccessPoliciesCommand>();
     }
 }
