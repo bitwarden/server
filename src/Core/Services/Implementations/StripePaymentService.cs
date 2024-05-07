@@ -1911,7 +1911,6 @@ public class StripePaymentService : IPaymentService
             var invoices = await _stripeAdapter.InvoiceListAsync(options);
 
             return invoices
-                .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
                 .OrderByDescending(invoice => invoice.Created)
                 .Select(invoice => new BillingInfo.BillingInvoice(invoice));
         }
