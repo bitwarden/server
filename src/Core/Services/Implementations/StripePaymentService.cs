@@ -1902,7 +1902,8 @@ public class StripePaymentService : IPaymentService
         var options = new StripeInvoiceListOptions
         {
             Customer = customer.Id,
-            SelectAll = true
+            SelectAll = true,
+            Status = "paid"
         };
 
         try
