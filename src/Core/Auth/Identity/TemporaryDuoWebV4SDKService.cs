@@ -110,8 +110,8 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
 
     private bool HasProperMetaData(TwoFactorProvider provider)
     {
-        return provider?.MetaData != null && provider.MetaData.ContainsKey("IKey") &&
-            provider.MetaData.ContainsKey("SKey") && provider.MetaData.ContainsKey("Host");
+        return provider?.MetaData != null && provider.MetaData.ContainsKey("ClientId") &&
+            provider.MetaData.ContainsKey("ClientSecret") && provider.MetaData.ContainsKey("Host");
     }
 
     /// <summary>
@@ -128,8 +128,8 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
             _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
 
         var client = new Duo.ClientBuilder(
-            (string)provider.MetaData["IKey"],
-            (string)provider.MetaData["SKey"],
+            (string)provider.MetaData["ClientId"],
+            (string)provider.MetaData["ClientSecret"],
             (string)provider.MetaData["Host"],
             redirectUri).Build();
 

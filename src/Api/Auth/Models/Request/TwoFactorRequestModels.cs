@@ -44,10 +44,10 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
 {
     [Required]
     [StringLength(50)]
-    public string IntegrationKey { get; set; }
+    public string ClientId { get; set; }
     [Required]
     [StringLength(50)]
-    public string SecretKey { get; set; }
+    public string ClientSecret { get; set; }
     [Required]
     [StringLength(50)]
     public string Host { get; set; }
@@ -68,8 +68,8 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         {
             MetaData = new Dictionary<string, object>
             {
-                ["SKey"] = SecretKey,
-                ["IKey"] = IntegrationKey,
+                ["ClientSecret"] = ClientSecret,
+                ["ClientId"] = ClientId,
                 ["Host"] = Host
             },
             Enabled = true
@@ -94,8 +94,8 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         {
             MetaData = new Dictionary<string, object>
             {
-                ["SKey"] = SecretKey,
-                ["IKey"] = IntegrationKey,
+                ["ClientSecret"] = ClientSecret,
+                ["ClientId"] = ClientId,
                 ["Host"] = Host
             },
             Enabled = true

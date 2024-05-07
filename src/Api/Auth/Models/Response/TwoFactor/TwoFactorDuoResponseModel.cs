@@ -36,8 +36,8 @@ public class TwoFactorDuoResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public string Host { get; set; }
-    public string SecretKey { get; set; }
-    public string IntegrationKey { get; set; }
+    public string ClientSecret { get; set; }
+    public string ClientId { get; set; }
 
     private void Build(TwoFactorProvider provider)
     {
@@ -49,13 +49,13 @@ public class TwoFactorDuoResponseModel : ResponseModel
             {
                 Host = (string)provider.MetaData["Host"];
             }
-            if (provider.MetaData.ContainsKey("SKey"))
+            if (provider.MetaData.ContainsKey("ClientSecret"))
             {
-                SecretKey = (string)provider.MetaData["SKey"];
+                ClientSecret = (string)provider.MetaData["ClientSecret"];
             }
-            if (provider.MetaData.ContainsKey("IKey"))
+            if (provider.MetaData.ContainsKey("ClientId"))
             {
-                IntegrationKey = (string)provider.MetaData["IKey"];
+                ClientId = (string)provider.MetaData["ClientId"];
             }
         }
         else

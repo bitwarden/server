@@ -159,7 +159,7 @@ public class TwoFactorController : Controller
         var user = await CheckAsync(model, true);
         try
         {
-            var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
+            var duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
             await duoApi.JSONApiCall("GET", "/auth/v2/check");
         }
         catch (DuoException)
@@ -217,7 +217,7 @@ public class TwoFactorController : Controller
 
         try
         {
-            var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
+            var duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
             await duoApi.JSONApiCall("GET", "/auth/v2/check");
         }
         catch (DuoException)
