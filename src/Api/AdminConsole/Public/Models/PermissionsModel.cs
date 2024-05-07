@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace Bit.Api.AdminConsole.Public.Models;
 
 /// <summary>
-/// Represents a Member's custom permissions in the Public Api.
+/// Represents a member's custom permissions if the member has a Custom role.
 /// </summary>
 public class PermissionsModel
 {
