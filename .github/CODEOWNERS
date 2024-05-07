@@ -54,6 +54,7 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/Billing @bitwarden/team-billing-dev
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
+src/Core/Services/Implementations/StripePaymentService.cs @bitwarden/team-billing-dev
 
 # Multiple owners - DO NOT REMOVE (DevOps)
 **/packages.lock.json
