@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+using Bit.Core.AdminConsole.OrganizationAuth.Models;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Repositories;
@@ -50,6 +51,11 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
             await _mailService.SendTrustedDeviceAdminApprovalEmailAsync(user.Email, approvalDateTime,
                 updatedAuthRequest.RequestIpAddress, deviceTypeAndIdentifier);
         }
+    }
+
+    public async Task UpdateManyAsync(Guid organizationId, IEnumerable<OrganizationAuthRequestUpdateCommandModel> authRequestUpdates)
+    {
+        throw new NotImplementedException();
     }
 }
 
