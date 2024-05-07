@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.Controllers;
-using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.Context;
@@ -9,7 +8,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
-using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
