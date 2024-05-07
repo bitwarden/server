@@ -72,7 +72,8 @@ public abstract class MemberBaseModel
     [Required]
     public bool ResetPasswordEnrolled { get; set; }
     /// <summary>
-    /// The member's custom permissions if the member has a Custom role.
+    /// The member's custom permissions if the member has a Custom role. If not supplied, all custom permissions will
+    /// default to false.
     /// </summary>
     public PermissionsModel? Permissions { get; set; }
 
