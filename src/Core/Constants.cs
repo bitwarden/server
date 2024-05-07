@@ -109,6 +109,8 @@ public static class FeatureFlagKeys
     public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string VaultOnboarding = "vault-onboarding";
     public const string BrowserFilelessImport = "browser-fileless-import";
+    public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
+
     /// <summary>
     /// Deprecated - never used, do not use. Will always default to false. Will be deleted as part of Flexible Collections cleanup
     /// </summary>
@@ -136,6 +138,7 @@ public static class FeatureFlagKeys
     public const string EnableDeleteProvider = "AC-1218-delete-provider";
     public const string EmailVerification = "email-verification";
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
+    public const string ExtensionRefresh = "extension-refresh";
 
     public static List<string> GetAllKeys()
     {
