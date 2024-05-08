@@ -153,17 +153,16 @@ jobs:
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
       - name: Generate image full name
-        id: image-name
+        id: cache-name
         env:
-          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+        run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:buildcache" >> $GITHUB_OUTPUT
 
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          cache-from: type=registry,ref=${{ steps.image-name.outputs.name }}
-          cache-to: type=inline
+          cache-from: type=registry,ref=${{ steps.cache-name.outputs.name }}
+          cache-to: type=registry,ref=${{ steps.cache-name.outputs.name}},mode=max
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
@@ -171,9 +170,7 @@ jobs:
             linux/arm/v7,
             linux/arm64
           push: true
-          tags: ${{ steps.image-name.outputs.name }}
-          secrets: |
-            "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
+          tags: ${{ steps.image-tags.outputs.tags }}
 
       - name: Scan Docker image
         id: container-scan
