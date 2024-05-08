@@ -227,24 +227,29 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> CanDeleteAsync(ICollection<Collection> resources, CurrentContextOrganization? org)
     {
-        // Owners, Admins, and users with DeleteAnyCollection permission can always delete collections
-        if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.DeleteAnyCollection: true })
+        // Users with DeleteAnyCollection permission can always delete collections
+        if (org is { Permissions.DeleteAnyCollection: true })
         {
             return true;
         }
 
-        // Check for non-null org here: the user must be apart of the organization for this setting to take affect
-        // The limit collection management setting is disabled,
-        // ensure acting user has manage permissions for all collections being deleted
-        if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
+        // If AllowAdminAccessToAllCollectionItems is true, Owners and Admins can delete any collection, regardless of LimitCollectionCreationDeletion setting
+        var organizationAbility = await GetOrganizationAbilityAsync(org);
+        var allowAdminAccessToAllCollectionItems = !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
+                                                   organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+        if (allowAdminAccessToAllCollectionItems && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources, org);
-            if (canManageCollections)
-            {
-                return true;
-            }
+            return true;
+        }
+
+        // If LimitCollectionCreationDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
+        // Ensure acting user has manage permissions for all collections being deleted
+        // If LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
+        var canDeleteManagedCollections = organizationAbility is { LimitCollectionCreationDeletion: false } ||
+                                          org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
+        if (canDeleteManagedCollections && await CanManageCollectionsAsync(resources, org))
+        {
+            return true;
         }
 
         // Allow providers to delete collections if they are a provider for the target organization
