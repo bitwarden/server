@@ -1,8 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Queries;
-using Bit.Core.Billing.Queries.Implementations;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -10,16 +9,16 @@ using NSubstitute;
 using Stripe;
 using Xunit;
 
-namespace Bit.Core.Test.Billing.Queries;
+namespace Bit.Core.Test.Billing.Services;
 
 [SutProviderCustomize]
-public class OrganizationBillingQueriesTests
+public class OrganizationBillingServiceTests
 {
     #region GetMetadata
     [Theory, BitAutoData]
     public async Task GetMetadata_OrganizationNull_ReturnsNull(
         Guid organizationId,
-        SutProvider<OrganizationBillingQueries> sutProvider)
+        SutProvider<OrganizationBillingService> sutProvider)
     {
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
@@ -30,7 +29,7 @@ public class OrganizationBillingQueriesTests
     public async Task GetMetadata_CustomerNull_ReturnsNull(
         Guid organizationId,
         Organization organization,
-        SutProvider<OrganizationBillingQueries> sutProvider)
+        SutProvider<OrganizationBillingService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
@@ -43,7 +42,7 @@ public class OrganizationBillingQueriesTests
     public async Task GetMetadata_SubscriptionNull_ReturnsNull(
         Guid organizationId,
         Organization organization,
-        SutProvider<OrganizationBillingQueries> sutProvider)
+        SutProvider<OrganizationBillingService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
@@ -58,7 +57,7 @@ public class OrganizationBillingQueriesTests
     public async Task GetMetadata_Succeeds(
         Guid organizationId,
         Organization organization,
-        SutProvider<OrganizationBillingQueries> sutProvider)
+        SutProvider<OrganizationBillingService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 

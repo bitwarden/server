@@ -13,10 +13,10 @@ public static class ServiceCollectionExtensions
 {
     public static void AddBillingOperations(this IServiceCollection services)
     {
+        services.AddTransient<IOrganizationBillingService, OrganizationBillingService>();
         services.AddTransient<ISubscriberService, SubscriberService>();
 
         // Queries
-        services.AddTransient<IOrganizationBillingQueries, OrganizationBillingQueries>();
         services.AddTransient<IProviderBillingQueries, ProviderBillingQueries>();
 
         // Commands

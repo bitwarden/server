@@ -1,7 +1,7 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -29,7 +29,7 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationBillingQueries>().GetMetadata(organizationId)
+        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
             .Returns(new OrganizationMetadataDTO(true));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);

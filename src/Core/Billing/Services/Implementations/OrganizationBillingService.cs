@@ -1,16 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Stripe;
 
-namespace Bit.Core.Billing.Queries.Implementations;
+namespace Bit.Core.Billing.Services.Implementations;
 
-public class OrganizationBillingQueries(
+public class OrganizationBillingService(
     IOrganizationRepository organizationRepository,
-    ISubscriberService subscriberService) : IOrganizationBillingQueries
+    ISubscriberService subscriberService) : IOrganizationBillingService
 {
     public async Task<OrganizationMetadataDTO> GetMetadata(Guid organizationId)
     {
