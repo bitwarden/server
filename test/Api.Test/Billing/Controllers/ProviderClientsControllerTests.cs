@@ -186,7 +186,7 @@ public class ProviderClientsControllerTests
 
         Assert.IsType<Ok>(result);
 
-        await sutProvider.GetDependency<ICreateCustomerCommand>().Received(1).CreateCustomer(
+        await sutProvider.GetDependency<IProviderBillingService>().Received(1).CreateCustomerForClientOrganization(
             provider,
             clientOrganization);
     }

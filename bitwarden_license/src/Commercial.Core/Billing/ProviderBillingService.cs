@@ -11,6 +11,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -19,6 +20,7 @@ using static Bit.Core.Billing.Utilities;
 namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
+    IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
@@ -26,6 +28,7 @@ public class ProviderBillingService(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
+    IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IProviderBillingService
 {
     public async Task AssignSeatsToClientOrganization(
@@ -54,6 +57,77 @@ public class ProviderBillingService(
         await ScaleSeats(provider, organization.PlanType, seatAdjustment);
 
         organization.Seats = seats;
+
+        await organizationRepository.ReplaceAsync(organization);
+    }
+
+    public async Task CreateCustomerForClientOrganization(
+        Provider provider,
+        Organization organization)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(organization);
+
+        if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
+        {
+            logger.LogWarning("Client organization ({ID}) already has a populated {FieldName}", organization.Id, nameof(organization.GatewayCustomerId));
+
+            return;
+        }
+
+        var providerCustomer = await subscriberService.GetCustomerOrThrow(provider, new CustomerGetOptions
+        {
+            Expand = ["tax_ids"]
+        });
+
+        var providerTaxId = providerCustomer.TaxIds.FirstOrDefault();
+
+        var organizationDisplayName = organization.DisplayName();
+
+        var customerCreateOptions = new CustomerCreateOptions
+        {
+            Address = new AddressOptions
+            {
+                Country = providerCustomer.Address?.Country,
+                PostalCode = providerCustomer.Address?.PostalCode,
+                Line1 = providerCustomer.Address?.Line1,
+                Line2 = providerCustomer.Address?.Line2,
+                City = providerCustomer.Address?.City,
+                State = providerCustomer.Address?.State
+            },
+            Name = organizationDisplayName,
+            Description = $"{provider.Name} Client Organization",
+            Email = provider.BillingEmail,
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                CustomFields =
+                [
+                    new CustomerInvoiceSettingsCustomFieldOptions
+                    {
+                        Name = organization.SubscriberType(),
+                        Value = organizationDisplayName.Length <= 30
+                            ? organizationDisplayName
+                            : organizationDisplayName[..30]
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "region", globalSettings.BaseServiceUri.CloudRegion }
+            },
+            TaxIdData = providerTaxId == null ? null :
+            [
+                new CustomerTaxIdDataOptions
+                {
+                    Type = providerTaxId.Type,
+                    Value = providerTaxId.Value
+                }
+            ]
+        };
+
+        var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+
+        organization.GatewayCustomerId = customer.Id;
 
         await organizationRepository.ReplaceAsync(organization);
     }

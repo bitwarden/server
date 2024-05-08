@@ -2,7 +2,6 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -15,7 +14,6 @@ namespace Bit.Api.Billing.Controllers;
 
 [Route("providers/{providerId:guid}/clients")]
 public class ProviderClientsController(
-    ICreateCustomerCommand createCustomerCommand,
     ICurrentContext currentContext,
     IFeatureService featureService,
     ILogger<ProviderClientsController> logger,
@@ -88,7 +86,7 @@ public class ProviderClientsController(
             requestBody.PlanType,
             requestBody.Seats);
 
-        await createCustomerCommand.CreateCustomer(
+        await providerBillingService.CreateCustomerForClientOrganization(
             provider,
             clientOrganization);
 

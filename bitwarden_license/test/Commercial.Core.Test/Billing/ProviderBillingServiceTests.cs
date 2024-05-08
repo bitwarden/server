@@ -9,9 +9,11 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -21,6 +23,7 @@ using Stripe;
 using Xunit;
 
 using static Bit.Core.Test.Billing.Utilities;
+
 namespace Bit.Commercial.Core.Test.Billing;
 
 [SutProviderCustomize]
@@ -340,6 +343,115 @@ public class ProviderBillingServiceTests
         // Being below the seat minimum means no purchased seats.
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             pPlan => pPlan.Id == providerPlan.Id && pPlan.PurchasedSeats == 0 && pPlan.AllocatedSeats == 80));
+    }
+    #endregion
+
+    #region CreateCustomerForClientOrganization
+    [Theory, BitAutoData]
+    public async Task CreateCustomerForClientOrganization_ProviderNull_ThrowsArgumentNullException(
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.CreateCustomerForClientOrganization(null, organization));
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomerForClientOrganization_OrganizationNull_ThrowsArgumentNullException(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.CreateCustomerForClientOrganization(provider, null));
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomerForClientOrganization_HasGatewayCustomerId_NoOp(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.GatewayCustomerId = "customer_id";
+
+        await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
+
+        await sutProvider.GetDependency<ISubscriberService>().DidNotReceiveWithAnyArgs()
+            .GetCustomerOrThrow(Arg.Any<ISubscriber>(), Arg.Any<CustomerGetOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_ForClientOrg_Succeeds(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+        organization.Name = "Name";
+        organization.BusinessName = "BusinessName";
+
+        var providerCustomer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "USA",
+                PostalCode = "12345",
+                Line1 = "123 Main St.",
+                Line2 = "Unit 4",
+                City = "Fake Town",
+                State = "Fake State"
+            },
+            TaxIds = new StripeList<TaxId>
+            {
+                Data =
+                [
+                    new TaxId { Type = "TYPE", Value = "VALUE" }
+                ]
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
+                options => options.Expand.FirstOrDefault() == "tax_ids"))
+            .Returns(providerCustomer);
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
+            .Returns(new Bit.Core.Settings.GlobalSettings.BaseServiceUriSettings(new Bit.Core.Settings.GlobalSettings()) { CloudRegion = "US" });
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
+                options =>
+                    options.Address.Country == providerCustomer.Address.Country &&
+                    options.Address.PostalCode == providerCustomer.Address.PostalCode &&
+                    options.Address.Line1 == providerCustomer.Address.Line1 &&
+                    options.Address.Line2 == providerCustomer.Address.Line2 &&
+                    options.Address.City == providerCustomer.Address.City &&
+                    options.Address.State == providerCustomer.Address.State &&
+                    options.Name == organization.DisplayName() &&
+                    options.Description == $"{provider.Name} Client Organization" &&
+                    options.Email == provider.BillingEmail &&
+                    options.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Organization" &&
+                    options.InvoiceSettings.CustomFields.FirstOrDefault().Value == "Name" &&
+                    options.Metadata["region"] == "US" &&
+                    options.TaxIdData.FirstOrDefault().Type == providerCustomer.TaxIds.FirstOrDefault().Type &&
+                    options.TaxIdData.FirstOrDefault().Value == providerCustomer.TaxIds.FirstOrDefault().Value))
+            .Returns(new Customer
+            {
+                Id = "customer_id"
+            });
+
+        await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
+            options =>
+                options.Address.Country == providerCustomer.Address.Country &&
+                options.Address.PostalCode == providerCustomer.Address.PostalCode &&
+                options.Address.Line1 == providerCustomer.Address.Line1 &&
+                options.Address.Line2 == providerCustomer.Address.Line2 &&
+                options.Address.City == providerCustomer.Address.City &&
+                options.Address.State == providerCustomer.Address.State &&
+                options.Name == organization.DisplayName() &&
+                options.Description == $"{provider.Name} Client Organization" &&
+                options.Email == provider.BillingEmail &&
+                options.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Organization" &&
+                options.InvoiceSettings.CustomFields.FirstOrDefault().Value == "Name" &&
+                options.Metadata["region"] == "US" &&
+                options.TaxIdData.FirstOrDefault().Type == providerCustomer.TaxIds.FirstOrDefault().Type &&
+                options.TaxIdData.FirstOrDefault().Value == providerCustomer.TaxIds.FirstOrDefault().Value));
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Is<Organization>(
+            org => org.GatewayCustomerId == "customer_id"));
     }
     #endregion
 

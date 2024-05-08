@@ -15,7 +15,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISubscriberService, SubscriberService>();
 
         // Commands
-        services.AddTransient<ICreateCustomerCommand, CreateCustomerCommand>();
         services.AddTransient<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
         services.AddTransient<IStartSubscriptionCommand, StartSubscriptionCommand>();
     }

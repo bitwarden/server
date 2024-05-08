@@ -23,6 +23,16 @@ public interface IProviderBillingService
         int seats);
 
     /// <summary>
+    /// Create a Stripe <see cref="Stripe.Customer"/> for the provided client <paramref name="organization"/> utilizing
+    /// the address and tax information of its <paramref name="provider"/>.
+    /// </summary>
+    /// <param name="provider">The MSP that owns the client organization.</param>
+    /// <param name="organization">The client organization to create a Stripe <see cref="Stripe.Customer"/> for.</param>
+    Task CreateCustomerForClientOrganization(
+        Provider provider,
+        Organization organization);
+
+    /// <summary>
     /// Retrieves the number of seats an MSP has assigned to its client organizations with a specified <paramref name="planType"/>.
     /// </summary>
     /// <param name="providerId">The ID of the MSP to retrieve the assigned seat total for.</param>
