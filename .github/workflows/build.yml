@@ -207,6 +207,9 @@ jobs:
       - name: Login to PROD ACR
         run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
 
+      - name: Restore
+        run: dotnet tool restore
+
       - name: Make Docker stubs
         if: github.ref == 'refs/heads/main' ||
           github.ref == 'refs/heads/rc' ||
