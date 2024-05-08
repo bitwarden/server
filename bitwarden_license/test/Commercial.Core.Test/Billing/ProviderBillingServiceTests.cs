@@ -26,7 +26,7 @@ namespace Bit.Commercial.Core.Test.Billing;
 [SutProviderCustomize]
 public class ProviderBillingServiceTests
 {
-    #region AssignSeatsToClientOrganization
+    #region AssignSeatsToClientOrganization & ScaleSeats
     [Theory, BitAutoData]
     public Task AssignSeatsToClientOrganization_NullProvider_ArgumentNullException(
         Organization organization,

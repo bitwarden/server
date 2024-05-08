@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -56,7 +57,7 @@ public class OrganizationsController : Controller
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
     private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
     private readonly IFeatureService _featureService;
-    private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IProviderBillingService _providerBillingService;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -84,7 +85,7 @@ public class OrganizationsController : Controller
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
         IRemovePaymentMethodCommand removePaymentMethodCommand,
         IFeatureService featureService,
-        IScaleSeatsCommand scaleSeatsCommand)
+        IProviderBillingService providerBillingService)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -111,7 +112,7 @@ public class OrganizationsController : Controller
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
         _removePaymentMethodCommand = removePaymentMethodCommand;
         _featureService = featureService;
-        _scaleSeatsCommand = scaleSeatsCommand;
+        _providerBillingService = providerBillingService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -256,7 +257,7 @@ public class OrganizationsController : Controller
 
             if (provider.IsBillable())
             {
-                await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                await _providerBillingService.ScaleSeats(
                     provider,
                     organization.PlanType,
                     -organization.Seats ?? 0);

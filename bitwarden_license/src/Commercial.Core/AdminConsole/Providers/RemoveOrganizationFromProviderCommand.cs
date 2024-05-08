@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -19,35 +20,32 @@ namespace Bit.Commercial.Core.AdminConsole.Providers;
 public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProviderCommand
 {
     private readonly IEventService _eventService;
-    private readonly ILogger<RemoveOrganizationFromProviderCommand> _logger;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
-    private readonly IScaleSeatsCommand _scaleSeatsCommand;
     private readonly IFeatureService _featureService;
+    private readonly IProviderBillingService _providerBillingService;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
-        ILogger<RemoveOrganizationFromProviderCommand> logger,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
-        IScaleSeatsCommand scaleSeatsCommand,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IProviderBillingService providerBillingService)
     {
         _eventService = eventService;
-        _logger = logger;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
-        _scaleSeatsCommand = scaleSeatsCommand;
         _featureService = featureService;
+        _providerBillingService = providerBillingService;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -89,6 +87,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         if (isConsolidatedBillingEnabled && provider.Status == ProviderStatusType.Billable)
         {
             var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
+
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
                 Customer = organization.GatewayCustomerId,
@@ -101,12 +100,14 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 },
                 OffSession = true,
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-                Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
+                Items = [ new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats } ]
             };
+
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
             organization.GatewaySubscriptionId = subscription.Id;
-            await _scaleSeatsCommand.ScalePasswordManagerSeats(provider, organization.PlanType,
-                -(organization.Seats ?? 0));
+
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
         else
         {
@@ -115,6 +116,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 CollectionMethod = "send_invoice",
                 DaysUntilDue = 30
             };
+
             await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
         }
 

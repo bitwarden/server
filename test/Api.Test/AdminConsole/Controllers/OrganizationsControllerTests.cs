@@ -64,7 +64,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IProviderBillingService _providerBillingService;
 
     private readonly OrganizationsController _sut;
 
@@ -96,7 +96,7 @@ public class OrganizationsControllerTests : IDisposable
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
-        _scaleSeatsCommand = Substitute.For<IScaleSeatsCommand>();
+        _providerBillingService = Substitute.For<IProviderBillingService>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -125,7 +125,7 @@ public class OrganizationsControllerTests : IDisposable
             _referenceEventService,
             _organizationEnableCollectionEnhancementsCommand,
             _providerRepository,
-            _scaleSeatsCommand);
+            _providerBillingService);
     }
 
     public void Dispose()
@@ -454,8 +454,8 @@ public class OrganizationsControllerTests : IDisposable
 
         await _sut.Delete(organizationId.ToString(), requestModel);
 
-        await _scaleSeatsCommand.Received(1)
-            .ScalePasswordManagerSeats(provider, organization.PlanType, -organization.Seats.Value);
+        await _providerBillingService.Received(1)
+            .ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
 
         await _organizationService.Received(1).DeleteAsync(organization);
     }

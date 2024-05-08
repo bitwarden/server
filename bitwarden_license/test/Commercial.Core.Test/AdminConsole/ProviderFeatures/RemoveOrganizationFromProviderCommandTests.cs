@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -171,8 +172,8 @@ public class RemoveOrganizationFromProviderCommandTests
             c.Items.Count == 1
         ));
 
-        await sutProvider.GetDependency<IScaleSeatsCommand>().Received(1)
-            .ScalePasswordManagerSeats(provider, organization.PlanType, -(int)organization.Seats);
+        await sutProvider.GetDependency<IProviderBillingService>().Received(1)
+            .ScaleSeats(provider, organization.PlanType, -(int)organization.Seats);
 
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.Id == organization.Id && org.BillingEmail == "a@example.com" &&

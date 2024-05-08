@@ -71,7 +71,7 @@ public class OrganizationsController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IProviderBillingService _providerBillingService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -100,7 +100,7 @@ public class OrganizationsController : Controller
         IReferenceEventService referenceEventService,
         IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
         IProviderRepository providerRepository,
-        IScaleSeatsCommand scaleSeatsCommand)
+        IProviderBillingService providerBillingService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -128,7 +128,7 @@ public class OrganizationsController : Controller
         _referenceEventService = referenceEventService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
         _providerRepository = providerRepository;
-        _scaleSeatsCommand = scaleSeatsCommand;
+        _providerBillingService = providerBillingService;
     }
 
     [HttpGet("{id}")]
@@ -576,7 +576,7 @@ public class OrganizationsController : Controller
 
             if (provider.IsBillable())
             {
-                await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                await _providerBillingService.ScaleSeats(
                     provider,
                     organization.PlanType,
                     -organization.Seats ?? 0);

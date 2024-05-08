@@ -14,8 +14,8 @@ public interface IProviderBillingService
     /// <see cref="Stripe.Subscription"/> depending on the provider's seat minimum for the client <paramref name="organization"/>'s
     /// <see cref="PlanType"/>.
     /// </summary>
-    /// <param name="provider">The MSP that manages the client <paramref name="organization"/>.</param>
-    /// <param name="organization">The client organization whose <see cref="seats"/> you want to update.</param>
+    /// <param name="provider">The <see cref="Provider"/> that manages the client <paramref name="organization"/>.</param>
+    /// <param name="organization">The client <see cref="Organization"/> whose <see cref="seats"/> you want to update.</param>
     /// <param name="seats">The number of seats to assign to the client organization.</param>
     Task AssignSeatsToClientOrganization(
         Provider provider,
@@ -30,7 +30,9 @@ public interface IProviderBillingService
     /// <returns>An <see cref="int"/> representing the number of seats the provider has assigned to its client organizations with the specified <paramref name="planType"/>.</returns>
     /// <exception cref="BillingException">Thrown when the provider represented by the <paramref name="providerId"/> is <see langword="null"/>.</exception>
     /// <exception cref="BillingException">Thrown when the provider represented by the <paramref name="providerId"/> has <see cref="Provider.Type"/> <see cref="ProviderType.Reseller"/>.</exception>
-    Task<int> GetAssignedSeatTotalForPlanOrThrow(Guid providerId, PlanType planType);
+    Task<int> GetAssignedSeatTotalForPlanOrThrow(
+        Guid providerId,
+        PlanType planType);
 
     /// <summary>
     /// Retrieves a provider's billing subscription data.
@@ -38,5 +40,19 @@ public interface IProviderBillingService
     /// <param name="providerId">The ID of the provider to retrieve subscription data for.</param>
     /// <returns>A <see cref="ProviderSubscriptionDTO"/> object containing the provider's Stripe <see cref="Stripe.Subscription"/> and their <see cref="ConfiguredProviderPlanDTO"/>s.</returns>
     /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<ProviderSubscriptionDTO> GetSubscriptionDTO(Guid providerId);
+    Task<ProviderSubscriptionDTO> GetSubscriptionDTO(
+        Guid providerId);
+
+    /// <summary>
+    /// Scales the <paramref name="provider"/>'s seats for the specified <paramref name="planType"/> using the provided <paramref name="seatAdjustment"/>.
+    /// This operation may autoscale the provider's Stripe <see cref="Stripe.Subscription"/> depending on the <paramref name="provider"/>'s seat minimum for the
+    /// specified <paramref name="planType"/>.
+    /// </summary>
+    /// <param name="provider">The <see cref="Provider"/> to scale seats for.</param>
+    /// <param name="planType">The <see cref="PlanType"/> to scale seats for.</param>
+    /// <param name="seatAdjustment">The change in the number of seats you'd like to apply to the <paramref name="provider"/>.</param>
+    Task ScaleSeats(
+        Provider provider,
+        PlanType planType,
+        int seatAdjustment);
 }

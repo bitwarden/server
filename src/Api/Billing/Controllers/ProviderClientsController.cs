@@ -24,7 +24,6 @@ public class ProviderClientsController(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IScaleSeatsCommand scaleSeatsCommand,
     IUserService userService) : Controller
 {
     [HttpPost]
@@ -84,7 +83,7 @@ public class ProviderClientsController(
             return TypedResults.Problem();
         }
 
-        await scaleSeatsCommand.ScalePasswordManagerSeats(
+        await providerBillingService.ScaleSeats(
             provider,
             requestBody.PlanType,
             requestBody.Seats);
