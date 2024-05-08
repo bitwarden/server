@@ -54,7 +54,7 @@ services:
       - postgres
 
   mysql:
-    image: mysql:8
+    image: mysql:8.0
     container_name: bw-mysql
     ports:
       - "3306:3306"

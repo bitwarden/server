@@ -173,7 +173,7 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
-        IEnumerable<string> adminEmails)
+        IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
     {
         var message = CreateDefaultMessage($"Action Required: {userIdentifier} Needs to Be Confirmed", adminEmails);
         var model = new OrganizationUserAcceptedViewModel
@@ -189,7 +189,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
+    public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
     {
         var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
         var model = new OrganizationUserConfirmedViewModel
@@ -198,7 +198,9 @@ public class HandlebarsMailService : IMailService
             TitleSecondBold = CoreHelpers.SanitizeForEmail(organizationName, false),
             TitleThird = "!",
             OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            WebVaultUrl = hasAccessSecretsManager
+                ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
+                : _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "OrganizationUserConfirmed", model);
@@ -216,6 +218,7 @@ public class HandlebarsMailService : IMailService
 
         var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
         {
+
             var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
                 orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings);
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
@@ -256,11 +259,33 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Welcome to Bitwarden!", userEmail);
         var model = new BaseMailModel
         {
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct,
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "TrialInitiation", model);
         message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token)
+    {
+        var message = CreateDefaultMessage("Request to Delete Your Provider", email);
+        var model = new ProviderInitiateDeleteModel
+        {
+            Token = WebUtility.UrlEncode(token),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            ProviderId = provider.Id,
+            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName(), false),
+            ProviderNameUrlEncoded = WebUtility.UrlEncode(provider.Name),
+            ProviderBillingEmail = provider.BillingEmail,
+            ProviderCreationDate = provider.CreationDate.ToLongDateString(),
+            ProviderCreationTime = provider.CreationDate.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+        };
+        await AddMessageContentAsync(message, "Provider.InitiateDeleteProvider", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "InitiateDeleteProvider";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -948,7 +973,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Service Accounts Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Machine Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
             OrganizationId = organization.Id,

@@ -69,7 +69,7 @@ public class AccountsController : Controller
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly ISubscriberQueries _subscriberQueries;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -104,7 +104,7 @@ public class AccountsController : Controller
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
-        IGetSubscriptionQuery getSubscriptionQuery,
+        ISubscriberQueries subscriberQueries,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
@@ -133,7 +133,7 @@ public class AccountsController : Controller
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
-        _getSubscriptionQuery = getSubscriptionQuery;
+        _subscriberQueries = subscriberQueries;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _cipherValidator = cipherValidator;
@@ -618,6 +618,14 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.ReturnErrorOnExistingKeypair))
+        {
+            if (!string.IsNullOrWhiteSpace(user.PrivateKey) || !string.IsNullOrWhiteSpace(user.PublicKey))
+            {
+                throw new BadRequestException("User has existing keypair");
+            }
+        }
+
         await _userService.SaveUserAsync(model.ToUser(user));
         return new KeysResponseModel(user);
     }
@@ -821,8 +829,8 @@ public class AccountsController : Controller
         await _userService.UpdateLicenseAsync(user, license);
     }
 
-    [HttpPost("churn-premium")]
-    public async Task PostChurn([FromBody] SubscriptionCancellationRequestModel request)
+    [HttpPost("cancel")]
+    public async Task PostCancel([FromBody] SubscriptionCancellationRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
@@ -831,7 +839,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var subscription = await _getSubscriptionQuery.GetSubscription(user);
+        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(user);
 
         await _cancelSubscriptionCommand.CancelSubscription(subscription,
             new OffboardingSurveyResponse
@@ -849,19 +857,6 @@ public class AccountsController : Controller
         {
             EndOfPeriod = user.IsExpired()
         });
-    }
-
-    [HttpPost("cancel-premium")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostCancel()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await _userService.CancelPremiumAsync(user);
     }
 
     [HttpPost("reinstate-premium")]
