@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,7 @@ public class ProviderBillingQueries(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
-    ISubscriberQueries subscriberQueries) : IProviderBillingQueries
+    ISubscriberService subscriberService) : IProviderBillingQueries
 {
     public async Task<int> GetAssignedSeatTotalForPlanOrThrow(
         Guid providerId,
@@ -68,7 +69,7 @@ public class ProviderBillingQueries(
             throw ContactSupport("Consolidated billing does not support reseller-type providers");
         }
 
-        var subscription = await subscriberQueries.GetSubscription(provider, new SubscriptionGetOptions
+        var subscription = await subscriberService.GetSubscription(provider, new SubscriptionGetOptions
         {
             Expand = ["customer"]
         });

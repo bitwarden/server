@@ -5,6 +5,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Queries;
 using Bit.Core.Billing.Queries.Implementations;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -46,9 +47,9 @@ public class ProviderBillingQueriesTests
 
         providerRepository.GetByIdAsync(providerId).Returns(provider);
 
-        var subscriberQueries = sutProvider.GetDependency<ISubscriberQueries>();
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
-        subscriberQueries.GetSubscription(provider).ReturnsNull();
+        subscriberService.GetSubscription(provider).ReturnsNull();
 
         var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
 
@@ -56,7 +57,7 @@ public class ProviderBillingQueriesTests
 
         await providerRepository.Received(1).GetByIdAsync(providerId);
 
-        await subscriberQueries.Received(1).GetSubscription(
+        await subscriberService.Received(1).GetSubscription(
             provider,
             Arg.Is<SubscriptionGetOptions>(
                 options => options.Expand.Count == 1 && options.Expand.First() == "customer"));
@@ -72,11 +73,11 @@ public class ProviderBillingQueriesTests
 
         providerRepository.GetByIdAsync(providerId).Returns(provider);
 
-        var subscriberQueries = sutProvider.GetDependency<ISubscriberQueries>();
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
         var subscription = new Subscription();
 
-        subscriberQueries.GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(
+        subscriberService.GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(
             options => options.Expand.Count == 1 && options.Expand.First() == "customer")).Returns(subscription);
 
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
@@ -131,7 +132,7 @@ public class ProviderBillingQueriesTests
 
         await providerRepository.Received(1).GetByIdAsync(providerId);
 
-        await subscriberQueries.Received(1).GetSubscription(
+        await subscriberService.Received(1).GetSubscription(
             provider,
             Arg.Is<SubscriptionGetOptions>(
                 options => options.Expand.Count == 1 && options.Expand.First() == "customer"));

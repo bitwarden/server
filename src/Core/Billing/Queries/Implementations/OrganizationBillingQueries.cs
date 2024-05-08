@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Stripe;
@@ -9,7 +10,7 @@ namespace Bit.Core.Billing.Queries.Implementations;
 
 public class OrganizationBillingQueries(
     IOrganizationRepository organizationRepository,
-    ISubscriberQueries subscriberQueries) : IOrganizationBillingQueries
+    ISubscriberService subscriberService) : IOrganizationBillingQueries
 {
     public async Task<OrganizationMetadataDTO> GetMetadata(Guid organizationId)
     {
@@ -20,12 +21,12 @@ public class OrganizationBillingQueries(
             return null;
         }
 
-        var customer = await subscriberQueries.GetCustomer(organization, new CustomerGetOptions
+        var customer = await subscriberService.GetCustomer(organization, new CustomerGetOptions
         {
             Expand = ["discount.coupon.applies_to"]
         });
 
-        var subscription = await subscriberQueries.GetSubscription(organization);
+        var subscription = await subscriberService.GetSubscription(organization);
 
         if (customer == null || subscription == null)
         {

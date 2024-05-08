@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Queries;
 using Bit.Core.Billing.Queries.Implementations;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -46,7 +47,7 @@ public class OrganizationBillingQueriesTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
-        sutProvider.GetDependency<ISubscriberQueries>().GetCustomer(organization).Returns(new Customer());
+        sutProvider.GetDependency<ISubscriberService>().GetCustomer(organization).Returns(new Customer());
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
@@ -61,9 +62,9 @@ public class OrganizationBillingQueriesTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
-        var subscriberQueries = sutProvider.GetDependency<ISubscriberQueries>();
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
-        subscriberQueries
+        subscriberService
             .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
             .Returns(new Customer
             {
@@ -80,7 +81,7 @@ public class OrganizationBillingQueriesTests
                 }
             });
 
-        subscriberQueries.GetSubscription(organization).Returns(new Subscription
+        subscriberService.GetSubscription(organization).Returns(new Subscription
         {
             Items = new StripeList<SubscriptionItem>
             {

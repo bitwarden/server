@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Commands.Implementations;
 using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -42,7 +43,7 @@ public class CreateCustomerCommandTests
 
         await sutProvider.Sut.CreateCustomer(provider, organization);
 
-        await sutProvider.GetDependency<ISubscriberQueries>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<ISubscriberService>().DidNotReceiveWithAnyArgs()
             .GetCustomerOrThrow(Arg.Any<ISubscriber>(), Arg.Any<CustomerGetOptions>());
     }
 
@@ -76,7 +77,7 @@ public class CreateCustomerCommandTests
             }
         };
 
-        sutProvider.GetDependency<ISubscriberQueries>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
                 options => options.Expand.FirstOrDefault() == "tax_ids"))
             .Returns(providerCustomer);
 

@@ -17,6 +17,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -60,7 +61,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
@@ -92,7 +93,7 @@ public class OrganizationsControllerTests : IDisposable
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
-        _subscriberQueries = Substitute.For<ISubscriberQueries>();
+        _subscriberService = Substitute.For<ISubscriberService>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
@@ -121,7 +122,7 @@ public class OrganizationsControllerTests : IDisposable
             _addSecretsManagerSubscriptionCommand,
             _pushNotificationService,
             _cancelSubscriptionCommand,
-            _subscriberQueries,
+            _subscriberService,
             _referenceEventService,
             _organizationEnableCollectionEnhancementsCommand,
             _providerRepository,

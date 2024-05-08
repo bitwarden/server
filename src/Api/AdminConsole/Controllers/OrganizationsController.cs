@@ -23,6 +23,7 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -67,7 +68,7 @@ public class OrganizationsController : Controller
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
@@ -96,7 +97,7 @@ public class OrganizationsController : Controller
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
         IPushNotificationService pushNotificationService,
         ICancelSubscriptionCommand cancelSubscriptionCommand,
-        ISubscriberQueries subscriberQueries,
+        ISubscriberService subscriberService,
         IReferenceEventService referenceEventService,
         IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
         IProviderRepository providerRepository,
@@ -124,7 +125,7 @@ public class OrganizationsController : Controller
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
         _pushNotificationService = pushNotificationService;
         _cancelSubscriptionCommand = cancelSubscriptionCommand;
-        _subscriberQueries = subscriberQueries;
+        _subscriberService = subscriberService;
         _referenceEventService = referenceEventService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
         _providerRepository = providerRepository;
@@ -486,7 +487,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(organization);
+        var subscription = await _subscriberService.GetSubscriptionOrThrow(organization);
 
         await _cancelSubscriptionCommand.CancelSubscription(subscription,
             new OffboardingSurveyResponse

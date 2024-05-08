@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -14,7 +15,7 @@ public class CreateCustomerCommand(
     ILogger<CreateCustomerCommand> logger,
     IOrganizationRepository organizationRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberQueries subscriberQueries) : ICreateCustomerCommand
+    ISubscriberService subscriberService) : ICreateCustomerCommand
 {
     public async Task CreateCustomer(
         Provider provider,
@@ -30,7 +31,7 @@ public class CreateCustomerCommand(
             return;
         }
 
-        var providerCustomer = await subscriberQueries.GetCustomerOrThrow(provider, new CustomerGetOptions
+        var providerCustomer = await subscriberService.GetCustomerOrThrow(provider, new CustomerGetOptions
         {
             Expand = ["tax_ids"]
         });
