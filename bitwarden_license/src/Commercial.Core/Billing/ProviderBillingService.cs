@@ -3,12 +3,14 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -59,6 +61,68 @@ public class ProviderBillingService(
         organization.Seats = seats;
 
         await organizationRepository.ReplaceAsync(organization);
+    }
+
+    public async Task CreateCustomer(
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(taxInfo);
+
+        if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
+            string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+        {
+            logger.LogError("Cannot create Stripe customer for provider ({ID}) - Both the provider's country and postal code are required", provider.Id);
+
+            throw ContactSupport();
+        }
+
+        var providerDisplayName = provider.DisplayName();
+
+        var customerCreateOptions = new CustomerCreateOptions
+        {
+            Address = new AddressOptions
+            {
+                Country = taxInfo.BillingAddressCountry,
+                PostalCode = taxInfo.BillingAddressPostalCode,
+                Line1 = taxInfo.BillingAddressLine1,
+                Line2 = taxInfo.BillingAddressLine2,
+                City = taxInfo.BillingAddressCity,
+                State = taxInfo.BillingAddressState
+            },
+            Coupon = "msp-discount-35",
+            Description = provider.DisplayBusinessName(),
+            Email = provider.BillingEmail,
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                CustomFields =
+                [
+                    new CustomerInvoiceSettingsCustomFieldOptions
+                    {
+                        Name = provider.SubscriberType(),
+                        Value = providerDisplayName.Length <= 30
+                            ? providerDisplayName
+                            : providerDisplayName[..30]
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "region", globalSettings.BaseServiceUri.CloudRegion }
+            },
+            TaxIdData = taxInfo.HasTaxId ?
+                [
+                    new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }
+                ]
+                : null
+        };
+
+        var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+
+        provider.GatewayCustomerId = customer.Id;
+
+        await providerRepository.ReplaceAsync(provider);
     }
 
     public async Task CreateCustomerForClientOrganization(
@@ -293,6 +357,103 @@ public class ProviderBillingService(
                 currentlyAssignedSeatTotal,
                 seatMinimum);
         }
+    }
+
+    public async Task StartSubscription(
+        Provider provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        if (!string.IsNullOrEmpty(provider.GatewaySubscriptionId))
+        {
+            logger.LogWarning("Cannot start Provider subscription - Provider ({ID}) already has a {FieldName}", provider.Id, nameof(provider.GatewaySubscriptionId));
+
+            throw ContactSupport();
+        }
+
+        var customer = await subscriberService.GetCustomerOrThrow(provider);
+
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+
+        if (providerPlans == null || providerPlans.Count == 0)
+        {
+            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured plans", provider.Id);
+
+            throw ContactSupport();
+        }
+
+        var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
+
+        var teamsProviderPlan =
+            providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
+
+        if (teamsProviderPlan == null)
+        {
+            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured Teams Monthly plan", provider.Id);
+
+            throw ContactSupport();
+        }
+
+        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+        {
+            Price = teamsPlan.PasswordManager.StripeSeatPlanId,
+            Quantity = teamsProviderPlan.SeatMinimum
+        });
+
+        var enterpriseProviderPlan =
+            providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
+
+        if (enterpriseProviderPlan == null)
+        {
+            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured Enterprise Monthly plan", provider.Id);
+
+            throw ContactSupport();
+        }
+
+        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+
+        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+        {
+            Price = enterprisePlan.PasswordManager.StripeSeatPlanId,
+            Quantity = enterpriseProviderPlan.SeatMinimum
+        });
+
+        var subscriptionCreateOptions = new SubscriptionCreateOptions
+        {
+            AutomaticTax = new SubscriptionAutomaticTaxOptions
+            {
+                Enabled = true
+            },
+            CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
+            Customer = customer.Id,
+            DaysUntilDue = 30,
+            Items = subscriptionItemOptionsList,
+            Metadata = new Dictionary<string, string>
+            {
+                { "providerId", provider.Id.ToString() }
+            },
+            OffSession = true,
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
+        };
+
+        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+        provider.GatewaySubscriptionId = subscription.Id;
+
+        if (subscription.Status == StripeConstants.SubscriptionStatus.Incomplete)
+        {
+            await providerRepository.ReplaceAsync(provider);
+
+            logger.LogError("Started incomplete Provider ({ProviderID}) subscription ({SubscriptionID})", provider.Id, subscription.Id);
+
+            throw ContactSupport();
+        }
+
+        provider.Status = ProviderStatusType.Billable;
+
+        await providerRepository.ReplaceAsync(provider);
     }
 
     private Func<int, int, Task> CurrySeatScalingUpdate(

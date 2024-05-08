@@ -3,7 +3,7 @@ using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -24,13 +24,13 @@ public class ProvidersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
-    private readonly IStartSubscriptionCommand _startSubscriptionCommand;
     private readonly ILogger<ProvidersController> _logger;
+    private readonly IProviderBillingService _providerBillingService;
 
     public ProvidersController(IUserService userService, IProviderRepository providerRepository,
         IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings,
-        IFeatureService featureService, IStartSubscriptionCommand startSubscriptionCommand,
-        ILogger<ProvidersController> logger)
+        IFeatureService featureService, ILogger<ProvidersController> logger,
+        IProviderBillingService providerBillingService)
     {
         _userService = userService;
         _providerRepository = providerRepository;
@@ -38,8 +38,8 @@ public class ProvidersController : Controller
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _featureService = featureService;
-        _startSubscriptionCommand = startSubscriptionCommand;
         _logger = logger;
+        _providerBillingService = providerBillingService;
     }
 
     [HttpGet("{id:guid}")]
@@ -112,7 +112,9 @@ public class ProvidersController : Controller
 
             try
             {
-                await _startSubscriptionCommand.StartSubscription(provider, taxInfo);
+                await _providerBillingService.CreateCustomer(provider, taxInfo);
+
+                await _providerBillingService.StartSubscription(provider);
             }
             catch
             {

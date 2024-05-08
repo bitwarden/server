@@ -1,16 +1,19 @@
-﻿using Bit.Commercial.Core.Billing;
+﻿using System.Net;
+using Bit.Commercial.Core.Billing;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -346,6 +349,108 @@ public class ProviderBillingServiceTests
     }
     #endregion
 
+    #region CreateCustomer
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_NullProvider_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider,
+        TaxInfo taxInfo) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.CreateCustomer(null, taxInfo));
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_NullTaxInfo_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.CreateCustomer(provider, null));
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_MissingCountry_ContactSupport(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        taxInfo.BillingAddressCountry = null;
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.CreateCustomer(provider, taxInfo));
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_MissingPostalCode_ContactSupport(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        taxInfo.BillingAddressCountry = null;
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.CreateCustomer(provider, taxInfo));
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_Success(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        provider.Name = "MSP";
+
+        taxInfo.BillingAddressCountry = "AD";
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
+                o.Address.Country == taxInfo.BillingAddressCountry &&
+                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
+                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
+                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
+                o.Address.City == taxInfo.BillingAddressCity &&
+                o.Address.State == taxInfo.BillingAddressState &&
+                o.Coupon == "msp-discount-35" &&
+                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Email == provider.BillingEmail &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.Metadata["region"] == "" &&
+                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
+                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+            .Returns(new Customer
+            {
+                Id = "customer_id",
+                Tax = new CustomerTax
+                {
+                    AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported
+                }
+            });
+
+        await sutProvider.Sut.CreateCustomer(provider, taxInfo);
+
+        await stripeAdapter.Received(1).CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
+            o.Address.Country == taxInfo.BillingAddressCountry &&
+            o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
+            o.Address.Line1 == taxInfo.BillingAddressLine1 &&
+            o.Address.Line2 == taxInfo.BillingAddressLine2 &&
+            o.Address.City == taxInfo.BillingAddressCity &&
+            o.Address.State == taxInfo.BillingAddressState &&
+            o.Coupon == "msp-discount-35" &&
+            o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+            o.Email == provider.BillingEmail &&
+            o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
+            o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+            o.Metadata["region"] == "" &&
+            o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
+            o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber));
+
+        await sutProvider.GetDependency<IProviderRepository>()
+            .ReplaceAsync(Arg.Is<Provider>(p => p.GatewayCustomerId == "customer_id"));
+    }
+    #endregion
+
     #region CreateCustomerForClientOrganization
     [Theory, BitAutoData]
     public async Task CreateCustomerForClientOrganization_ProviderNull_ThrowsArgumentNullException(
@@ -661,6 +766,201 @@ public class ProviderBillingServiceTests
             Assert.Equal(providerPlan.PurchasedSeats!.Value, configuredProviderPlan.PurchasedSeats);
             Assert.Equal(providerPlan.AllocatedSeats!.Value, configuredProviderPlan.AssignedSeats);
         }
+    }
+    #endregion
+
+    #region StartSubscription
+    [Theory, BitAutoData]
+    public async Task StartSubscription_NullProvider_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.StartSubscription(null));
+
+    [Theory, BitAutoData]
+    public async Task StartSubscription_AlreadyHasGatewaySubscriptionId_ContactSupport(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider)
+    {
+        provider.GatewaySubscriptionId = "subscription_id";
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
+    }
+
+    [Theory, BitAutoData]
+    public async Task StartSubscription_NoProviderPlans_ContactSupport(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider)
+    {
+        provider.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        {
+            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        });
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
+            .Returns(new List<ProviderPlan>());
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task StartSubscription_NoProviderTeamsPlan_ContactSupport(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider)
+    {
+        provider.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        {
+            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        });
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new ()
+            {
+                PlanType = PlanType.EnterpriseMonthly
+            }
+        };
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
+            .Returns(providerPlans);
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task StartSubscription_NoProviderEnterprisePlan_ContactSupport(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider)
+    {
+        provider.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        {
+            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        });
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new ()
+            {
+                PlanType = PlanType.TeamsMonthly
+            }
+        };
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
+            .Returns(providerPlans);
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task StartSubscription_SubscriptionIncomplete_ThrowsBillingException(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider)
+    {
+        provider.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        {
+            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        });
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new ()
+            {
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 100
+            },
+            new ()
+            {
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100
+            }
+        };
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
+            .Returns(providerPlans);
+
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        {
+            Id = "subscription_id",
+            Status = StripeConstants.SubscriptionStatus.Incomplete
+        });
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
+
+        await sutProvider.GetDependency<IProviderRepository>().Received(1).ReplaceAsync(Arg.Is<Provider>(p => p.GatewaySubscriptionId == "subscription_id"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task StartSubscription_Succeeds(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider)
+    {
+        provider.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        {
+            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        });
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new ()
+            {
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 100
+            },
+            new ()
+            {
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100
+            }
+        };
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
+            .Returns(providerPlans);
+
+        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
+            sub =>
+                sub.AutomaticTax.Enabled == true &&
+                sub.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
+                sub.Customer == "customer_id" &&
+                sub.DaysUntilDue == 30 &&
+                sub.Items.Count == 2 &&
+                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeSeatPlanId &&
+                sub.Items.ElementAt(0).Quantity == 100 &&
+                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeSeatPlanId &&
+                sub.Items.ElementAt(1).Quantity == 100 &&
+                sub.Metadata["providerId"] == provider.Id.ToString() &&
+                sub.OffSession == true &&
+                sub.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations)).Returns(new Subscription
+                {
+                    Id = "subscription_id",
+                    Status = StripeConstants.SubscriptionStatus.Active
+                });
+
+        await sutProvider.Sut.StartSubscription(provider);
+
+        await sutProvider.GetDependency<IProviderRepository>().Received(1).ReplaceAsync(Arg.Is<Provider>(p => p.GatewaySubscriptionId == "subscription_id"));
     }
     #endregion
 }

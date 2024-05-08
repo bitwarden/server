@@ -16,6 +16,5 @@ public static class ServiceCollectionExtensions
 
         // Commands
         services.AddTransient<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
-        services.AddTransient<IStartSubscriptionCommand, StartSubscriptionCommand>();
     }
 }

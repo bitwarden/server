@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Services;
 
@@ -21,6 +22,16 @@ public interface IProviderBillingService
         Provider provider,
         Organization organization,
         int seats);
+
+    /// <summary>
+    /// Create a Stripe <see cref="Stripe.Customer"/> for the specified <paramref name="provider"/> utilizing the provided <paramref name="taxInfo"/>.
+    /// </summary>
+    /// <param name="provider">The <see cref="Provider"/> to create a Stripe customer for.</param>
+    /// <param name="taxInfo">The <see cref="TaxInfo"/> to use for calculating the customer's automatic tax.</param>
+    /// <returns></returns>
+    Task CreateCustomer(
+        Provider provider,
+        TaxInfo taxInfo);
 
     /// <summary>
     /// Create a Stripe <see cref="Stripe.Customer"/> for the provided client <paramref name="organization"/> utilizing
@@ -65,4 +76,13 @@ public interface IProviderBillingService
         Provider provider,
         PlanType planType,
         int seatAdjustment);
+
+    /// <summary>
+    /// Starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/> given it has an existing Stripe <see cref="Stripe.Customer"/>.
+    /// <see cref="Provider"/> subscriptions will always be started with a <see cref="Stripe.SubscriptionItem"/> for both the <see cref="PlanType.TeamsMonthly"/>
+    /// and <see cref="PlanType.EnterpriseMonthly"/> plan, and the quantity for each item will be equal the provider's seat minimum for each respective plan.
+    /// </summary>
+    /// <param name="provider">The provider to create the <see cref="Stripe.Subscription"/> for.</param>
+    Task StartSubscription(
+        Provider provider);
 }
