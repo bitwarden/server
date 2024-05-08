@@ -1,6 +1,4 @@
-﻿using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Commands.Implementations;
-using Bit.Core.Billing.Services;
+﻿using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 
 namespace Bit.Core.Billing.Extensions;
@@ -13,8 +11,5 @@ public static class ServiceCollectionExtensions
     {
         services.AddTransient<IOrganizationBillingService, OrganizationBillingService>();
         services.AddTransient<ISubscriberService, SubscriberService>();
-
-        // Commands
-        services.AddTransient<IRemovePaymentMethodCommand, RemovePaymentMethodCommand>();
     }
 }

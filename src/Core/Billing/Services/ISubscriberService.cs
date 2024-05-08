@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Models;
+﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Stripe;
 
@@ -8,7 +7,7 @@ namespace Bit.Core.Billing.Services;
 public interface ISubscriberService
 {
     /// <summary>
-    /// Cancels a suscriber's subscription while including user-provided feedback via the <paramref name="offboardingSurveyResponse"/>.
+    /// Cancels a subscriber's subscription while including user-provided feedback via the <paramref name="offboardingSurveyResponse"/>.
     /// If the <paramref name="cancelImmediately"/> flag is <see langword="false"/>,
     /// this command sets the subscription's <b>"cancel_at_end_of_period"</b> property to <see langword="true"/>.
     /// Otherwise, this command cancels the subscription immediately.
@@ -70,4 +69,13 @@ public interface ISubscriberService
     Task<Subscription> GetSubscriptionOrThrow(
         ISubscriber subscriber,
         SubscriptionGetOptions subscriptionGetOptions = null);
+
+    /// <summary>
+    /// Attempts to remove a subscriber's saved payment method. If the Stripe <see cref="Stripe.Customer"/> representing the
+    /// <paramref name="subscriber"/> contains a valid <b>"btCustomerId"</b> key in its <see cref="Stripe.Customer.Metadata"/> property,
+    /// this command will attempt to remove the Braintree <see cref="Braintree.PaymentMethod"/>. Otherwise, it will attempt to remove the
+    /// Stripe <see cref="Stripe.PaymentMethod"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to remove the saved payment method for.</param>
+    Task RemovePaymentMethod(ISubscriber subscriber);
 }

@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
@@ -12,7 +11,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Microsoft.Extensions.Logging;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
@@ -27,6 +25,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly ISubscriberService _subscriberService;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -36,7 +35,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
         IFeatureService featureService,
-        IProviderBillingService providerBillingService)
+        IProviderBillingService providerBillingService,
+        ISubscriberService subscriberService)
     {
         _eventService = eventService;
         _mailService = mailService;
@@ -46,6 +46,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _stripeAdapter = stripeAdapter;
         _featureService = featureService;
         _providerBillingService = providerBillingService;
+        _subscriberService = subscriberService;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -74,14 +75,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         organization.BillingEmail = organizationOwnerEmails.MinBy(email => email);
 
-        var customerUpdateOptions = new CustomerUpdateOptions
-        {
-            Coupon = string.Empty,
-            Email = organization.BillingEmail
-        };
-
-        await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
-
         var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
 
         if (isConsolidatedBillingEnabled && provider.Status == ProviderStatusType.Billable)
@@ -109,8 +102,16 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
-        else
+        else if (!string.IsNullOrEmpty(organization.GatewayCustomerId) && !string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
+            var customerUpdateOptions = new CustomerUpdateOptions
+            {
+                Coupon = string.Empty,
+                Email = organization.BillingEmail
+            };
+
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
+
             var subscriptionUpdateOptions = new SubscriptionUpdateOptions
             {
                 CollectionMethod = "send_invoice",
@@ -118,6 +119,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             };
 
             await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+
+            await _subscriberService.RemovePaymentMethod(organization);
         }
 
         await _organizationRepository.ReplaceAsync(organization);

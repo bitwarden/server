@@ -1,14 +1,18 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
+using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
 using static Bit.Core.Billing.Utilities;
+using Customer = Stripe.Customer;
+using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
 public class SubscriberService(
+    IBraintreeGateway braintreeGateway,
     ILogger<SubscriberService> logger,
     IStripeAdapter stripeAdapter) : ISubscriberService
 {
@@ -232,6 +236,98 @@ public class SubscriberService(
                 subscriber.GatewaySubscriptionId, subscriber.Id, exception.Message);
 
             throw ContactSupport("An error occurred while trying to retrieve a Stripe Subscription", exception);
+        }
+    }
+
+    public async Task RemovePaymentMethod(
+        ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            throw ContactSupport();
+        }
+
+        var stripeCustomer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        {
+            Expand = ["invoice_settings.default_payment_method", "sources"]
+        });
+
+        if (stripeCustomer.Metadata?.TryGetValue(BraintreeCustomerIdKey, out var braintreeCustomerId) ?? false)
+        {
+            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
+
+            if (braintreeCustomer == null)
+            {
+                logger.LogError("Failed to retrieve Braintree customer ({ID}) when removing payment method", braintreeCustomerId);
+
+                throw ContactSupport();
+            }
+
+            if (braintreeCustomer.DefaultPaymentMethod != null)
+            {
+                var existingDefaultPaymentMethod = braintreeCustomer.DefaultPaymentMethod;
+
+                var updateCustomerResult = await braintreeGateway.Customer.UpdateAsync(
+                    braintreeCustomerId,
+                    new CustomerRequest { DefaultPaymentMethodToken = null });
+
+                if (!updateCustomerResult.IsSuccess())
+                {
+                    logger.LogError("Failed to update payment method for Braintree customer ({ID}) | Message: {Message}",
+                        braintreeCustomerId, updateCustomerResult.Message);
+
+                    throw ContactSupport();
+                }
+
+                var deletePaymentMethodResult = await braintreeGateway.PaymentMethod.DeleteAsync(existingDefaultPaymentMethod.Token);
+
+                if (!deletePaymentMethodResult.IsSuccess())
+                {
+                    await braintreeGateway.Customer.UpdateAsync(
+                        braintreeCustomerId,
+                        new CustomerRequest { DefaultPaymentMethodToken = existingDefaultPaymentMethod.Token });
+
+                    logger.LogError(
+                        "Failed to delete Braintree payment method for Customer ({ID}), re-linked payment method. Message: {Message}",
+                        braintreeCustomerId, deletePaymentMethodResult.Message);
+
+                    throw ContactSupport();
+                }
+            }
+            else
+            {
+                logger.LogWarning("Tried to remove non-existent Braintree payment method for Customer ({ID})", braintreeCustomerId);
+            }
+        }
+        else
+        {
+            if (stripeCustomer.Sources != null && stripeCustomer.Sources.Any())
+            {
+                foreach (var source in stripeCustomer.Sources)
+                {
+                    switch (source)
+                    {
+                        case BankAccount:
+                            await stripeAdapter.BankAccountDeleteAsync(stripeCustomer.Id, source.Id);
+                            break;
+                        case Card:
+                            await stripeAdapter.CardDeleteAsync(stripeCustomer.Id, source.Id);
+                            break;
+                    }
+                }
+            }
+
+            var paymentMethods = stripeAdapter.PaymentMethodListAutoPagingAsync(new PaymentMethodListOptions
+            {
+                Customer = stripeCustomer.Id
+            });
+
+            await foreach (var paymentMethod in paymentMethods)
+            {
+                await stripeAdapter.PaymentMethodDetachAsync(paymentMethod.Id);
+            }
         }
     }
 }

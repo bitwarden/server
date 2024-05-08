@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -85,7 +84,7 @@ public class RemoveOrganizationFromProviderCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveOrganizationFromProvider_MakesCorrectInvocations__FeatureFlagOff(
+    public async Task RemoveOrganizationFromProvider_MakesCorrectInvocations_FeatureFlagOff(
         Provider provider,
         ProviderOrganization providerOrganization,
         Organization organization,
@@ -119,6 +118,8 @@ public class RemoveOrganizationFromProviderCommandTests
         await stripeAdapter.Received(1).CustomerUpdateAsync(
             organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
                 options => options.Coupon == string.Empty && options.Email == "a@example.com"));
+
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentMethod(organization);
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendProviderUpdatePaymentMethod(
             organization.Id,
@@ -161,9 +162,9 @@ public class RemoveOrganizationFromProviderCommandTests
         });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
-        await stripeAdapter.Received(1).CustomerUpdateAsync(
-            organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
-                options => options.Coupon == string.Empty && options.Email == "a@example.com"));
+
+        await stripeAdapter.DidNotReceiveWithAnyArgs().CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+        await sutProvider.GetDependency<ISubscriberService>().DidNotReceiveWithAnyArgs().RemovePaymentMethod(Arg.Any<Organization>());
 
         await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(c =>
             c.Customer == organization.GatewayCustomerId &&

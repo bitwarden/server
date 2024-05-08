@@ -7,7 +7,6 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -55,7 +54,6 @@ public class OrganizationsController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
-    private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
     private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
 
@@ -83,7 +81,6 @@ public class OrganizationsController : Controller
         IServiceAccountRepository serviceAccountRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IRemovePaymentMethodCommand removePaymentMethodCommand,
         IFeatureService featureService,
         IProviderBillingService providerBillingService)
     {
@@ -110,7 +107,6 @@ public class OrganizationsController : Controller
         _serviceAccountRepository = serviceAccountRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
-        _removePaymentMethodCommand = removePaymentMethodCommand;
         _featureService = featureService;
         _providerBillingService = providerBillingService;
     }
@@ -350,8 +346,6 @@ public class OrganizationsController : Controller
             providerOrganization,
             organization);
 
-        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
-
         return Json(null);
     }
     private async Task<Organization> GetOrganization(Guid id, OrganizationEditModel model)
@@ -412,5 +406,4 @@ public class OrganizationsController : Controller
 
         return organization;
     }
-
 }
