@@ -25,6 +25,8 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     private Guid _targetOrganizationId;
     private HashSet<Guid>? _managedCollectionsIds;
 
+    private HashSet<Guid>? _orphanedCollectionsIds;
+
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
@@ -140,7 +142,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have access for the collection being read
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 return true;
@@ -167,7 +169,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have access with manage permission for the collection being read
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 return true;
@@ -202,7 +204,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have manage permission for the collection being managed
         if (org is not null)
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 return true;
@@ -238,7 +240,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure acting user has manage permissions for all collections being deleted
         if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
         {
-            var canManageCollections = await CanManageCollectionsAsync(resources);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 return true;
@@ -249,19 +251,50 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         return await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId);
     }
 
-    private async Task<bool> CanManageCollectionsAsync(ICollection<Collection> targetCollections)
+    private async Task<bool> CanManageCollectionsAsync(ICollection<Collection> targetCollections,
+        CurrentContextOrganization? org)
     {
         if (_managedCollectionsIds == null)
         {
             var allUserCollections = await _collectionRepository
                 .GetManyByUserIdAsync(_currentContext.UserId!.Value, useFlexibleCollections: true);
-            _managedCollectionsIds = allUserCollections
+
+            var managedCollectionIds = allUserCollections
                 .Where(c => c.Manage)
-                .Select(c => c.Id)
+                .Select(c => c.Id);
+
+            _managedCollectionsIds = managedCollectionIds
                 .ToHashSet();
         }
 
-        return targetCollections.All(tc => _managedCollectionsIds.Contains(tc.Id));
+        var canManageTargetCollections = targetCollections.All(tc => _managedCollectionsIds.Contains(tc.Id));
+
+        // The user can manage all target collections, stop here, return true.
+        if (canManageTargetCollections)
+        {
+            return true;
+        }
+
+        // The user is not assigned to manage all target collections
+        // If the user is an Owner/Admin/Custom user with edit, check if any targets are orphaned collections
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
+        {
+            // User is not allowed to manage orphaned collections
+            return false;
+        }
+
+        if (_orphanedCollectionsIds == null)
+        {
+            var orgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(_targetOrganizationId);
+
+            // Orphaned collections are collections that have no users or groups with manage permissions
+            _orphanedCollectionsIds = orgCollections.Where(c =>
+                    !c.Item2.Users.Any(u => u.Manage) && !c.Item2.Groups.Any(g => g.Manage))
+                .Select(c => c.Item1.Id)
+                .ToHashSet();
+        }
+
+        return targetCollections.All(tc => _orphanedCollectionsIds.Contains(tc.Id) || _managedCollectionsIds.Contains(tc.Id));
     }
 
     private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(CurrentContextOrganization? organization)
