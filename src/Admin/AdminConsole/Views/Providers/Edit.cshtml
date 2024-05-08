@@ -1,5 +1,6 @@
 ﻿@using Bit.Admin.Enums;
 @using Bit.Core
+@using Bit.Core.Billing.Extensions
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @inject Bit.Core.Services.IFeatureService FeatureService
 
@@ -42,7 +43,7 @@
             </div>
         </div>
     </div>
-    @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+    @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && Model.Provider.IsBillable())
     {
         <div class="row">
             <div class="col-sm">
@@ -68,7 +69,7 @@
          <div class="modal-dialog">
              <div class="modal-content rounded">
                  <div class="p-3">
-                     <h3 class="font-weight-bolder" id="exampleModalLabel">Request provider deletion</h3>
+                     <h4 class="font-weight-bolder" id="exampleModalLabel">Request provider deletion</h4>
                  </div>
                  <div class="modal-body">
                      <span class="font-weight-light">
@@ -92,11 +93,11 @@
          <div class="modal-dialog">
              <div class="modal-content rounded">
                  <div class="p-3">
-                     <h3 class="font-weight-bolder" id="exampleModalLabel">Delete provider</h3>
+                     <h4 class="font-weight-bolder" id="exampleModalLabel">Delete provider</h4>
                  </div>
                  <div class="modal-body">
                      <span class="font-weight-light">
-                         This action is permanent and irreversible. Enter the provide name to complete deletion of the provider and associated data.
+                         This action is permanent and irreversible. Enter the provider name to complete deletion of the provider and associated data.
                      </span>
                      <form>
                          <div class="form-group">
@@ -117,7 +118,7 @@
              <div class="modal-content rounded">
                  <div class="modal-body">
                      <h4 class="font-weight-bolder">Cannot Delete @Model.Name</h4>
-                     <p class="font-weight-lighter">you must unlink all clients before deleting @Model.Name</p>
+                     <p class="font-weight-lighter">You must unlink all clients before you can delete @Model.Name.</p>
                  </div>
                  <div class="modal-footer">
                      <button type="button" class="btn btn-outline-primary btn-pill" data-dismiss="modal">Cancel</button>

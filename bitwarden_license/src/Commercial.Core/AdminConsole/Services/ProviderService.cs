@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -518,7 +519,9 @@ public class ProviderService : IProviderService
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
         OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
     {
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && provider.IsBillable();
 
         ThrowOnInvalidPlanType(organizationSignup.Plan, consolidatedBillingEnabled);
 
