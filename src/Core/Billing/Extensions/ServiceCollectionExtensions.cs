@@ -1,7 +1,5 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Commands.Implementations;
-using Bit.Core.Billing.Queries;
-using Bit.Core.Billing.Queries.Implementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 
@@ -15,9 +13,6 @@ public static class ServiceCollectionExtensions
     {
         services.AddTransient<IOrganizationBillingService, OrganizationBillingService>();
         services.AddTransient<ISubscriberService, SubscriberService>();
-
-        // Queries
-        services.AddTransient<IProviderBillingQueries, ProviderBillingQueries>();
 
         // Commands
         services.AddTransient<IAssignSeatsToClientOrganizationCommand, AssignSeatsToClientOrganizationCommand>();

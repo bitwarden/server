@@ -2,7 +2,7 @@
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Services;
@@ -61,7 +61,7 @@ public class ProviderBillingControllerTests
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(providerId)
             .Returns(true);
 
-        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionDTO(providerId).ReturnsNull();
+        sutProvider.GetDependency<IProviderBillingService>().GetSubscriptionDTO(providerId).ReturnsNull();
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
 
@@ -96,7 +96,7 @@ public class ProviderBillingControllerTests
             configuredProviderPlanDTOList,
             subscription);
 
-        sutProvider.GetDependency<IProviderBillingQueries>().GetSubscriptionDTO(providerId)
+        sutProvider.GetDependency<IProviderBillingService>().GetSubscriptionDTO(providerId)
             .Returns(providerSubscriptionDTO);
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);

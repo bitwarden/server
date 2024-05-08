@@ -9,14 +9,14 @@ using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Utilities;
 
-namespace Bit.Core.Billing.Queries.Implementations;
+namespace Bit.Commercial.Core.Billing;
 
-public class ProviderBillingQueries(
-    ILogger<ProviderBillingQueries> logger,
+public class ProviderBillingService(
+    ILogger<ProviderBillingService> logger,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
-    ISubscriberService subscriberService) : IProviderBillingQueries
+    ISubscriberService subscriberService) : IProviderBillingService
 {
     public async Task<int> GetAssignedSeatTotalForPlanOrThrow(
         Guid providerId,

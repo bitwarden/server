@@ -3,9 +3,9 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Billing.Queries;
+namespace Bit.Core.Billing.Services;
 
-public interface IProviderBillingQueries
+public interface IProviderBillingService
 {
     /// <summary>
     /// Retrieves the number of seats an MSP has assigned to its client organizations with a specified <paramref name="planType"/>.

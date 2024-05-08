@@ -2,8 +2,8 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Queries;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -15,7 +15,7 @@ namespace Bit.Core.Billing.Commands.Implementations;
 public class ScaleSeatsCommand(
     ILogger<ScaleSeatsCommand> logger,
     IPaymentService paymentService,
-    IProviderBillingQueries providerBillingQueries,
+    IProviderBillingService providerBillingService,
     IProviderPlanRepository providerPlanRepository) : IScaleSeatsCommand
 {
     public async Task ScalePasswordManagerSeats(Provider provider, PlanType planType, int seatAdjustment)
@@ -50,7 +50,7 @@ public class ScaleSeatsCommand(
         var seatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
 
         var currentlyAssignedSeatTotal =
-            await providerBillingQueries.GetAssignedSeatTotalForPlanOrThrow(provider.Id, planType);
+            await providerBillingService.GetAssignedSeatTotalForPlanOrThrow(provider.Id, planType);
 
         var newlyAssignedSeatTotal = currentlyAssignedSeatTotal + seatAdjustment;
 

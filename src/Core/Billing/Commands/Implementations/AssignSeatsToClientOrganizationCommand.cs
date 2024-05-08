@@ -3,8 +3,8 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Queries;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -17,7 +17,7 @@ public class AssignSeatsToClientOrganizationCommand(
     ILogger<AssignSeatsToClientOrganizationCommand> logger,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
-    IProviderBillingQueries providerBillingQueries,
+    IProviderBillingService providerBillingService,
     IProviderPlanRepository providerPlanRepository) : IAssignSeatsToClientOrganizationCommand
 {
     public async Task AssignSeatsToClientOrganization(
@@ -54,7 +54,7 @@ public class AssignSeatsToClientOrganizationCommand(
         var providerSeatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
 
         // How many seats the provider has assigned to all their client organizations that have the specified plan type.
-        var providerCurrentlyAssignedSeatTotal = await providerBillingQueries.GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType);
+        var providerCurrentlyAssignedSeatTotal = await providerBillingService.GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType);
 
         // How many seats are being added to or subtracted from this client organization.
         var seatDifference = seats - (organization.Seats ?? 0);

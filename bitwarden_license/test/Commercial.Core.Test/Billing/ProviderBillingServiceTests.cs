@@ -1,12 +1,14 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Commercial.Core.Billing;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Queries;
-using Bit.Core.Billing.Queries.Implementations;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -14,16 +16,92 @@ using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
 
-namespace Bit.Core.Test.Billing.Queries;
+using static Bit.Core.Test.Billing.Utilities;
+namespace Bit.Commercial.Core.Test.Billing;
 
 [SutProviderCustomize]
-public class ProviderBillingQueriesTests
+public class ProviderBillingServiceTests
 {
-    #region GetSubscriptionData
+    #region GetAssignedSeatTotalForPlanOrThrow
+    [Theory, BitAutoData]
+    public async Task GetAssignedSeatTotalForPlanOrThrow_NullProvider_ContactSupport(
+        Guid providerId,
+        SutProvider<ProviderBillingService> sutProvider)
+        => await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly));
 
     [Theory, BitAutoData]
+    public async Task GetAssignedSeatTotalForPlanOrThrow_ResellerProvider_ContactSupport(
+        Guid providerId,
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        provider.Type = ProviderType.Reseller;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).Returns(provider);
+
+        await ThrowsContactSupportAsync(
+            () => sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly),
+            internalMessage: "Consolidated billing does not support reseller-type providers");
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAssignedSeatTotalForPlanOrThrow_Succeeds(
+        Guid providerId,
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).Returns(provider);
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var enterpriseMonthlyPlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+
+        var providerOrganizationOrganizationDetailList = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ()
+            {
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 10
+            },
+            new ()
+            {
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 10
+            },
+            new ()
+            {
+                // Ignored because of status.
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Created,
+                Seats = 100
+            },
+            new ()
+            {
+                // Ignored because of plan.
+                Plan = enterpriseMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 30
+            }
+        };
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetManyDetailsByProviderAsync(providerId)
+            .Returns(providerOrganizationOrganizationDetailList);
+
+        var assignedSeatTotal = await sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly);
+
+        Assert.Equal(20, assignedSeatTotal);
+    }
+    #endregion
+
+    #region GetSubscriptionData
+    [Theory, BitAutoData]
     public async Task GetSubscriptionData_NullProvider_ReturnsNull(
-        SutProvider<ProviderBillingQueries> sutProvider,
+        SutProvider<ProviderBillingService> sutProvider,
         Guid providerId)
     {
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
@@ -39,7 +117,7 @@ public class ProviderBillingQueriesTests
 
     [Theory, BitAutoData]
     public async Task GetSubscriptionData_NullSubscription_ReturnsNull(
-        SutProvider<ProviderBillingQueries> sutProvider,
+        SutProvider<ProviderBillingService> sutProvider,
         Guid providerId,
         Provider provider)
     {
@@ -65,7 +143,7 @@ public class ProviderBillingQueriesTests
 
     [Theory, BitAutoData]
     public async Task GetSubscriptionData_Success(
-        SutProvider<ProviderBillingQueries> sutProvider,
+        SutProvider<ProviderBillingService> sutProvider,
         Guid providerId,
         Provider provider)
     {

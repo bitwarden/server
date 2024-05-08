@@ -3,8 +3,8 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Commands.Implementations;
 using Bit.Core.Billing.Entities;
-using Bit.Core.Billing.Queries;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
@@ -137,7 +137,7 @@ public class AssignSeatsToClientOrganizationCommandTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 50 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingQueries>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(50);
+        sutProvider.GetDependency<IProviderBillingService>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(50);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -196,7 +196,7 @@ public class AssignSeatsToClientOrganizationCommandTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 95 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingQueries>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(95);
+        sutProvider.GetDependency<IProviderBillingService>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(95);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -257,7 +257,7 @@ public class AssignSeatsToClientOrganizationCommandTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 110 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingQueries>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
+        sutProvider.GetDependency<IProviderBillingService>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -318,7 +318,7 @@ public class AssignSeatsToClientOrganizationCommandTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 110 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingQueries>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
+        sutProvider.GetDependency<IProviderBillingService>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 

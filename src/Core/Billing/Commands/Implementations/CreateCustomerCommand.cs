@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.Billing.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

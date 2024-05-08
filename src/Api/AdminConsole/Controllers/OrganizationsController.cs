@@ -22,7 +22,6 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
