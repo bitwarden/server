@@ -3,6 +3,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -14,12 +15,12 @@ namespace Bit.Api.Billing.Controllers;
 
 [Route("providers/{providerId:guid}/clients")]
 public class ProviderClientsController(
-    IAssignSeatsToClientOrganizationCommand assignSeatsToClientOrganizationCommand,
     ICreateCustomerCommand createCustomerCommand,
     ICurrentContext currentContext,
     IFeatureService featureService,
     ILogger<ProviderClientsController> logger,
     IOrganizationRepository organizationRepository,
+    IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
@@ -133,7 +134,7 @@ public class ProviderClientsController(
             return TypedResults.Problem();
         }
 
-        await assignSeatsToClientOrganizationCommand.AssignSeatsToClientOrganization(
+        await providerBillingService.AssignSeatsToClientOrganization(
             provider,
             clientOrganization,
             requestBody.AssignedSeats);

@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
@@ -7,6 +8,20 @@ namespace Bit.Core.Billing.Services;
 
 public interface IProviderBillingService
 {
+    /// <summary>
+    /// Assigns a specified number of <paramref name="seats"/> to a client <paramref name="organization"/> on behalf of
+    /// its <paramref name="provider"/>. Seat adjustments for the client organization may autoscale the provider's Stripe
+    /// <see cref="Stripe.Subscription"/> depending on the provider's seat minimum for the client <paramref name="organization"/>'s
+    /// <see cref="PlanType"/>.
+    /// </summary>
+    /// <param name="provider">The MSP that manages the client <paramref name="organization"/>.</param>
+    /// <param name="organization">The client organization whose <see cref="seats"/> you want to update.</param>
+    /// <param name="seats">The number of seats to assign to the client organization.</param>
+    Task AssignSeatsToClientOrganization(
+        Provider provider,
+        Organization organization,
+        int seats);
+
     /// <summary>
     /// Retrieves the number of seats an MSP has assigned to its client organizations with a specified <paramref name="planType"/>.
     /// </summary>
