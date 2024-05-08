@@ -15,7 +15,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -59,7 +58,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
     private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
@@ -91,7 +89,6 @@ public class OrganizationsControllerTests : IDisposable
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
-        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
         _subscriberService = Substitute.For<ISubscriberService>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
@@ -120,7 +117,6 @@ public class OrganizationsControllerTests : IDisposable
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
             _pushNotificationService,
-            _cancelSubscriptionCommand,
             _subscriberService,
             _referenceEventService,
             _organizationEnableCollectionEnhancementsCommand,

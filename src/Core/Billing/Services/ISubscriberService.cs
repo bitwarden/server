@@ -1,10 +1,26 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Models;
+using Bit.Core.Entities;
 using Stripe;
 
 namespace Bit.Core.Billing.Services;
 
 public interface ISubscriberService
 {
+    /// <summary>
+    /// Cancels a suscriber's subscription while including user-provided feedback via the <paramref name="offboardingSurveyResponse"/>.
+    /// If the <paramref name="cancelImmediately"/> flag is <see langword="false"/>,
+    /// this command sets the subscription's <b>"cancel_at_end_of_period"</b> property to <see langword="true"/>.
+    /// Otherwise, this command cancels the subscription immediately.
+    /// </summary>
+    /// <param name="subscriber">The subscriber with the subscription to cancel.</param>
+    /// <param name="offboardingSurveyResponse">An <see cref="OffboardingSurveyResponse"/> DTO containing user-provided feedback on why they are cancelling the subscription.</param>
+    /// <param name="cancelImmediately">A flag indicating whether to cancel the subscription immediately or at the end of the subscription period.</param>
+    Task CancelSubscription(
+        ISubscriber subscriber,
+        OffboardingSurveyResponse offboardingSurveyResponse,
+        bool cancelImmediately);
+
     /// <summary>
     /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
     /// </summary>

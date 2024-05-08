@@ -21,7 +21,6 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -68,7 +67,6 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
     private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
@@ -103,7 +101,6 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
-        ICancelSubscriptionCommand cancelSubscriptionCommand,
         ISubscriberService subscriberService,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
@@ -132,7 +129,6 @@ public class AccountsController : Controller
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
-        _cancelSubscriptionCommand = cancelSubscriptionCommand;
         _subscriberService = subscriberService;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
@@ -839,9 +835,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var subscription = await _subscriberService.GetSubscriptionOrThrow(user);
-
-        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+        await _subscriberService.CancelSubscription(user,
             new OffboardingSurveyResponse
             {
                 UserId = user.Id,

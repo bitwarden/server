@@ -19,7 +19,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
@@ -66,7 +65,6 @@ public class OrganizationsController : Controller
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
     private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
@@ -95,7 +93,6 @@ public class OrganizationsController : Controller
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
         IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
         IPushNotificationService pushNotificationService,
-        ICancelSubscriptionCommand cancelSubscriptionCommand,
         ISubscriberService subscriberService,
         IReferenceEventService referenceEventService,
         IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
@@ -123,7 +120,6 @@ public class OrganizationsController : Controller
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
         _pushNotificationService = pushNotificationService;
-        _cancelSubscriptionCommand = cancelSubscriptionCommand;
         _subscriberService = subscriberService;
         _referenceEventService = referenceEventService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
@@ -486,9 +482,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var subscription = await _subscriberService.GetSubscriptionOrThrow(organization);
-
-        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+        await _subscriberService.CancelSubscription(organization,
             new OffboardingSurveyResponse
             {
                 UserId = _currentContext.UserId!.Value,

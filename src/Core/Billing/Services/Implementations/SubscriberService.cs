@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Billing.Models;
+using Bit.Core.Entities;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -11,6 +12,85 @@ public class SubscriberService(
     ILogger<SubscriberService> logger,
     IStripeAdapter stripeAdapter) : ISubscriberService
 {
+    public async Task CancelSubscription(
+        ISubscriber subscriber,
+        OffboardingSurveyResponse offboardingSurveyResponse,
+        bool cancelImmediately)
+    {
+        var subscription = await GetSubscriptionOrThrow(subscriber);
+
+        if (subscription.CanceledAt.HasValue ||
+            subscription.Status == "canceled" ||
+            subscription.Status == "unpaid" ||
+            subscription.Status == "incomplete_expired")
+        {
+            logger.LogWarning("Cannot cancel subscription ({ID}) that's already inactive", subscription.Id);
+
+            throw ContactSupport();
+        }
+
+        var metadata = new Dictionary<string, string>
+        {
+            { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
+        };
+
+        List<string> validCancellationReasons = [
+            "customer_service",
+            "low_quality",
+            "missing_features",
+            "other",
+            "switched_service",
+            "too_complex",
+            "too_expensive",
+            "unused"
+        ];
+
+        if (cancelImmediately)
+        {
+            if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
+            {
+                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, new SubscriptionUpdateOptions
+                {
+                    Metadata = metadata
+                });
+            }
+
+            var options = new SubscriptionCancelOptions
+            {
+                CancellationDetails = new SubscriptionCancellationDetailsOptions
+                {
+                    Comment = offboardingSurveyResponse.Feedback
+                }
+            };
+
+            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
+            {
+                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
+            }
+
+            await stripeAdapter.SubscriptionCancelAsync(subscription.Id, options);
+        }
+        else
+        {
+            var options = new SubscriptionUpdateOptions
+            {
+                CancelAtPeriodEnd = true,
+                CancellationDetails = new SubscriptionCancellationDetailsOptions
+                {
+                    Comment = offboardingSurveyResponse.Feedback
+                },
+                Metadata = metadata
+            };
+
+            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
+            {
+                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
+            }
+
+            await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, options);
+        }
+    }
+
     public async Task<Customer> GetCustomer(
         ISubscriber subscriber,
         CustomerGetOptions customerGetOptions = null)

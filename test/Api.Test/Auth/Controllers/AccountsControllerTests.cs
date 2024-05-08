@@ -14,7 +14,6 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -56,7 +55,6 @@ public class AccountsControllerTests : IDisposable
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
     private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
@@ -89,7 +87,6 @@ public class AccountsControllerTests : IDisposable
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
-        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
         _subscriberService = Substitute.For<ISubscriberService>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _currentContext = Substitute.For<ICurrentContext>();
@@ -121,7 +118,6 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommand,
             _rotateUserKeyCommand,
             _featureService,
-            _cancelSubscriptionCommand,
             _subscriberService,
             _referenceEventService,
             _currentContext,
