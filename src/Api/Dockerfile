@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -52,7 +52,7 @@ WORKDIR /app
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
@@ -62,8 +62,8 @@ EXPOSE 5000
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        gosu \
-        curl \
+    gosu \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy app from the build stage

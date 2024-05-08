@@ -355,15 +355,11 @@ public class CurrentContext : ICurrentContext
          * Owner, Admin, Manager, and Provider checks are handled via the EditAssigned/DeleteAssigned context calls.
          * This entire method will be moved to the CollectionAuthorizationHandler in the future
          */
-        var canCreateNewCollections = false;
+
         var org = GetOrganization(orgId);
-        if (org != null)
-        {
-            canCreateNewCollections = !org.LimitCollectionCreationDeletion || org.Permissions.CreateNewCollections;
-        }
         return await EditAssignedCollections(orgId)
                || await DeleteAssignedCollections(orgId)
-               || canCreateNewCollections;
+               || (org != null && org.Permissions.CreateNewCollections);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
@@ -493,6 +489,10 @@ public class CurrentContext : ICurrentContext
     {
         if (Organizations == null)
         {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
             var userOrgs = await organizationUserRepository.GetManyDetailsByUserAsync(userId);
             Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
                 .Select(ou => new CurrentContextOrganization(ou)).ToList();
@@ -505,6 +505,10 @@ public class CurrentContext : ICurrentContext
     {
         if (Providers == null)
         {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
             var userProviders = await providerUserRepository.GetManyByUserAsync(userId);
             Providers = userProviders.Where(ou => ou.Status == ProviderUserStatusType.Confirmed)
                 .Select(ou => new CurrentContextProvider(ou)).ToList();

@@ -2,7 +2,7 @@
 #                 Build stage                 #
 ###############################################
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS bitwarden-build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS bitwarden-build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -45,7 +45,7 @@ WORKDIR /app
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
@@ -54,4 +54,4 @@ LABEL com.bitwarden.product="bitwarden"
 WORKDIR /app
 COPY --from=bitwarden-build /app/MsSqlMigratorUtility ./
 
-ENTRYPOINT ["sh", "-c", "dotnet /app/MsSqlMigratorUtility.dll \"${MSSQL_CONN_STRING}\" -v ${@}", "--" ]
+ENTRYPOINT ["sh", "-c", "dotnet /app/MsSqlMigratorUtility.dll \"${MSSQL_CONN_STRING}\" ${@}", "--" ]

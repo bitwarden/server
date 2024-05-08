@@ -150,6 +150,7 @@ public class Context
         var configText = File.ReadAllText(ConfigPath);
         var deserializer = new DeserializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
             .Build();
         Config = deserializer.Deserialize<Configuration>(configText);
 

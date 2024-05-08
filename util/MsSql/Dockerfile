@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server:2019-CU17-ubuntu-20.04
+FROM mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04
 
 LABEL com.bitwarden.product="bitwarden"
 
@@ -6,8 +6,8 @@ USER root:root
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        gosu \
-        tzdata \
+    gosu \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 COPY util/MsSql/backup-db.sql /
@@ -17,7 +17,6 @@ COPY util/MsSql/entrypoint.sh /
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh
 
-# Does not work unfortunately (https://github.com/bitwarden/server/issues/286)
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
 
 HEALTHCHECK --start-period=120s --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \

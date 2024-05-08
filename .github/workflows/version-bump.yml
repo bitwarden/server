@@ -4,19 +4,44 @@ name: Version Bump
 on:
   workflow_dispatch:
     inputs:
-      version_number:
-        description: "New Version"
-        required: true
+      version_number_override:
+        description: "New version override (leave blank for automatic calculation, example: '2024.1.0')"
+        required: false
+        type: string
+      cut_rc_branch:
+        description: "Cut RC branch?"
+        default: true
+        type: boolean
 
 jobs:
-  bump_props_version:
-    name: "Create version_bump_${{ github.event.inputs.version_number }} branch"
-    runs-on: ubuntu-20.04
+  bump_version:
+    name: Bump Version
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.set-final-version-output.outputs.version }}
     steps:
-      - name: Checkout Branch
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+      - name: Validate version input
+        if: ${{ inputs.version_number_override != '' }}
+        uses: bitwarden/gh-actions/version-check@main
+        with:
+          version: ${{ inputs.version_number_override }}
 
-      - name: Login to Azure - CI Subscription
+      - name: Check out branch
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        with:
+          ref: main
+
+      - name: Check if RC branch exists
+        if: ${{ inputs.cut_rc_branch == true }}
+        run: |
+          remote_rc_branch_check=$(git ls-remote --heads origin rc | wc -l)
+          if [[ "${remote_rc_branch_check}" -gt 0 ]]; then
+            echo "Remote RC branch exists."
+            echo "Please delete current RC branch before running again."
+            exit 1
+          fi
+
+      - name: Log in to Azure - CI subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
@@ -26,7 +51,9 @@ jobs:
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
           keyvault: "bitwarden-ci"
-          secrets: "github-gpg-private-key, github-gpg-private-key-passphrase"
+          secrets: "github-gpg-private-key,
+            github-gpg-private-key-passphrase,
+            github-pat-bitwarden-devops-bot-repo-scope"
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@82a020f1f7f605c65dd2449b392a52c3fcfef7ef # v6.0.0
@@ -36,22 +63,81 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      - name: Create Version Branch
-        run: git switch -c version_bump_${{ github.event.inputs.version_number }}
-
-      - name: Bump Version - Props
-        uses: bitwarden/gh-actions/version-bump@main
-        with:
-          version: ${{ github.event.inputs.version_number }}
-          file_path: "Directory.Build.props"
-
-      - name: Refresh lockfiles
-        run: dotnet restore -f --force-evaluate --no-cache
-
-      - name: Setup git
+      - name: Set up Git
         run: |
           git config --local user.email "106330231+bitwarden-devops-bot@users.noreply.github.com"
           git config --local user.name "bitwarden-devops-bot"
+
+      - name: Create version branch
+        id: create-branch
+        run: |
+          NAME=version_bump_${{ github.ref_name }}_$(date +"%Y-%m-%d")
+          git switch -c $NAME
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Get current version
+        id: current-version
+        run: |
+          CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify input version
+        if: ${{ inputs.version_number_override != '' }}
+        env:
+          CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
+          NEW_VERSION: ${{ inputs.version_number_override }}
+        run: |
+          # Error if version has not changed.
+          if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
+            echo "Version has not changed."
+            exit 1
+          fi
+
+          # Check if version is newer.
+          printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V
+          if [ $? -eq 0 ]; then
+            echo "Version check successful."
+          else
+            echo "Version check failed."
+            exit 1
+          fi
+
+      - name: Calculate next release version
+        if: ${{ inputs.version_number_override == '' }}
+        id: calculate-next-version
+        uses: bitwarden/gh-actions/version-next@main
+        with:
+          version: ${{ steps.current-version.outputs.version }}
+
+      - name: Bump version props - Version Override
+        if: ${{ inputs.version_number_override != '' }}
+        id: bump-version-override
+        uses: bitwarden/gh-actions/version-bump@main
+        with:
+          file_path: "Directory.Build.props"
+          version: ${{ inputs.version_number_override }}
+
+      - name: Bump version props - Automatic Calculation
+        if: ${{ inputs.version_number_override == '' }}
+        id: bump-version-automatic
+        uses: bitwarden/gh-actions/version-bump@main
+        with:
+          file_path: "Directory.Build.props"
+          version: ${{ steps.calculate-next-version.outputs.version }}
+
+      - name: Set final version output
+        id: set-final-version-output
+        run: |
+          if [[ "${{ steps.bump-version-override.outcome }}" = "success" ]]; then
+            echo "version=${{ inputs.version_number_override }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.bump-version-automatic.outcome }}" = "success" ]]; then
+            echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check if version changed
         id: version-changed
@@ -65,22 +151,24 @@ jobs:
 
       - name: Commit files
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-        run: git commit -m "Bumped version to ${{ github.event.inputs.version_number }}" -a
+        run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
 
       - name: Push changes
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-        run: git push -u origin version_bump_${{ github.event.inputs.version_number }}
-
-      - name: Create Version PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
-          PR_BRANCH: "version_bump_${{ github.event.inputs.version_number }}"
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          BASE_BRANCH: master
-          TITLE: "Bump version to ${{ github.event.inputs.version_number }}"
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
+        run: git push -u origin $PR_BRANCH
+
+      - name: Create version PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
+          TITLE: "Bump version to ${{ steps.set-final-version-output.outputs.version }}"
         run: |
-          gh pr create --title "$TITLE" \
-            --base "$BASE" \
+          PR_URL=$(gh pr create --title "$TITLE" \
+            --base "main" \
             --head "$PR_BRANCH" \
             --label "version update" \
             --label "automated pr" \
@@ -93,4 +181,62 @@ jobs:
               - [X] Other
 
               ## Objective
-              Automated version bump to ${{ github.event.inputs.version_number }}"
+              Automated version bump to ${{ steps.set-final-version-output.outputs.version }}")
+          echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
+
+      - name: Approve PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr review $PR_NUMBER --approve
+
+      - name: Merge PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        env:
+          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
+
+
+  cut_rc:
+    name: Cut RC branch
+    if: ${{ inputs.cut_rc_branch == true }}
+    needs: bump_version
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: main
+
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Verify version has been updated
+        env:
+          NEW_VERSION: ${{ needs.bump_version.outputs.version }}
+        run: |
+          # Wait for version to change.
+          while : ; do
+            echo "Waiting for version to be updated..."
+            git pull --force
+            CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+            # If the versions don't match we continue the loop, otherwise we break out of the loop.
+            [[ "$NEW_VERSION" != "$CURRENT_VERSION" ]] || break
+            sleep 10
+          done
+
+      - name: Cut RC branch
+        run: |
+          git switch --quiet --create rc
+          git push --quiet --set-upstream origin rc
+
+  move-future-db-scripts:
+    name: Move finalization database scripts
+    needs: cut_rc
+    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    secrets: inherit

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Bit.Core.Services;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.Models;
@@ -89,12 +90,12 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
 
     public async Task<HttpContext> GroupsPostAsync(Guid organizationId, ScimGroupRequestModel model)
     {
-        return await Server.PostAsync($"/v2/{organizationId}/groups", GetStringContent(model), httpContext => httpContext.Request.Headers.Add(HeaderNames.UserAgent, "Okta"));
+        return await Server.PostAsync($"/v2/{organizationId}/groups", GetStringContent(model), httpContext => httpContext.Request.Headers.Append(HeaderNames.UserAgent, "Okta"));
     }
 
     public async Task<HttpContext> GroupsPutAsync(Guid organizationId, Guid id, ScimGroupRequestModel model)
     {
-        return await Server.PutAsync($"/v2/{organizationId}/groups/{id}", GetStringContent(model), httpContext => httpContext.Request.Headers.Add(HeaderNames.UserAgent, "Okta"));
+        return await Server.PutAsync($"/v2/{organizationId}/groups/{id}", GetStringContent(model), httpContext => httpContext.Request.Headers.Append(HeaderNames.UserAgent, "Okta"));
     }
 
     public async Task<HttpContext> GroupsPatchAsync(Guid organizationId, Guid id, ScimPatchModel model)
@@ -196,11 +197,11 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
         };
     }
 
-    private List<Infrastructure.EntityFramework.Models.Organization> GetSeedingOrganizations()
+    private List<Organization> GetSeedingOrganizations()
     {
-        return new List<Infrastructure.EntityFramework.Models.Organization>()
+        return new List<Organization>()
         {
-            new Infrastructure.EntityFramework.Models.Organization { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
+            new Organization { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
         };
     }
 

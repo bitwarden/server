@@ -9,8 +9,9 @@ using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
+using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
-using IdentityServer4.Extensions;
+using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
@@ -64,6 +65,7 @@ public class Startup
 
         services.AddSwaggerGen(c =>
         {
+            c.SchemaFilter<EnumSchemaFilter>();
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
         });
 
@@ -89,7 +91,7 @@ public class Startup
 
         // Authentication
         services
-            .AddDistributedIdentityServices(globalSettings)
+            .AddDistributedIdentityServices()
             .AddAuthentication()
             .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
             .AddOpenIdConnect("sso", "Single Sign On", options =>
@@ -176,7 +178,7 @@ public class Startup
             var uri = new Uri(globalSettings.BaseServiceUri.Identity);
             app.Use(async (ctx, next) =>
             {
-                ctx.SetIdentityServerOrigin($"{uri.Scheme}://{uri.Host}");
+                ctx.RequestServices.GetRequiredService<IServerUrls>().Origin = $"{uri.Scheme}://{uri.Host}";
                 await next();
             });
         }
@@ -213,7 +215,11 @@ public class Startup
         app.UseRouting();
 
         // Add Cors
-        app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
+        app.UseCors(policy => policy.SetIsOriginAllowed(o =>
+                CoreHelpers.IsCorsOriginAllowed(o, globalSettings) ||
+
+                // If development - allow requests from the Swagger UI so it can authorize
+                (Environment.IsDevelopment() && o == globalSettings.BaseServiceUri.Api))
             .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
 
         // Add current context

@@ -88,6 +88,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { "globalSettings:send:connectionString", null},
                 { "globalSettings:notifications:connectionString", null},
                 { "globalSettings:storage:connectionString", null},
+
+                // This will force it to use an ephemeral key for IdentityServer
+                { "globalSettings:developmentDirectory", null }
             });
         });
 
@@ -136,22 +139,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.Remove(captchaValidationService);
             services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
 
-            // Disable blocking
-            var blockingService = services.First(sd => sd.ServiceType == typeof(IBlockIpService));
-            services.Remove(blockingService);
-            services.AddSingleton<IBlockIpService, NoopBlockIpService>();
-
             // TODO: Install and use azurite in CI pipeline
             var installationDeviceRepository =
                 services.First(sd => sd.ServiceType == typeof(IInstallationDeviceRepository));
             services.Remove(installationDeviceRepository);
             services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
-
-            // TODO: Install and use azurite in CI pipeline
-            var metaDataRepository =
-                services.First(sd => sd.ServiceType == typeof(IMetaDataRepository));
-            services.Remove(metaDataRepository);
-            services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
 
             // TODO: Install and use azurite in CI pipeline
             var referenceEventService = services.First(sd => sd.ServiceType == typeof(IReferenceEventService));

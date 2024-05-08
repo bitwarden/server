@@ -1,6 +1,6 @@
 ﻿using Azure.Messaging.ServiceBus;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -63,5 +63,20 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
     public async Task BaseDeleteOrganizationAbilityAsync(Guid organizationId)
     {
         await base.DeleteOrganizationAbilityAsync(organizationId);
+    }
+
+    public override async Task DeleteProviderAbilityAsync(Guid providerId)
+    {
+        await base.DeleteProviderAbilityAsync(providerId);
+        var message = new ServiceBusMessage
+        {
+            Subject = _subName,
+            ApplicationProperties =
+            {
+                { "type", (byte)ApplicationCacheMessageType.DeleteProviderAbility },
+                { "id", providerId },
+            }
+        };
+        var task = _topicMessageSender.SendMessageAsync(message);
     }
 }

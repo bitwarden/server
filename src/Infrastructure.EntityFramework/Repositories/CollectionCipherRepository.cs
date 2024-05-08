@@ -46,31 +46,31 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var data = await new CollectionCipherReadByUserIdQuery(userId)
+            var data = await new CollectionCipherReadByUserIdQuery(userId, useFlexibleCollections)
                 .Run(dbContext)
                 .ToArrayAsync();
             return data;
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId)
+            var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId, useFlexibleCollections)
                 .Run(dbContext)
                 .ToArrayAsync();
             return data;
         }
     }
 
-    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
+    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -81,7 +81,17 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 .Select(c => c.OrganizationId)
                 .FirstAsync();
 
-            var availableCollections = await (from c in dbContext.Collections
+            List<Guid> availableCollections;
+            if (useFlexibleCollections)
+            {
+                var availableCollectionsQuery = new CollectionsReadByOrganizationIdUserIdQuery(organizationId, userId);
+                availableCollections = await availableCollectionsQuery
+                    .Run(dbContext)
+                    .Select(c => c.Id).ToListAsync();
+            }
+            else
+            {
+                availableCollections = await (from c in dbContext.Collections
                                               join o in dbContext.Organizations on c.OrganizationId equals o.Id
                                               join ou in dbContext.OrganizationUsers
                                                  on new { OrganizationId = o.Id, UserId = (Guid?)userId } equals
@@ -103,6 +113,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                               where o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed
                                                  && (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
                                               select c.Id).ToListAsync();
+
+            }
 
             var collectionCiphers = await (from cc in dbContext.CollectionCiphers
                                            where cc.CipherId == cipherId
@@ -176,12 +188,22 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
-    public async Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId, Guid organizationId, IEnumerable<Guid> collectionIds)
+    public async Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId, Guid organizationId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availableCollections = from c in dbContext.Collections
+
+            IQueryable<Models.Collection> availableCollections;
+            if (useFlexibleCollections)
+            {
+                var availableCollectionsQuery = new CollectionsReadByOrganizationIdUserIdQuery(organizationId, userId);
+                availableCollections = availableCollectionsQuery
+                    .Run(dbContext);
+            }
+            else
+            {
+                availableCollections = from c in dbContext.Collections
                                        join o in dbContext.Organizations
                                            on c.OrganizationId equals o.Id
                                        join ou in dbContext.OrganizationUsers
@@ -204,8 +226,10 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                        where !g.AccessAll && cg.CollectionId == c.Id &&
                                        (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed &&
                                        (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
-                                       select new { c, o, ou, cu, gu, g, cg };
-            var count = await availableCollections.CountAsync();
+                                       select c;
+
+            }
+
             if (await availableCollections.CountAsync() < 1)
             {
                 return;
@@ -213,13 +237,56 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
 
             var insertData = from collectionId in collectionIds
                              from cipherId in cipherIds
-                             where availableCollections.Select(x => x.c.Id).Contains(collectionId)
+                             where availableCollections.Select(c => c.Id).Contains(collectionId)
                              select new Models.CollectionCipher
                              {
                                  CollectionId = collectionId,
                                  CipherId = cipherId,
                              };
             await dbContext.AddRangeAsync(insertData);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task AddCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var availableCollections = await (from c in dbContext.Collections
+                                              join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                              where o.Id == organizationId && o.Enabled
+                                              select c).ToListAsync();
+
+            var currentCollectionCiphers = await (from cc in dbContext.CollectionCiphers
+                                                  where cipherIds.Contains(cc.CipherId)
+                                                  select cc).ToListAsync();
+
+            var insertData = from collectionId in collectionIds
+                             from cipherId in cipherIds
+                             where
+                                 availableCollections.Select(c => c.Id).Contains(collectionId) &&
+                                 !currentCollectionCiphers.Any(cc => cc.CipherId == cipherId && cc.CollectionId == collectionId)
+                             select new Models.CollectionCipher { CollectionId = collectionId, CipherId = cipherId, };
+
+            await dbContext.AddRangeAsync(insertData);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoveCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var currentCollectionCiphersToBeRemoved = await (from cc in dbContext.CollectionCiphers
+                                                             where cipherIds.Contains(cc.CipherId) && collectionIds.Contains(cc.CollectionId)
+                                                             select cc).ToListAsync();
+            dbContext.RemoveRange(currentCollectionCiphersToBeRemoved);
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
             await dbContext.SaveChangesAsync();
         }

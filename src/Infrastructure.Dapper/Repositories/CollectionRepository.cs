@@ -51,12 +51,16 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     }
 
     public async Task<Tuple<CollectionDetails, CollectionAccessDetails>> GetByIdWithAccessAsync(
-        Guid id, Guid userId)
+        Guid id, Guid userId, bool useFlexibleCollections)
     {
+        var sprocName = useFlexibleCollections
+            ? $"[{Schema}].[Collection_ReadWithGroupsAndUsersByIdUserId_V2]"
+            : $"[{Schema}].[Collection_ReadWithGroupsAndUsersByIdUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                $"[{Schema}].[Collection_ReadWithGroupsAndUsersByIdUserId]",
+                sprocName,
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -139,23 +143,27 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId)
+    public async Task<ICollection<Tuple<CollectionDetails, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId, bool useFlexibleCollections)
     {
+        var sprocName = useFlexibleCollections
+            ? $"[{Schema}].[Collection_ReadWithGroupsAndUsersByUserId_V2]"
+            : $"[{Schema}].[Collection_ReadWithGroupsAndUsersByUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                $"[{Schema}].[Collection_ReadWithGroupsAndUsersByUserId]",
+                sprocName,
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var collections = (await results.ReadAsync<Collection>()).Where(c => c.OrganizationId == organizationId);
+            var collections = (await results.ReadAsync<CollectionDetails>()).Where(c => c.OrganizationId == organizationId);
             var groups = (await results.ReadAsync<CollectionGroup>())
                 .GroupBy(g => g.CollectionId);
             var users = (await results.ReadAsync<CollectionUser>())
                 .GroupBy(u => u.CollectionId);
 
             return collections.Select(collection =>
-                new Tuple<Collection, CollectionAccessDetails>(
+                new Tuple<CollectionDetails, CollectionAccessDetails>(
                     collection,
                     new CollectionAccessDetails
                     {
@@ -181,15 +189,18 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 )
             ).ToList();
         }
-
     }
 
-    public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId)
+    public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
     {
+        var sprocName = useFlexibleCollections
+            ? $"[{Schema}].[Collection_ReadByIdUserId_V2]"
+            : $"[{Schema}].[Collection_ReadByIdUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionDetails>(
-                $"[{Schema}].[Collection_ReadByIdUserId]",
+                sprocName,
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -197,16 +208,89 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
     {
+        var sprocName = useFlexibleCollections
+            ? $"[{Schema}].[Collection_ReadByUserId_V2]"
+            : $"[{Schema}].[Collection_ReadByUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionDetails>(
-                $"[{Schema}].[Collection_ReadByUserId]",
+                sprocName,
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryMultipleAsync(
+                $"[{Schema}].[Collection_ReadByOrganizationIdWithPermissions]",
+                new { OrganizationId = organizationId, UserId = userId, IncludeAccessRelationships = includeAccessRelationships },
+                commandType: CommandType.StoredProcedure);
+
+            var collections = (await results.ReadAsync<CollectionAdminDetails>()).ToList();
+
+            if (!includeAccessRelationships)
+            {
+                return collections;
+            }
+
+            var groups = (await results.ReadAsync<CollectionGroup>())
+                .GroupBy(g => g.CollectionId)
+                .ToList();
+            var users = (await results.ReadAsync<CollectionUser>())
+                .GroupBy(u => u.CollectionId)
+                .ToList();
+
+            foreach (var collection in collections)
+            {
+                collection.Groups = groups
+                    .FirstOrDefault(g => g.Key == collection.Id)?
+                    .Select(g => new CollectionAccessSelection
+                    {
+                        Id = g.GroupId,
+                        HidePasswords = g.HidePasswords,
+                        ReadOnly = g.ReadOnly,
+                        Manage = g.Manage
+                    }).ToList() ?? new List<CollectionAccessSelection>();
+                collection.Users = users
+                    .FirstOrDefault(u => u.Key == collection.Id)?
+                    .Select(c => new CollectionAccessSelection
+                    {
+                        Id = c.OrganizationUserId,
+                        HidePasswords = c.HidePasswords,
+                        ReadOnly = c.ReadOnly,
+                        Manage = c.Manage
+                    }).ToList() ?? new List<CollectionAccessSelection>();
+            }
+
+            return collections;
+        }
+    }
+
+    public async Task<CollectionAdminDetails> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryMultipleAsync(
+                $"[{Schema}].[Collection_ReadByIdWithPermissions]",
+                new { CollectionId = collectionId, UserId = userId, IncludeAccessRelationships = includeAccessRelationships },
+                commandType: CommandType.StoredProcedure);
+
+            var collectionDetails = await results.ReadFirstOrDefaultAsync<CollectionAdminDetails>();
+
+            if (!includeAccessRelationships) return collectionDetails;
+
+            collectionDetails.Groups = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
+            collectionDetails.Users = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
+
+            return collectionDetails;
         }
     }
 

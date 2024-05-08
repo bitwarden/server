@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
@@ -19,7 +19,7 @@ public class SmSeatSubscriptionUpdate : SubscriptionUpdate
 
     public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
     {
-        var item = SubscriptionItem(subscription, PlanIds.Single());
+        var item = FindSubscriptionItem(subscription, PlanIds.Single());
         return new()
         {
             new SubscriptionItemOptions
@@ -35,7 +35,7 @@ public class SmSeatSubscriptionUpdate : SubscriptionUpdate
     public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
     {
 
-        var item = SubscriptionItem(subscription, PlanIds.Single());
+        var item = FindSubscriptionItem(subscription, PlanIds.Single());
         return new()
         {
             new SubscriptionItemOptions

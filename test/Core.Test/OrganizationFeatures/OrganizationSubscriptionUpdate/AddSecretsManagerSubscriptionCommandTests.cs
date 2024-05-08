@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -109,28 +109,11 @@ public class AddSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_ThrowsException_WhenOrganizationEnrolledInSmBeta(
-        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
-        Organization organization)
-    {
-        organization.UseSecretsManager = true;
-        organization.SecretsManagerBeta = true;
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
-
-        Assert.Contains("Organization is enrolled in Secrets Manager Beta", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task SignUpAsync_ThrowsException_WhenOrganizationAlreadyHasSecretsManager(
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         Organization organization)
     {
         organization.UseSecretsManager = true;
-        organization.SecretsManagerBeta = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
@@ -147,7 +130,6 @@ public class AddSecretsManagerSubscriptionCommandTests
         Provider provider)
     {
         organization.UseSecretsManager = false;
-        organization.SecretsManagerBeta = false;
         provider.Type = ProviderType.Msp;
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
 

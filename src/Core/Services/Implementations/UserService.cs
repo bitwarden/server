@@ -1,11 +1,10 @@
 ﻿using System.Security.Claims;
-using System.Text.Json;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -28,7 +27,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using File = System.IO.File;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bit.Core.Services;
 
@@ -61,8 +62,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
-    private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public UserService(
@@ -95,9 +94,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IWebAuthnCredentialRepository webAuthnRepository,
-        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
         : base(
               store,
               optionsAccessor,
@@ -135,8 +132,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _webAuthnCredentialRepository = webAuthnRepository;
-        _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -261,7 +256,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             try
             {
-                await CancelPremiumAsync(user, null, true);
+                await CancelPremiumAsync(user);
             }
             catch (GatewayException) { }
         }
@@ -343,7 +338,26 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var result = await base.CreateAsync(user, masterPassword);
         if (result == IdentityResult.Success)
         {
-            await _mailService.SendWelcomeEmailAsync(user);
+            if (!string.IsNullOrEmpty(user.ReferenceData))
+            {
+                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
+                if (referenceData.TryGetValue("initiationPath", out var value))
+                {
+                    var initiationPath = value.ToString();
+                    await SendAppropriateWelcomeEmailAsync(user, initiationPath);
+                    if (!string.IsNullOrEmpty(initiationPath))
+                    {
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
+                            {
+                                SignupInitiationPath = initiationPath
+                            });
+
+                        return result;
+                    }
+                }
+            }
+
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
@@ -520,129 +534,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.SetTwoFactorProviders(providers);
         await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
         return true;
-    }
-
-    public async Task<CredentialCreateOptions> StartWebAuthnLoginRegistrationAsync(User user)
-    {
-        var fidoUser = new Fido2User
-        {
-            DisplayName = user.Name,
-            Name = user.Email,
-            Id = user.Id.ToByteArray(),
-        };
-
-        // Get existing keys to exclude
-        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var excludeCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
-            .ToList();
-
-        var authenticatorSelection = new AuthenticatorSelection
-        {
-            AuthenticatorAttachment = null,
-            RequireResidentKey = true,
-            UserVerification = UserVerificationRequirement.Required
-        };
-
-        var extensions = new AuthenticationExtensionsClientInputs { };
-
-        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
-            AttestationConveyancePreference.None, extensions);
-
-        return options;
-    }
-
-    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, CredentialCreateOptions options,
-        AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf,
-        string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
-    {
-        var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        if (existingCredentials.Count >= 5)
-        {
-            return false;
-        }
-
-        var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
-
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-
-        var credential = new WebAuthnCredential
-        {
-            Name = name,
-            CredentialId = CoreHelpers.Base64UrlEncode(success.Result.CredentialId),
-            PublicKey = CoreHelpers.Base64UrlEncode(success.Result.PublicKey),
-            Type = success.Result.CredType,
-            AaGuid = success.Result.Aaguid,
-            Counter = (int)success.Result.Counter,
-            UserId = user.Id,
-            SupportsPrf = supportsPrf,
-            EncryptedUserKey = encryptedUserKey,
-            EncryptedPublicKey = encryptedPublicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
-        };
-
-        await _webAuthnCredentialRepository.CreateAsync(credential);
-        return true;
-    }
-
-    public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
-    {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var existingCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
-            .ToList();
-
-        if (existingCredentials.Count == 0)
-        {
-            return null;
-        }
-
-        // TODO: PRF?
-        var exts = new AuthenticationExtensionsClientInputs
-        {
-            UserVerificationMethod = true
-        };
-        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Required, exts);
-
-        // TODO: temp save options to user record somehow
-
-        return options;
-    }
-
-    public async Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user)
-    {
-        // TODO: Get options from user record somehow, then clear them
-        var options = AssertionOptions.FromJson("");
-
-        var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
-        var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertionId);
-        if (credential == null)
-        {
-            return null;
-        }
-
-        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
-        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
-        var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
-        var assertionVerificationResult = await _fido2.MakeAssertionAsync(
-            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
-
-        // Update SignatureCounter
-        credential.Counter = (int)assertionVerificationResult.Counter;
-        await _webAuthnCredentialRepository.ReplaceAsync(credential);
-
-        if (assertionVerificationResult.Status == "ok")
-        {
-            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user));
-            return token;
-        }
-        else
-        {
-            return null;
-        }
     }
 
     public async Task SendEmailVerificationAsync(User user)
@@ -905,7 +796,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.ForcePasswordReset = true;
 
         await _userRepository.ReplaceAsync(user);
-        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.Name);
+        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
         await _pushService.PushLogOutAsync(user.Id);
 
@@ -1102,12 +993,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("You can't subtract storage!");
         }
 
-        if ((paymentMethodType == PaymentMethodType.GoogleInApp ||
-            paymentMethodType == PaymentMethodType.AppleInApp) && additionalStorageGb > 0)
-        {
-            throw new BadRequestException("You cannot add storage with this payment method.");
-        }
-
         string paymentIntentClientSecret = null;
         IPaymentService paymentService = null;
         if (_globalSettings.SelfHosted)
@@ -1166,29 +1051,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
             paymentIntentClientSecret);
-    }
-
-    public async Task IapCheckAsync(User user, PaymentMethodType paymentMethodType)
-    {
-        if (paymentMethodType != PaymentMethodType.AppleInApp)
-        {
-            throw new BadRequestException("Payment method not supported for in-app purchases.");
-        }
-
-        if (user.Premium)
-        {
-            throw new BadRequestException("Already a premium user.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(user.GatewayCustomerId))
-        {
-            var customerService = new Stripe.CustomerService();
-            var customer = await customerService.GetAsync(user.GatewayCustomerId);
-            if (customer != null && customer.Balance != 0)
-            {
-                throw new BadRequestException("Customer balance cannot exist when using in-app purchases.");
-            }
-        }
     }
 
     public async Task UpdateLicenseAsync(User user, UserLicense license)
@@ -1265,7 +1127,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null, bool accountDelete = false)
+    public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
     {
         var eop = endOfPeriod.GetValueOrDefault(true);
         if (!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
@@ -1273,11 +1135,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             eop = false;
         }
-        await _paymentService.CancelSubscriptionAsync(user, eop, accountDelete);
+        await _paymentService.CancelSubscriptionAsync(user, eop);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.CancelSubscription, user, _currentContext)
             {
-                EndOfPeriod = eop,
+                EndOfPeriod = eop
             });
     }
 
@@ -1528,7 +1390,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await organizationService.DeleteUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                organization.Name, user.Email);
+                organization.DisplayName(), user.Email);
         }).ToArray();
 
         await Task.WhenAll(removeOrgUserTasks);
@@ -1589,5 +1451,19 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return isVerified;
+    }
+
+    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)
+    {
+        var isFromMarketingWebsite = initiationPath.Contains("Secrets Manager trial");
+
+        if (isFromMarketingWebsite)
+        {
+            await _mailService.SendTrialInitiationEmailAsync(user.Email);
+        }
+        else
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+        }
     }
 }
