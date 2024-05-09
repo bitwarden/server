@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -75,9 +76,38 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         organization.BillingEmail = organizationOwnerEmails.MinBy(email => email);
 
+        await ResetOrganizationBillingAsync(organization, provider, organizationOwnerEmails);
+
+        await _organizationRepository.ReplaceAsync(organization);
+
+        await _providerOrganizationRepository.DeleteAsync(providerOrganization);
+
+        await _eventService.LogProviderOrganizationEventAsync(
+            providerOrganization,
+            EventType.ProviderOrganization_Removed);
+    }
+
+    /// <summary>
+    /// When a client organization is unlinked from a provider, we have to check if they're Stripe-enabled
+    /// and, if they are, we remove their MSP discount and set their Subscription to `send_invoice`. This is because
+    /// the provider's payment method will be removed from their Stripe customer causing ensuing charges to fail. Lastly,
+    /// we email the organization owners letting them know they need to add a new payment method.
+    /// </summary>
+    private async Task ResetOrganizationBillingAsync(
+        Organization organization,
+        Provider provider,
+        IEnumerable<string> organizationOwnerEmails)
+    {
+        if (!organization.IsStripeEnabled())
+        {
+            return;
+        }
+
         var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
 
-        if (isConsolidatedBillingEnabled && provider.Status == ProviderStatusType.Billable)
+        if (isConsolidatedBillingEnabled &&
+            provider.Status == ProviderStatusType.Billable &&
+            organization.Status == OrganizationStatusType.Managed)
         {
             var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
 
@@ -93,7 +123,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 },
                 OffSession = true,
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-                Items = [ new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats } ]
+                Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
@@ -102,7 +132,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
-        else if (!string.IsNullOrEmpty(organization.GatewayCustomerId) && !string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        else
         {
             var customerUpdateOptions = new CustomerUpdateOptions
             {
@@ -114,7 +144,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             var subscriptionUpdateOptions = new SubscriptionUpdateOptions
             {
-                CollectionMethod = "send_invoice",
+                CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30
             };
 
@@ -123,18 +153,10 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             await _subscriberService.RemovePaymentMethod(organization);
         }
 
-        await _organizationRepository.ReplaceAsync(organization);
-
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
             organization.Name,
             provider.Name,
             organizationOwnerEmails);
-
-        await _providerOrganizationRepository.DeleteAsync(providerOrganization);
-
-        await _eventService.LogProviderOrganizationEventAsync(
-            providerOrganization,
-            EventType.ProviderOrganization_Removed);
     }
 }
