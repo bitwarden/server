@@ -24,7 +24,6 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
-
 using static Bit.Core.Test.Billing.Utilities;
 
 namespace Bit.Commercial.Core.Test.Billing;
@@ -33,6 +32,7 @@ namespace Bit.Commercial.Core.Test.Billing;
 public class ProviderBillingServiceTests
 {
     #region AssignSeatsToClientOrganization & ScaleSeats
+
     [Theory, BitAutoData]
     public Task AssignSeatsToClientOrganization_NullProvider_ArgumentNullException(
         Organization organization,
@@ -74,15 +74,17 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AssignSeatsToClientOrganization_OrganizationPlanTypeDoesNotSupportConsolidatedBilling_ContactSupport(
-        Provider provider,
-        Organization organization,
-        int seats,
-        SutProvider<ProviderBillingService> sutProvider)
+    public async Task
+        AssignSeatsToClientOrganization_OrganizationPlanTypeDoesNotSupportConsolidatedBilling_ContactSupport(
+            Provider provider,
+            Organization organization,
+            int seats,
+            SutProvider<ProviderBillingService> sutProvider)
     {
         organization.PlanType = PlanType.FamiliesAnnually;
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
     }
 
     [Theory, BitAutoData]
@@ -96,15 +98,11 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(new List<ProviderPlan>
         {
-            new ()
-            {
-                Id = Guid.NewGuid(),
-                PlanType = PlanType.TeamsMonthly,
-                ProviderId = provider.Id
-            }
+            new() { Id = Guid.NewGuid(), PlanType = PlanType.TeamsMonthly, ProviderId = provider.Id }
         });
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
     }
 
     [Theory, BitAutoData]
@@ -148,7 +146,8 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 50 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingService>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(50);
+        sutProvider.GetDependency<IProviderBillingService>()
+            .GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(50);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -207,7 +206,8 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 95 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingService>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(95);
+        sutProvider.GetDependency<IProviderBillingService>()
+            .GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(95);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -268,7 +268,8 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 110 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingService>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
+        sutProvider.GetDependency<IProviderBillingService>()
+            .GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -329,7 +330,8 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 110 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingService>().GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
+        sutProvider.GetDependency<IProviderBillingService>()
+            .GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -347,9 +349,11 @@ public class ProviderBillingServiceTests
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             pPlan => pPlan.Id == providerPlan.Id && pPlan.PurchasedSeats == 0 && pPlan.AllocatedSeats == 80));
     }
+
     #endregion
 
     #region CreateCustomer
+
     [Theory, BitAutoData]
     public async Task CreateCustomer_NullProvider_ThrowsArgumentNullException(
         SutProvider<ProviderBillingService> sutProvider,
@@ -422,10 +426,7 @@ public class ProviderBillingServiceTests
             .Returns(new Customer
             {
                 Id = "customer_id",
-                Tax = new CustomerTax
-                {
-                    AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported
-                }
+                Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
             });
 
         await sutProvider.Sut.CreateCustomer(provider, taxInfo);
@@ -449,20 +450,24 @@ public class ProviderBillingServiceTests
         await sutProvider.GetDependency<IProviderRepository>()
             .ReplaceAsync(Arg.Is<Provider>(p => p.GatewayCustomerId == "customer_id"));
     }
+
     #endregion
 
     #region CreateCustomerForClientOrganization
+
     [Theory, BitAutoData]
     public async Task CreateCustomerForClientOrganization_ProviderNull_ThrowsArgumentNullException(
         Organization organization,
         SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.CreateCustomerForClientOrganization(null, organization));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            sutProvider.Sut.CreateCustomerForClientOrganization(null, organization));
 
     [Theory, BitAutoData]
     public async Task CreateCustomerForClientOrganization_OrganizationNull_ThrowsArgumentNullException(
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.CreateCustomerForClientOrganization(provider, null));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            sutProvider.Sut.CreateCustomerForClientOrganization(provider, null));
 
     [Theory, BitAutoData]
     public async Task CreateCustomerForClientOrganization_HasGatewayCustomerId_NoOp(
@@ -513,7 +518,10 @@ public class ProviderBillingServiceTests
             .Returns(providerCustomer);
 
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
-            .Returns(new Bit.Core.Settings.GlobalSettings.BaseServiceUriSettings(new Bit.Core.Settings.GlobalSettings()) { CloudRegion = "US" });
+            .Returns(new Bit.Core.Settings.GlobalSettings.BaseServiceUriSettings(new Bit.Core.Settings.GlobalSettings())
+            {
+                CloudRegion = "US"
+            });
 
         sutProvider.GetDependency<IStripeAdapter>().CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
                 options =>
@@ -531,10 +539,7 @@ public class ProviderBillingServiceTests
                     options.Metadata["region"] == "US" &&
                     options.TaxIdData.FirstOrDefault().Type == providerCustomer.TaxIds.FirstOrDefault().Type &&
                     options.TaxIdData.FirstOrDefault().Value == providerCustomer.TaxIds.FirstOrDefault().Value))
-            .Returns(new Customer
-            {
-                Id = "customer_id"
-            });
+            .Returns(new Customer { Id = "customer_id" });
 
         await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
 
@@ -558,9 +563,11 @@ public class ProviderBillingServiceTests
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.GatewayCustomerId == "customer_id"));
     }
+
     #endregion
 
     #region GetAssignedSeatTotalForPlanOrThrow
+
     [Theory, BitAutoData]
     public async Task GetAssignedSeatTotalForPlanOrThrow_NullProvider_ContactSupport(
         Guid providerId,
@@ -598,31 +605,17 @@ public class ProviderBillingServiceTests
 
         var providerOrganizationOrganizationDetailList = new List<ProviderOrganizationOrganizationDetails>
         {
-            new ()
-            {
-                Plan = teamsMonthlyPlan.Name,
-                Status = OrganizationStatusType.Managed,
-                Seats = 10
-            },
-            new ()
-            {
-                Plan = teamsMonthlyPlan.Name,
-                Status = OrganizationStatusType.Managed,
-                Seats = 10
-            },
-            new ()
+            new() { Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 10 },
+            new() { Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 10 },
+            new()
             {
                 // Ignored because of status.
-                Plan = teamsMonthlyPlan.Name,
-                Status = OrganizationStatusType.Created,
-                Seats = 100
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Created, Seats = 100
             },
-            new ()
+            new()
             {
                 // Ignored because of plan.
-                Plan = enterpriseMonthlyPlan.Name,
-                Status = OrganizationStatusType.Managed,
-                Seats = 30
+                Plan = enterpriseMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 30
             }
         };
 
@@ -630,13 +623,16 @@ public class ProviderBillingServiceTests
             .GetManyDetailsByProviderAsync(providerId)
             .Returns(providerOrganizationOrganizationDetailList);
 
-        var assignedSeatTotal = await sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly);
+        var assignedSeatTotal =
+            await sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly);
 
         Assert.Equal(20, assignedSeatTotal);
     }
+
     #endregion
 
     #region GetSubscriptionData
+
     [Theory, BitAutoData]
     public async Task GetSubscriptionData_NullProvider_ReturnsNull(
         SutProvider<ProviderBillingService> sutProvider,
@@ -718,11 +714,7 @@ public class ProviderBillingServiceTests
             AllocatedSeats = 60
         };
 
-        var providerPlans = new List<ProviderPlan>
-        {
-            enterprisePlan,
-            teamsPlan,
-        };
+        var providerPlans = new List<ProviderPlan> { enterprisePlan, teamsPlan, };
 
         providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
 
@@ -767,9 +759,11 @@ public class ProviderBillingServiceTests
             Assert.Equal(providerPlan.AllocatedSeats!.Value, configuredProviderPlan.AssignedSeats);
         }
     }
+
     #endregion
 
     #region StartSubscription
+
     [Theory, BitAutoData]
     public async Task StartSubscription_NullProvider_ThrowsArgumentNullException(
         SutProvider<ProviderBillingService> sutProvider) =>
@@ -794,7 +788,8 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
         {
-            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            Id = "customer_id",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         });
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -816,16 +811,11 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
         {
-            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            Id = "customer_id",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         });
 
-        var providerPlans = new List<ProviderPlan>
-        {
-            new ()
-            {
-                PlanType = PlanType.EnterpriseMonthly
-            }
-        };
+        var providerPlans = new List<ProviderPlan> { new() { PlanType = PlanType.EnterpriseMonthly } };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
@@ -846,16 +836,11 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
         {
-            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            Id = "customer_id",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         });
 
-        var providerPlans = new List<ProviderPlan>
-        {
-            new ()
-            {
-                PlanType = PlanType.TeamsMonthly
-            }
-        };
+        var providerPlans = new List<ProviderPlan> { new() { PlanType = PlanType.TeamsMonthly } };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
@@ -876,35 +861,27 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
         {
-            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            Id = "customer_id",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         });
 
         var providerPlans = new List<ProviderPlan>
         {
-            new ()
-            {
-                PlanType = PlanType.TeamsMonthly,
-                SeatMinimum = 100
-            },
-            new ()
-            {
-                PlanType = PlanType.EnterpriseMonthly,
-                SeatMinimum = 100
-            }
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 100 },
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 100 }
         };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
-        {
-            Id = "subscription_id",
-            Status = StripeConstants.SubscriptionStatus.Incomplete
-        });
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>())
+            .Returns(
+                new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Incomplete });
 
         await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
 
-        await sutProvider.GetDependency<IProviderRepository>().Received(1).ReplaceAsync(Arg.Is<Provider>(p => p.GatewaySubscriptionId == "subscription_id"));
+        await sutProvider.GetDependency<IProviderRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<Provider>(p => p.GatewaySubscriptionId == "subscription_id"));
     }
 
     [Theory, BitAutoData]
@@ -916,21 +893,14 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
         {
-            Id = "customer_id", Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            Id = "customer_id",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         });
 
         var providerPlans = new List<ProviderPlan>
         {
-            new ()
-            {
-                PlanType = PlanType.TeamsMonthly,
-                SeatMinimum = 100
-            },
-            new ()
-            {
-                PlanType = PlanType.EnterpriseMonthly,
-                SeatMinimum = 100
-            }
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 100 },
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 100 }
         };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -953,14 +923,15 @@ public class ProviderBillingServiceTests
                 sub.Metadata["providerId"] == provider.Id.ToString() &&
                 sub.OffSession == true &&
                 sub.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations)).Returns(new Subscription
-                {
-                    Id = "subscription_id",
-                    Status = StripeConstants.SubscriptionStatus.Active
-                });
+        {
+            Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active
+        });
 
         await sutProvider.Sut.StartSubscription(provider);
 
-        await sutProvider.GetDependency<IProviderRepository>().Received(1).ReplaceAsync(Arg.Is<Provider>(p => p.GatewaySubscriptionId == "subscription_id"));
+        await sutProvider.GetDependency<IProviderRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<Provider>(p => p.GatewaySubscriptionId == "subscription_id"));
     }
+
     #endregion
 }
