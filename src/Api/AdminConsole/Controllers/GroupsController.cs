@@ -137,7 +137,9 @@ public class GroupsController : Controller
         }
 
         // Flexible Collections - check the user has permission to grant access to the collections for the new group
-        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        if (await FlexibleCollectionsIsEnabledAsync(orgId) &&
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) &&
+            model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
