@@ -15,6 +15,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProviderService, ProviderService>();
         services.AddScoped<ICreateProviderCommand, CreateProviderCommand>();
         services.AddScoped<IRemoveOrganizationFromProviderCommand, RemoveOrganizationFromProviderCommand>();
-        services.AddTransient<IProviderBillingService, ProviderBillingService>();
+        services.AddScoped<IProviderBillingService, ProviderBillingService>();
     }
 }
