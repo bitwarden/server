@@ -139,6 +139,7 @@ public static class FeatureFlagKeys
     public const string EmailVerification = "email-verification";
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
     public const string ExtensionRefresh = "extension-refresh";
+    public const string RestrictProviderAccess = "restrict-provider-access";
 
     public static List<string> GetAllKeys()
     {
