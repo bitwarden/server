@@ -146,8 +146,21 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 50 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingService>()
-            .GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(50);
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 25
+            },
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 25
+            }
+        ]);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -206,8 +219,21 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 95 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingService>()
-            .GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(95);
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 60
+            },
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 35
+            }
+        ]);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -232,6 +258,8 @@ public class ProviderBillingServiceTests
         Organization organization,
         SutProvider<ProviderBillingService> sutProvider)
     {
+        provider.Type = ProviderType.Msp;
+
         organization.Seats = 10;
 
         organization.PlanType = PlanType.TeamsMonthly;
@@ -268,8 +296,21 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 110 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingService>()
-            .GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 60
+            },
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 50
+            }
+        ]);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -330,8 +371,21 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 110 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderBillingService>()
-            .GetAssignedSeatTotalForPlanOrThrow(provider.Id, providerPlan.PlanType).Returns(110);
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 60
+            },
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 50
+            }
+        ]);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
