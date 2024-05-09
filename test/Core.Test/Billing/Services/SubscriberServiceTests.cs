@@ -182,7 +182,7 @@ public class SubscriberServiceTests
 
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());;
+            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>()); ;
     }
     #endregion
 

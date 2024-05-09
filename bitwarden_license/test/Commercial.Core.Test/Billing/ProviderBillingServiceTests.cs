@@ -923,9 +923,10 @@ public class ProviderBillingServiceTests
                 sub.Metadata["providerId"] == provider.Id.ToString() &&
                 sub.OffSession == true &&
                 sub.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations)).Returns(new Subscription
-        {
-            Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active
-        });
+                {
+                    Id = "subscription_id",
+                    Status = StripeConstants.SubscriptionStatus.Active
+                });
 
         await sutProvider.Sut.StartSubscription(provider);
 
