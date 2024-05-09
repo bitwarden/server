@@ -22,6 +22,10 @@ public static class BillingExtensions
             PlanType: PlanType.TeamsMonthly or PlanType.EnterpriseMonthly
         };
 
+    public static bool IsStripeEnabled(this Organization organization)
+        => !string.IsNullOrEmpty(organization.GatewayCustomerId) &&
+           !string.IsNullOrEmpty(organization.GatewaySubscriptionId);
+
     public static bool SupportsConsolidatedBilling(this PlanType planType)
         => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly;
 }

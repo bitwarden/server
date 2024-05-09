@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -112,6 +113,9 @@ public class ProviderOrganizationsController : Controller
             providerOrganization,
             organization);
 
-        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+        if (organization.IsStripeEnabled())
+        {
+            await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+        }
     }
 }
