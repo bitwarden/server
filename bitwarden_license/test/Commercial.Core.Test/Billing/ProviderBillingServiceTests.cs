@@ -154,11 +154,15 @@ public class ProviderBillingServiceTests
         [
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 25
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 25
             },
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 25
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 25
             }
         ]);
 
@@ -227,11 +231,15 @@ public class ProviderBillingServiceTests
         [
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 60
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 60
             },
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 35
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 35
             }
         ]);
 
@@ -304,11 +312,15 @@ public class ProviderBillingServiceTests
         [
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 60
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 60
             },
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 50
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 50
             }
         ]);
 
@@ -379,11 +391,15 @@ public class ProviderBillingServiceTests
         [
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 60
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 60
             },
             new ProviderOrganizationOrganizationDetails
             {
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 50
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 50
             }
         ]);
 
