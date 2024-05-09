@@ -26,7 +26,6 @@ public class ProviderBillingService(
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
-    IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
@@ -303,8 +302,7 @@ public class ProviderBillingService(
 
         var seatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
 
-        var currentlyAssignedSeatTotal =
-            await providerBillingService.GetAssignedSeatTotalForPlanOrThrow(provider.Id, planType);
+        var currentlyAssignedSeatTotal = await GetAssignedSeatTotalForPlanOrThrow(provider.Id, planType);
 
         var newlyAssignedSeatTotal = currentlyAssignedSeatTotal + seatAdjustment;
 
