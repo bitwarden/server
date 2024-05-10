@@ -12,6 +12,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace Bit.Api.Controllers;
 
@@ -153,12 +154,14 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
+    [EnableQuery]
+    public async Task<IEnumerable<CollectionResponseModel>> Get(Guid orgId)
     {
         if (await FlexibleCollectionsIsEnabledAsync(orgId))
         {
             // New flexible collections logic
-            return await GetByOrgId_vNext(orgId);
+            var data = await GetByOrgId_vNext(orgId);
+            return data.Data;
         }
 
         // Old pre-flexible collections logic follows
@@ -179,8 +182,10 @@ public class CollectionsController : Controller
             orgCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
         }
 
-        var responses = orgCollections.Select(c => new CollectionResponseModel(c));
-        return new ListResponseModel<CollectionResponseModel>(responses);
+        // var responses = orgCollections.Select(c => new CollectionResponseModel(c));
+        // return new ListResponseModel<CollectionResponseModel>(responses);
+
+        return orgCollections.Select(c => new CollectionResponseModel(c));
     }
 
     [HttpGet("~/collections")]

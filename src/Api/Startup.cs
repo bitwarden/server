@@ -30,6 +30,14 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
+using Microsoft.AspNetCore.OData;
+
+
+
+
+
+
+
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -197,6 +205,11 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
+        // Define any EDM model relations needed here. Inject the OData methods
+        // into the existing controllers. 
+        services.AddControllers().AddOData(
+            options => options.Select().Filter().Count().OrderBy().Expand());
+
         services.AddSwagger(globalSettings);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
@@ -239,6 +252,9 @@ public class Startup
 
         // Add static files to the request pipeline.
         app.UseStaticFiles();
+
+        // Add OData Route Debug Middleware
+        app.UseODataRouteDebug();
 
         // Add routing
         app.UseRouting();
