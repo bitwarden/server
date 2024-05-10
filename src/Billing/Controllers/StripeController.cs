@@ -3,6 +3,8 @@ using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -23,6 +25,7 @@ using Stripe;
 using Customer = Stripe.Customer;
 using Event = Stripe.Event;
 using JsonSerializer = System.Text.Json.JsonSerializer;
+using Plan = Stripe.Plan;
 using Subscription = Stripe.Subscription;
 using TaxRate = Bit.Core.Entities.TaxRate;
 using Transaction = Bit.Core.Entities.Transaction;
@@ -55,6 +58,7 @@ public class StripeController : Controller
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeFacade _stripeFacade;
     private readonly IFeatureService _featureService;
+    private readonly IProviderRepository _providerRepository;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -74,7 +78,8 @@ public class StripeController : Controller
         ICurrentContext currentContext,
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IProviderRepository providerRepository)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -102,6 +107,7 @@ public class StripeController : Controller
         _stripeEventService = stripeEventService;
         _stripeFacade = stripeFacade;
         _featureService = featureService;
+        _providerRepository = providerRepository;
     }
 
     [HttpPost("webhook")]
@@ -425,7 +431,61 @@ public class StripeController : Controller
         }
 
         var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
-        if (organizationId.HasValue)
+
+        if (providerId.HasValue)
+        {
+            var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+
+            if (provider == null)
+            {
+                _logger.LogError(
+                    "Received invoice.payment_succeeded webhook ({EventID}) for Provider ({ProviderID}) that does not exist",
+                    parsedEvent.Id,
+                    providerId.Value);
+
+                return;
+            }
+
+            var teamsMonthly = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+            var enterpriseMonthly = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+
+            var teamsMonthlyLineItem =
+                subscription.Items.Data.FirstOrDefault(item =>
+                    item.Plan.Id == teamsMonthly.PasswordManager.StripeSeatPlanId);
+
+            var enterpriseMonthlyLineItem =
+                subscription.Items.Data.FirstOrDefault(item =>
+                    item.Plan.Id == enterpriseMonthly.PasswordManager.StripeSeatPlanId);
+
+            if (teamsMonthlyLineItem == null || enterpriseMonthlyLineItem == null)
+            {
+                _logger.LogError("invoice.payment_succeeded webhook ({EventID}) for Provider ({ProviderID}) indicates missing subscription line items",
+                    parsedEvent.Id,
+                    provider.Id);
+
+                return;
+            }
+
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
+            {
+                Type = ReferenceEventType.Rebilled,
+                Source = ReferenceEventSource.Provider,
+                Id = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                Seats = (int)teamsMonthlyLineItem.Quantity
+            });
+
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
+            {
+                Type = ReferenceEventType.Rebilled,
+                Source = ReferenceEventSource.Provider,
+                Id = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                Seats = (int)enterpriseMonthlyLineItem.Quantity
+            });
+        }
+        else if (organizationId.HasValue)
         {
             if (!subscription.Items.Any(i =>
                     StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
