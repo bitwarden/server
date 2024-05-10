@@ -82,7 +82,7 @@ public class OrganizationAuthRequestsController : Controller
         throw new NotImplementedException();
     }
 
-    private async Task ValidateAdminRequest(Guid orgId)
+    public async Task ValidateAdminRequest(Guid orgId)
     {
         if (!await _currentContext.ManageResetPassword(orgId))
         {
