@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+using Bit.Core.AdminConsole.OrganizationAuth.Models;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -77,9 +78,21 @@ public class OrganizationAuthRequestsController : Controller
 
     [RequireFeature(FeatureFlagKeys.BulkDeviceApproval)]
     [HttpPost("")]
-    public async Task UpdateManyAuthRequests(Guid orgId, [FromBody] OrganizationAuthRequestUpdateManyRequestModel model)
+    public async Task UpdateManyAuthRequests(Guid orgId, [FromBody] IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> model)
     {
-        throw new NotImplementedException();
+        await ValidateAdminRequest(orgId);
+
+        await _updateOrganizationAuthRequestCommand.UpdateManyAsync(
+            orgId,
+            model.Select(x =>
+                new OrganizationAuthRequestUpdateCommandModel
+                {
+                    Id = x.Id,
+                    Key = x.Key,
+                    Approved = x.Approved
+                }
+            ).ToList()
+        );
     }
 
     public async Task ValidateAdminRequest(Guid orgId)
