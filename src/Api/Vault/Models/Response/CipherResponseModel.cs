@@ -102,6 +102,7 @@ public class CipherResponseModel : CipherMiniResponseModel
     public bool Favorite { get; set; }
     public bool Edit { get; set; }
     public bool ViewPassword { get; set; }
+    public bool Unavailable { get; set; }
 }
 
 public class CipherDetailsResponseModel : CipherResponseModel
