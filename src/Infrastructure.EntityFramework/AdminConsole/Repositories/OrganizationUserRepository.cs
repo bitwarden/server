@@ -661,6 +661,26 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await GetCountFromQuery(query);
     }
 
+    public async Task<IEnumerable<OrganizationUserResetPasswordDetails>>
+        GetManyResetPasswordDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        where organizationUserIds.Contains(ou.Id)
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id
+                        join o in dbContext.Organizations
+                            on ou.OrganizationId equals o.Id
+                        where ou.OrganizationId == organizationId
+                        select new { ou, u, o };
+            var data = await query
+                .Select(x => new OrganizationUserResetPasswordDetails(x.ou, x.u, x.o)).ToListAsync();
+            return data;
+        }
+    }
+
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Core.Entities.OrganizationUser> resetPasswordKeys)

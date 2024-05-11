@@ -523,6 +523,20 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyResetPasswordDetailsByOrganizationUserAsync(
+        Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserResetPasswordDetails>(
+                "[dbo].[OrganizationUser_ReadManyResetPasswordDetailsByOrganizationUserIds]",
+                new { OrganizationId = organizationId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<OrganizationUser> resetPasswordKeys)
