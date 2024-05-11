@@ -12,7 +12,7 @@ BEGIN
         U.[KdfMemory],
         U.[KdfParallelism],
         OU.[ResetPasswordKey],
-        O.[PrivateKey]
+        O.[PrivateKey] AS EncryptedPrivateKey
     FROM @OrganizationUserIds AS OUIDs
     INNER JOIN [dbo].[OrganizationUser] AS OU
         ON OUIDs.[Id] = OU.[Id]
