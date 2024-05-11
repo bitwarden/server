@@ -186,7 +186,7 @@ public class OrganizationUsersController : Controller
         return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
     }
 
-    [HttpGet("{id}/bulk-reset-password-details")]
+    [HttpPost("reset-password-details")]
     public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetResetPasswordDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         // Make sure the calling user can reset passwords for this org
