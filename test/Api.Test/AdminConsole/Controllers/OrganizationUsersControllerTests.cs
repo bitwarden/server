@@ -471,6 +471,45 @@ public class OrganizationUsersControllerTests
         Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task GetResetPasswordDetails_ReturnsDetails(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        ICollection<OrganizationUserResetPasswordDetails> resetPasswordDetails,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyResetPasswordDetailsByOrganizationUserAsync(organizationId, bulkRequestModel.Ids)
+            .Returns(resetPasswordDetails);
+
+        var response = await sutProvider.Sut.GetResetPasswordDetails(organizationId, bulkRequestModel);
+
+        Assert.Equal(resetPasswordDetails.Count, response.Data.Count());
+        Assert.True(response.Data.All(r =>
+            resetPasswordDetails.Any(ou =>
+                ou.OrganizationUserId == r.OrganizationUserId &&
+                ou.Kdf == r.Kdf &&
+                ou.KdfIterations == r.KdfIterations &&
+                ou.KdfMemory == r.KdfMemory &&
+                ou.KdfParallelism == r.KdfParallelism &&
+                ou.ResetPasswordKey == r.ResetPasswordKey &&
+                ou.EncryptedPrivateKey == r.EncryptedPrivateKey)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetResetPasswordDetails_WithoutManageResetPasswordPermission_Throws(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetResetPasswordDetails(organizationId, bulkRequestModel));
+    }
+
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider, OrganizationAbility organizationAbility,
         OrganizationUser organizationUser, Guid savingUserId, OrganizationUserUpdateRequestModel model, bool authorizeAll)
     {
