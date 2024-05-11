@@ -6,6 +6,11 @@ namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 public class OrganizationUserResetPasswordDetails
 {
+    public OrganizationUserResetPasswordDetails()
+    {
+
+    }
+
     public OrganizationUserResetPasswordDetails(OrganizationUser orgUser, User user, Organization org)
     {
         if (orgUser == null)
