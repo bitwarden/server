@@ -128,6 +128,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(orgUser));
         }
 
+        OrganizationUserId = orgUser.OrganizationUserId;
         Kdf = orgUser.Kdf;
         KdfIterations = orgUser.KdfIterations;
         KdfMemory = orgUser.KdfMemory;
@@ -136,6 +137,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
         EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
     }
 
+    public Guid OrganizationUserId { get; set; }
     public KdfType Kdf { get; set; }
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }

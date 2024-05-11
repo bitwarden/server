@@ -23,6 +23,7 @@ public class OrganizationUserResetPasswordDetails
             throw new ArgumentNullException(nameof(org));
         }
 
+        OrganizationUserId = orgUser.Id;
         Kdf = user.Kdf;
         KdfIterations = user.KdfIterations;
         KdfMemory = user.KdfMemory;
@@ -30,6 +31,7 @@ public class OrganizationUserResetPasswordDetails
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = org.PrivateKey;
     }
+    public Guid OrganizationUserId { get; set; }
     public KdfType Kdf { get; set; }
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }

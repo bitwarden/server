@@ -186,6 +186,19 @@ public class OrganizationUsersController : Controller
         return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
     }
 
+    [HttpGet("{id}/bulk-reset-password-details")]
+    public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetResetPasswordDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        // Make sure the calling user can reset passwords for this org
+        if (!await _currentContext.ManageResetPassword(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var responses = await _organizationUserRepository.GetManyResetPasswordDetailsByOrganizationUserAsync(orgId, model.Ids);
+        return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(responses.Select(r => new OrganizationUserResetPasswordDetailsResponseModel(r)));
+    }
+
     [HttpPost("invite")]
     public async Task Invite(Guid orgId, [FromBody] OrganizationUserInviteRequestModel model)
     {
