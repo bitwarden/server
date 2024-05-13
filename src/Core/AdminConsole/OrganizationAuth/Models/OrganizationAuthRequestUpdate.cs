@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.AdminConsole.OrganizationAuth.Models;
 
-public class OrganizationAuthRequestUpdateCommandModel
+public class OrganizationAuthRequestUpdate
 {
     public Guid Id { get; set; }
     public bool Approved { get; set; }

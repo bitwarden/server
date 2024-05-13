@@ -179,7 +179,7 @@ public class UpdateOrganizationAuthRequestCommandTests
     [BitAutoData]
     public void ProcessManyAuthRequests_NullRequestsInput_ReturnsEmptyList(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        IEnumerable<OrganizationAuthRequestUpdateCommandModel> updates,
+        IEnumerable<OrganizationAuthRequestUpdate> updates,
         Guid organizationId
     )
     {
@@ -204,7 +204,7 @@ public class UpdateOrganizationAuthRequestCommandTests
     public void ProcessManyAuthRequests_ValidInput_ReturnsPopulatedList(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
         List<OrganizationAdminAuthRequest> authRequestRecords,
-        List<OrganizationAuthRequestUpdateCommandModel> updates,
+        List<OrganizationAuthRequestUpdate> updates,
         Guid organizationId,
         string key
     )
@@ -351,7 +351,7 @@ public class UpdateOrganizationAuthRequestCommandTests
     public void FilterOutAuthRequestsWithNoUpdate_NoUpdate_Drops(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
         List<OrganizationAdminAuthRequest> authRequests,
-        IEnumerable<OrganizationAuthRequestUpdateCommandModel> authRequestUpdates
+        IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates
     )
     {
         var checkForMatchingIds = true;
@@ -376,7 +376,7 @@ public class UpdateOrganizationAuthRequestCommandTests
     public void FilterOutAuthRequestsWithNoUpdate_UpdateFound_Passes(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
         List<OrganizationAdminAuthRequest> authRequests,
-        List<OrganizationAuthRequestUpdateCommandModel> authRequestUpdates
+        List<OrganizationAuthRequestUpdate> authRequestUpdates
     )
     {
         authRequests[0].Id = authRequestUpdates[0].Id;
@@ -690,9 +690,9 @@ public class UpdateOrganizationAuthRequestCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateMany_ValidRequest_DoesNotThrow(
+    public async Task UpdateAsync_ValidRequest_DoesNotThrow(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        IEnumerable<OrganizationAuthRequestUpdateCommandModel> authRequestUpdates,
+        IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates,
         OrganizationAdminAuthRequest existingAuthRequest,
         Guid organizationId
     )

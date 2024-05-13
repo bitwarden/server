@@ -73,7 +73,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         }
     }
 
-    public async Task UpdateAsync(Guid organizationId, IEnumerable<OrganizationAuthRequestUpdateCommandModel> authRequestUpdates)
+    public async Task UpdateAsync(Guid organizationId, IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates)
     {
         var databaseRecords = await FetchManyOrganizationAuthRequestsFromTheDatabase(organizationId, authRequestUpdates.Select(aru => aru.Id));
         var processedAuthRequests = ProcessManyAuthRequests(databaseRecords, authRequestUpdates, organizationId);
@@ -104,7 +104,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
 
     public IEnumerable<T> ProcessManyAuthRequests<T>(
             IEnumerable<T> authRequestsToProcess,
-            IEnumerable<OrganizationAuthRequestUpdateCommandModel> updates,
+            IEnumerable<OrganizationAuthRequestUpdate> updates,
             Guid organizationId) where T : AuthRequest
     {
         var processedAuthRequests = new List<T>();
@@ -155,7 +155,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
 
     public IEnumerable<T> FilterOutAuthRequestsWithNoUpdates<T>(
         IEnumerable<T> authRequests,
-        IEnumerable<OrganizationAuthRequestUpdateCommandModel> authRequestUpdates
+        IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates
     ) where T : AuthRequest
     {
         return authRequests?.Where(ar => authRequestUpdates.FirstOrDefault(aru => ar.Id == aru.Id) != null).ToList() ?? new List<T>();
