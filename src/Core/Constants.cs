@@ -102,9 +102,6 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
-    public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
-    public const string PasswordlessLogin = "passwordless-login";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
     public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string VaultOnboarding = "vault-onboarding";
