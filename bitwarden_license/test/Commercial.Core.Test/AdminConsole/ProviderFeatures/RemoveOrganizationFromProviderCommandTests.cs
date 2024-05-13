@@ -106,13 +106,13 @@ public class RemoveOrganizationFromProviderCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
         organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns([
-            "a@b.com",
-            "b@b.com"
+            "a@example.com",
+            "b@example.com"
         ]);
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@b.com"));
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
             .DeleteAsync(providerOrganization);
@@ -120,7 +120,15 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
 
-        sutProvider.GetDependency<IFeatureService>().DidNotReceiveWithAnyArgs().IsEnabled(Arg.Any<string>());
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendProviderUpdatePaymentMethod(
+                organization.Id,
+                organization.Name,
+                provider.Name,
+                Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
+
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
     }
 
     [Theory, BitAutoData]
@@ -141,8 +149,8 @@ public class RemoveOrganizationFromProviderCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
         organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns([
-            "a@b.com",
-            "b@b.com"
+            "a@example.com",
+            "b@example.com"
         ]);
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
@@ -154,7 +162,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         await stripeAdapter.Received(1).CustomerUpdateAsync(organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options =>
-                options.Coupon == string.Empty && options.Email == "a@b.com"));
+                options.Coupon == string.Empty && options.Email == "a@example.com"));
 
         await stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -163,13 +171,20 @@ public class RemoveOrganizationFromProviderCommandTests
 
         await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentMethod(organization);
 
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@b.com"));
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
             .DeleteAsync(providerOrganization);
 
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
+
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendProviderUpdatePaymentMethod(
+                organization.Id,
+                organization.Name,
+                provider.Name,
+                Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
     }
 
     [Theory, BitAutoData]
@@ -198,8 +213,8 @@ public class RemoveOrganizationFromProviderCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
         organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns([
-            "a@b.com",
-            "b@b.com"
+            "a@example.com",
+            "b@example.com"
         ]);
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
@@ -228,12 +243,23 @@ public class RemoveOrganizationFromProviderCommandTests
         await sutProvider.GetDependency<IProviderBillingService>().Received(1)
             .ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
 
-        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@b.com" && organization.GatewaySubscriptionId == "subscription_id"));
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+            org =>
+                org.BillingEmail == "a@example.com" &&
+                org.GatewaySubscriptionId == "subscription_id" &&
+                org.Status == OrganizationStatusType.Created));
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
             .DeleteAsync(providerOrganization);
 
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
+
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .SendProviderUpdatePaymentMethod(
+                organization.Id,
+                organization.Name,
+                provider.Name,
+                Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
     }
 }
