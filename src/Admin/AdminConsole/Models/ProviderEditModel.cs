@@ -46,6 +46,16 @@ public class ProviderEditModel : ProviderViewModel
     [Display(Name = "Gateway Subscription Id")]
     public string GatewaySubscriptionId { get; set; }
 
+    public virtual Provider ToProvider(Provider existingProvider)
+    {
+        existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant().Trim();
+        existingProvider.BillingPhone = BillingPhone?.ToLowerInvariant().Trim();
+        existingProvider.Gateway = Gateway;
+        existingProvider.GatewayCustomerId = GatewayCustomerId;
+        existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
+        return existingProvider;
+    }
+
     private static int GetSeatMinimum(IEnumerable<ProviderPlan> providerPlans, PlanType planType)
         => providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == planType)?.SeatMinimum ?? 0;
 }

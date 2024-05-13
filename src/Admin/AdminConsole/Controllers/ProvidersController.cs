@@ -184,11 +184,7 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        provider.BillingEmail = model.BillingEmail?.ToLowerInvariant().Trim();
-        provider.BillingPhone = model.BillingPhone?.ToLowerInvariant().Trim();
-        provider.Gateway = model.Gateway;
-        provider.GatewayCustomerId = model.GatewayCustomerId;
-        provider.GatewaySubscriptionId = model.GatewaySubscriptionId;
+        model.ToProvider(provider);
 
         await _providerRepository.ReplaceAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
@@ -219,12 +215,14 @@ public class ProvidersController : Controller
         {
             foreach (var providerPlan in providerPlans)
             {
-                providerPlan.SeatMinimum = providerPlan.PlanType switch
+                if (providerPlan.PlanType == PlanType.EnterpriseMonthly)
                 {
-                    PlanType.TeamsMonthly => model.TeamsMonthlySeatMinimum,
-                    PlanType.EnterpriseMonthly => model.EnterpriseMonthlySeatMinimum,
-                    _ => providerPlan.SeatMinimum
-                };
+                    providerPlan.SeatMinimum = model.EnterpriseMonthlySeatMinimum;
+                }
+                else if (providerPlan.PlanType == PlanType.TeamsMonthly)
+                {
+                    providerPlan.SeatMinimum = model.TeamsMonthlySeatMinimum;
+                }
 
                 await _providerPlanRepository.ReplaceAsync(providerPlan);
             }
