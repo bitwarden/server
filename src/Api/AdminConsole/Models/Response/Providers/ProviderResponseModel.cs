@@ -26,6 +26,7 @@ public class ProviderResponseModel : ResponseModel
         BillingEmail = provider.BillingEmail;
         CreationDate = provider.CreationDate;
         Type = provider.Type;
+        Status = provider.Status;
     }
 
     public Guid Id { get; set; }
@@ -40,4 +41,5 @@ public class ProviderResponseModel : ResponseModel
     public string BillingEmail { get; set; }
     public DateTime CreationDate { get; set; }
     public ProviderType Type { get; set; }
+    public ProviderStatusType Status { get; set; }
 }
