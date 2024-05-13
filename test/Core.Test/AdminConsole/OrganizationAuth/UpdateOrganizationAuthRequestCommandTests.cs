@@ -263,94 +263,92 @@ public class UpdateOrganizationAuthRequestCommandTests
 
     [Theory]
     [BitAutoData]
-    public void FilterOutSpentAuthRequests_NullInput_ReturnsEmptyList(
+    public void IsAuthRequestSpent_NullInput_RequestIsSpent(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider
     )
     {
-        var sutResponse = sutProvider.Sut.FilterOutSpentAuthRequests((List<OrganizationAdminAuthRequest>)null);
-        Assert.Equal(sutResponse, new List<OrganizationAdminAuthRequest>());
+        var sutResponse = sutProvider.Sut.IsAuthRequestSpent((OrganizationAdminAuthRequest)null);
+        Assert.True(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutSpentAuthRequests_RequestAlreadyApproved_Drops(
+    public void IsAuthRequestSpent_AuthRequestIsApproved_RequestIsSpent(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests,
+        OrganizationAdminAuthRequest authRequest,
         string Key
     )
     {
-        authRequests[0] = UnrespondToAuthRequest(authRequests[0]);
-        authRequests[0] = sutProvider.Sut.ApproveAuthRequest(authRequests[0], Key);
-        var sutResponse = sutProvider.Sut.FilterOutSpentAuthRequests(authRequests);
-        Assert.Null(sutResponse.SingleOrDefault(x => x == authRequests[0]));
+        authRequest = sutProvider.Sut.ApproveAuthRequest(authRequest, Key);
+        var sutResponse = sutProvider.Sut.IsAuthRequestSpent(authRequest);
+        Assert.True(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutSpentAuthRequests_RequestAlreadyDenied_Drops(
+    public void IsAuthRequestSpent_AuthRequestIsDenied_RequestIsSpent(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests
+        OrganizationAdminAuthRequest authRequest
     )
     {
-        authRequests[0] = UnrespondToAuthRequest(authRequests[0]);
-        authRequests[0] = sutProvider.Sut.DenyAuthRequest(authRequests[0]);
-        var sutResponse = sutProvider.Sut.FilterOutSpentAuthRequests(authRequests);
-        Assert.Null(sutResponse.SingleOrDefault(x => x == authRequests[0]));
+        authRequest = sutProvider.Sut.DenyAuthRequest(authRequest);
+        var sutResponse = sutProvider.Sut.IsAuthRequestSpent(authRequest);
+        Assert.True(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutSpentAuthRequests_UnresolvedAuthRequest_Passes(
+    public void IsAuthRequestSpent_AuthRequestIsUnresolved_RequestIsNotSpent(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests
+        OrganizationAdminAuthRequest authRequest
     )
     {
-        authRequests[0] = UnrespondToAuthRequest(authRequests[0]);
-        var sutResponse = sutProvider.Sut.FilterOutSpentAuthRequests(authRequests);
-        Assert.NotNull(sutResponse.SingleOrDefault(x => x == authRequests[0]));
+        authRequest = UnrespondToAuthRequest(authRequest);
+        var sutResponse = sutProvider.Sut.IsAuthRequestSpent(authRequest);
+        Assert.False(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutExpiredAuthRequests_NullInput_ReturnsEmptyList(
+    public void IsAuthRequestExpired_NullInput_IsExpired(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider
     )
     {
-        var sutResponse = sutProvider.Sut.FilterOutExpiredAuthRequests((List<OrganizationAdminAuthRequest>)null);
-        Assert.Equal(sutResponse, new List<OrganizationAdminAuthRequest>());
+        var sutResponse = sutProvider.Sut.IsAuthRequestExpired((OrganizationAdminAuthRequest)null);
+        Assert.True(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutExpiredAuthRequests_RequestIsExpired_Drops(
+    public void IsAuthRequestExpired_RequestIsExpired_IsExpired(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests
+        OrganizationAdminAuthRequest authRequest
     )
     {
-        authRequests[0].CreationDate = DateTime.UtcNow.AddDays(-1);
-        var sutResponse = sutProvider.Sut.FilterOutExpiredAuthRequests(authRequests);
+        authRequest.CreationDate = DateTime.UtcNow.AddDays(-1);
         sutProvider.Sut.FetchRequestExpirationTimespan().Returns(TimeSpan.MinValue);
-        Assert.Null(sutResponse.SingleOrDefault(x => x == authRequests[0]));
+        var sutResponse = sutProvider.Sut.IsAuthRequestExpired(authRequest);
+        Assert.True(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutExpiredAuthRequests_RequestIsNotExpired_Passes(
+    public void IsAuthRequestExpired_RequestIsNotExpired_IsNotExpired(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests
+        OrganizationAdminAuthRequest authRequest
     )
     {
-        authRequests[0].CreationDate = DateTime.UtcNow.AddDays(-1);
-        sutProvider.Sut.FetchRequestExpirationTimespan().Returns(DateTime.UtcNow.AddDays(5) - authRequests[0].CreationDate);
-        var sutResponse = sutProvider.Sut.FilterOutExpiredAuthRequests(authRequests);
-        Assert.NotNull(sutResponse.SingleOrDefault(x => x == authRequests[0]));
+        authRequest.CreationDate = DateTime.UtcNow.AddDays(-1);
+        sutProvider.Sut.FetchRequestExpirationTimespan().Returns(DateTime.UtcNow.AddDays(5) - authRequest.CreationDate);
+        var sutResponse = sutProvider.Sut.IsAuthRequestExpired(authRequest);
+        Assert.False(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutAuthRequestsWithNoUpdate_NoUpdate_Drops(
+    public void IsAuthRequestBeingUpdated_NoUpdate_False(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests,
+        OrganizationAdminAuthRequest authRequest,
         IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates
     )
     {
@@ -358,68 +356,63 @@ public class UpdateOrganizationAuthRequestCommandTests
         while (checkForMatchingIds)
         {
             checkForMatchingIds = false;
-            foreach (var authRequest in authRequests)
+            foreach (var update in authRequestUpdates)
             {
-                if (authRequestUpdates.FirstOrDefault(aru => aru.Id == authRequest.Id) != null)
+                if (authRequest.Id == update.Id)
                 {
                     authRequest.Id = new Guid();
                     checkForMatchingIds = true;
                 }
             }
         }
-        var sutResponse = sutProvider.Sut.FilterOutAuthRequestsWithNoUpdates(authRequests, authRequestUpdates);
-        Assert.Empty(sutResponse);
+        var sutResponse = sutProvider.Sut.IsAuthRequestBeingUpdated(authRequest, authRequestUpdates);
+        Assert.False(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutAuthRequestsWithNoUpdate_UpdateFound_Passes(
+    public void IsAuthRequestBeingUpdated_UpdateFound_True(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests,
+        OrganizationAdminAuthRequest authRequest,
         List<OrganizationAuthRequestUpdate> authRequestUpdates
     )
     {
-        authRequests[0].Id = authRequestUpdates[0].Id;
-        var sutResponse = sutProvider.Sut.FilterOutAuthRequestsWithNoUpdates(authRequests, authRequestUpdates);
-        Assert.NotEmpty(sutResponse);
+        authRequest.Id = authRequestUpdates[0].Id;
+        var sutResponse = sutProvider.Sut.IsAuthRequestBeingUpdated(authRequest, authRequestUpdates);
+        Assert.True(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutAuthRequestsThatDoNotMatchOrganizationId_OrganizationIdDoesNotMatch_Drops(
+    public void IsAuthRequestForTheCorrectOrganization_OrganizationIdDoesNotMatch_False(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests,
+        OrganizationAdminAuthRequest authRequest,
         Guid organizationId
     )
     {
-        var checkForMatchingIds = true;
-        while (checkForMatchingIds)
+        while (true)
         {
-            checkForMatchingIds = false;
-            foreach (var authRequest in authRequests)
+            if (authRequest.OrganizationId != organizationId)
             {
-                if (authRequest.OrganizationId == organizationId)
-                {
-                    authRequest.OrganizationId = new Guid();
-                    checkForMatchingIds = true;
-                }
+                break;
             }
+            organizationId = new Guid();
         }
-        var sutResponse = sutProvider.Sut.FilterOutAuthRequestsThatDoNotMatchOrganizationId(authRequests, organizationId);
-        Assert.Equal(sutResponse, new List<OrganizationAdminAuthRequest>());
+        var sutResponse = sutProvider.Sut.IsAuthRequestForTheCorrectOrganization(authRequest, organizationId);
+        Assert.False(sutResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public void FilterOutAuthRequestsThatDoNotMatchOrganizationId_OrganizationIdMatches_Passes(
+    public void IsAuthRequestForTheCorrectOrganization_OrganizationIdMatches_True(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
-        List<OrganizationAdminAuthRequest> authRequests,
+        OrganizationAdminAuthRequest authRequest,
         Guid organizationId
     )
     {
-        authRequests[0].OrganizationId = organizationId;
-        var sutResponse = sutProvider.Sut.FilterOutAuthRequestsThatDoNotMatchOrganizationId(authRequests, organizationId);
-        Assert.NotEmpty(sutResponse);
+        authRequest.OrganizationId = organizationId;
+        var sutResponse = sutProvider.Sut.IsAuthRequestForTheCorrectOrganization(authRequest, organizationId);
+        Assert.True(sutResponse);
     }
 
     [Theory]

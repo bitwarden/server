@@ -108,10 +108,11 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
             Guid organizationId) where T : AuthRequest
     {
         var processedAuthRequests = new List<T>();
-        authRequestsToProcess = FilterOutSpentAuthRequests(authRequestsToProcess);
-        authRequestsToProcess = FilterOutExpiredAuthRequests(authRequestsToProcess);
-        authRequestsToProcess = FilterOutAuthRequestsWithNoUpdates(authRequestsToProcess, updates);
-        authRequestsToProcess = FilterOutAuthRequestsThatDoNotMatchOrganizationId(authRequestsToProcess, organizationId);
+        authRequestsToProcess = authRequestsToProcess
+            .Where(ar => !IsAuthRequestSpent(ar))
+            .Where(ar => !IsAuthRequestExpired(ar))
+            .Where(ar => IsAuthRequestForTheCorrectOrganization(ar, organizationId))
+            .Where(ar => IsAuthRequestBeingUpdated(ar, updates));
         foreach (var authRequestToProcess in authRequestsToProcess ?? new List<T>())
         {
             var updatesForThisRequest = updates.SingleOrDefault(u => u.Id == authRequestToProcess.Id);
@@ -143,30 +144,30 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         return authRequestToDeny;
     }
 
-    public IEnumerable<T> FilterOutSpentAuthRequests<T>(IEnumerable<T> authRequests) where T : AuthRequest
+    public bool IsAuthRequestSpent<T>(T authRequest) where T : AuthRequest
     {
-        return authRequests?.Where(au => au.Approved == null && !au.ResponseDate.HasValue && !au.AuthenticationDate.HasValue).ToList() ?? new List<T>();
+        return authRequet == null || authRequest.Approved != null || authRequest.ResponseDate.HasValue || authRequest.AuthenticationDate.HasValue;
     }
 
-    public IEnumerable<T> FilterOutExpiredAuthRequests<T>(IEnumerable<T> authRequests) where T : AuthRequest
+    public bool IsAuthRequestExpired<T>(T authRequest) where T : AuthRequest
     {
-        return authRequests?.Where(au => DateTime.UtcNow < au.CreationDate.Add(FetchRequestExpirationTimespan())).ToList() ?? new List<T>();
+        return DateTime.UtcNow < authRequest.CreationDate.Add(FetchRequestExpirationTimespan());
     }
 
-    public IEnumerable<T> FilterOutAuthRequestsWithNoUpdates<T>(
-        IEnumerable<T> authRequests,
+    public bool IsAuthRequestBeingUpdated<T>(
+        T authRequest,
         IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates
     ) where T : AuthRequest
     {
-        return authRequests?.Where(ar => authRequestUpdates.FirstOrDefault(aru => ar.Id == aru.Id) != null).ToList() ?? new List<T>();
+        return authRequestUpdates.FirstOrDefault(aru => aru.Id == authRequest.Id) != null;
     }
 
-    public IEnumerable<T> FilterOutAuthRequestsThatDoNotMatchOrganizationId<T>(
-        IEnumerable<T> authRequests,
+    public bool IsAuthRequestForTheCorrectOrganization<T>(
+        T authRequest,
         Guid organizationId
     ) where T : AuthRequest
     {
-        return authRequests?.Where(ar => ar.OrganizationId == organizationId).ToList() ?? new List<T>();
+        return authRequest.OrganizationId == organizationId;
     }
 
     public TimeSpan FetchRequestExpirationTimespan()
