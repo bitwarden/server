@@ -73,7 +73,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         }
     }
 
-    public async Task UpdateManyAsync(Guid organizationId, IEnumerable<OrganizationAuthRequestUpdateCommandModel> authRequestUpdates)
+    public async Task UpdateAsync(Guid organizationId, IEnumerable<OrganizationAuthRequestUpdateCommandModel> authRequestUpdates)
     {
         var databaseRecords = await FetchManyOrganizationAuthRequestsFromTheDatabase(organizationId, authRequestUpdates.Select(aru => aru.Id));
         var processedAuthRequests = ProcessManyAuthRequests(databaseRecords, authRequestUpdates, organizationId);

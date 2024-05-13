@@ -705,7 +705,7 @@ public class UpdateOrganizationAuthRequestCommandTests
                 return existingAuthRequest;
             }).ToList();
         sutProvider.Sut.FetchManyOrganizationAuthRequestsFromTheDatabase(organizationId, authRequestUpdates.Select(x => x.Id)).Returns(updatedAuthRequests);
-        await sutProvider.Sut.UpdateManyAsync(organizationId, authRequestUpdates);
+        await sutProvider.Sut.UpdateAsync(organizationId, authRequestUpdates);
     }
 
     private T UnrespondToAuthRequest<T>(T authRequestToUnrespondTo) where T : AuthRequest
