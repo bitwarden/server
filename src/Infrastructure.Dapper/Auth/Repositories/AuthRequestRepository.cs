@@ -1,9 +1,9 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Infrastructure.Dapper.Auth.Helpers;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -83,12 +83,11 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
             return;
         }
 
-        var authRequestsTVP = authRequests.ToDataTable();
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 $"[dbo].[AuthRequest_UpdateMany]",
-                new { AuthRequestsInput = authRequestsTVP },
+                new { jsonData = JsonSerializer.Serialize(authRequests) },
                 commandType: CommandType.StoredProcedure);
         }
     }

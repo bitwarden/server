@@ -1,42 +1,8 @@
-IF NOT EXISTS (
-    SELECT
-        *
-    FROM
-        sys.types
-    WHERE
-        [Name] = 'AuthRequestType' AND
-        is_user_defined = 1
-)
-BEGIN
-    CREATE TYPE [dbo].[AuthRequestType] AS TABLE(
-        [Id]                        UNIQUEIDENTIFIER,
-        [UserId]                    UNIQUEIDENTIFIER,
-        [Type]                      SMALLINT,
-        [RequestDeviceIdentifier]   NVARCHAR(50),
-        [RequestDeviceType]         SMALLINT,
-        [RequestIpAddress]          VARCHAR(50),
-        [ResponseDeviceId]          UNIQUEIDENTIFIER,
-        [AccessCode]                VARCHAR(25),
-        [PublicKey]                 VARCHAR(MAX),
-        [Key]                       VARCHAR(MAX),
-        [MasterPasswordHash]        VARCHAR(MAX),
-        [Approved]                  BIT,
-        [CreationDate]              DATETIME2 (7),
-        [ResponseDate]              DATETIME2 (7),
-        [AuthenticationDate]        DATETIME2 (7),
-        [OrganizationId]            UNIQUEIDENTIFIER
-    )
-END
-GO
-
-CREATE OR ALTER PROCEDURE [dbo].[AuthRequest_UpdateMany]
-    @AuthRequestsInput [dbo].[AuthRequestType] READONLY
+CREATE OR ALTER PROCEDURE AuthRequest_UpdateMany
+    @jsonData NVARCHAR(MAX)
 AS
 BEGIN
-    SET NOCOUNT ON
-
-    UPDATE
-        AR
+    UPDATE AR
     SET
         [Id] = ARI.[Id],
         [UserId] = ARI.[UserId],
@@ -57,5 +23,25 @@ BEGIN
     FROM
         [dbo].[AuthRequest] AR
     INNER JOIN
-        @AuthRequestsInput ARI ON AR.Id = ARI.Id
+        OPENJSON(@jsonData)
+        WITH (
+            Id INT '$.Id',
+            UserId INT '$.UserId',
+            Type NVARCHAR(50) '$.Type',
+            RequestDeviceIdentifier NVARCHAR(100) '$.RequestDeviceIdentifier',
+            RequestDeviceType NVARCHAR(50) '$.RequestDeviceType',
+            RequestIpAddress NVARCHAR(50) '$.RequestIpAddress',
+            ResponseDeviceId INT '$.ResponseDeviceId',
+            AccessCode NVARCHAR(50) '$.AccessCode',
+            PublicKey NVARCHAR(MAX) '$.PublicKey',
+            Key NVARCHAR(MAX) '$.Key',
+            MasterPasswordHash NVARCHAR(MAX) '$.MasterPasswordHash',
+            Approved BIT '$.Approved',
+            CreationDate DATETIME2 '$.CreationDate',
+            ResponseDate DATETIME2 '$.ResponseDate',
+            AuthenticationDate DATETIME2 '$.AuthenticationDate',
+            OrganizationId INT '$.OrganizationId'
+        ) AS ARI
+    WHERE
+        AR.Id = ARI.Id;
 END
