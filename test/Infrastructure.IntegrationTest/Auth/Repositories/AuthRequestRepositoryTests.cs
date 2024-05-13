@@ -107,7 +107,11 @@ public class AuthRequestRepositoryTests
         {
             await authRequestRepository.CreateAsync(CreateAuthRequest(user1.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddMinutes(-5))),
             await authRequestRepository.CreateAsync(CreateAuthRequest(user3.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddMinutes(-7))),
-            await authRequestRepository.CreateAsync(CreateAuthRequest(user2.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddMinutes(-10)))
+            await authRequestRepository.CreateAsync(CreateAuthRequest(user2.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddMinutes(-10))),
+            // This last auth request is not created manually, and will be
+            // used to make sure entity framework's `UpdateRange` method
+            // doesn't create requests too.
+            CreateAuthRequest(user2.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddMinutes(-11))
         };
 
         // Update some properties on two auth request, but leave the other one
@@ -169,6 +173,11 @@ public class AuthRequestRepositoryTests
         Assert.True(AuthRequestEquals(authRequestToBeUpdated1, updatedAuthRequest1));
         var updatedAuthRequest2 = await authRequestRepository.GetByIdAsync(authRequestToBeUpdated2.Id);
         Assert.True(AuthRequestEquals(authRequestToBeUpdated2, updatedAuthRequest2));
+
+        // Assert that the auth request we never created is not created by
+        // the update method.
+        var uncreatedAuthRequest = await authRequestRepository.GetByIdAsync(authRequests[3].Id);
+        Assert.Null(uncreatedAuthRequest);
     }
 
     private static AuthRequest CreateAuthRequest(Guid userId, AuthRequestType authRequestType, DateTime creationDate, bool? approved = null, DateTime? responseDate = null)
