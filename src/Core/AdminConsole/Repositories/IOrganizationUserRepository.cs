@@ -43,7 +43,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
     Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType);
     Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
-    Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyResetPasswordDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds);
+    Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds);
 
     /// <summary>
     /// Updates encrypted data for organization users during a key rotation

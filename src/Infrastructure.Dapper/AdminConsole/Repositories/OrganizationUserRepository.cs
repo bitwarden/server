@@ -523,13 +523,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyResetPasswordDetailsByOrganizationUserAsync(
+    public async Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(
         Guid organizationId, IEnumerable<Guid> organizationUserIds)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserResetPasswordDetails>(
-                "[dbo].[OrganizationUser_ReadManyResetPasswordDetailsByOrganizationUserIds]",
+                "[dbo].[OrganizationUser_ReadManyAccountRecoveryDetailsByOrganizationUserIds]",
                 new { OrganizationId = organizationId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
 

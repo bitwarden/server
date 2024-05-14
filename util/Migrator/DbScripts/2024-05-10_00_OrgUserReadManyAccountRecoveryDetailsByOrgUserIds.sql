@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadManyResetPasswordDetailsByOrganizationUserIds]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadManyAccountRecoveryDetailsByOrganizationUserIds]
     @OrganizationId UNIQUEIDENTIFIER,
     @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY
 AS

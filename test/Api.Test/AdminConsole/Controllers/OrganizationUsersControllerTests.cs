@@ -473,7 +473,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetResetPasswordDetails_ReturnsDetails(
+    public async Task GetAccountRecoveryDetails_ReturnsDetails(
         Guid organizationId,
         OrganizationUserBulkRequestModel bulkRequestModel,
         ICollection<OrganizationUserResetPasswordDetails> resetPasswordDetails,
@@ -481,10 +481,10 @@ public class OrganizationUsersControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyResetPasswordDetailsByOrganizationUserAsync(organizationId, bulkRequestModel.Ids)
+            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organizationId, bulkRequestModel.Ids)
             .Returns(resetPasswordDetails);
 
-        var response = await sutProvider.Sut.GetResetPasswordDetails(organizationId, bulkRequestModel);
+        var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
 
         Assert.Equal(resetPasswordDetails.Count, response.Data.Count());
         Assert.True(response.Data.All(r =>
@@ -500,14 +500,14 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetResetPasswordDetails_WithoutManageResetPasswordPermission_Throws(
+    public async Task GetAccountRecoveryDetails_WithoutManageResetPasswordPermission_Throws(
         Guid organizationId,
         OrganizationUserBulkRequestModel bulkRequestModel,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetResetPasswordDetails(organizationId, bulkRequestModel));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel));
     }
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider, OrganizationAbility organizationAbility,

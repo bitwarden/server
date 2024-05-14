@@ -186,8 +186,8 @@ public class OrganizationUsersController : Controller
         return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
     }
 
-    [HttpPost("reset-password-details")]
-    public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetResetPasswordDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    [HttpPost("account-recovery-details")]
+    public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetAccountRecoveryDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         // Make sure the calling user can reset passwords for this org
         if (!await _currentContext.ManageResetPassword(orgId))
@@ -195,7 +195,7 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var responses = await _organizationUserRepository.GetManyResetPasswordDetailsByOrganizationUserAsync(orgId, model.Ids);
+        var responses = await _organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(orgId, model.Ids);
         return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(responses.Select(r => new OrganizationUserResetPasswordDetailsResponseModel(r)));
     }
 

@@ -662,7 +662,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     public async Task<IEnumerable<OrganizationUserResetPasswordDetails>>
-        GetManyResetPasswordDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
+        GetManyAccountRecoveryDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
