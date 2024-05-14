@@ -95,4 +95,85 @@ public class OrganizationUserRepositoryTests
         Assert.NotEqual(updatedUser1.AccountRevisionDate, user1.AccountRevisionDate);
         Assert.NotEqual(updatedUser2.AccountRevisionDate, user2.AccountRevisionDate);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyAccountRecoveryDetailsByOrganizationUserAsync_Works(IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var user2 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 2",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.Argon2id,
+            KdfIterations = 4,
+            KdfMemory = 5,
+            KdfParallelism = 6
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            PrivateKey = "privatekey",
+        });
+
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            ResetPasswordKey = "resetpasswordkey1",
+        });
+
+        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user2.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            ResetPasswordKey = "resetpasswordkey2",
+        });
+
+        var recoveryDetails = await organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(
+            organization.Id,
+            new[]
+            {
+                orgUser1.Id,
+                orgUser2.Id,
+            });
+
+        Assert.NotNull(recoveryDetails);
+        Assert.Equal(2, recoveryDetails.Count());
+        Assert.Contains(recoveryDetails, r =>
+            r.OrganizationUserId == orgUser1.Id &&
+            r.Kdf == KdfType.PBKDF2_SHA256 &&
+            r.KdfIterations == 1 &&
+            r.KdfMemory == 2 &&
+            r.KdfParallelism == 3 &&
+            r.ResetPasswordKey == "resetpasswordkey1" &&
+            r.EncryptedPrivateKey == "privatekey");
+        Assert.Contains(recoveryDetails, r =>
+            r.OrganizationUserId == orgUser2.Id &&
+            r.Kdf == KdfType.Argon2id &&
+            r.KdfIterations == 4 &&
+            r.KdfMemory == 5 &&
+            r.KdfParallelism == 6 &&
+            r.ResetPasswordKey == "resetpasswordkey2" &&
+            r.EncryptedPrivateKey == "privatekey");
+    }
 }
