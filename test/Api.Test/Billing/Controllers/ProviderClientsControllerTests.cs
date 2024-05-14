@@ -368,7 +368,7 @@ public class ProviderClientsControllerTests
 
         var result = await sutProvider.Sut.UpdateAsync(providerId, providerOrganizationId, requestBody);
 
-        await sutProvider.GetDependency<IAssignSeatsToClientOrganizationCommand>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IProviderBillingService>().DidNotReceiveWithAnyArgs()
             .AssignSeatsToClientOrganization(
                 Arg.Any<Provider>(),
                 Arg.Any<Organization>(),
