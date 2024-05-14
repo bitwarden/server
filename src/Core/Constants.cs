@@ -102,21 +102,15 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
-    public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
-    public const string PasswordlessLogin = "passwordless-login";
-    public const string TrustedDeviceEncryption = "trusted-device-encryption";
-    public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string VaultOnboarding = "vault-onboarding";
-    public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
+    public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
+
     /// <summary>
     /// Deprecated - never used, do not use. Will always default to false. Will be deleted as part of Flexible Collections cleanup
     /// </summary>
     public const string FlexibleCollections = "flexible-collections-disabled-do-not-use";
     public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
-    public const string BulkCollectionAccess = "bulk-collection-access";
-    public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
@@ -129,11 +123,19 @@ public static class FeatureFlagKeys
     /// flexible collections
     /// </summary>
     public const string FlexibleCollectionsMigration = "flexible-collections-migration";
-    public const string AC1607_PresentUsersWithOffboardingSurvey = "AC-1607_present-user-offboarding-survey";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
-    public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
+    public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
+    public const string EnableConsolidatedBilling = "enable-consolidated-billing";
+    public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
+    public const string UnassignedItemsBanner = "unassigned-items-banner";
+    public const string EnableDeleteProvider = "AC-1218-delete-provider";
+    public const string EmailVerification = "email-verification";
+    public const string AnhFcmv1Migration = "anh-fcmv1-migration";
+    public const string ExtensionRefresh = "extension-refresh";
+    public const string RestrictProviderAccess = "restrict-provider-access";
+    public const string VaultBulkManagementAction = "vault-bulk-management-action";
 
     public static List<string> GetAllKeys()
     {
@@ -148,9 +150,9 @@ public static class FeatureFlagKeys
         // place overriding values when needed locally (offline), or return null
         return new Dictionary<string, string>()
         {
-            { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" },
-            { DuoRedirect, "true" }
+            { DuoRedirect, "true" },
+            { UnassignedItemsBanner, "true"},
+            { FlexibleCollectionsSignup, "true" }
         };
     }
 }

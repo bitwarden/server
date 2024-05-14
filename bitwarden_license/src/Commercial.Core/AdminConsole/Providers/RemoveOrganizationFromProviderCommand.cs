@@ -1,11 +1,17 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -20,6 +26,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IFeatureService _featureService;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -28,7 +36,9 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
-        IStripeAdapter stripeAdapter)
+        IStripeAdapter stripeAdapter,
+        IScaleSeatsCommand scaleSeatsCommand,
+        IFeatureService featureService)
     {
         _eventService = eventService;
         _logger = logger;
@@ -37,6 +47,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
+        _scaleSeatsCommand = scaleSeatsCommand;
+        _featureService = featureService;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -65,7 +77,34 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         organization.BillingEmail = organizationOwnerEmails.MinBy(email => email);
 
+        await ResetOrganizationBillingAsync(organization, provider, organizationOwnerEmails);
+
         await _organizationRepository.ReplaceAsync(organization);
+
+        await _providerOrganizationRepository.DeleteAsync(providerOrganization);
+
+        await _eventService.LogProviderOrganizationEventAsync(
+            providerOrganization,
+            EventType.ProviderOrganization_Removed);
+    }
+
+    /// <summary>
+    /// When a client organization is unlinked from a provider, we have to check if they're Stripe-enabled
+    /// and, if they are, we remove their MSP discount and set their Subscription to `send_invoice`. This is because
+    /// the provider's payment method will be removed from their Stripe customer causing ensuing charges to fail. Lastly,
+    /// we email the organization owners letting them know they need to add a new payment method.
+    /// </summary>
+    private async Task ResetOrganizationBillingAsync(
+        Organization organization,
+        Provider provider,
+        IEnumerable<string> organizationOwnerEmails)
+    {
+        if (!organization.IsStripeEnabled())
+        {
+            return;
+        }
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
 
         var customerUpdateOptions = new CustomerUpdateOptions
         {
@@ -75,24 +114,47 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
 
-        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+        if (isConsolidatedBillingEnabled && provider.Status == ProviderStatusType.Billable)
         {
-            CollectionMethod = "send_invoice",
-            DaysUntilDue = 30
-        };
+            var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
 
-        await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+            var subscriptionCreateOptions = new SubscriptionCreateOptions
+            {
+                Customer = organization.GatewayCustomerId,
+                CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
+                DaysUntilDue = 30,
+                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
+                Metadata = new Dictionary<string, string>
+                {
+                    { "organizationId", organization.Id.ToString() }
+                },
+                OffSession = true,
+                ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
+                Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
+            };
+
+            var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+            organization.GatewaySubscriptionId = subscription.Id;
+
+            await _scaleSeatsCommand.ScalePasswordManagerSeats(provider, organization.PlanType,
+                -(organization.Seats ?? 0));
+        }
+        else
+        {
+            var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+            {
+                CollectionMethod = "send_invoice",
+                DaysUntilDue = 30
+            };
+
+            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+        }
 
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
             organization.Name,
             provider.Name,
             organizationOwnerEmails);
-
-        await _providerOrganizationRepository.DeleteAsync(providerOrganization);
-
-        await _eventService.LogProviderOrganizationEventAsync(
-            providerOrganization,
-            EventType.ProviderOrganization_Removed);
     }
 }

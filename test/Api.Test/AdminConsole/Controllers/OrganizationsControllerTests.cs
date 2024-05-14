@@ -2,8 +2,11 @@
 using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -25,6 +28,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Services;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -56,9 +60,11 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly IGetSubscriptionQuery _getSubscriptionQuery;
+    private readonly ISubscriberQueries _subscriberQueries;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IScaleSeatsCommand _scaleSeatsCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -86,9 +92,11 @@ public class OrganizationsControllerTests : IDisposable
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
-        _getSubscriptionQuery = Substitute.For<IGetSubscriptionQuery>();
+        _subscriberQueries = Substitute.For<ISubscriberQueries>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
+        _providerRepository = Substitute.For<IProviderRepository>();
+        _scaleSeatsCommand = Substitute.For<IScaleSeatsCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -113,9 +121,11 @@ public class OrganizationsControllerTests : IDisposable
             _addSecretsManagerSubscriptionCommand,
             _pushNotificationService,
             _cancelSubscriptionCommand,
-            _getSubscriptionQuery,
+            _subscriberQueries,
             _referenceEventService,
-            _organizationEnableCollectionEnhancementsCommand);
+            _organizationEnableCollectionEnhancementsCommand,
+            _providerRepository,
+            _scaleSeatsCommand);
     }
 
     public void Dispose()
@@ -413,5 +423,40 @@ public class OrganizationsControllerTests : IDisposable
 
         await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
         await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncOrganizationsAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, AutoData]
+    public async Task Delete_OrganizationIsConsolidatedBillingClient_ScalesProvidersSeats(
+        Provider provider,
+        Organization organization,
+        User user,
+        Guid organizationId,
+        SecretVerificationRequestModel requestModel)
+    {
+        organization.Status = OrganizationStatusType.Managed;
+        organization.PlanType = PlanType.TeamsMonthly;
+        organization.Seats = 10;
+
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
+
+        _currentContext.OrganizationOwner(organizationId).Returns(true);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        _userService.VerifySecretAsync(user, requestModel.Secret).Returns(true);
+
+        _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
+
+        _providerRepository.GetByOrganizationIdAsync(organization.Id).Returns(provider);
+
+        await _sut.Delete(organizationId.ToString(), requestModel);
+
+        await _scaleSeatsCommand.Received(1)
+            .ScalePasswordManagerSeats(provider, organization.PlanType, -organization.Seats.Value);
+
+        await _organizationService.Received(1).DeleteAsync(organization);
     }
 }

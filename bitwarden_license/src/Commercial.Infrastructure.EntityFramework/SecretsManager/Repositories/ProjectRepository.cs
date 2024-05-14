@@ -70,23 +70,43 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var utcNow = DateTime.UtcNow;
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var projects = dbContext.Project
-            .Where(c => ids.Contains(c.Id))
-            .Include(p => p.Secrets);
-        await projects.ForEachAsync(project =>
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var serviceAccountIds = await dbContext.Project
+            .Where(p => ids.Contains(p.Id))
+            .Include(p => p.ServiceAccountAccessPolicies)
+            .SelectMany(p => p.ServiceAccountAccessPolicies.Select(ap => ap.ServiceAccountId!.Value))
+            .Distinct()
+            .ToListAsync();
+
+        var secretIds = await dbContext.Project
+            .Where(p => ids.Contains(p.Id))
+            .Include(p => p.Secrets)
+            .SelectMany(p => p.Secrets.Select(s => s.Id))
+            .Distinct()
+            .ToListAsync();
+
+        var utcNow = DateTime.UtcNow;
+        if (serviceAccountIds.Count > 0)
         {
-            foreach (var projectSecret in project.Secrets)
-            {
-                projectSecret.RevisionDate = utcNow;
-            }
+            await dbContext.ServiceAccount
+                .Where(sa => serviceAccountIds.Contains(sa.Id))
+                .ExecuteUpdateAsync(setters =>
+                    setters.SetProperty(sa => sa.RevisionDate, utcNow));
+        }
 
-            dbContext.Remove(project);
-        });
+        if (secretIds.Count > 0)
+        {
+            await dbContext.Secret
+                .Where(s => secretIds.Contains(s.Id))
+                .ExecuteUpdateAsync(setters =>
+                    setters.SetProperty(s => s.RevisionDate, utcNow));
+        }
 
-        await dbContext.SaveChangesAsync();
+        await dbContext.Project.Where(p => ids.Contains(p.Id)).ExecuteDeleteAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids)
@@ -120,27 +140,8 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         var projectQuery = dbContext.Project
             .Where(s => s.Id == id);
 
-        var query = accessType switch
-        {
-            AccessClientType.NoAccessCheck => projectQuery.Select(_ => new { Read = true, Write = true }),
-            AccessClientType.User => projectQuery.Select(p => new
-            {
-                Read = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read)
-                       || p.GroupAccessPolicies.Any(ap =>
-                           ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
-                Write = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                        p.GroupAccessPolicies.Any(ap =>
-                            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
-            }),
-            AccessClientType.ServiceAccount => projectQuery.Select(p => new
-            {
-                Read = p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read),
-                Write = p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write),
-            }),
-            _ => projectQuery.Select(_ => new { Read = false, Write = false }),
-        };
-
-        var policy = await query.FirstOrDefaultAsync();
+        var accessQuery = BuildProjectAccessQuery(projectQuery, userId, accessType);
+        var policy = await accessQuery.FirstOrDefaultAsync();
 
         return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
@@ -153,6 +154,46 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
         return projectIds.Count == results.Count;
     }
+
+    public async Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToProjectsAsync(
+        IEnumerable<Guid> projectIds,
+        Guid userId,
+        AccessClientType accessType)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var projectsQuery = dbContext.Project.Where(p => projectIds.Contains(p.Id));
+        var accessQuery = BuildProjectAccessQuery(projectsQuery, userId, accessType);
+
+        return await accessQuery.ToDictionaryAsync(pa => pa.Id, pa => (pa.Read, pa.Write));
+    }
+
+    private record ProjectAccess(Guid Id, bool Read, bool Write);
+
+    private static IQueryable<ProjectAccess> BuildProjectAccessQuery(IQueryable<Project> projectQuery, Guid userId,
+        AccessClientType accessType) =>
+        accessType switch
+        {
+            AccessClientType.NoAccessCheck => projectQuery.Select(p => new ProjectAccess(p.Id, true, true)),
+            AccessClientType.User => projectQuery.Select(p => new ProjectAccess
+            (
+                p.Id,
+                p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                p.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
+                p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                p.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))
+            )),
+            AccessClientType.ServiceAccount => projectQuery.Select(p => new ProjectAccess
+            (
+                p.Id,
+                p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read),
+                p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)
+            )),
+            _ => projectQuery.Select(p => new ProjectAccess(p.Id, false, false))
+        };
 
     private IQueryable<ProjectPermissionDetails> ProjectToPermissionDetails(IQueryable<Project> query, Guid userId, AccessClientType accessType)
     {
@@ -199,8 +240,4 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
     private static Expression<Func<Project, bool>> ServiceAccountHasReadAccessToProject(Guid serviceAccountId) => p =>
         p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read);
-
-    private static Expression<Func<Project, bool>> ServiceAccountHasWriteAccessToProject(Guid serviceAccountId) => p =>
-        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Write);
-
 }
