@@ -465,7 +465,7 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Email:
             case TwoFactorProviderType.YubiKey:
-                if (!(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
+                if (!await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return null;
                 }
@@ -474,18 +474,13 @@ public abstract class BaseRequestValidator<T> where T : class
                     CoreHelpers.CustomProviderName(type));
                 if (type == TwoFactorProviderType.Duo)
                 {
+                    var authUrl = await _duoWebV4SDKService.GenerateAsync(provider, user);
                     var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = token
+                        ["AuthUrl"] = authUrl
                     };
 
-                    // DUO SDK v4 Update: Duo-Redirect
-                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                    {
-                        // Generate AuthUrl from DUO SDK v4 token provider
-                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
-                    }
                     return duoResponse;
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)

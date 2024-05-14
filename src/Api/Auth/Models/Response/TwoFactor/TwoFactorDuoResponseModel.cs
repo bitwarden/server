@@ -36,9 +36,14 @@ public class TwoFactorDuoResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public string Host { get; set; }
+    //TODO - will remove with PM-8107
+    public string SKey { get; set; }
+    //TODO - will remove with PM-8107
+    public string IKey { get; set; }
     public string ClientSecret { get; set; }
     public string ClientId { get; set; }
 
+    // updated build to assist in the EDD migration for the Duo 2FA provider
     private void Build(TwoFactorProvider provider)
     {
         if (provider?.MetaData != null && provider.MetaData.Count > 0)
@@ -49,13 +54,27 @@ public class TwoFactorDuoResponseModel : ResponseModel
             {
                 Host = (string)provider.MetaData["Host"];
             }
+            //todo - will remove SKey and IKey with PM-8107
+            if (provider.MetaData.ContainsKey("SKey"))
+            {
+                ClientSecret = (string)provider.MetaData["SKey"];
+                SKey = (string)provider.MetaData["SKey"];
+            }
+            if (provider.MetaData.ContainsKey("IKey"))
+            {
+                IKey = (string)provider.MetaData["IKey"];
+                ClientId = (string)provider.MetaData["IKey"];
+            }
             if (provider.MetaData.ContainsKey("ClientSecret"))
             {
                 ClientSecret = (string)provider.MetaData["ClientSecret"];
+                SKey = (string)provider.MetaData["ClientSecret"];
+
             }
             if (provider.MetaData.ContainsKey("ClientId"))
             {
                 ClientId = (string)provider.MetaData["ClientId"];
+                IKey = (string)provider.MetaData["ClientId"];
             }
         }
         else

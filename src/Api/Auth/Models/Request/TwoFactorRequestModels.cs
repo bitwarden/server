@@ -48,6 +48,12 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
     [Required]
     [StringLength(50)]
     public string ClientSecret { get; set; }
+    //todo - will remove SKey and IKey with PM-8107
+    [StringLength(50)]
+    public string IKey { get; set; }
+    //todo - will remove SKey and IKey with PM-8107
+    [StringLength(50)]
+    public string SKey { get; set; }
     [Required]
     [StringLength(50)]
     public string Host { get; set; }
@@ -68,6 +74,9 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         {
             MetaData = new Dictionary<string, object>
             {
+                //todo - will remove SKey and IKey with PM-8107
+                ["SKey"] = SKey,
+                ["IKey"] = IKey,
                 ["ClientSecret"] = ClientSecret,
                 ["ClientId"] = ClientId,
                 ["Host"] = Host
