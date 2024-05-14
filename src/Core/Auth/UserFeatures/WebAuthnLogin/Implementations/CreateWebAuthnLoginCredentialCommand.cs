@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
-internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCredentialCommand
+public class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCredentialCommand
 {
     public const int MaxCredentialsPerUser = 5;
 
