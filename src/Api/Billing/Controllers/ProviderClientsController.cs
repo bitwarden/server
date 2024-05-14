@@ -131,10 +131,17 @@ public class ProviderClientsController(
             return TypedResults.Problem();
         }
 
-        await providerBillingService.AssignSeatsToClientOrganization(
-            provider,
-            clientOrganization,
-            requestBody.AssignedSeats);
+        if (clientOrganization.Seats != requestBody.AssignedSeats)
+        {
+            await providerBillingService.AssignSeatsToClientOrganization(
+                provider,
+                clientOrganization,
+                requestBody.AssignedSeats);
+        }
+
+        clientOrganization.Name = requestBody.Name;
+
+        await organizationRepository.ReplaceAsync(clientOrganization);
 
         return TypedResults.Ok();
     }
