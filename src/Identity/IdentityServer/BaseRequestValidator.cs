@@ -474,11 +474,10 @@ public abstract class BaseRequestValidator<T> where T : class
                     CoreHelpers.CustomProviderName(type));
                 if (type == TwoFactorProviderType.Duo)
                 {
-                    var authUrl = await _duoWebV4SDKService.GenerateAsync(provider, user);
                     var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["AuthUrl"] = authUrl
+                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
                     };
 
                     return duoResponse;
@@ -508,14 +507,9 @@ public abstract class BaseRequestValidator<T> where T : class
                     var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
+                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
                     };
-                    // DUO SDK v4 Update: DUO-Redirect
-                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                    {
-                        // Generate AuthUrl from DUO SDK v4 token provider
-                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
-                    }
+
                     return duoResponse;
                 }
                 return null;
