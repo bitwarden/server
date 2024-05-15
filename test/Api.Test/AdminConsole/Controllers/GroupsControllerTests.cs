@@ -284,7 +284,7 @@ public class GroupsControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, Arg.Any<Guid>())
-                .Returns((OrganizationUser) null); // Provider is not an OrganizationUser, so it will always return null
+                .Returns((OrganizationUser)null); // Provider is not an OrganizationUser, so it will always return null
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(savingUserId);
         sutProvider.GetDependency<IGroupRepository>().GetManyUserIdsByIdAsync(group.Id)
