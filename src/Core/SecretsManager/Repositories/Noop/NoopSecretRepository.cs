@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 
 namespace Bit.Core.SecretsManager.Repositories.Noop;
 
@@ -45,12 +46,12 @@ public class NoopSecretRepository : ISecretRepository
         return Task.FromResult(null as Secret);
     }
 
-    public Task<Secret> CreateAsync(Secret secret)
+    public Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
     {
         return Task.FromResult(null as Secret);
     }
 
-    public Task<Secret> UpdateAsync(Secret secret)
+    public Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
     {
         return Task.FromResult(null as Secret);
     }

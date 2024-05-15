@@ -395,6 +395,36 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         await transaction.CommitAsync();
     }
 
+    public async Task<SecretAccessPolicies?> GetSecretAccessPoliciesAsync(
+        Guid secretId,
+        Guid userId)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var entities = await dbContext.AccessPolicies.Where(ap =>
+                ((UserSecretAccessPolicy)ap).GrantedSecretId == secretId ||
+                ((GroupSecretAccessPolicy)ap).GrantedSecretId == secretId ||
+                ((ServiceAccountSecretAccessPolicy)ap).GrantedSecretId == secretId)
+            .Include(ap => ((UserSecretAccessPolicy)ap).OrganizationUser.User)
+            .Include(ap => ((GroupSecretAccessPolicy)ap).Group)
+            .Select(ap => new
+            {
+                ap,
+                CurrentUserInGroup = ap is GroupSecretAccessPolicy &&
+                                     ((GroupSecretAccessPolicy)ap).Group.GroupUsers.Any(g =>
+                                         g.OrganizationUser.UserId == userId)
+            })
+            .ToListAsync();
+
+        if (entities.Count == 0)
+        {
+            return null;
+        }
+
+        return new SecretAccessPolicies(secretId, entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup)).ToList());
+    }
+
     private static async Task UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
         List<BaseAccessPolicy> policies, IReadOnlyCollection<AccessPolicy> userPolicyEntities,
         IReadOnlyCollection<AccessPolicy> groupPolicyEntities)
