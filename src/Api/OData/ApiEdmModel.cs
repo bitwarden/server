@@ -12,10 +12,14 @@ public static class ApiEdmModel
     {
         var modelBuilder = new ODataConventionModelBuilder();
 
-        // Define Edm models if needed. This is not necessary but might be for defining custom types
+
         modelBuilder.EntitySet<ProfileOrganizationResponseModel>("Organizations");
         modelBuilder.EntitySet<MemberResponseModel>("Members");
+
+        modelBuilder.EntityType<ListResponseModel<CollectionResponseModel>>();
         modelBuilder.EntitySet<CollectionResponseModel>("Collections");
+
+        // var collectionConfig = modelBuilder.EntitySet<ListResponseModel<CollectionResponseModel>>("Collections");
 
         return modelBuilder.GetEdmModel();
     }

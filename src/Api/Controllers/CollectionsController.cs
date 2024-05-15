@@ -155,13 +155,14 @@ public class CollectionsController : Controller
 
     [HttpGet("")]
     [EnableQuery]
-    public async Task<IEnumerable<CollectionResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
     {
         if (await FlexibleCollectionsIsEnabledAsync(orgId))
         {
             // New flexible collections logic
-            var data = await GetByOrgId_vNext(orgId);
-            return data.Data;
+            return await GetByOrgId_vNext(orgId);
+            // var data = await GetByOrgId_vNext(orgId);
+            // return data.Data;
         }
 
         // Old pre-flexible collections logic follows
@@ -182,10 +183,10 @@ public class CollectionsController : Controller
             orgCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
         }
 
-        // var responses = orgCollections.Select(c => new CollectionResponseModel(c));
-        // return new ListResponseModel<CollectionResponseModel>(responses);
+        var responses = orgCollections.Select(c => new CollectionResponseModel(c));
+        return new ListResponseModel<CollectionResponseModel>(responses);
 
-        return orgCollections.Select(c => new CollectionResponseModel(c));
+        // return orgCollections.Select(c => new CollectionResponseModel(c));
     }
 
     [HttpGet("~/collections")]
