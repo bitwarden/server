@@ -204,6 +204,7 @@ jobs:
         with:
           version: ${{ steps.set-final-version-output.outputs.version }}
           project: ${{ github.repository }}
+          AZURE_KV_CI_SERVICE_PRINCIPAL: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
   cut_rc:
     name: Cut RC branch
