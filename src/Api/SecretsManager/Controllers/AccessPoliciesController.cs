@@ -24,6 +24,7 @@ public class AccessPoliciesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
+    private readonly ISecretRepository _secretRepository;
     private readonly IServiceAccountGrantedPolicyUpdatesQuery _serviceAccountGrantedPolicyUpdatesQuery;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateServiceAccountGrantedPoliciesCommand _updateServiceAccountGrantedPoliciesCommand;
@@ -41,6 +42,7 @@ public class AccessPoliciesController : Controller
         IAccessPolicyRepository accessPolicyRepository,
         IServiceAccountRepository serviceAccountRepository,
         IProjectRepository projectRepository,
+        ISecretRepository secretRepository,
         IAccessClientQuery accessClientQuery,
         IServiceAccountGrantedPolicyUpdatesQuery serviceAccountGrantedPolicyUpdatesQuery,
         IProjectServiceAccountsAccessPoliciesUpdatesQuery projectServiceAccountsAccessPoliciesUpdatesQuery,
@@ -53,6 +55,7 @@ public class AccessPoliciesController : Controller
         _serviceAccountRepository = serviceAccountRepository;
         _projectRepository = projectRepository;
         _accessPolicyRepository = accessPolicyRepository;
+        _secretRepository = secretRepository;
         _updateServiceAccountGrantedPoliciesCommand = updateServiceAccountGrantedPoliciesCommand;
         _accessClientQuery = accessClientQuery;
         _serviceAccountGrantedPolicyUpdatesQuery = serviceAccountGrantedPolicyUpdatesQuery;
@@ -257,6 +260,22 @@ public class AccessPoliciesController : Controller
 
         var results = await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id);
         return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
+    }
+
+    [HttpGet("/secrets/{secretId}/access-policies")]
+    public async Task<SecretAccessPoliciesResponseModel> GetSecretAccessPoliciesAsync(Guid secretId)
+    {
+        var secret = await _secretRepository.GetByIdAsync(secretId);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.ReadAccessPolicies);
+
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var accessPolicies = await _accessPolicyRepository.GetSecretAccessPoliciesAsync(secretId, userId);
+        return new SecretAccessPoliciesResponseModel(accessPolicies, userId);
     }
 
     private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(

@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Queries.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
@@ -145,11 +146,11 @@ public class SecretsControllerTests
         var resultSecret = data.ToSecret(organizationId);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
-        sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>()).ReturnsForAnyArgs(resultSecret);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
         await sutProvider.GetDependency<ICreateSecretCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Secret>());
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
     }
 
     [Theory]
@@ -169,12 +170,12 @@ public class SecretsControllerTests
         var resultSecret = data.ToSecret(organizationId);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
-        sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>()).ReturnsForAnyArgs(resultSecret);
 
         await sutProvider.Sut.CreateAsync(organizationId, data);
 
         await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
-            .CreateAsync(Arg.Any<Secret>());
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
     }
 
     [Theory]
@@ -193,11 +194,11 @@ public class SecretsControllerTests
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secretId).ReturnsForAnyArgs(mockSecret);
 
         var resultSecret = data.ToSecret(secretId, organizationId);
-        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>()).ReturnsForAnyArgs(resultSecret);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSecretAsync(secretId, data));
         await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
-            .UpdateAsync(Arg.Any<Secret>());
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
     }
 
     [Theory]
@@ -215,11 +216,11 @@ public class SecretsControllerTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
 
         var resultSecret = data.ToSecret(secretId, organizationId);
-        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>()).ReturnsForAnyArgs(resultSecret);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSecretAsync(secretId, data));
         await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
-            .UpdateAsync(Arg.Any<Secret>());
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
     }
 
     [Theory]
@@ -227,10 +228,11 @@ public class SecretsControllerTests
     public async Task UpdateSecret_Success(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId, Secret mockSecret)
     {
         // We currently only allow a secret to be in one project at a time
-        if (data.ProjectIds != null && data.ProjectIds.Length > 1)
+        if (data.ProjectIds is { Length: > 1 })
         {
             data.ProjectIds = new Guid[] { data.ProjectIds.ElementAt(0) };
         }
+        data.AccessPoliciesRequests = null;
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToSecret(secretId, organizationId),
@@ -238,11 +240,11 @@ public class SecretsControllerTests
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secretId).ReturnsForAnyArgs(mockSecret);
 
         var resultSecret = data.ToSecret(secretId, organizationId);
-        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>()).ReturnsForAnyArgs(resultSecret);
 
         await sutProvider.Sut.UpdateSecretAsync(secretId, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
-            .UpdateAsync(Arg.Any<Secret>());
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
     }
 
     [Theory]
