@@ -162,6 +162,15 @@ public abstract class BaseRequestValidator<T> where T : class
             twoFactorToken = null;
         }
 
+
+        // Force legacy users to the web for migration
+        if (UserService.IsLegacyUser(user) && request.ClientId != "web")
+        {
+            await BuildErrorResultAsync("Legacy user detected. Please login on web vault to migrate your account",
+                false, context, null);
+            return;
+        }
+
         // Returns true if can finish validation process
         if (await IsValidAuthTypeAsync(user, request.GrantType))
         {
@@ -376,7 +385,7 @@ public abstract class BaseRequestValidator<T> where T : class
                orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
     }
 
-    private Device GetDeviceFromRequest(ValidatedRequest request)
+    protected Device GetDeviceFromRequest(ValidatedRequest request)
     {
         var deviceIdentifier = request.Raw["DeviceIdentifier"]?.ToString();
         var deviceType = request.Raw["DeviceType"]?.ToString();

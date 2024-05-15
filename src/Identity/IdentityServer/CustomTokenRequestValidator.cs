@@ -11,8 +11,10 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
+using HandlebarsDotNet;
 using IdentityModel;
 using Microsoft.AspNetCore.Identity;
 
@@ -57,6 +59,18 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
+        if (context.Result.ValidatedRequest.GrantType == "refresh_token")
+        {
+            // Force legacy users to the web for migration
+            if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
+                context.Result.ValidatedRequest.ClientId != "web")
+            {
+                await BuildErrorResultAsync("Legacy user detected. Please login on web vault to migrate your account",
+                    false, context, null);
+                return;
+            }
+        }
+
         string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
             || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
@@ -69,6 +83,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
             }
+
 
             return;
         }

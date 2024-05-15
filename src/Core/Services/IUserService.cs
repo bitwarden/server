@@ -76,4 +76,10 @@ public interface IUserService
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret);
+
+    /// <summary>
+    /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
+    /// We force these users to the web to migrate their encryption scheme.
+    /// </summary>
+    Task<bool> IsLegacyUser(string userId);
 }

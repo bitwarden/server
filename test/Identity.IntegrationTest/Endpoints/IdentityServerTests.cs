@@ -332,6 +332,45 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_NotOnWebClient_Fails(string deviceId)
+    {
+        var username = "test+tokenclientcredentials@email.com";
+
+        await _factory.RegisterAsync(new RegisterRequestModel
+        {
+            Email = username, MasterPasswordHash = "master_password_hash",
+        });
+
+        var database = _factory.GetDatabaseContext();
+        var user = await database.Users
+            .FirstAsync(u => u.Email == username);
+
+        user.PrivateKey = "EncryptedPrivateKey";
+        await database.SaveChangesAsync();
+
+        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "scope", "api offline_access" },
+                { "client_id", "browser" },
+                { "deviceType", DeviceTypeAsString(DeviceType.ChromeBrowser) },
+                { "deviceIdentifier", deviceId },
+                { "deviceName", "chrome" },
+                { "grant_type", "password" },
+                { "username", username },
+                { "password", "master_password_hash" },
+            }), context => context.SetAuthEmail(username));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+        var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "ErrorModel", JsonValueKind.Object);
+        var message = AssertHelper.AssertJsonProperty(error, "Message", JsonValueKind.String).GetString();
+        Assert.Equal("Legacy user detected. Please login on web vault to migrate your account", message);
+    }
+
+
+    [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization, Bit.Core.Entities.OrganizationApiKey organizationApiKey)
     {
         var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
