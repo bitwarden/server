@@ -1323,7 +1323,6 @@ public class OrganizationService : IOrganizationService
         var validOrganizationUserIds = validOrganizationUsers.Select(u => u.UserId.Value).ToList();
 
         var organization = await GetOrgById(organizationId);
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
         var usersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validOrganizationUserIds);
         var users = await _userRepository.GetManyAsync(validOrganizationUserIds);
 
@@ -1355,7 +1354,7 @@ public class OrganizationService : IOrganizationService
                     }
                 }
 
-                await CheckPolicies(policies, organizationId, user, orgUsers, userService);
+                await CheckPolicies(organizationId, user, orgUsers, userService);
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
@@ -1449,22 +1448,27 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task CheckPolicies(ICollection<Policy> policies, Guid organizationId, User user,
+    private async Task CheckPolicies(Guid organizationId, User user,
         ICollection<OrganizationUser> userOrgs, IUserService userService)
     {
-        var usingTwoFactorPolicy = policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-        if (usingTwoFactorPolicy && !await userService.TwoFactorIsEnabledAsync(user))
+        // Enforce Two Factor Authentication Policy for this organization
+        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)).Any(p => p.OrganizationId == organizationId);
+        if (orgRequiresTwoFactor && !await userService.TwoFactorIsEnabledAsync(user))
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }
 
-        var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
-        if (usingSingleOrgPolicy)
+        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
+        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
+        // Enforce Single Organization Policy for this organization
+        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
         {
-            if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
-            {
-                throw new BadRequestException("User is a member of another organization.");
-            }
+            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
+        }
+        // Enforce Single Organization Policy of other organizations user is a member of
+        if (singleOrgPolicies.Count != 0)
+        {
+            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
         }
     }
 
