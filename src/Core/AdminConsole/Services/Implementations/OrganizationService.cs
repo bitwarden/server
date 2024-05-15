@@ -1460,13 +1460,15 @@ public class OrganizationService : IOrganizationService
 
         var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
         var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
+        var otherSingleOrgPolicies =
+            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
         // Enforce Single Organization Policy for this organization
         if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
         {
             throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
         }
         // Enforce Single Organization Policy of other organizations user is a member of
-        if (singleOrgPolicies.Count != 0)
+        if (otherSingleOrgPolicies.Any())
         {
             throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
         }
