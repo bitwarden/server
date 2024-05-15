@@ -517,4 +517,85 @@ public class SecretAuthorizationHandlerTests
 
         Assert.Equal(expected, authzContext.HasSucceeded);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanReadAccessPolicies_AccessToSecretsManagerFalse_DoesNotSucceed(
+        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretOperations.ReadAccessPolicies;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId)
+            .Returns(false);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, secret);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanReadAccessPolicies_NullResource_DoesNotSucceed(
+        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = SecretOperations.ReadAccessPolicies;
+        SetupPermission(sutProvider, PermissionType.RunAsAdmin, secret.OrganizationId, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, null);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(AccessClientType.ServiceAccount)]
+    [BitAutoData(AccessClientType.Organization)]
+    public async Task CanReadAccessPolicies_UnsupportedClient_DoesNotSucceed(
+        AccessClientType clientType,
+        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretOperations.ReadAccessPolicies;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), secret.OrganizationId)
+            .Returns((clientType, Guid.NewGuid()));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, secret);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanReadAccessPolicies_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = SecretOperations.ReadAccessPolicies;
+        SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>())
+            .Returns((read, write));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, secret);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
 }
