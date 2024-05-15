@@ -32,11 +32,6 @@ public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMode
 {
     private const string _objectName = "userProjectAccessPolicy";
 
-    public UserProjectAccessPolicyResponseModel(UserProjectAccessPolicy accessPolicy) : base(accessPolicy, _objectName)
-    {
-        SetProperties(accessPolicy);
-    }
-
     public UserProjectAccessPolicyResponseModel(UserProjectAccessPolicy accessPolicy, Guid currentUserId) : base(accessPolicy, _objectName)
     {
         CurrentUser = currentUserId == accessPolicy.User?.Id;
@@ -66,12 +61,6 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
 {
     private const string _objectName = "userServiceAccountAccessPolicy";
 
-    public UserServiceAccountAccessPolicyResponseModel(UserServiceAccountAccessPolicy accessPolicy)
-        : base(accessPolicy, _objectName)
-    {
-        SetProperties(accessPolicy);
-    }
-
     public UserServiceAccountAccessPolicyResponseModel(UserServiceAccountAccessPolicy accessPolicy, Guid userId)
         : base(accessPolicy, _objectName)
     {
@@ -93,6 +82,35 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
+        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
+        UserId = accessPolicy.User?.Id;
+    }
+}
+
+public class UserSecretAccessPolicyResponseModel : BaseAccessPolicyResponseModel
+{
+    private const string _objectName = "userSecretAccessPolicy";
+
+    public UserSecretAccessPolicyResponseModel(UserSecretAccessPolicy accessPolicy, Guid currentUserId) : base(accessPolicy, _objectName)
+    {
+        CurrentUser = currentUserId == accessPolicy.User?.Id;
+        SetProperties(accessPolicy);
+    }
+
+    public UserSecretAccessPolicyResponseModel() : base(new UserSecretAccessPolicy(), _objectName)
+    {
+    }
+
+    public Guid? OrganizationUserId { get; set; }
+    public string? OrganizationUserName { get; set; }
+    public Guid? UserId { get; set; }
+    public Guid? GrantedSecretId { get; set; }
+    public bool? CurrentUser { get; set; }
+
+    private void SetProperties(UserSecretAccessPolicy accessPolicy)
+    {
+        OrganizationUserId = accessPolicy.OrganizationUserId;
+        GrantedSecretId = accessPolicy.GrantedSecretId;
         OrganizationUserName = GetUserDisplayName(accessPolicy.User);
         UserId = accessPolicy.User?.Id;
     }
@@ -144,6 +162,29 @@ public class GroupServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResp
     public bool? CurrentUserInGroup { get; set; }
 }
 
+public class GroupSecretAccessPolicyResponseModel : BaseAccessPolicyResponseModel
+{
+    private const string _objectName = "groupSecretAccessPolicy";
+
+    public GroupSecretAccessPolicyResponseModel(GroupSecretAccessPolicy accessPolicy)
+        : base(accessPolicy, _objectName)
+    {
+        GroupId = accessPolicy.GroupId;
+        GrantedSecretId = accessPolicy.GrantedSecretId;
+        GroupName = accessPolicy.Group?.Name;
+        CurrentUserInGroup = accessPolicy.CurrentUserInGroup;
+    }
+
+    public GroupSecretAccessPolicyResponseModel() : base(new GroupSecretAccessPolicy(), _objectName)
+    {
+    }
+
+    public Guid? GroupId { get; set; }
+    public string? GroupName { get; set; }
+    public bool? CurrentUserInGroup { get; set; }
+    public Guid? GrantedSecretId { get; set; }
+}
+
 public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel
 {
     private const string _objectName = "serviceAccountProjectAccessPolicy";
@@ -166,4 +207,26 @@ public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyRe
     public string? ServiceAccountName { get; set; }
     public Guid? GrantedProjectId { get; set; }
     public string? GrantedProjectName { get; set; }
+}
+
+public class ServiceAccountSecretAccessPolicyResponseModel : BaseAccessPolicyResponseModel
+{
+    private const string _objectName = "serviceAccountSecretAccessPolicy";
+
+    public ServiceAccountSecretAccessPolicyResponseModel(ServiceAccountSecretAccessPolicy accessPolicy)
+        : base(accessPolicy, _objectName)
+    {
+        ServiceAccountId = accessPolicy.ServiceAccountId;
+        GrantedSecretId = accessPolicy.GrantedSecretId;
+        ServiceAccountName = accessPolicy.ServiceAccount?.Name;
+    }
+
+    public ServiceAccountSecretAccessPolicyResponseModel()
+        : base(new ServiceAccountSecretAccessPolicy(), _objectName)
+    {
+    }
+
+    public Guid? ServiceAccountId { get; set; }
+    public string? ServiceAccountName { get; set; }
+    public Guid? GrantedSecretId { get; set; }
 }

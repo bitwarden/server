@@ -25,6 +25,16 @@ public class AccessPolicyRequest
             Write = Write
         };
 
+    public UserSecretAccessPolicy ToUserSecretAccessPolicy(Guid secretId, Guid organizationId) =>
+        new()
+        {
+            OrganizationUserId = GranteeId,
+            GrantedSecretId = secretId,
+            GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
+            Read = Read,
+            Write = Write
+        };
+
     public GroupProjectAccessPolicy ToGroupProjectAccessPolicy(Guid projectId, Guid organizationId) =>
         new()
         {
@@ -35,12 +45,32 @@ public class AccessPolicyRequest
             Write = Write
         };
 
+    public GroupSecretAccessPolicy ToGroupSecretAccessPolicy(Guid secretId, Guid organizationId) =>
+        new()
+        {
+            GroupId = GranteeId,
+            GrantedSecretId = secretId,
+            GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
+            Read = Read,
+            Write = Write
+        };
+
     public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(Guid projectId, Guid organizationId) =>
         new()
         {
             ServiceAccountId = GranteeId,
             GrantedProjectId = projectId,
             GrantedProject = new Project { OrganizationId = organizationId, Id = projectId },
+            Read = Read,
+            Write = Write
+        };
+
+    public ServiceAccountSecretAccessPolicy ToServiceAccountSecretAccessPolicy(Guid secretId, Guid organizationId) =>
+        new()
+        {
+            ServiceAccountId = GranteeId,
+            GrantedSecretId = secretId,
+            GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
             Read = Read,
             Write = Write
         };
