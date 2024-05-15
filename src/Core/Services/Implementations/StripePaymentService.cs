@@ -1899,16 +1899,37 @@ public class StripePaymentService : IPaymentService
             return null;
         }
 
-        var options = new StripeInvoiceListOptions
+        var paidOptions = new StripeInvoiceListOptions
         {
             Customer = customer.Id,
             SelectAll = true,
-            Status = "paid"
+            Status = "paid",
+        };
+        var openOptions = new StripeInvoiceListOptions
+        {
+            Customer = customer.Id,
+            SelectAll = true,
+            Status = "open",
+        };
+        var uncollectibleOptions = new StripeInvoiceListOptions
+        {
+            Customer = customer.Id,
+            SelectAll = true,
+            Status = "uncollectible",
         };
 
         try
         {
-            var invoices = await _stripeAdapter.InvoiceListAsync(options);
+            var paidInvoicesTask = _stripeAdapter.InvoiceListAsync(paidOptions);
+            var openInvoicesTask = _stripeAdapter.InvoiceListAsync(openOptions);
+            var uncollectibleInvoicesTask = _stripeAdapter.InvoiceListAsync(uncollectibleOptions);
+
+            var paidInvoices = await paidInvoicesTask;
+            var openInvoices = await openInvoicesTask;
+            var uncollectibleInvoices = await uncollectibleInvoicesTask;
+
+            var invoices = paidInvoices.Concat(openInvoices)
+                .Concat(uncollectibleInvoices);
 
             return invoices
                 .OrderByDescending(invoice => invoice.Created)
