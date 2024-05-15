@@ -122,7 +122,7 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     private async Task<Duo.Client> BuildDuoClientAsync(TwoFactorProvider provider)
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
-        // to redirect back to the correct client
+        // to redirect back to the initiating client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
         var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
             _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");

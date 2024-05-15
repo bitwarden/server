@@ -159,7 +159,16 @@ public class TwoFactorController : Controller
         var user = await CheckAsync(model, true);
         try
         {
-            var duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
+            // for backwards compatibility - will be removed with PM-8107
+            DuoApi duoApi = null;
+            if (model.ClientId != null || model.ClientSecret != null)
+            {
+                duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
+            }
+            else
+            {
+                duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
+            }
             await duoApi.JSONApiCall("GET", "/auth/v2/check");
         }
         catch (DuoException)
@@ -217,8 +226,16 @@ public class TwoFactorController : Controller
 
         try
         {
-            var duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
-            await duoApi.JSONApiCall("GET", "/auth/v2/check");
+            // for backwards compatibility - will be removed with PM-8107
+            DuoApi duoApi = null;
+            if (model.ClientId != null || model.ClientSecret != null)
+            {
+                duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
+            }
+            else
+            {
+                duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
+            }
         }
         catch (DuoException)
         {

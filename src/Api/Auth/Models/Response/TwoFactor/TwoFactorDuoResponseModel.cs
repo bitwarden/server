@@ -37,9 +37,9 @@ public class TwoFactorDuoResponseModel : ResponseModel
     public bool Enabled { get; set; }
     public string Host { get; set; }
     //TODO - will remove with PM-8107
-    public string SKey { get; set; }
+    public string SecretKey { get; set; }
     //TODO - will remove with PM-8107
-    public string IKey { get; set; }
+    public string IntegrationKey { get; set; }
     public string ClientSecret { get; set; }
     public string ClientId { get; set; }
 
@@ -50,31 +50,38 @@ public class TwoFactorDuoResponseModel : ResponseModel
         {
             Enabled = provider.Enabled;
 
-            if (provider.MetaData.ContainsKey("Host"))
+            if (provider.MetaData.TryGetValue("Host", out var host))
             {
-                Host = (string)provider.MetaData["Host"];
+                Host = (string)host;
             }
             //todo - will remove SKey and IKey with PM-8107
-            if (provider.MetaData.ContainsKey("SKey"))
+            // check Skey and IKey first if they exist
+            if (provider.MetaData.TryGetValue("SKey", out var sKey))
             {
-                ClientSecret = (string)provider.MetaData["SKey"];
-                SKey = (string)provider.MetaData["SKey"];
+                ClientSecret = (string)sKey;
+                SecretKey = (string)sKey;
             }
-            if (provider.MetaData.ContainsKey("IKey"))
+            if (provider.MetaData.TryGetValue("IKey", out var iKey))
             {
-                IKey = (string)provider.MetaData["IKey"];
-                ClientId = (string)provider.MetaData["IKey"];
+                IntegrationKey = (string)iKey;
+                ClientId = (string)iKey;
             }
-            if (provider.MetaData.ContainsKey("ClientSecret"))
+            // Even if IKey and SKey exist prioritize v4 params ClientId and ClientSecret
+            if (provider.MetaData.TryGetValue("ClientSecret", out var clientSecret))
             {
-                ClientSecret = (string)provider.MetaData["ClientSecret"];
-                SKey = (string)provider.MetaData["ClientSecret"];
-
+                if (!string.IsNullOrWhiteSpace((string)clientSecret))
+                {
+                    ClientSecret = (string)clientSecret;
+                    SecretKey = (string)clientSecret;
+                }
             }
-            if (provider.MetaData.ContainsKey("ClientId"))
+            if (provider.MetaData.TryGetValue("ClientId", out var clientId))
             {
-                ClientId = (string)provider.MetaData["ClientId"];
-                IKey = (string)provider.MetaData["ClientId"];
+                if (!string.IsNullOrWhiteSpace((string)clientId))
+                {
+                    ClientId = (string)clientId;
+                    IntegrationKey = (string)clientId;
+                }
             }
         }
         else
