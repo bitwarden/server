@@ -21,9 +21,9 @@ public class UpdateSecretCommandTests
     [BitAutoData]
     public async Task UpdateAsync_SecretDoesNotExist_ThrowsNotFound(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
     {
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data, null));
 
-        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().UpdateAsync(default);
+        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().UpdateAsync(default, null);
     }
 
     [Theory]
@@ -34,10 +34,10 @@ public class UpdateSecretCommandTests
         data.Projects = new List<Project>() { mockProject };
 
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(data.Id).Returns(data);
-        await sutProvider.Sut.UpdateAsync(data);
+        await sutProvider.Sut.UpdateAsync(data, null);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .UpdateAsync(data);
+            .UpdateAsync(data, null);
     }
 
     [Theory]
@@ -54,7 +54,7 @@ public class UpdateSecretCommandTests
             Key = existingSecret.Key,
         };
 
-        var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate, null);
 
         Assert.Equal(existingSecret.OrganizationId, result.OrganizationId);
         Assert.NotEqual(existingSecret.OrganizationId, updatedOrgId);
@@ -75,7 +75,7 @@ public class UpdateSecretCommandTests
             OrganizationId = existingSecret.OrganizationId
         };
 
-        var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate, null);
 
         Assert.Equal(existingSecret.CreationDate, result.CreationDate);
         Assert.NotEqual(existingSecret.CreationDate, updatedCreationDate);
@@ -96,7 +96,7 @@ public class UpdateSecretCommandTests
             OrganizationId = existingSecret.OrganizationId
         };
 
-        var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate, null);
 
         Assert.Equal(existingSecret.DeletedDate, result.DeletedDate);
         Assert.NotEqual(existingSecret.DeletedDate, updatedDeletionDate);
@@ -118,7 +118,7 @@ public class UpdateSecretCommandTests
             OrganizationId = existingSecret.OrganizationId
         };
 
-        var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate, null);
 
         Assert.NotEqual(secretUpdate.RevisionDate, result.RevisionDate);
         AssertHelper.AssertRecent(result.RevisionDate);
