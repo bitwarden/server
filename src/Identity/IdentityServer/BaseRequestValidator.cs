@@ -385,7 +385,7 @@ public abstract class BaseRequestValidator<T> where T : class
                orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
     }
 
-    protected Device GetDeviceFromRequest(ValidatedRequest request)
+    private Device GetDeviceFromRequest(ValidatedRequest request)
     {
         var deviceIdentifier = request.Raw["DeviceIdentifier"]?.ToString();
         var deviceType = request.Raw["DeviceType"]?.ToString();
