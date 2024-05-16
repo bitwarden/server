@@ -140,7 +140,7 @@ public static class FeatureFlagKeys
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
     public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
-    public const string PM4154MultiWorkerDecryptionService = "PM-4154-multi-worker-encryption-service";
+    public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
 
     public static List<string> GetAllKeys()
     {
