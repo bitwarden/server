@@ -3,15 +3,15 @@ using Bit.Core.Models.Business;
 
 namespace Bit.Api.Billing.Models.Responses;
 
-public record PaymentInformationResponse(PaymentMethodDTO PaymentInfo, TaxInformationDTO TaxInfo)
+public record PaymentInformationResponse(PaymentMethod PaymentMethod, TaxInformation TaxInformation)
 {
     public static PaymentInformationResponse From(BillingInfo.BillingSource billingSource, TaxInfo taxInfo)
     {
-        var paymentMethodDto = new PaymentMethodDTO(
+        var paymentMethodDto = new PaymentMethod(
             billingSource.Type, billingSource.Description, billingSource.CardBrand
         );
 
-        var taxInformationDto = new TaxInformationDTO(
+        var taxInformationDto = new TaxInformation(
             taxInfo.BillingAddressCountry, taxInfo.BillingAddressPostalCode, taxInfo.TaxIdNumber,
             taxInfo.BillingAddressLine1, taxInfo.BillingAddressLine2, taxInfo.BillingAddressCity,
             taxInfo.BillingAddressState
@@ -22,12 +22,12 @@ public record PaymentInformationResponse(PaymentMethodDTO PaymentInfo, TaxInform
 
 }
 
-public record PaymentMethodDTO(
+public record PaymentMethod(
     PaymentMethodType Type,
     string Description,
     string CardBrand);
 
-public record TaxInformationDTO(
+public record TaxInformation(
     string Country,
     string PostalCode,
     string TaxId,
