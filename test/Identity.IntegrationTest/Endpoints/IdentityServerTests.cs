@@ -338,7 +338,8 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         await _factory.RegisterAsync(new RegisterRequestModel
         {
-            Email = username, MasterPasswordHash = "master_password_hash",
+            Email = username,
+            MasterPasswordHash = "master_password_hash",
         });
 
         var database = _factory.GetDatabaseContext();
