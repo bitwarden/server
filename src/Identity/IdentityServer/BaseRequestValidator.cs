@@ -164,11 +164,14 @@ public abstract class BaseRequestValidator<T> where T : class
 
 
         // Force legacy users to the web for migration
-        if (UserService.IsLegacyUser(user) && request.ClientId != "web")
+        if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
         {
+            if (UserService.IsLegacyUser(user) && request.ClientId != "web")
+            {
             await BuildErrorResultAsync("Legacy user detected. Please login on web vault to migrate your account",
                 false, context, null);
             return;
+            }
         }
 
         // Returns true if can finish validation process

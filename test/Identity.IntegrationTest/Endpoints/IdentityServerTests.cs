@@ -334,13 +334,19 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_NotOnWebClient_Fails(string deviceId)
     {
+        var server = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("globalSettings:launchDarkly:flagValues:block-legacy-users", "true");
+        }).Server;
+
         var username = "test+tokenclientcredentials@email.com";
 
-        await _factory.RegisterAsync(new RegisterRequestModel
+
+        await server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
         {
-            Email = username,
-            MasterPasswordHash = "master_password_hash",
-        });
+            Email = username, MasterPasswordHash = "master_password_hash"
+        }));
+
 
         var database = _factory.GetDatabaseContext();
         var user = await database.Users
@@ -349,7 +355,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         user.PrivateKey = "EncryptedPrivateKey";
         await database.SaveChangesAsync();
 
-        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
+        var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(
             new Dictionary<string, string>
             {
                 { "scope", "api offline_access" },
