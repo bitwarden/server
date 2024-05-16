@@ -476,4 +476,38 @@ public class ProviderBillingService(
 
         await providerPlanRepository.ReplaceAsync(providerPlan);
     };
+
+    public async Task<ProviderPaymentInfoDTO> GetPaymentInformationAsync(Guid providerId)
+    {
+        var provider = await providerRepository.GetByIdAsync(providerId);
+
+        if (provider == null)
+        {
+            logger.LogError(
+                "Could not find provider ({ID}) when retrieving payment information.",
+                providerId);
+
+            return null;
+        }
+
+        if (provider.Type == ProviderType.Reseller)
+        {
+            logger.LogError("payment information cannot be retrieved for reseller-type provider ({ID})", providerId);
+
+            throw ContactSupport("Consolidated billing does not support reseller-type providers");
+        }
+
+        var taxInformation = await paymentService.GetTaxInfoAsync(provider);
+        var billingInformation = await paymentService.GetBillingAsync(provider);
+
+        if (taxInformation == null && billingInformation == null)
+        {
+            return null;
+        }
+
+        return new ProviderPaymentInfoDTO(
+            billingInformation.PaymentSource,
+            taxInformation);
+
+    }
 }
