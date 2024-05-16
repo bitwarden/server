@@ -604,7 +604,28 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/collections")]
     [HttpPost("{id}/collections")]
-    public async Task<OptionalCipherDetailsResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<CipherDetailsResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipher = await GetByIdAsync(id, userId);
+        if (cipher == null || !cipher.OrganizationId.HasValue ||
+            !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
+        {
+            throw new NotFoundException();
+        }
+
+        await _cipherService.SaveCollectionsAsync(cipher,
+            model.CollectionIds.Select(c => new Guid(c)), userId, false);
+
+        var updatedCipher = await GetByIdAsync(id, userId);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
+
+        return new CipherDetailsResponseModel(updatedCipher, _globalSettings, collectionCiphers);
+    }
+
+    [HttpPut("{id}/collections_v2")]
+    [HttpPost("{id}/collections_v2")]
+    public async Task<OptionalCipherDetailsResponseModel> PutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
@@ -623,8 +644,8 @@ public class CiphersController : Controller
         // We will be returning an "Unavailable" property so the client knows the user can no longer access this
         var response = new OptionalCipherDetailsResponseModel()
         {
-            Unavailable = updatedCipher == null,
-            Cipher = updatedCipher == null
+            Unavailable = updatedCipher is null,
+            Cipher = updatedCipher is null
                 ? null
                 : new CipherDetailsResponseModel(updatedCipher, _globalSettings, collectionCiphers)
         };
