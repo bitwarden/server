@@ -368,7 +368,10 @@ public class OrganizationsController : Controller
             providerOrganization,
             organization);
 
-        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+        if (organization.IsStripeEnabled())
+        {
+            await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+        }
 
         return Json(null);
     }
