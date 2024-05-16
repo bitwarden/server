@@ -200,7 +200,8 @@ public class GroupsController : Controller
             var userId = _userService.GetProperUserId(User).Value;
             var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, userId);
             var currentGroupUsers = await _groupRepository.GetManyUserIdsByIdAsync(id);
-            if (!currentGroupUsers.Contains(organizationUser.Id) && model.Users.Contains(organizationUser.Id))
+            // OrganizationUser may be null if the current user is a provider
+            if (organizationUser != null && !currentGroupUsers.Contains(organizationUser.Id) && model.Users.Contains(organizationUser.Id))
             {
                 throw new BadRequestException("You cannot add yourself to groups.");
             }
