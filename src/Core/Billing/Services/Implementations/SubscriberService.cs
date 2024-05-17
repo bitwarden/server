@@ -343,7 +343,7 @@ public class SubscriberService(
             return null;
         }
 
-        var customer = await RetrieveCustomerAsync(subscriber);
+        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions { Expand = ["tax_ids"] });
 
         if (customer is null)
         {
@@ -368,7 +368,7 @@ public class SubscriberService(
     public async Task<BillingInfo.BillingSource> GetPaymentMethodAsync(ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
-        var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
+        var customer = await GetCustomerOrThrow(subscriber, GetCustomerPaymentOptions());
         if (customer == null)
         {
             logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
@@ -423,20 +423,6 @@ public class SubscriberService(
         var cardPaymentMethods = stripeAdapter.PaymentMethodListAutoPaging(
             new PaymentMethodListOptions { Customer = customerId, Type = "card" });
         return cardPaymentMethods.MaxBy(m => m.Created);
-    }
-
-    private async Task<Customer> RetrieveCustomerAsync(ISubscriber subscriber)
-    {
-        try
-        {
-            return await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId,
-                new CustomerGetOptions { Expand = ["tax_ids"] });
-        }
-        catch (StripeException exception)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe customer ({SubscriberID}): {Error}", subscriber.Id, exception.Message);
-            return null;
-        }
     }
 
     private TaxInfo MapToTaxInfo(Customer customer)
