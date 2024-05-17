@@ -285,6 +285,8 @@ public class OrganizationsController : Controller
             await _organizationService.InitiateDeleteAsync(organization, model.AdminEmail);
         }
 
+        TempData["Success"] = "The request to initiate deletion of the organization has been sent.";
+
         return RedirectToAction("Edit", new { id });
     }
 
