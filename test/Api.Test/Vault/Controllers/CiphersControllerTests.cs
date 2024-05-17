@@ -3,9 +3,11 @@ using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
@@ -14,7 +16,9 @@ using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
+using CipherType = Bit.Core.Vault.Enums.CipherType;
 
 namespace Bit.Api.Test.Controllers;
 
@@ -48,6 +52,76 @@ public class CiphersControllerTests
 
         Assert.Equal(folderId, result.FolderId);
         Assert.Equal(isFavorite, result.Favorite);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutCollections_vNextShouldThrowException(Guid id, CipherCollectionsRequestModel model, Guid userId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(Guid.NewGuid()).Returns(false);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.PutCollections_vNext(id, model);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutCollections_vNextShouldSaveUpdatedCipher(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails);
+
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        var cipherService = sutProvider.GetDependency<ICipherService>();
+
+        await sutProvider.Sut.PutCollections_vNext(id, model);
+
+        await cipherService.ReceivedWithAnyArgs().SaveCollectionsAsync(default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutCollections_vNextReturnOptionalDetailsCipher(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails);
+
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+
+        var result = await sutProvider.Sut.PutCollections_vNext(id, model);
+
+        Assert.IsType<OptionalCipherDetailsResponseModel>(result);
+    }
+
+    private void SetupUserAndOrgMocks(Guid id, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
+    }
+
+    private CipherDetails CreateCipherDetailsMock(Guid id, Guid userId)
+    {
+        return new CipherDetails
+        {
+            Id = id,
+            UserId = userId,
+            OrganizationId = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = @"
+            {
+                ""Uris"": [
+                    {
+                        ""Uri"": ""https://bitwarden.com""
+                    }
+                ],
+                ""Username"": ""testuser"",
+                ""Password"": ""securepassword123""
+            }"
+        };
     }
 
     [Theory]
