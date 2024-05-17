@@ -14,6 +14,7 @@ using Xunit;
 
 using static Bit.Core.Test.Billing.Utilities;
 using Customer = Stripe.Customer;
+using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Test.Billing.Services;
@@ -814,5 +815,71 @@ public class SubscriberServiceTests
         Assert.Equal("12345", taxInfo.BillingAddressPostalCode);
         Assert.Equal("US", taxInfo.BillingAddressCountry);
     }
+    #endregion
+
+    #region GetPaymentMethodAsync
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethodAsync_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            async () => await sutProvider.Sut.GetPaymentMethodAsync(null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethodAsync_NoCustomer_ReturnsNull(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        subscriber.GatewayCustomerId = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns((Customer)null);
+
+        var billingSource = await sutProvider.Sut.GetPaymentMethodAsync(subscriber);
+
+        Assert.Null(billingSource);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethodAsync_StripeCardPaymentMethod_ReturnsBillingSource(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer();
+        var paymentMethod = CreateSamplePaymentMethod();
+        subscriber.GatewayCustomerId = "test_customer_id";
+        customer.InvoiceSettings = new CustomerInvoiceSettings
+        {
+            DefaultPaymentMethod = paymentMethod
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        var billingSource = await sutProvider.Sut.GetPaymentMethodAsync(subscriber);
+
+        Assert.NotNull(billingSource);
+        Assert.Equal(paymentMethod.Card.Brand, billingSource.CardBrand);
+    }
+
+    private static PaymentMethod CreateSamplePaymentMethod()
+    {
+        var paymentMethod = new PaymentMethod
+        {
+            Id = "pm_test123",
+            Type = "card",
+            Card = new PaymentMethodCard
+            {
+                Brand = "visa",
+                Last4 = "4242",
+                ExpMonth = 12,
+                ExpYear = 2024
+            }
+        };
+        return paymentMethod;
+    }
+
     #endregion
 }

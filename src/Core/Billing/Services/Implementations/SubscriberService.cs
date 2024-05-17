@@ -365,6 +365,66 @@ public class SubscriberService(
         return MapToTaxInfo(customer);
     }
 
+    public async Task<BillingInfo.BillingSource> GetPaymentMethodAsync(ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
+        if (customer == null)
+        {
+            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
+                subscriber.GatewayCustomerId, subscriber.Id);
+            return null;
+        }
+
+        if (customer.Metadata?.ContainsKey("btCustomerId") ?? false)
+        {
+            try
+            {
+                var braintreeCustomer = await braintreeGateway.Customer.FindAsync(
+                    customer.Metadata["btCustomerId"]);
+                if (braintreeCustomer?.DefaultPaymentMethod != null)
+                {
+                    return new BillingInfo.BillingSource(
+                        braintreeCustomer.DefaultPaymentMethod);
+                }
+            }
+            catch (Braintree.Exceptions.NotFoundException ex)
+            {
+                logger.LogError("An error occurred while trying to retrieve braintree customer ({SubscriberID}): {Error}", subscriber.Id, ex.Message);
+            }
+        }
+
+        if (customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card")
+        {
+            return new BillingInfo.BillingSource(
+                customer.InvoiceSettings.DefaultPaymentMethod);
+        }
+
+        if (customer.DefaultSource != null &&
+            (customer.DefaultSource is Card || customer.DefaultSource is BankAccount))
+        {
+            return new BillingInfo.BillingSource(customer.DefaultSource);
+        }
+
+        var paymentMethod = GetLatestCardPaymentMethod(customer.Id);
+        return paymentMethod != null ? new BillingInfo.BillingSource(paymentMethod) : null;
+    }
+
+    private static CustomerGetOptions GetCustomerPaymentOptions()
+    {
+        var customerOptions = new CustomerGetOptions();
+        customerOptions.AddExpand("default_source");
+        customerOptions.AddExpand("invoice_settings.default_payment_method");
+        return customerOptions;
+    }
+
+    private Stripe.PaymentMethod GetLatestCardPaymentMethod(string customerId)
+    {
+        var cardPaymentMethods = stripeAdapter.PaymentMethodListAutoPaging(
+            new PaymentMethodListOptions { Customer = customerId, Type = "card" });
+        return cardPaymentMethods.MaxBy(m => m.Created);
+    }
+
     private async Task<Customer> RetrieveCustomerAsync(ISubscriber subscriber)
     {
         try

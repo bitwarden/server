@@ -475,7 +475,7 @@ public class ProviderBillingService(
         }
 
         var taxInformation = await subscriberService.GetTaxInformationAsync(provider);
-        var billingInformation = await paymentService.GetBillingAsync(provider);
+        var billingInformation = await subscriberService.GetPaymentMethodAsync(provider);
 
         if (taxInformation == null && billingInformation == null)
         {
@@ -483,9 +483,8 @@ public class ProviderBillingService(
         }
 
         return new ProviderPaymentInfoDTO(
-            billingInformation.PaymentSource,
+            billingInformation,
             taxInformation);
-
     }
 
     private Func<int, int, Task> CurrySeatScalingUpdate(
