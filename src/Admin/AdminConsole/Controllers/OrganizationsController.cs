@@ -276,16 +276,24 @@ public class OrganizationsController : Controller
     {
         if (!ModelState.IsValid)
         {
-            return RedirectToAction("Edit", new { id });
+            TempData["Error"] = ModelState.GetErrorMessage();
         }
-
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        if (organization != null)
+        else
         {
-            await _organizationService.InitiateDeleteAsync(organization, model.AdminEmail);
+            try
+            {
+                var organization = await _organizationRepository.GetByIdAsync(id);
+                if (organization != null)
+                {
+                    await _organizationService.InitiateDeleteAsync(organization, model.AdminEmail);
+                    TempData["Success"] = "The request to initiate deletion of the organization has been sent.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
         }
-
-        TempData["Success"] = "The request to initiate deletion of the organization has been sent.";
 
         return RedirectToAction("Edit", new { id });
     }
