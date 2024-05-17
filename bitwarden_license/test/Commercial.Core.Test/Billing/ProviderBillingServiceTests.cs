@@ -1005,4 +1005,29 @@ public class ProviderBillingServiceTests
     }
 
     #endregion
+
+    #region GetPaymentInformationAsync
+
+    /*[Theory,BitAutoData]
+    public async Task GetPaymentInformationAsync_NullProvider_ReturnsNull(
+        SutProvider<ProviderBillingService> sutProvider,
+        Guid providerId)
+    {
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(providerId).ReturnsNull();
+
+        var paymentService = sutProvider.GetDependency<IPaymentService>();
+        paymentService.GetTaxInfoAsync(Arg.Any<Provider>()).ReturnsNull();
+        paymentService.GetBillingAsync(Arg.Any<Provider>()).ReturnsNull();
+
+        var sut = sutProvider.Sut;
+
+        var paymentInfo = await sut.GetPaymentInformationAsync(providerId);
+
+        Assert.Null(paymentInfo);
+        await providerRepository.Received(1).GetByIdAsync(providerId);
+        await paymentService.DidNotReceive().GetTaxInfoAsync(Arg.Any<Provider>());
+        await paymentService.DidNotReceive().GetBillingAsync(Arg.Any<Provider>());
+    }*/
+    #endregion
 }

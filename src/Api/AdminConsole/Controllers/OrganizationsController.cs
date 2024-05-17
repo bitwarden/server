@@ -732,7 +732,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var taxInfo = await _paymentService.GetTaxInfoAsync(organization);
+        var taxInfo = await _subscriberService.GetTaxInformationAsync(organization);
         return new TaxInfoResponseModel(taxInfo);
     }
 

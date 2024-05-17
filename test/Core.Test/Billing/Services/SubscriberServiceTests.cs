@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Services;
@@ -731,6 +732,87 @@ public class SubscriberServiceTests
         braintreeGateway.PaymentMethod.Returns(paymentMethodGateway);
 
         return (braintreeGateway, customerGateway, paymentMethodGateway);
+    }
+    #endregion
+
+    #region GetTaxInformationAsync
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider)
+        => await Assert.ThrowsAsync<ArgumentNullException>(
+            async () => await sutProvider.Sut.GetTaxInformationAsync(null));
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_NoGatewayCustomerId_ReturnsNull(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        subscriber.GatewayCustomerId = null;
+
+        var taxInfo = await sutProvider.Sut.GetTaxInformationAsync(subscriber);
+
+        Assert.Null(taxInfo);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_NoCustomer_ReturnsNull(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns((Customer)null);
+
+        var taxInfo = await sutProvider.Sut.GetTaxInformationAsync(subscriber);
+
+        Assert.Null(taxInfo);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_StripeException_ReturnsNull(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .ThrowsAsync(new StripeException());
+
+        var taxInfo = await sutProvider.Sut.GetTaxInformationAsync(subscriber);
+
+        Assert.Null(taxInfo);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_Succeeds(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer
+        {
+            Address = new Stripe.Address
+            {
+                Line1 = "123 Main St",
+                Line2 = "Apt 4B",
+                City = "Metropolis",
+                State = "NY",
+                PostalCode = "12345",
+                Country = "US"
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        var taxInfo = await sutProvider.Sut.GetTaxInformationAsync(subscriber);
+
+        Assert.NotNull(taxInfo);
+        Assert.Equal("123 Main St", taxInfo.BillingAddressLine1);
+        Assert.Equal("Apt 4B", taxInfo.BillingAddressLine2);
+        Assert.Equal("Metropolis", taxInfo.BillingAddressCity);
+        Assert.Equal("NY", taxInfo.BillingAddressState);
+        Assert.Equal("12345", taxInfo.BillingAddressPostalCode);
+        Assert.Equal("US", taxInfo.BillingAddressCountry);
     }
     #endregion
 }

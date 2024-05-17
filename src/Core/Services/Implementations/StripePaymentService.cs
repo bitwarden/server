@@ -1651,43 +1651,6 @@ public class StripePaymentService : IPaymentService
         return subscriptionInfo;
     }
 
-    public async Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber)
-    {
-        if (subscriber == null || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
-        {
-            return null;
-        }
-
-        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId,
-            new CustomerGetOptions { Expand = ["tax_ids"] });
-
-        if (customer == null)
-        {
-            return null;
-        }
-
-        var address = customer.Address;
-        var taxId = customer.TaxIds?.FirstOrDefault();
-
-        // Line1 is required, so if missing we're using the subscriber name
-        // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
-        if (address != null && string.IsNullOrWhiteSpace(address.Line1))
-        {
-            address.Line1 = null;
-        }
-
-        return new TaxInfo
-        {
-            TaxIdNumber = taxId?.Value,
-            BillingAddressLine1 = address?.Line1,
-            BillingAddressLine2 = address?.Line2,
-            BillingAddressCity = address?.City,
-            BillingAddressState = address?.State,
-            BillingAddressPostalCode = address?.PostalCode,
-            BillingAddressCountry = address?.Country,
-        };
-    }
-
     public async Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo)
     {
         if (subscriber != null && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))

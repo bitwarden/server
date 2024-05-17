@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
+using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -330,4 +331,69 @@ public class SubscriberService(
             }
         }
     }
+
+    public async Task<TaxInfo> GetTaxInformationAsync(ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        if (string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        {
+            logger.LogError("Cannot retrieve GatewayCustomerId for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
+
+            return null;
+        }
+
+        var customer = await RetrieveCustomerAsync(subscriber);
+
+        if (customer is null)
+        {
+            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
+                subscriber.GatewayCustomerId, subscriber.Id);
+
+            return null;
+        }
+
+        var address = customer.Address;
+
+        // Line1 is required, so if missing we're using the subscriber name
+        // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
+        if (address is not null && string.IsNullOrWhiteSpace(address.Line1))
+        {
+            address.Line1 = null;
+        }
+
+        return MapToTaxInfo(customer);
+    }
+
+    private async Task<Customer> RetrieveCustomerAsync(ISubscriber subscriber)
+    {
+        try
+        {
+            return await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId,
+                new CustomerGetOptions { Expand = ["tax_ids"] });
+        }
+        catch (StripeException exception)
+        {
+            logger.LogError("An error occurred while trying to retrieve Stripe customer ({SubscriberID}): {Error}", subscriber.Id, exception.Message);
+            return null;
+        }
+    }
+
+    private TaxInfo MapToTaxInfo(Customer customer)
+    {
+        var address = customer.Address;
+        var taxId = customer.TaxIds?.FirstOrDefault();
+
+        return new TaxInfo
+        {
+            TaxIdNumber = taxId?.Value,
+            BillingAddressLine1 = address?.Line1,
+            BillingAddressLine2 = address?.Line2,
+            BillingAddressCity = address?.City,
+            BillingAddressState = address?.State,
+            BillingAddressPostalCode = address?.PostalCode,
+            BillingAddressCountry = address?.Country,
+        };
+    }
+
 }
