@@ -98,17 +98,19 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         Provider provider,
         IEnumerable<string> organizationOwnerEmails)
     {
-        if (!organization.IsStripeEnabled())
-        {
-            return;
-        }
-
         var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
 
         if (isConsolidatedBillingEnabled &&
             provider.Status == ProviderStatusType.Billable &&
-            organization.Status == OrganizationStatusType.Managed)
+            organization.Status == OrganizationStatusType.Managed &&
+            !string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            {
+                Description = string.Empty,
+                Email = organization.BillingEmail
+            });
+
             var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
@@ -129,26 +131,23 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
             organization.GatewaySubscriptionId = subscription.Id;
+            organization.Status = OrganizationStatusType.Created;
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
-        else
+        else if (organization.IsStripeEnabled())
         {
-            var customerUpdateOptions = new CustomerUpdateOptions
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Coupon = string.Empty,
                 Email = organization.BillingEmail
-            };
+            });
 
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
-
-            var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
             {
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30
-            };
-
-            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+            });
 
             await _subscriberService.RemovePaymentMethod(organization);
         }
