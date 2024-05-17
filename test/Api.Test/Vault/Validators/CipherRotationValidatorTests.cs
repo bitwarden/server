@@ -42,4 +42,16 @@ public class CipherRotationValidatorTests
 
         Assert.DoesNotContain(result, c => c.Id == ciphers.First().Id);
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_SentCiphersAreEmptyButDatabaseCiphersAreNot_Throws(
+        SutProvider<CipherRotationValidator> sutProvider, User user, IEnumerable<CipherWithIdRequestModel> ciphers)
+    {
+        var userCiphers = ciphers.Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
+            .ToList();
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
+            .Returns(userCiphers);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, Enumerable.Empty<CipherWithIdRequestModel>()));
+    }
 }

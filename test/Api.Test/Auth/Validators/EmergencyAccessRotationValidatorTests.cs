@@ -133,4 +133,25 @@ public class EmergencyAccessRotationValidatorTests
         await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ValidateAsync(user, emergencyAccessKeys));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_SentKeysAreEmptyButDatabaseIsNot_Throws(
+        SutProvider<EmergencyAccessRotationValidator> sutProvider, User user,
+        IEnumerable<EmergencyAccessWithIdRequestModel> emergencyAccessKeys)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
+        var userEmergencyAccess = emergencyAccessKeys.Select(e => new EmergencyAccessDetails
+        {
+            Id = e.Id,
+            GrantorName = user.Name,
+            GrantorEmail = user.Email,
+            KeyEncrypted = e.KeyEncrypted,
+            Type = e.Type
+        }).ToList();
+        sutProvider.GetDependency<IEmergencyAccessRepository>().GetManyDetailsByGrantorIdAsync(user.Id)
+            .Returns(userEmergencyAccess);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, Enumerable.Empty<EmergencyAccessWithIdRequestModel>()));
+    }
 }

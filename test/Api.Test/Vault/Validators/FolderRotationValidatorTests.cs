@@ -39,4 +39,14 @@ public class FolderRotationValidatorTests
 
         Assert.DoesNotContain(result, c => c.Id == folders.First().Id);
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_SentFoldersAreEmptyButDatabaseFoldersAreNot_Throws(
+        SutProvider<FolderRotationValidator> sutProvider, User user, IEnumerable<FolderWithIdRequestModel> folders)
+    {
+        var userFolders = folders.Select(f => f.ToFolder(new Folder())).ToList();
+        sutProvider.GetDependency<IFolderRepository>().GetManyByUserIdAsync(user.Id).Returns(userFolders);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, Enumerable.Empty<FolderWithIdRequestModel>()));
+    }
 }
