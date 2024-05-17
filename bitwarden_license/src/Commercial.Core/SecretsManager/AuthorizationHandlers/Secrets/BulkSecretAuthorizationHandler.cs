@@ -54,7 +54,7 @@ public class
         var secretsAccess =
             await _secretRepository.AccessToSecretsAsync(resources.Select(s => s.Id), userId, accessClient);
 
-        if (secretsAccess?.Count == resources.Count &&
+        if (secretsAccess.Count == resources.Count &&
             secretsAccess.All(a => a.Value.Read))
         {
             context.Succeed(requirement);
