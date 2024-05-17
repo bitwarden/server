@@ -33,6 +33,21 @@ public class OrganizationBillingController(
         return TypedResults.Ok(response);
     }
 
+    [HttpGet("history")]
+    public async Task<IResult> GetHistoryAsync([FromRoute] Guid organizationId)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var billingInfo = await paymentService.GetBillingHistoryAsync(organization);
+
+        return TypedResults.Ok(billingInfo);
+    }
+
     [HttpGet]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IResult> GetBillingAsync(Guid organizationId)
