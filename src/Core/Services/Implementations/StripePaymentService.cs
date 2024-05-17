@@ -1867,22 +1867,45 @@ public class StripePaymentService : IPaymentService
 
     }
 
-    private async Task<IEnumerable<BillingInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer)
+    private async Task<IEnumerable<BillingInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer,
+        long? limit = null)
     {
         if (customer == null)
         {
             return null;
         }
 
-        var options = new StripeInvoiceListOptions
-        {
-            Customer = customer.Id,
-            SelectAll = true
-        };
-
         try
         {
-            var invoices = await _stripeAdapter.InvoiceListAsync(options);
+            var paidInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+            {
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "paid"
+            });
+            var openInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+            {
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "open"
+            });
+            var uncollectibleInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+            {
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "uncollectible"
+            });
+
+            var paidInvoices = await paidInvoicesTask;
+            var openInvoices = await openInvoicesTask;
+            var uncollectibleInvoices = await uncollectibleInvoicesTask;
+
+            var invoices = paidInvoices
+                .Concat(openInvoices)
+                .Concat(uncollectibleInvoices);
 
             return invoices
                 .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
