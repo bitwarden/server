@@ -373,30 +373,6 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetSecretsByIds_OrganizationMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
-        List<Secret> data)
-    {
-        var (ids, request) = BuildGetSecretsRequestModel(data);
-        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task GetSecretsByIds_NoAccessToSecretsManager_ThrowsNotFound(
-        SutProvider<SecretsController> sutProvider, List<Secret> data)
-    {
-        var (ids, request) = BuildGetSecretsRequestModel(data);
-        var organizationId = SetOrganizations(ref data);
-
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
-            .ReturnsForAnyArgs(false);
-        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task GetSecretsByIds_AccessDenied_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
         List<Secret> data)
     {
@@ -404,10 +380,8 @@ public class SecretsControllerTests
         var organizationId = SetOrganizations(ref data);
 
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
-            .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
@@ -421,10 +395,8 @@ public class SecretsControllerTests
         var organizationId = SetOrganizations(ref data);
 
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
-            .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
 
         var results = await sutProvider.Sut.GetSecretsByIdsAsync(request);

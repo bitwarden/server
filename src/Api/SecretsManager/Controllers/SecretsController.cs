@@ -225,25 +225,13 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        // Ensure all secrets belong to the same organization.
-        var organizationId = secrets.First().OrganizationId;
-        if (secrets.Any(secret => secret.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, secrets, BulkSecretOperations.ReadAll);
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-
-        foreach (var secret in secrets)
-        {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Read);
-            if (!authorizationResult.Succeeded)
-            {
-                throw new NotFoundException();
-            }
-        }
-
-        await LogSecretsRetrievalAsync(organizationId, secrets);
+        await LogSecretsRetrievalAsync(secrets.First().OrganizationId, secrets);
 
         var responses = secrets.Select(s => new BaseSecretResponseModel(s));
         return new ListResponseModel<BaseSecretResponseModel>(responses);
