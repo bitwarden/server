@@ -24,13 +24,9 @@ public class EmergencyAccessRotationValidator : IRotationValidator<IEnumerable<E
         IEnumerable<EmergencyAccessWithIdRequestModel> emergencyAccessKeys)
     {
         var result = new List<EmergencyAccess>();
-        if (emergencyAccessKeys == null || !emergencyAccessKeys.Any())
-        {
-            return result;
-        }
 
         var existing = await _emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(user.Id);
-        if (existing == null || !existing.Any())
+        if (existing == null || existing.Count == 0)
         {
             return result;
         }

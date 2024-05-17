@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Repositories;
@@ -60,14 +59,6 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
         if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
-        }
-
-        if ((!model.Ciphers.Any()) && (await _cipherRepository.GetManyByUserIdAsync(user.Id, false, false)).Count != 0)
-        {
-            // if there are no ciphers in the req but some in the db, the local client state is likely de-synced and rotating would lead to permanent vault corruption
-            // we cannot filter by exact counts/ids since a users vault might already contain corrupt ciphers, which would permanently block them from key-rotation, unless
-            // we filter and drop these on the client
-            throw new BadRequestException("No ciphers in request, but ciphers in database. Local vault is not synced.");
         }
 
         var now = DateTime.UtcNow;
