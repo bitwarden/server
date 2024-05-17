@@ -55,7 +55,7 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PutCollections_vNextShouldThrowException(Guid id, CipherCollectionsRequestModel model, Guid userId,
+    public async Task PutCollections_vNextShouldThrowExceptionWhenCipherIsNullOrNoOrgValue(Guid id, CipherCollectionsRequestModel model, Guid userId,
         SutProvider<CiphersController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).Returns(userId);
@@ -83,7 +83,7 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PutCollections_vNextReturnOptionalDetailsCipher(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    public async Task PutCollections_vNextReturnOptionalDetailsCipherUnavailableFalse(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
@@ -94,6 +94,22 @@ public class CiphersControllerTests
         var result = await sutProvider.Sut.PutCollections_vNext(id, model);
 
         Assert.IsType<OptionalCipherDetailsResponseModel>(result);
+        Assert.False(result.Unavailable);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutCollections_vNextReturnOptionalDetailsCipherUnavailableTrue(Guid id, CipherCollectionsRequestModel model, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        SetupUserAndOrgMocks(id, userId, sutProvider);
+        var cipherDetails = CreateCipherDetailsMock(id, userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails, [(CipherDetails)null]);
+
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+
+        var result = await sutProvider.Sut.PutCollections_vNext(id, model);
+
+        Assert.IsType<OptionalCipherDetailsResponseModel>(result);
+        Assert.True(result.Unavailable);
     }
 
     private void SetupUserAndOrgMocks(Guid id, Guid userId, SutProvider<CiphersController> sutProvider)
