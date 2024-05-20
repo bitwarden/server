@@ -82,10 +82,10 @@ public class OrganizationAuthRequestsController : Controller
     {
         await ValidateAdminRequest(orgId);
 
-        await _updateOrganizationAuthRequestCommand.UpdateManyAsync(
+        await _updateOrganizationAuthRequestCommand.UpdateAsync(
             orgId,
             model.Select(x =>
-                new OrganizationAuthRequestUpdateCommandModel
+                new OrganizationAuthRequestUpdate
                 {
                     Id = x.Id,
                     Key = x.Key,
