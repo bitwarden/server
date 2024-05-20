@@ -166,6 +166,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Disable logs
             services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
+
+            // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
+            var stripePaymentService = services.First(sd => sd.ServiceType == typeof(IPaymentService));
+            services.Remove(stripePaymentService);
+            services.AddSingleton<IPaymentService, NoopPaymentService>();
         });
 
         foreach (var configureTestService in _configureTestServices)

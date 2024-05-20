@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,6 +13,9 @@ namespace Bit.Api.AdminConsole.Public.Models.Response;
 /// </summary>
 public class MemberResponseModel : MemberBaseModel, IResponseModel
 {
+    [JsonConstructor]
+    public MemberResponseModel() { }
+
     public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections,
         bool flexibleCollectionsEnabled)
         : base(user, flexibleCollectionsEnabled)
