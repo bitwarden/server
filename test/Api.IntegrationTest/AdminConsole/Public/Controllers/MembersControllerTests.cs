@@ -46,7 +46,13 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task Get_CustomUser_Success()
+    public async Task List_Member_Success()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
+    public async Task Get_CustomMember_Success()
     {
         var (email, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
             OrganizationUserType.Custom, new Permissions { AccessReports = true, ManageScim = true });
@@ -60,6 +66,24 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         AssertPermissionsEqual(new PermissionsModel { AccessReports = true, ManageScim = true },
             result.Permissions);
+    }
+
+    [Fact]
+    public async Task Post_CustomMember_Success()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
+    public async Task Put_CustomMember_Success()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
+    public async Task Put_ExistingCustomMember_NullPermissions_DoesNotOverwritePermissions()
+    {
+        throw new NotImplementedException();
     }
 
     private void AssertPermissionsEqual(PermissionsModel expected, PermissionsModel actual)
