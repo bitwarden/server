@@ -13,7 +13,7 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
     private OrganizationAuthRequestUpdate _updates { get; }
     private AuthRequestUpdateProcessorConfiguration _configuration { get; }
 
-    public EventType OrganizationEventType => ProcessedAuthRequest.Approved.Value ?
+    public EventType OrganizationEventType => ProcessedAuthRequest?.Approved.Value ?? false ?
         EventType.OrganizationUser_ApprovedAuthRequest :
         EventType.OrganizationUser_RejectedAuthRequest;
 
