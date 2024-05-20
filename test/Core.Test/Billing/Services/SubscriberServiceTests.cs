@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Services;
@@ -13,6 +15,7 @@ using Xunit;
 
 using static Bit.Core.Test.Billing.Utilities;
 using Customer = Stripe.Customer;
+using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Test.Billing.Services;
@@ -731,6 +734,148 @@ public class SubscriberServiceTests
         braintreeGateway.PaymentMethod.Returns(paymentMethodGateway);
 
         return (braintreeGateway, customerGateway, paymentMethodGateway);
+    }
+    #endregion
+
+    #region GetTaxInformationAsync
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider)
+        => await Assert.ThrowsAsync<ArgumentNullException>(
+            async () => await sutProvider.Sut.GetTaxInformationAsync(null));
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_NoGatewayCustomerId_ReturnsNull(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        subscriber.GatewayCustomerId = null;
+
+        var taxInfo = await sutProvider.Sut.GetTaxInformationAsync(subscriber);
+
+        Assert.Null(taxInfo);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_NoCustomer_ReturnsNull(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns((Customer)null);
+
+        await Assert.ThrowsAsync<BillingException>(
+            () => sutProvider.Sut.GetTaxInformationAsync(subscriber));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_StripeException_ReturnsNull(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .ThrowsAsync(new StripeException());
+
+        await Assert.ThrowsAsync<BillingException>(
+            () => sutProvider.Sut.GetTaxInformationAsync(subscriber));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformationAsync_Succeeds(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer
+        {
+            Address = new Stripe.Address
+            {
+                Line1 = "123 Main St",
+                Line2 = "Apt 4B",
+                City = "Metropolis",
+                State = "NY",
+                PostalCode = "12345",
+                Country = "US"
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        var taxInfo = await sutProvider.Sut.GetTaxInformationAsync(subscriber);
+
+        Assert.NotNull(taxInfo);
+        Assert.Equal("123 Main St", taxInfo.BillingAddressLine1);
+        Assert.Equal("Apt 4B", taxInfo.BillingAddressLine2);
+        Assert.Equal("Metropolis", taxInfo.BillingAddressCity);
+        Assert.Equal("NY", taxInfo.BillingAddressState);
+        Assert.Equal("12345", taxInfo.BillingAddressPostalCode);
+        Assert.Equal("US", taxInfo.BillingAddressCountry);
+    }
+    #endregion
+
+    #region GetPaymentMethodAsync
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethodAsync_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            async () => await sutProvider.Sut.GetPaymentMethodAsync(null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethodAsync_NoCustomer_ReturnsNull(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        subscriber.GatewayCustomerId = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns((Customer)null);
+
+        await Assert.ThrowsAsync<BillingException>(() => sutProvider.Sut.GetPaymentMethodAsync(subscriber));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethodAsync_StripeCardPaymentMethod_ReturnsBillingSource(
+        Provider subscriber,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer();
+        var paymentMethod = CreateSamplePaymentMethod();
+        subscriber.GatewayCustomerId = "test_customer_id";
+        customer.InvoiceSettings = new CustomerInvoiceSettings
+        {
+            DefaultPaymentMethod = paymentMethod
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        var billingSource = await sutProvider.Sut.GetPaymentMethodAsync(subscriber);
+
+        Assert.NotNull(billingSource);
+        Assert.Equal(paymentMethod.Card.Brand, billingSource.CardBrand);
+    }
+
+    private static PaymentMethod CreateSamplePaymentMethod()
+    {
+        var paymentMethod = new PaymentMethod
+        {
+            Id = "pm_test123",
+            Type = "card",
+            Card = new PaymentMethodCard
+            {
+                Brand = "visa",
+                Last4 = "4242",
+                ExpMonth = 12,
+                ExpYear = 2024
+            }
+        };
+        return paymentMethod;
     }
     #endregion
 }
