@@ -38,7 +38,7 @@ public class UpdateOrganizationAuthRequestCommandTests
                 Approved = true,
                 ResponseDate = responseDate,
                 RequestDeviceType = deviceType,
-
+                RequestDeviceIdentifier = deviceIdentifier,
                 RequestIpAddress = requestIpAddress,
             });
 
