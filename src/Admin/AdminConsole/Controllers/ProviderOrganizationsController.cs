@@ -3,6 +3,8 @@ using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -55,12 +57,23 @@ public class ProviderOrganizationsController : Controller
             return RedirectToAction("View", "Providers", new { id = providerId });
         }
 
-        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(
-            provider,
-            providerOrganization,
-            organization);
+        try
+        {
+            await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(
+                provider,
+                providerOrganization,
+                organization);
+        }
+        catch (BadRequestException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
-        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+
+        if (organization.IsStripeEnabled())
+        {
+            await _removePaymentMethodCommand.RemovePaymentMethod(organization);
+        }
 
         return Json(null);
     }

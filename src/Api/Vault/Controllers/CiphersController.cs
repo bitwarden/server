@@ -334,12 +334,32 @@ public class CiphersController : Controller
             return await _currentContext.EditAnyCollection(organizationId);
         }
 
-        if (await CanEditCiphersAsync(organizationId, cipherIds))
+        var org = _currentContext.GetOrganization(organizationId);
+
+        // If we're not an "admin", we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
         {
-            return true;
+            // Are we a provider user? If so, we need to be sure we're not restricted
+            // Once the feature flag is removed, this check can be combined with the above
+            if (await _currentContext.ProviderUserForOrgAsync(organizationId))
+            {
+                // Provider is restricted from editing ciphers, so we're not an "admin"
+                if (_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess))
+                {
+                    return false;
+                }
+
+                // Provider is unrestricted, so we're an "admin", don't return early
+            }
+            else
+            {
+                // Not a provider or admin
+                return false;
+            }
         }
 
-        return false;
+        // We know we're an "admin", now check the ciphers explicitly (in case admins are restricted)
+        return await CanEditCiphersAsync(organizationId, cipherIds);
     }
 
     /// <summary>
@@ -360,10 +380,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can access all ciphers in V1 (to change later)
+        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
@@ -399,10 +419,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can edit all ciphers in V1 (to change later)
+        // Provider users can edit all ciphers if RestrictProviderAccess is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
@@ -422,10 +442,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can still access organization ciphers in V1 (to change later)
+        // Provider users can only access organization ciphers if RestrictProviderAccess is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
@@ -445,10 +465,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can access all ciphers in V1 (to change later)
+        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return true;
+            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;

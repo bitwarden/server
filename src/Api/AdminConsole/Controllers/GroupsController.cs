@@ -137,7 +137,9 @@ public class GroupsController : Controller
         }
 
         // Flexible Collections - check the user has permission to grant access to the collections for the new group
-        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        if (await FlexibleCollectionsIsEnabledAsync(orgId) &&
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) &&
+            model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
@@ -198,7 +200,8 @@ public class GroupsController : Controller
             var userId = _userService.GetProperUserId(User).Value;
             var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, userId);
             var currentGroupUsers = await _groupRepository.GetManyUserIdsByIdAsync(id);
-            if (!currentGroupUsers.Contains(organizationUser.Id) && model.Users.Contains(organizationUser.Id))
+            // OrganizationUser may be null if the current user is a provider
+            if (organizationUser != null && !currentGroupUsers.Contains(organizationUser.Id) && model.Users.Contains(organizationUser.Id))
             {
                 throw new BadRequestException("You cannot add yourself to groups.");
             }

@@ -12,7 +12,7 @@
                     window.location.href = `@Url.Action("Edit", "Providers")?id=${providerId}`;
                 },
                 error: function (response) {
-                    alert("Error!");
+                    alert("Error!: " + response.responseText);
                 }
             });
         }
