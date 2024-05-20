@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
-using Bit.Core.AdminConsole.OrganizationAuth.Models;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -81,18 +80,7 @@ public class OrganizationAuthRequestsController : Controller
     public async Task UpdateManyAuthRequests(Guid orgId, [FromBody] IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> model)
     {
         await ValidateAdminRequest(orgId);
-
-        await _updateOrganizationAuthRequestCommand.UpdateAsync(
-            orgId,
-            model.Select(x =>
-                new OrganizationAuthRequestUpdate
-                {
-                    Id = x.Id,
-                    Key = x.Key,
-                    Approved = x.Approved
-                }
-            ).ToList()
-        );
+        await _updateOrganizationAuthRequestCommand.UpdateAsync(orgId, model.Select(x => x.ToOrganizationAuthRequestUpdate()));
     }
 
     public async Task ValidateAdminRequest(Guid orgId)
