@@ -149,20 +149,22 @@ public class BatchAuthRequestUpdateProcessorTests
 
     [Theory]
     [BitAutoData]
-    public async Task SendEventLogs_NoProcessors_IsHandled
+    public async Task SendEventLogs_NoProcessedAuthRequests_IsHandled
     (
         List<OrganizationAuthRequestUpdate> updates,
-        AuthRequestUpdateProcessorConfiguration configuration,
-        Func<AuthRequest, EventType, Task> callback
+        AuthRequestUpdateProcessorConfiguration configuration
     )
     {
         var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(null, updates, configuration);
+        var callback = Substitute.For<Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task>>();
+        Assert.Empty(sut.Processors);
         await sut.SendEventLogs(callback);
+        await callback.DidNotReceiveWithAnyArgs()(Arg.Any<IEnumerable<(OrganizationAdminAuthRequest, EventType)>>());
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SendEventLogs_HasProcessors_Sends
+    public async Task SendEventLogs_HasProcessedAuthRequests_IsHandled
     (
         List<OrganizationAdminAuthRequest> authRequests,
         List<OrganizationAuthRequestUpdate> updates,
@@ -172,9 +174,9 @@ public class BatchAuthRequestUpdateProcessorTests
     {
         (authRequests[0], updates[0], configuration) = UnrespondAndEnsureValid(authRequests[0], updates[0], configuration);
         var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequests, updates, configuration);
-        var callback = Substitute.For<Func<OrganizationAdminAuthRequest, EventType, Task>>();
+        var callback = Substitute.For<Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task>>();
         await sut.Process(errorHandler).SendEventLogs(callback);
-        await callback.ReceivedWithAnyArgs()(Arg.Any<OrganizationAdminAuthRequest>(), Arg.Any<EventType>());
+        await callback.ReceivedWithAnyArgs()(Arg.Any<IEnumerable<(OrganizationAdminAuthRequest, EventType)>>());
     }
 
     private (

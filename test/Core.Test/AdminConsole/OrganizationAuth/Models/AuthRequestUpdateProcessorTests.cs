@@ -200,39 +200,6 @@ public class AuthRequestUpdateProcessorTests
         await callback.Received()(sut.ProcessedAuthRequest, "iOS - device-id");
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task SendEventLog_RequestIsApproved_Sends(
-        OrganizationAdminAuthRequest authRequest,
-        OrganizationAuthRequestUpdate update,
-        AuthRequestUpdateProcessorConfiguration processorConfiguration
-    )
-    {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
-        update.Approved = true;
-        update.Key = "key";
-        var sut = new AuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequest, update, processorConfiguration);
-        var callback = Substitute.For<Func<OrganizationAdminAuthRequest, EventType, Task>>();
-        await sut.Process().SendEventLog(callback);
-        await callback.Received()(sut.ProcessedAuthRequest, EventType.OrganizationUser_ApprovedAuthRequest);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SendEventLog_RequestIsDenied_Sends(
-        OrganizationAdminAuthRequest authRequest,
-        OrganizationAuthRequestUpdate update,
-        AuthRequestUpdateProcessorConfiguration processorConfiguration
-    )
-    {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
-        update.Approved = false;
-        var sut = new AuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequest, update, processorConfiguration);
-        var callback = Substitute.For<Func<OrganizationAdminAuthRequest, EventType, Task>>();
-        await sut.Process().SendEventLog(callback);
-        await callback.Received()(sut.ProcessedAuthRequest, EventType.OrganizationUser_RejectedAuthRequest);
-    }
-
     private static T Approve<T>(T authRequest) where T : AuthRequest
     {
         authRequest.Key = "key";

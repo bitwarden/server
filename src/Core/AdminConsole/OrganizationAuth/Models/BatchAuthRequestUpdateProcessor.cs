@@ -51,10 +51,10 @@ public class BatchAuthRequestUpdateProcessor<T> where T : AuthRequest
         return this;
     }
 
-    // Currently events like notifications, emails, and event logs are still
-    // done per-request in a loop, which is different than saving updates to
-    // the database. Saving can be done in bulk all the way through to the
-    // repository.
+    // Currently push notifications and emails are still done per-request in
+    // a loop, which is different than saving updates to the database and
+    // raising organization events. These can be done in bulk all the way
+    // through to the repository.
     //
     // Adding bulk notification and email methods is being tracked as tech
     // debt on https://bitwarden.atlassian.net/browse/AC-2629
@@ -76,11 +76,14 @@ public class BatchAuthRequestUpdateProcessor<T> where T : AuthRequest
         return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor<T>> SendEventLogs(Func<T, EventType, Task> callback)
+    public async Task<BatchAuthRequestUpdateProcessor<T>> SendEventLogs(Func<IEnumerable<(T, EventType)>, Task> callback)
     {
-        foreach (var processor in _processed)
+        if (_processed.Any())
         {
-            await processor.SendEventLog(callback);
+            await callback(_processed.Select(p =>
+            {
+                return (p.ProcessedAuthRequest, p.OrganizationEventType);
+            }));
         }
         return this;
     }

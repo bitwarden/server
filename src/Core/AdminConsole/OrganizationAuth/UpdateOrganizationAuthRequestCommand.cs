@@ -7,7 +7,6 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -93,7 +92,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         .Save((IEnumerable<OrganizationAdminAuthRequest> authRequests) => _authRequestRepository.UpdateManyAsync(authRequests))
         .Then(p => p.SendPushNotifications((ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar)))
         .Then(p => p.SendNewDeviceEmails(PushTrustedDeviceEmail))
-        .Then(p => p.SendEventLogs(PushAuthRequestEventLog));
+        .Then(p => p.SendEventLogs(SendOrganizationEventLogs));
     }
 
     async Task<ICollection<OrganizationAdminAuthRequest>> FetchManyOrganizationAuthRequestsFromTheDatabase(Guid organizationId, IEnumerable<Guid> authRequestIds)
@@ -126,22 +125,15 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         );
     }
 
-    async Task<OrganizationUser> FetchOrganizationUserFromTheDatabase(Guid organizationId, Guid userId)
+    async Task SendOrganizationEventLogs(IEnumerable<(OrganizationAdminAuthRequest AuthRequest, EventType EventType)> events)
     {
-        return await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-    }
-
-    async Task PushAuthRequestEventLog<T>(T authRequest, EventType eventType) where T : AuthRequest
-    {
-        var organizationUser = await FetchOrganizationUserFromTheDatabase(authRequest.OrganizationId.Value, authRequest.UserId);
-
-        // This should be impossible
-        if (organizationUser == null)
-        {
-            _logger.LogError($"An organization user was not found while processing auth request {authRequest.Id}. Event logs can not be posted for this request.");
-            return;
-        }
-
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, eventType);
+        var organizationUsers = await _organizationUserRepository.GetManyAsync(events.Select(e => e.AuthRequest.OrganizationUserId));
+        await _eventService.LogOrganizationUserEventsAsync(
+            organizationUsers.Select(ou =>
+            {
+                var e = events.FirstOrDefault(e => e.AuthRequest.OrganizationId == ou.Id);
+                return (ou, e.EventType, e.AuthRequest.ResponseDate);
+            })
+        );
     }
 }

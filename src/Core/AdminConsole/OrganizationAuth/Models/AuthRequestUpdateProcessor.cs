@@ -13,6 +13,10 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
     private OrganizationAuthRequestUpdate _updates { get; }
     private AuthRequestUpdateProcessorConfiguration _configuration { get; }
 
+    public EventType OrganizationEventType => ProcessedAuthRequest.Approved.Value ?
+        EventType.OrganizationUser_ApprovedAuthRequest :
+        EventType.OrganizationUser_RejectedAuthRequest;
+
     public AuthRequestUpdateProcessor(
         T authRequest,
         OrganizationAuthRequestUpdate updates,
@@ -73,19 +77,6 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
                 deviceTypeDisplayName :
                 $"{deviceTypeDisplayName} - {_unprocessedAuthRequest.RequestDeviceIdentifier}";
         await callback(ProcessedAuthRequest, deviceTypeAndIdentifierDisplayString);
-        return this;
-    }
-
-    public async Task<AuthRequestUpdateProcessor<T>> SendEventLog(Func<T, EventType, Task> callback)
-    {
-        if (!ProcessedAuthRequest?.Approved == null || callback == null)
-        {
-            return this;
-        }
-        var eventType = _updates.Approved ?
-            EventType.OrganizationUser_ApprovedAuthRequest :
-            EventType.OrganizationUser_RejectedAuthRequest;
-        await callback(ProcessedAuthRequest, eventType);
         return this;
     }
 
