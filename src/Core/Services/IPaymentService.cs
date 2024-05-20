@@ -57,4 +57,5 @@ public interface IPaymentService
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
         int additionalServiceAccount, DateTime? prorationDate = null);
     Task<bool> RisksSubscriptionFailure(Organization organization);
+    Task<bool> HasSecretsManagerStandalone(Organization organization);
 }
