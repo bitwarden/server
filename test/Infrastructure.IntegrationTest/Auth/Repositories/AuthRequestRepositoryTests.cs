@@ -166,7 +166,6 @@ public class AuthRequestRepositoryTests
         // Assert that the unchanged auth request is still unchanged
         var skippedAuthRequest = await authRequestRepository.GetByIdAsync(authRequestNotToBeUpdated.Id);
         Assert.True(AuthRequestEquals(skippedAuthRequest, authRequestNotToBeUpdated));
-        //Assert.Equal(skippedAuthRequest.CreationDate, authRequestNotToBeUpdated.CreationDate);
 
         // Assert that the values updated on the changed auth requests were updated, and no others
         var updatedAuthRequest1 = await authRequestRepository.GetByIdAsync(authRequestToBeUpdated1.Id);
