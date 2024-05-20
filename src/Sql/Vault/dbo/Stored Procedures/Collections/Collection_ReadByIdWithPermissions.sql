@@ -35,7 +35,7 @@ BEGIN
 	    CASE
             WHEN
                 -- No active user or group has manage rights
-                NOT EXISTS(
+                 NOT EXISTS(
                     SELECT 1
                     FROM [dbo].[CollectionUser] CU2
                              JOIN [dbo].[OrganizationUser] OU2 ON CU2.[OrganizationUserId] = OU2.[Id]
@@ -51,7 +51,7 @@ BEGIN
                         CG2.[CollectionId] = C.[Id] AND
                         CG2.[Manage] = 1
                 )
-                THEN 1
+            THEN 1
             ELSE 0
         END AS [Unmanaged]
 	FROM
