@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE AuthRequest_UpdateMany
+CREATE PROCEDURE AuthRequest_UpdateMany
     @jsonData NVARCHAR(MAX)
 AS
 BEGIN
