@@ -48,4 +48,17 @@ public class OrganizationAuthRequestsControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(true);
         await sutProvider.Sut.UpdateManyAuthRequests(organizationId, request);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateManyAuthRequests_NotPermissioned_ThrowsUnauthorized(
+        SutProvider<OrganizationAuthRequestsController> sutProvider,
+        IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> request,
+        Guid organizationId
+    )
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sutProvider.Sut.UpdateManyAuthRequests(organizationId, request));
+    }
 }
