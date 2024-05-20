@@ -102,11 +102,6 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
-    public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
-    public const string PasswordlessLogin = "passwordless-login";
-    public const string TrustedDeviceEncryption = "trusted-device-encryption";
-    public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string VaultOnboarding = "vault-onboarding";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -140,6 +135,7 @@ public static class FeatureFlagKeys
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
     public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
+    public const string VaultBulkManagementAction = "vault-bulk-management-action";
 
     public static List<string> GetAllKeys()
     {
@@ -154,8 +150,6 @@ public static class FeatureFlagKeys
         // place overriding values when needed locally (offline), or return null
         return new Dictionary<string, string>()
         {
-            { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" },
             { DuoRedirect, "true" },
             { UnassignedItemsBanner, "true"},
             { FlexibleCollectionsSignup, "true" }

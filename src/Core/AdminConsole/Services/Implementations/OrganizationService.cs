@@ -1323,7 +1323,6 @@ public class OrganizationService : IOrganizationService
         var validOrganizationUserIds = validOrganizationUsers.Select(u => u.UserId.Value).ToList();
 
         var organization = await GetOrgById(organizationId);
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
         var usersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validOrganizationUserIds);
         var users = await _userRepository.GetManyAsync(validOrganizationUserIds);
 
@@ -1355,7 +1354,7 @@ public class OrganizationService : IOrganizationService
                     }
                 }
 
-                await CheckPolicies(policies, organizationId, user, orgUsers, userService);
+                await CheckPolicies(organizationId, user, orgUsers, userService);
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
@@ -1449,22 +1448,29 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task CheckPolicies(ICollection<Policy> policies, Guid organizationId, User user,
+    private async Task CheckPolicies(Guid organizationId, User user,
         ICollection<OrganizationUser> userOrgs, IUserService userService)
     {
-        var usingTwoFactorPolicy = policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-        if (usingTwoFactorPolicy && !await userService.TwoFactorIsEnabledAsync(user))
+        // Enforce Two Factor Authentication Policy for this organization
+        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)).Any(p => p.OrganizationId == organizationId);
+        if (orgRequiresTwoFactor && !await userService.TwoFactorIsEnabledAsync(user))
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }
 
-        var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
-        if (usingSingleOrgPolicy)
+        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
+        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
+        var otherSingleOrgPolicies =
+            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
+        // Enforce Single Organization Policy for this organization
+        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
         {
-            if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
-            {
-                throw new BadRequestException("User is a member of another organization.");
-            }
+            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
+        }
+        // Enforce Single Organization Policy of other organizations user is a member of
+        if (otherSingleOrgPolicies.Any())
+        {
+            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
         }
     }
 
@@ -1673,14 +1679,14 @@ public class OrganizationService : IOrganizationService
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
+        IEnumerable<Guid> groups, bool accessSecretsManager)
     {
         // Collection associations validation not required as they are always an empty list - created via system user (scim)
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups, accessSecretsManager);
     }
 
     private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, bool accessSecretsManager = false)
     {
         var invite = new OrganizationUserInvite()
         {
@@ -1688,7 +1694,8 @@ public class OrganizationService : IOrganizationService
             Type = type,
             AccessAll = accessAll,
             Collections = collections,
-            Groups = groups
+            Groups = groups,
+            AccessSecretsManager = accessSecretsManager
         };
         var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
             new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
@@ -1787,6 +1794,8 @@ public class OrganizationService : IOrganizationService
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
 
+            var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+
             var userInvites = new List<(OrganizationUserInvite, string)>();
             foreach (var user in newUsers)
             {
@@ -1803,6 +1812,7 @@ public class OrganizationService : IOrganizationService
                         Type = OrganizationUserType.User,
                         AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
+                        AccessSecretsManager = hasStandaloneSecretsManager
                     };
                     userInvites.Add((invite, user.ExternalId));
                 }
