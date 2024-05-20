@@ -1554,9 +1554,7 @@ public class StripePaymentService : IPaymentService
         var billingInfo = new BillingInfo
         {
             Balance = GetBillingBalance(customer),
-            PaymentSource = await GetBillingPaymentSourceAsync(customer),
-            Invoices = await GetBillingInvoicesAsync(customer),
-            Transactions = await GetBillingTransactionsAsync(subscriber)
+            PaymentSource = await GetBillingPaymentSourceAsync(customer)
         };
 
         return billingInfo;
@@ -1908,7 +1906,6 @@ public class StripePaymentService : IPaymentService
                 .Concat(uncollectibleInvoices);
 
             return invoices
-                .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
                 .OrderByDescending(invoice => invoice.Created)
                 .Select(invoice => new BillingInfo.BillingInvoice(invoice));
         }
