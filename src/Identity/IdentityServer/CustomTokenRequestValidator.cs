@@ -12,7 +12,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using HandlebarsDotNet;

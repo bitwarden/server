@@ -344,7 +344,8 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         await server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
         {
-            Email = username, MasterPasswordHash = "master_password_hash"
+            Email = username,
+            MasterPasswordHash = "master_password_hash"
         }));
 
 

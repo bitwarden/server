@@ -168,9 +168,9 @@ public abstract class BaseRequestValidator<T> where T : class
         {
             if (UserService.IsLegacyUser(user) && request.ClientId != "web")
             {
-            await BuildErrorResultAsync("Legacy user detected. Please login on web vault to migrate your account",
-                false, context, null);
-            return;
+                await BuildErrorResultAsync("Legacy user detected. Please login on web vault to migrate your account",
+                    false, context, null);
+                return;
             }
         }
 
