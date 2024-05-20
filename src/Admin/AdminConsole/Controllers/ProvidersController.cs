@@ -17,7 +17,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +35,6 @@ public class ProvidersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderService _providerService;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IUserService _userService;
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IFeatureService _featureService;
@@ -51,7 +49,6 @@ public class ProvidersController : Controller
         IProviderService providerService,
         GlobalSettings globalSettings,
         IApplicationCacheService applicationCacheService,
-        IReferenceEventService referenceEventService,
         IUserService userService,
         ICreateProviderCommand createProviderCommand,
         IFeatureService featureService,
@@ -65,7 +62,6 @@ public class ProvidersController : Controller
         _providerService = providerService;
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
-        _referenceEventService = referenceEventService;
         _userService = userService;
         _createProviderCommand = createProviderCommand;
         _featureService = featureService;
@@ -104,8 +100,8 @@ public class ProvidersController : Controller
         return View(new CreateProviderModel
         {
             OwnerEmail = ownerEmail,
-            TeamsMinimumSeats = teamsMinimumSeats,
-            EnterpriseMinimumSeats = enterpriseMinimumSeats
+            TeamsMonthlySeatMinimum = teamsMinimumSeats,
+            EnterpriseMonthlySeatMinimum = enterpriseMinimumSeats
         });
     }
 
@@ -123,8 +119,11 @@ public class ProvidersController : Controller
         switch (provider.Type)
         {
             case ProviderType.Msp:
-                await _createProviderCommand.CreateMspAsync(provider, model.OwnerEmail, model.TeamsMinimumSeats,
-                    model.EnterpriseMinimumSeats);
+                await _createProviderCommand.CreateMspAsync(
+                    provider,
+                    model.OwnerEmail,
+                    model.TeamsMonthlySeatMinimum,
+                    model.EnterpriseMonthlySeatMinimum);
                 break;
             case ProviderType.Reseller:
                 await _createProviderCommand.CreateResellerAsync(provider);
@@ -167,8 +166,9 @@ public class ProvidersController : Controller
             return View(new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>()));
         }
 
-        var providerPlan = await _providerPlanRepository.GetByProviderId(id);
-        return View(new ProviderEditModel(provider, users, providerOrganizations, providerPlan));
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+
+        return View(new ProviderEditModel(provider, users, providerOrganizations, providerPlans.ToList()));
     }
 
     [HttpPost]
@@ -177,14 +177,15 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
     {
-        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
         var provider = await _providerRepository.GetByIdAsync(id);
+
         if (provider == null)
         {
             return RedirectToAction("Index");
         }
 
         model.ToProvider(provider);
+
         await _providerRepository.ReplaceAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
 
@@ -195,13 +196,14 @@ public class ProvidersController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
-        model.ToProviderPlan(providerPlans);
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+
         if (providerPlans.Count == 0)
         {
             var newProviderPlans = new List<ProviderPlan>
             {
-                new() {ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum= model.TeamsMinimumSeats, PurchasedSeats = 0, AllocatedSeats = 0},
-                new() {ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum= model.EnterpriseMinimumSeats, PurchasedSeats = 0, AllocatedSeats = 0}
+                new () { ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum = model.TeamsMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 },
+                new () { ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum = model.EnterpriseMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 }
             };
 
             foreach (var newProviderPlan in newProviderPlans)
@@ -213,6 +215,15 @@ public class ProvidersController : Controller
         {
             foreach (var providerPlan in providerPlans)
             {
+                if (providerPlan.PlanType == PlanType.EnterpriseMonthly)
+                {
+                    providerPlan.SeatMinimum = model.EnterpriseMonthlySeatMinimum;
+                }
+                else if (providerPlan.PlanType == PlanType.TeamsMonthly)
+                {
+                    providerPlan.SeatMinimum = model.TeamsMonthlySeatMinimum;
+                }
+
                 await _providerPlanRepository.ReplaceAsync(providerPlan);
             }
         }
