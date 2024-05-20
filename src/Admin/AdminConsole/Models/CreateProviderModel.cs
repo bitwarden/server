@@ -24,11 +24,11 @@ public class CreateProviderModel : IValidatableObject
     [Display(Name = "Primary Billing Email")]
     public string BillingEmail { get; set; }
 
-    [Display(Name = "Teams minimum seats")]
-    public int TeamsMinimumSeats { get; set; }
+    [Display(Name = "Teams (Monthly) Seat Minimum")]
+    public int TeamsMonthlySeatMinimum { get; set; }
 
-    [Display(Name = "Enterprise minimum seats")]
-    public int EnterpriseMinimumSeats { get; set; }
+    [Display(Name = "Enterprise (Monthly) Seat Minimum")]
+    public int EnterpriseMonthlySeatMinimum { get; set; }
 
     public virtual Provider ToProvider()
     {
@@ -51,14 +51,14 @@ public class CreateProviderModel : IValidatableObject
                     var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(OwnerEmail);
                     yield return new ValidationResult($"The {ownerEmailDisplayName} field is required.");
                 }
-                if (TeamsMinimumSeats < 0)
+                if (TeamsMonthlySeatMinimum < 0)
                 {
-                    var teamsMinimumSeatsDisplayName = nameof(TeamsMinimumSeats).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(TeamsMinimumSeats);
+                    var teamsMinimumSeatsDisplayName = nameof(TeamsMonthlySeatMinimum).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(TeamsMonthlySeatMinimum);
                     yield return new ValidationResult($"The {teamsMinimumSeatsDisplayName} field can not be negative.");
                 }
-                if (EnterpriseMinimumSeats < 0)
+                if (EnterpriseMonthlySeatMinimum < 0)
                 {
-                    var enterpriseMinimumSeatsDisplayName = nameof(EnterpriseMinimumSeats).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(EnterpriseMinimumSeats);
+                    var enterpriseMinimumSeatsDisplayName = nameof(EnterpriseMonthlySeatMinimum).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(EnterpriseMonthlySeatMinimum);
                     yield return new ValidationResult($"The {enterpriseMinimumSeatsDisplayName} field can not be negative.");
                 }
                 break;
