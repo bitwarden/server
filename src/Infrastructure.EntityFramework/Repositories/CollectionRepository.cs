@@ -391,7 +391,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         c.Name,
                         c.CreationDate,
                         c.RevisionDate,
-                        c.ExternalId
+                        c.ExternalId,
+                        c.Unmanaged
                     }).Select(collectionGroup => new CollectionAdminDetails
                     {
                         Id = collectionGroup.Key.Id,
@@ -404,7 +405,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         HidePasswords =
                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
-                        Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned)))
+                        Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                        Unmanaged = collectionGroup.Key.Unmanaged
                     }).ToList();
             }
             else
@@ -417,7 +419,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          c.Name,
                                          c.CreationDate,
                                          c.RevisionDate,
-                                         c.ExternalId
+                                         c.ExternalId,
+                                         c.Unmanaged
                                      }
                     into collectionGroup
                                      select new CollectionAdminDetails
@@ -432,7 +435,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          HidePasswords =
                                              Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                                          Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
-                                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned)))
+                                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                                         Unmanaged = collectionGroup.Key.Unmanaged
                                      }).ToListAsync();
             }
 
@@ -511,7 +515,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         HidePasswords =
                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
-                        Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned)))
+                        Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                        Unmanaged = collectionGroup.Select(c => c.Unmanaged).FirstOrDefault()
                     }).FirstOrDefault();
             }
             else
@@ -539,7 +544,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                                HidePasswords =
                                                    Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                                                Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
-                                               Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned)))
+                                               Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                                               Unmanaged = collectionGroup.Select(c => c.Unmanaged).FirstOrDefault()
                                            }).FirstOrDefaultAsync();
             }
 

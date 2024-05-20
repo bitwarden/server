@@ -31,7 +31,29 @@ BEGIN
 	    	    CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
 	    	THEN 0
 	    	ELSE 1
-	    END) AS [Assigned]
+	    END) AS [Assigned],
+	    CASE
+            WHEN
+                -- No active user or group has manage rights
+                NOT EXISTS(
+                    SELECT 1
+                    FROM [dbo].[CollectionUser] CU2
+                             JOIN [dbo].[OrganizationUser] OU2 ON CU2.[OrganizationUserId] = OU2.[Id]
+                    WHERE
+                        CU2.[CollectionId] = C.[Id] AND
+                        OU2.[Status] = 2 AND
+                        CU2.[Manage] = 1
+                )
+                    AND NOT EXISTS (
+                    SELECT 1
+                    FROM [dbo].[CollectionGroup] CG2
+                    WHERE
+                        CG2.[CollectionId] = C.[Id] AND
+                        CG2.[Manage] = 1
+                )
+                THEN 1
+            ELSE 0
+        END AS [Unmanaged]
 	FROM
 	    [dbo].[CollectionView] C
 	LEFT JOIN

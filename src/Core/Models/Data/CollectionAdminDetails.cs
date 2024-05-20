@@ -14,4 +14,9 @@ public class CollectionAdminDetails : CollectionDetails
     /// Flag for whether the user has been explicitly assigned to the collection either directly or through a group.
     /// </summary>
     public bool Assigned { get; set; }
+
+    /// <summary>
+    /// Flag for whether a collection is managed by an active user or group.
+    /// </summary>
+    public bool Unmanaged { get; set; }
 }

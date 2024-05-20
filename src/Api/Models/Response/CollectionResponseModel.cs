@@ -89,6 +89,7 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
         ReadOnly = collection.ReadOnly;
         HidePasswords = collection.HidePasswords;
         Manage = collection.Manage;
+        Unmanaged = collection.Unmanaged;
         Groups = collection.Groups?.Select(g => new SelectionReadOnlyResponseModel(g)) ?? Enumerable.Empty<SelectionReadOnlyResponseModel>();
         Users = collection.Users?.Select(g => new SelectionReadOnlyResponseModel(g)) ?? Enumerable.Empty<SelectionReadOnlyResponseModel>();
     }
@@ -104,4 +105,5 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
     public bool Manage { get; set; }
+    public bool Unmanaged { get; set; }
 }
