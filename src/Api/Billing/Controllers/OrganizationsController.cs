@@ -304,7 +304,7 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        var taxInfo = await paymentService.GetTaxInfoAsync(organization);
+        var taxInfo = await subscriberService.GetTaxInformationAsync(organization);
         return new TaxInfoResponseModel(taxInfo);
     }
 

@@ -49,7 +49,6 @@ public interface IPaymentService
     Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber);
     Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber);
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
-    Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber);
     Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo);
     Task<TaxRate> CreateTaxRateAsync(TaxRate taxRate);
     Task UpdateTaxRateAsync(TaxRate taxRate);
