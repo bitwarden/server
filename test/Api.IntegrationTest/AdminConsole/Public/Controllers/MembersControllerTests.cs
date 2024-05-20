@@ -64,7 +64,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.NotNull(result);
         Assert.Equal(email, result.Email);
 
-        AssertPermissionsEqual(new PermissionsModel { AccessReports = true, ManageScim = true },
+        AssertHelper.AssertPropertyEqual(new PermissionsModel { AccessReports = true, ManageScim = true },
             result.Permissions);
     }
 
@@ -84,15 +84,5 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task Put_ExistingCustomMember_NullPermissions_DoesNotOverwritePermissions()
     {
         throw new NotImplementedException();
-    }
-
-    private void AssertPermissionsEqual(PermissionsModel expected, PermissionsModel actual)
-    {
-        AssertHelper.AssertPropertyEqual(expected, actual,
-            [
-                "EditAssignedCollections", // Deprecated and not included in the Public API
-                "DeleteAssignedCollections", // Deprecated and not included in the Public API
-                "ClaimsMap" // internal
-            ]);
     }
 }
