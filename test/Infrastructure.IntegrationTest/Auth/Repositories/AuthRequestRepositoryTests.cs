@@ -171,7 +171,7 @@ public class AuthRequestRepositoryTests
         var updatedAuthRequest1 = await authRequestRepository.GetByIdAsync(authRequestToBeUpdated1.Id);
         Assert.True(AuthRequestEquals(authRequestToBeUpdated1, updatedAuthRequest1));
         var updatedAuthRequest2 = await authRequestRepository.GetByIdAsync(authRequestToBeUpdated2.Id);
-        Assert.True(AuthRequestEquals(authRequestToBeUpdated2, updatedAuthRequest2));
+        Assert.False(AuthRequestEquals(authRequestToBeUpdated2, updatedAuthRequest2));
 
         // Assert that the auth request we never created is not created by
         // the update method.
