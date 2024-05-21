@@ -118,11 +118,6 @@ public static class FeatureFlagKeys
     /// Enables flexible collections improvements for new organizations on creation
     /// </summary>
     public const string FlexibleCollectionsSignup = "flexible-collections-signup";
-    /// <summary>
-    /// Exposes a migration button in the web vault which allows users to migrate an existing organization to
-    /// flexible collections
-    /// </summary>
-    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
