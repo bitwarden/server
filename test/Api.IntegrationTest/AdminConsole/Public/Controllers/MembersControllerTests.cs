@@ -151,16 +151,16 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         var request = new MemberUpdateRequestModel
         {
-               Type = OrganizationUserType.Custom,
-               Permissions = new PermissionsModel
-               {
-                   DeleteAnyCollection = true,
-                   EditAnyCollection = true,
-                   AccessEventLogs = true
-               },
-               AccessAll = false,
-               ExternalId = "example",
-               Collections = []
+            Type = OrganizationUserType.Custom,
+            Permissions = new PermissionsModel
+            {
+                DeleteAnyCollection = true,
+                EditAnyCollection = true,
+                AccessEventLogs = true
+            },
+            AccessAll = false,
+            ExternalId = "example",
+            Collections = []
         };
 
         var response = await _client.PutAsync($"/public/members/{orgUser.Id}", JsonContent.Create(request));
@@ -174,7 +174,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(OrganizationUserType.Custom, result.Type);
         Assert.Equal("example", result.ExternalId);
         AssertHelper.AssertPropertyEqual(
-            new PermissionsModel {DeleteAnyCollection = true, EditAnyCollection = true, AccessEventLogs = true},
+            new PermissionsModel { DeleteAnyCollection = true, EditAnyCollection = true, AccessEventLogs = true },
             result.Permissions);
         Assert.False(result.AccessAll);
         Assert.Empty(result.Collections);
@@ -198,14 +198,14 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task Put_ExistingCustomMember_NullPermissions_DoesNotOverwritePermissions()
     {
         var (email, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
-            OrganizationUserType.Custom, new Permissions { CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true});
+            OrganizationUserType.Custom, new Permissions { CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true });
 
         var request = new MemberUpdateRequestModel
         {
-               Type = OrganizationUserType.Custom,
-               AccessAll = false,
-               ExternalId = "example",
-               Collections = []
+            Type = OrganizationUserType.Custom,
+            AccessAll = false,
+            ExternalId = "example",
+            Collections = []
         };
 
         var response = await _client.PutAsync($"/public/members/{orgUser.Id}", JsonContent.Create(request));
@@ -217,7 +217,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(OrganizationUserType.Custom, result.Type);
         AssertHelper.AssertPropertyEqual(
-            new PermissionsModel { CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true},
+            new PermissionsModel { CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true },
             result.Permissions);
 
         // Assert against the database values
@@ -226,7 +226,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
         AssertHelper.AssertPropertyEqual(
-            new Permissions {  CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true},
+            new Permissions { CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true },
             orgUser.GetPermissions());
     }
 }
