@@ -115,10 +115,6 @@ public static class FeatureFlagKeys
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
     /// <summary>
-    /// Enables flexible collections improvements for new organizations on creation
-    /// </summary>
-    public const string FlexibleCollectionsSignup = "flexible-collections-signup";
-    /// <summary>
     /// Exposes a migration button in the web vault which allows users to migrate an existing organization to
     /// flexible collections
     /// </summary>
@@ -151,8 +147,7 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"},
-            { FlexibleCollectionsSignup, "true" }
+            { UnassignedItemsBanner, "true"}
         };
     }
 }

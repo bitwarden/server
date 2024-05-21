@@ -261,10 +261,6 @@ public class OrganizationServiceTests
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
-            .Returns(true);
-
         // Extract orgUserId when created
         Guid? orgUserId = null;
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -306,10 +302,6 @@ public class OrganizationServiceTests
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
-            .Returns(false);
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
 

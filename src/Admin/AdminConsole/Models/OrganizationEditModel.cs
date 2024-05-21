@@ -162,7 +162,7 @@ public class OrganizationEditModel : OrganizationViewModel
                 { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
             });
 
-    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsSignupEnabled, bool flexibleCollectionsV1Enabled)
+    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsV1Enabled)
     {
         BillingEmail = provider.BillingEmail;
 
@@ -170,11 +170,11 @@ public class OrganizationEditModel : OrganizationViewModel
         {
             // This feature flag indicates that new organizations should be automatically onboarded to
             // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            FlexibleCollections = true,
             // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
             // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
             // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            LimitCollectionCreationDeletion = false,
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
         return ToOrganization(newOrg);
