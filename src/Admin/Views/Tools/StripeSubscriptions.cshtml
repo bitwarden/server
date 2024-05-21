@@ -109,7 +109,7 @@
             <option asp-selected="Model.Filter.Price == null" value="@null">All</option>
             @foreach (var price in Model.Prices)
             {
-                <option asp-selected='@Model.Filter.Price == @price.Id' value="@price.Id">@price.Id</option>
+                <option asp-selected='@(Model.Filter.Price == price.Id)' value="@price.Id">@price.Id</option>
             }
         </select>
     </div>
@@ -119,7 +119,7 @@
             <option asp-selected="Model.Filter.TestClock == null" value="@null">All</option>
             @foreach (var clock in Model.TestClocks)
             {
-                <option asp-selected='@Model.Filter.TestClock == @clock.Id' value="@clock.Id">@clock.Name</option>
+                <option asp-selected='@(Model.Filter.TestClock == clock.Id)' value="@clock.Id">@clock.Name</option>
             }
         </select>
     </div>

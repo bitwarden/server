@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
                 }
                 options.InputLengthRestrictions.UserName = 256;
                 options.KeyManagement.Enabled = false;
+                options.UserInteraction.LoginUrl = "/sso/Login";
             })
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())
