@@ -216,10 +216,9 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
             Arg.Is<Organization>(o =>
-                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats &&
-                o.SmSeats == null &&
-                o.SmServiceAccounts == null &&
-                o.FlexibleCollections));
+                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats
+                && o.SmSeats == null
+                && o.SmServiceAccounts == null));
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
@@ -253,7 +252,7 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
-    public async Task SignUp_SetsAccessAllToFalse
+    public async Task SignUp_EnablesFlexibleCollectionsFeatures
         (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.Plan = planType;
@@ -268,6 +267,10 @@ public class OrganizationServiceTests
             .CreateAsync(Arg.Do<OrganizationUser>(ou => orgUserId = ou.Id));
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
+
+        // Assert: Organization.FlexibleCollections is enabled
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
+            .CreateAsync(Arg.Is<Organization>(o => o.FlexibleCollections));
 
         // Assert: AccessAll is not used
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
@@ -290,10 +293,6 @@ public class OrganizationServiceTests
 
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
-
-        await sutProvider.GetDependency<IOrganizationRepository>()
-            .Received(1)
-            .CreateAsync(Arg.Is<Organization>(o => o.FlexibleCollections));
     }
 
     [Theory]
@@ -319,10 +318,9 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
             Arg.Is<Organization>(o =>
-                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats &&
-                o.SmSeats == plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats &&
-                o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + signup.AdditionalServiceAccounts &&
-                o.FlexibleCollections));
+                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats
+                && o.SmSeats == plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats
+                && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + signup.AdditionalServiceAccounts));
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
@@ -443,8 +441,7 @@ public class OrganizationServiceTests
             org.UsePolicies == plan.HasPolicies &&
             org.PublicKey == signup.PublicKey &&
             org.PrivateKey == signup.PrivateKey &&
-            org.UseSecretsManager == false &&
-            org.FlexibleCollections));
+            org.UseSecretsManager == false));
 
         await sutProvider.GetDependency<IOrganizationApiKeyRepository>().Received(1)
             .CreateAsync(Arg.Is<OrganizationApiKey>(orgApiKey =>
