@@ -340,7 +340,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         ExternalId = collectionGroup.Key.ExternalId,
                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                         HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
-                        Manage = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.Manage))),
+                        Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                     })
                     .ToList();
             }
@@ -365,7 +365,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                               ExternalId = collectionGroup.Key.ExternalId,
                               ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                               HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
-                              Manage = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.Manage))),
+                              Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                           }).ToListAsync();
         }
     }
