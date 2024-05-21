@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -19,7 +20,7 @@ public class PostUserCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PostUser_Success(SutProvider<PostUserCommand> sutProvider, string externalId, Guid organizationId, List<BaseScimUserModel.EmailModel> emails, ICollection<OrganizationUserUserDetails> organizationUsers, Core.Entities.OrganizationUser newUser)
+    public async Task PostUser_Success(SutProvider<PostUserCommand> sutProvider, string externalId, Guid organizationId, List<BaseScimUserModel.EmailModel> emails, ICollection<OrganizationUserUserDetails> organizationUsers, Core.Entities.OrganizationUser newUser, Organization organization)
     {
         var scimUserRequestModel = new ScimUserRequestModel
         {
@@ -33,6 +34,10 @@ public class PostUserCommandTests
             .GetManyDetailsByOrganizationAsync(organizationId)
             .Returns(organizationUsers);
 
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IPaymentService>().HasSecretsManagerStandalone(organization).Returns(true);
+
         sutProvider.GetDependency<IOrganizationService>()
             .InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
                 Arg.Is<OrganizationUserInvite>(i =>
@@ -40,7 +45,8 @@ public class PostUserCommandTests
                     i.Type == OrganizationUserType.User &&
                     !i.AccessAll &&
                     !i.Collections.Any() &&
-                    !i.Groups.Any()), externalId)
+                    !i.Groups.Any() &&
+                    i.AccessSecretsManager), externalId)
             .Returns(newUser);
 
         var user = await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel);
@@ -52,7 +58,8 @@ public class PostUserCommandTests
                 i.Type == OrganizationUserType.User &&
                 !i.AccessAll &&
                 !i.Collections.Any() &&
-                !i.Groups.Any()), externalId);
+                !i.Groups.Any() &&
+                i.AccessSecretsManager), externalId);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetDetailsByIdAsync(newUser.Id);
     }
 

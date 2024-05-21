@@ -11,17 +11,23 @@ namespace Bit.Scim.Users;
 
 public class PostUserCommand : IPostUserCommand
 {
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
+    private readonly IPaymentService _paymentService;
     private readonly IScimContext _scimContext;
 
     public PostUserCommand(
+        IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
+        IPaymentService paymentService,
         IScimContext scimContext)
     {
+        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
+        _paymentService = paymentService;
         _scimContext = scimContext;
     }
 
@@ -50,6 +56,10 @@ public class PostUserCommand : IPostUserCommand
         {
             throw new ConflictException();
         }
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+        invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
         var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
             invite, externalId);
