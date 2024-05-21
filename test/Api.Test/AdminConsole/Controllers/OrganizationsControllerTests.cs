@@ -6,7 +6,6 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
