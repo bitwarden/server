@@ -216,9 +216,10 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
             Arg.Is<Organization>(o =>
-                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats
-                && o.SmSeats == null
-                && o.SmServiceAccounts == null));
+                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats &&
+                o.SmSeats == null &&
+                o.SmServiceAccounts == null &&
+                o.FlexibleCollections));
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
@@ -289,6 +290,10 @@ public class OrganizationServiceTests
 
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
+
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<Organization>(o => o.FlexibleCollections));
     }
 
     [Theory]
@@ -314,9 +319,10 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
             Arg.Is<Organization>(o =>
-                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats
-                && o.SmSeats == plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats
-                && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + signup.AdditionalServiceAccounts));
+                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats &&
+                o.SmSeats == plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats &&
+                o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + signup.AdditionalServiceAccounts &&
+                o.FlexibleCollections));
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
@@ -437,7 +443,8 @@ public class OrganizationServiceTests
             org.UsePolicies == plan.HasPolicies &&
             org.PublicKey == signup.PublicKey &&
             org.PrivateKey == signup.PrivateKey &&
-            org.UseSecretsManager == false));
+            org.UseSecretsManager == false &&
+            org.FlexibleCollections));
 
         await sutProvider.GetDependency<IOrganizationApiKeyRepository>().Received(1)
             .CreateAsync(Arg.Is<OrganizationApiKey>(orgApiKey =>
