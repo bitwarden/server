@@ -168,12 +168,12 @@ public class OrganizationEditModel : OrganizationViewModel
 
         var newOrg = new Organization
         {
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
+            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
+            // AC-1714 will remove this flag after all old code has been removed.
             FlexibleCollections = true,
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
+
+            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
+            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
         return ToOrganization(newOrg);
