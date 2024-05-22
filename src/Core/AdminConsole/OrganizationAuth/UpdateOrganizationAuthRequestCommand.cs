@@ -78,8 +78,9 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
 
     public async Task UpdateAsync(Guid organizationId, IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates)
     {
+        var authRequestEntities = await FetchManyOrganizationAuthRequestsFromTheDatabase(organizationId, authRequestUpdates.Select(aru => aru.Id));
         var processor = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(
-            await FetchManyOrganizationAuthRequestsFromTheDatabase(organizationId, authRequestUpdates.Select(aru => aru.Id)),
+            authRequestEntities,
             authRequestUpdates,
             new AuthRequestUpdateProcessorConfiguration()
             {
