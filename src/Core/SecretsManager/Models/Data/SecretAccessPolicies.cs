@@ -7,9 +7,10 @@ namespace Bit.Core.SecretsManager.Models.Data;
 
 public class SecretAccessPolicies
 {
-    public SecretAccessPolicies(Guid secretId, List<BaseAccessPolicy> policies)
+    public SecretAccessPolicies(Guid secretId, Guid organizationId, List<BaseAccessPolicy> policies)
     {
         SecretId = secretId;
+        OrganizationId = organizationId;
 
         UserAccessPolicies = policies
             .OfType<UserSecretAccessPolicy>()
@@ -22,19 +23,6 @@ public class SecretAccessPolicies
         ServiceAccountAccessPolicies = policies
             .OfType<ServiceAccountSecretAccessPolicy>()
             .ToList();
-
-        if (UserAccessPolicies.Any())
-        {
-            OrganizationId = UserAccessPolicies.First().GrantedSecret!.OrganizationId;
-        }
-        else if (GroupAccessPolicies.Any())
-        {
-            OrganizationId = GroupAccessPolicies.First().GrantedSecret!.OrganizationId;
-        }
-        else if (ServiceAccountAccessPolicies.Any())
-        {
-            OrganizationId = ServiceAccountAccessPolicies.First().GrantedSecret!.OrganizationId;
-        }
     }
 
     public SecretAccessPolicies()
