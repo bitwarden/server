@@ -438,9 +438,6 @@ public class OrganizationService : IOrganizationService
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var flexibleCollectionsV1Enabled =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
@@ -482,14 +479,12 @@ public class OrganizationService : IOrganizationService
             // Secrets Manager not available for purchase with Consolidated Billing.
             UseSecretsManager = false,
 
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
+            // AC-1714 will remove this flag after all old code has been removed.
+            FlexibleCollections = true,
 
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
+            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
 
@@ -533,9 +528,6 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var flexibleCollectionsV1IsEnabled =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
@@ -577,14 +569,12 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
 
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
+            // AC-1714 will remove this flag after all old code has been removed.
+            FlexibleCollections = true,
 
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
+            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
         };
 
@@ -665,9 +655,6 @@ public class OrganizationService : IOrganizationService
 
         await ValidateSignUpPoliciesAsync(owner.Id);
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var organization = new Organization
         {
             Name = license.Name,
@@ -713,7 +700,7 @@ public class OrganizationService : IOrganizationService
 
             // This feature flag indicates that new organizations should be automatically onboarded to
             // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            FlexibleCollections = true,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
