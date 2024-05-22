@@ -24,7 +24,7 @@ public abstract class MemberBaseModel
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
 
-        if (user.Type == OrganizationUserType.Custom)
+        if (Type == OrganizationUserType.Custom)
         {
             Permissions = new PermissionsModel(user.GetPermissions());
         }
@@ -42,7 +42,7 @@ public abstract class MemberBaseModel
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
 
-        if (user.Type == OrganizationUserType.Custom)
+        if (Type == OrganizationUserType.Custom)
         {
             Permissions = new PermissionsModel(user.GetPermissions());
         }
