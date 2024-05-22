@@ -136,6 +136,7 @@ public static class FeatureFlagKeys
     public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
+    public const string MemberAccessReport = "ac-2059-member-access-report";
 
     public static List<string> GetAllKeys()
     {
