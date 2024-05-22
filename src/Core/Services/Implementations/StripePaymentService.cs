@@ -1577,8 +1577,8 @@ public class StripePaymentService : IPaymentService
         var customer = await GetCustomerAsync(subscriber.GatewayCustomerId);
         var billingInfo = new BillingInfo
         {
-            Transactions = await GetBillingTransactionsAsync(subscriber),
-            Invoices = await GetBillingInvoicesAsync(customer)
+            Transactions = await GetBillingTransactionsAsync(subscriber, 20),
+            Invoices = await GetBillingInvoicesAsync(customer, 20)
         };
 
         return billingInfo;
@@ -1848,21 +1848,17 @@ public class StripePaymentService : IPaymentService
         return customer;
     }
 
-    private async Task<IEnumerable<BillingInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber)
+    private async Task<IEnumerable<BillingInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber, int? limit = null)
     {
-        ICollection<Transaction> transactions = null;
-        if (subscriber is User)
+        var transactions = subscriber switch
         {
-            transactions = await _transactionRepository.GetManyByUserIdAsync(subscriber.Id);
-        }
-        else if (subscriber is Organization)
-        {
-            transactions = await _transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id);
-        }
+            User => await _transactionRepository.GetManyByUserIdAsync(subscriber.Id, limit),
+            Organization => await _transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id, limit),
+            _ => null
+        };
 
         return transactions?.OrderByDescending(i => i.CreationDate)
             .Select(t => new BillingInfo.BillingTransaction(t));
-
     }
 
     private async Task<IEnumerable<BillingInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer,

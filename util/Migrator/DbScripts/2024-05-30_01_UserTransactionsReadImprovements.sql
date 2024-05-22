@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[Transaction_ReadByUserId]
+IF OBJECT_ID('[dbo].[Transaction_ReadByUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Transaction_ReadByUserId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Transaction_ReadByUserId]
     @UserId UNIQUEIDENTIFIER,
     @Limit INT
 AS
