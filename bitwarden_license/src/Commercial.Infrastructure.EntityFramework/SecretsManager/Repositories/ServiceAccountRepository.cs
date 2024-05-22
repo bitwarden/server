@@ -135,20 +135,28 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
     }
 
     public async Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdWithSecretsDetailsAsync(
-    Guid organizationId, Guid userId, AccessClientType accessType)
+        Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = from sa in dbContext.ServiceAccount
-                    join ap in dbContext.ServiceAccountProjectAccessPolicy
-                        on sa.Id equals ap.ServiceAccountId into grouping
-                    from ap in grouping.DefaultIfEmpty()
-                    where sa.OrganizationId == organizationId
-                    select new
-                    {
-                        ServiceAccount = sa,
-                        AccessToSecrets = ap.GrantedProject.Secrets.Count(s => s.DeletedDate == null)
-                    };
+        var query =
+            from sa in dbContext.ServiceAccount
+            join pap in dbContext.ServiceAccountProjectAccessPolicy
+                on sa.Id equals pap.ServiceAccountId into papGrouping
+            from pap in papGrouping.DefaultIfEmpty()
+            join sap in dbContext.ServiceAccountSecretAccessPolicy
+                on sa.Id equals sap.ServiceAccountId into sapGrouping
+            from sap in sapGrouping.DefaultIfEmpty()
+            where sa.OrganizationId == organizationId
+            select new
+            {
+                ServiceAccount = sa,
+                AccessToSecrets = pap.GrantedProject.Secrets.Count(s => s.DeletedDate == null) +
+                                  (sap != null &&
+                                   !pap.GrantedProject.Secrets.Select(x => x.Id).Contains(sap.GrantedSecretId.Value)
+                                      ? 1
+                                      : 0)
+            };
 
         query = accessType switch
         {
@@ -157,7 +165,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
                 c.ServiceAccount.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
                 c.ServiceAccount.GroupAccessPolicies.Any(ap =>
                     ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
-            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null)
         };
 
         var results = (await query.ToListAsync())
@@ -166,7 +174,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
                 new ServiceAccountSecretsDetails
                 {
                     ServiceAccount = Mapper.Map<Core.SecretsManager.Entities.ServiceAccount>(g.Key),
-                    AccessToSecrets = g.Sum(x => x.AccessToSecrets),
+                    AccessToSecrets = g.Sum(x => x.AccessToSecrets)
                 }).OrderBy(c => c.ServiceAccount.RevisionDate).ToList();
 
         return results;
