@@ -1227,6 +1227,7 @@ public class StripeController : Controller
         {
             "2023-10-16" => _billingSettings.StripeWebhookSecret20231016,
             "2022-08-01" => _billingSettings.StripeWebhookSecret,
+            "2024-04-10" => _billingSettings.StripeWebhookSecret, // Temporary until we can sort out the new secret if any
             _ => HandleDefault(versionContainer.ApiVersion)
         };
 
