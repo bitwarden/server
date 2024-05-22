@@ -1,15 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
-using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationAuth.Models;
 
-public class AuthRequestUpdateProcessor<T> where T : AuthRequest
+public class AuthRequestUpdateProcessor
 {
-    public T ProcessedAuthRequest { get; private set; }
+    public OrganizationAdminAuthRequest ProcessedAuthRequest { get; private set; }
 
-    private T _unprocessedAuthRequest { get; }
+    private OrganizationAdminAuthRequest _unprocessedAuthRequest { get; }
     private OrganizationAuthRequestUpdate _updates { get; }
     private AuthRequestUpdateProcessorConfiguration _configuration { get; }
 
@@ -18,7 +18,7 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
         EventType.OrganizationUser_RejectedAuthRequest;
 
     public AuthRequestUpdateProcessor(
-        T authRequest,
+        OrganizationAdminAuthRequest authRequest,
         OrganizationAuthRequestUpdate updates,
         AuthRequestUpdateProcessorConfiguration configuration
     )
@@ -28,7 +28,7 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
         _configuration = configuration;
     }
 
-    public AuthRequestUpdateProcessor<T> Process()
+    public AuthRequestUpdateProcessor Process()
     {
         var isExpired = DateTime.UtcNow >
             _unprocessedAuthRequest.CreationDate
@@ -50,7 +50,7 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
             Deny();
     }
 
-    public async Task<AuthRequestUpdateProcessor<T>> SendPushNotification(Func<T, Task> callback)
+    public async Task<AuthRequestUpdateProcessor> SendPushNotification(Func<OrganizationAdminAuthRequest, Task> callback)
     {
         if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
         {
@@ -60,7 +60,7 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
         return this;
     }
 
-    public async Task<AuthRequestUpdateProcessor<T>> SendNewDeviceEmail(Func<T, string, Task> callback)
+    public async Task<AuthRequestUpdateProcessor> SendNewDeviceEmail(Func<OrganizationAdminAuthRequest, string, Task> callback)
     {
         if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
         {
@@ -80,7 +80,7 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
         return this;
     }
 
-    private AuthRequestUpdateProcessor<T> Approve()
+    private AuthRequestUpdateProcessor Approve()
     {
         if (string.IsNullOrWhiteSpace(_updates.Key))
         {
@@ -93,7 +93,7 @@ public class AuthRequestUpdateProcessor<T> where T : AuthRequest
         return this;
     }
 
-    private AuthRequestUpdateProcessor<T> Deny()
+    private AuthRequestUpdateProcessor Deny()
     {
         ProcessedAuthRequest = _unprocessedAuthRequest;
         ProcessedAuthRequest.Approved = false;

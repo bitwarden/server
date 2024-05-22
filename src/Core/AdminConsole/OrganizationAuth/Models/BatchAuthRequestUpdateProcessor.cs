@@ -1,24 +1,24 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Models.Data;
 using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationAuth.Models;
 
-public class BatchAuthRequestUpdateProcessor<T> where T : AuthRequest
+public class BatchAuthRequestUpdateProcessor
 {
-    public List<AuthRequestUpdateProcessor<T>> Processors { get; } = new List<AuthRequestUpdateProcessor<T>>();
-    private List<AuthRequestUpdateProcessor<T>> _processed => Processors
+    public List<AuthRequestUpdateProcessor> Processors { get; } = new List<AuthRequestUpdateProcessor>();
+    private List<AuthRequestUpdateProcessor> _processed => Processors
         .Where(p => p.ProcessedAuthRequest != null)
         .ToList();
 
     public BatchAuthRequestUpdateProcessor(
-        ICollection<T> authRequests,
+        ICollection<OrganizationAdminAuthRequest> authRequests,
         IEnumerable<OrganizationAuthRequestUpdate> updates,
         AuthRequestUpdateProcessorConfiguration configuration
     )
     {
         Processors = authRequests?.Select(ar =>
         {
-            return new AuthRequestUpdateProcessor<T>(
+            return new AuthRequestUpdateProcessor(
                 ar,
                 updates.FirstOrDefault(u => u.Id == ar.Id),
                 configuration
@@ -26,7 +26,7 @@ public class BatchAuthRequestUpdateProcessor<T> where T : AuthRequest
         }).ToList() ?? Processors;
     }
 
-    public BatchAuthRequestUpdateProcessor<T> Process(Action<Exception> errorHandlerCallback)
+    public BatchAuthRequestUpdateProcessor Process(Action<Exception> errorHandlerCallback)
     {
         foreach (var processor in Processors)
         {
@@ -42,7 +42,7 @@ public class BatchAuthRequestUpdateProcessor<T> where T : AuthRequest
         return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor<T>> Save(Func<IEnumerable<T>, Task> callback)
+    public async Task<BatchAuthRequestUpdateProcessor> Save(Func<IEnumerable<OrganizationAdminAuthRequest>, Task> callback)
     {
         if (_processed.Any())
         {
@@ -58,7 +58,7 @@ public class BatchAuthRequestUpdateProcessor<T> where T : AuthRequest
     //
     // Adding bulk notification and email methods is being tracked as tech
     // debt on https://bitwarden.atlassian.net/browse/AC-2629
-    public async Task<BatchAuthRequestUpdateProcessor<T>> SendPushNotifications(Func<T, Task> callback)
+    public async Task<BatchAuthRequestUpdateProcessor> SendPushNotifications(Func<OrganizationAdminAuthRequest, Task> callback)
     {
         foreach (var processor in _processed)
         {
@@ -67,7 +67,7 @@ public class BatchAuthRequestUpdateProcessor<T> where T : AuthRequest
         return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor<T>> SendNewDeviceEmails(Func<T, string, Task> callback)
+    public async Task<BatchAuthRequestUpdateProcessor> SendNewDeviceEmails(Func<OrganizationAdminAuthRequest, string, Task> callback)
     {
         foreach (var processor in _processed)
         {
@@ -76,7 +76,7 @@ public class BatchAuthRequestUpdateProcessor<T> where T : AuthRequest
         return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor<T>> SendEventLogs(Func<IEnumerable<(T, EventType)>, Task> callback)
+    public async Task<BatchAuthRequestUpdateProcessor> SendEventLogs(Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task> callback)
     {
         if (_processed.Any())
         {

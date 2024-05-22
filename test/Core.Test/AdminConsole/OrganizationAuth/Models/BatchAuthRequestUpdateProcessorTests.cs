@@ -19,7 +19,7 @@ public class BatchAuthRequestUpdateProcessorTests
         Action<Exception> errorHandler
     )
     {
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(null, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(null, updates, configuration);
         sut.Process(errorHandler);
     }
 
@@ -34,7 +34,7 @@ public class BatchAuthRequestUpdateProcessorTests
         // An already approved auth request should break the processor
         // immediately.
         authRequests[0].Approved = true;
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequests, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         var errorHandler = Substitute.For<Action<Exception>>();
         sut.Process(errorHandler);
         errorHandler.ReceivedWithAnyArgs()(new AuthRequestUpdateProcessingException());
@@ -50,7 +50,7 @@ public class BatchAuthRequestUpdateProcessorTests
     )
     {
         (authRequests[0], updates[0], configuration) = UnrespondAndEnsureValid(authRequests[0], updates[0], configuration);
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequests, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         Assert.NotEmpty(sut.Processors);
         sut.Process(errorHandler);
         Assert.NotEmpty(sut.Processors.Where(p => p.ProcessedAuthRequest != null));
@@ -64,7 +64,7 @@ public class BatchAuthRequestUpdateProcessorTests
         Func<IEnumerable<AuthRequest>, Task> saveCallback
     )
     {
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(null, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(null, updates, configuration);
         Assert.Empty(sut.Processors);
         await sut.Save(saveCallback);
     }
@@ -79,7 +79,7 @@ public class BatchAuthRequestUpdateProcessorTests
     )
     {
         (authRequests[0], updates[0], configuration) = UnrespondAndEnsureValid(authRequests[0], updates[0], configuration);
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequests, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         var saveCallback = Substitute.For<Func<IEnumerable<OrganizationAdminAuthRequest>, Task>>();
         await sut.Process(errorHandler).Save(saveCallback);
         await saveCallback.ReceivedWithAnyArgs()(Arg.Any<IEnumerable<OrganizationAdminAuthRequest>>());
@@ -94,7 +94,7 @@ public class BatchAuthRequestUpdateProcessorTests
         Func<AuthRequest, Task> callback
     )
     {
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(null, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(null, updates, configuration);
         Assert.Empty(sut.Processors);
         await sut.SendPushNotifications(callback);
     }
@@ -110,7 +110,7 @@ public class BatchAuthRequestUpdateProcessorTests
     )
     {
         (authRequests[0], updates[0], configuration) = UnrespondAndEnsureValid(authRequests[0], updates[0], configuration);
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequests, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, Task>>();
         await sut.Process(errorHandler).SendPushNotifications(callback);
         await callback.ReceivedWithAnyArgs()(Arg.Any<OrganizationAdminAuthRequest>());
@@ -125,7 +125,7 @@ public class BatchAuthRequestUpdateProcessorTests
         Func<AuthRequest, string, Task> callback
     )
     {
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(null, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(null, updates, configuration);
         Assert.Empty(sut.Processors);
         await sut.SendNewDeviceEmails(callback);
     }
@@ -141,7 +141,7 @@ public class BatchAuthRequestUpdateProcessorTests
     )
     {
         (authRequests[0], updates[0], configuration) = UnrespondAndEnsureValid(authRequests[0], updates[0], configuration);
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequests, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, string, Task>>();
         await sut.Process(errorHandler).SendNewDeviceEmails(callback);
         await callback.ReceivedWithAnyArgs()(Arg.Any<OrganizationAdminAuthRequest>(), Arg.Any<string>());
@@ -155,7 +155,7 @@ public class BatchAuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration configuration
     )
     {
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(null, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(null, updates, configuration);
         var callback = Substitute.For<Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task>>();
         Assert.Empty(sut.Processors);
         await sut.SendEventLogs(callback);
@@ -173,7 +173,7 @@ public class BatchAuthRequestUpdateProcessorTests
     )
     {
         (authRequests[0], updates[0], configuration) = UnrespondAndEnsureValid(authRequests[0], updates[0], configuration);
-        var sut = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(authRequests, updates, configuration);
+        var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         var callback = Substitute.For<Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task>>();
         await sut.Process(errorHandler).SendEventLogs(callback);
         await callback.ReceivedWithAnyArgs()(Arg.Any<IEnumerable<(OrganizationAdminAuthRequest, EventType)>>());
