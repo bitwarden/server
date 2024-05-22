@@ -1,38 +1,23 @@
 ﻿using Bit.Core.Models.BitStripe;
 using Stripe;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Services.Implementations;
 
 public class StripeAdapter : IStripeAdapter
 {
-    private readonly Stripe.CustomerService _customerService;
-    private readonly Stripe.SubscriptionService _subscriptionService;
-    private readonly Stripe.InvoiceService _invoiceService;
-    private readonly Stripe.PaymentMethodService _paymentMethodService;
-    private readonly Stripe.TaxRateService _taxRateService;
-    private readonly Stripe.TaxIdService _taxIdService;
-    private readonly Stripe.ChargeService _chargeService;
-    private readonly Stripe.RefundService _refundService;
-    private readonly Stripe.CardService _cardService;
-    private readonly Stripe.BankAccountService _bankAccountService;
-    private readonly Stripe.PriceService _priceService;
-    private readonly Stripe.TestHelpers.TestClockService _testClockService;
-
-    public StripeAdapter()
-    {
-        _customerService = new Stripe.CustomerService();
-        _subscriptionService = new Stripe.SubscriptionService();
-        _invoiceService = new Stripe.InvoiceService();
-        _paymentMethodService = new Stripe.PaymentMethodService();
-        _taxRateService = new Stripe.TaxRateService();
-        _taxIdService = new Stripe.TaxIdService();
-        _chargeService = new Stripe.ChargeService();
-        _refundService = new Stripe.RefundService();
-        _cardService = new Stripe.CardService();
-        _bankAccountService = new Stripe.BankAccountService();
-        _priceService = new Stripe.PriceService();
-        _testClockService = new Stripe.TestHelpers.TestClockService();
-    }
+    private readonly CustomerService _customerService = new();
+    private readonly SubscriptionService _subscriptionService = new();
+    private readonly InvoiceService _invoiceService = new();
+    private readonly PaymentMethodService _paymentMethodService = new();
+    private readonly TaxRateService _taxRateService = new();
+    private readonly TaxIdService _taxIdService = new();
+    private readonly ChargeService _chargeService = new();
+    private readonly RefundService _refundService = new();
+    private readonly CardService _cardService = new();
+    private readonly BankAccountService _bankAccountService = new();
+    private readonly PriceService _priceService = new();
+    private readonly SetupIntentService _setupIntentService = new();
+    private readonly Stripe.TestHelpers.TestClockService _testClockService = new();
 
     public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
     {
@@ -52,6 +37,13 @@ public class StripeAdapter : IStripeAdapter
     public Task<Stripe.Customer> CustomerDeleteAsync(string id)
     {
         return _customerService.DeleteAsync(id);
+    }
+
+    public async Task<List<PaymentMethod>> CustomerListPaymentMethods(string id,
+        CustomerListPaymentMethodsOptions options = null)
+    {
+        var paymentMethods = await _customerService.ListPaymentMethodsAsync(id, options);
+        return paymentMethods.Data;
     }
 
     public Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions options)
@@ -221,6 +213,28 @@ public class StripeAdapter : IStripeAdapter
     {
         return await _priceService.ListAsync(options);
     }
+
+    public async Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options)
+    {
+        var setupIntents = await _setupIntentService.ListAsync(options);
+
+        return setupIntents.Data;
+    }
+
+    public Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options)
+        => _setupIntentService.CreateAsync(options);
+
+    public Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null)
+        => _setupIntentService.GetAsync(id, options);
+
+    public Task<SetupIntent> SetupIntentUpdate(string id, SetupIntentUpdateOptions options)
+        => _setupIntentService.UpdateAsync(id, options);
+
+    public Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null)
+        => _setupIntentService.CancelAsync(id, options);
+
+    public Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options)
+        => _setupIntentService.VerifyMicrodepositsAsync(id, options);
 
     public async Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync()
     {

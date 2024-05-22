@@ -2,7 +2,7 @@
 using Bit.Api.Utilities;
 using Bit.Core.Enums;
 
-namespace Bit.Api.Billing.Models.Requests;
+namespace Bit.Api.Billing.Models.Requests.Providers;
 
 public class CreateClientOrganizationRequestBody
 {

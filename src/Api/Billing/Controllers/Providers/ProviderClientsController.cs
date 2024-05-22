@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Billing.Models.Requests;
+using Bit.Api.Billing.Models.Requests.Providers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -10,7 +11,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Billing.Controllers;
+namespace Bit.Api.Billing.Controllers.Providers;
 
 [Route("providers/{providerId:guid}/clients")]
 public class ProviderClientsController(

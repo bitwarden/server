@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Billing.Controllers;
+using Bit.Api.Billing.Controllers.Providers;
 using Bit.Api.Billing.Models.Requests;
+using Bit.Api.Billing.Models.Requests.Providers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;

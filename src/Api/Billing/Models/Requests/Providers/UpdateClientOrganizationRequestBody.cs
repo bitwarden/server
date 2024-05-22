@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Billing.Models.Requests;
+namespace Bit.Api.Billing.Models.Requests.Providers;
 
 public class UpdateClientOrganizationRequestBody
 {

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Stripe;
 
@@ -20,6 +21,14 @@ public interface ISubscriberService
         ISubscriber subscriber,
         OffboardingSurveyResponse offboardingSurveyResponse,
         bool cancelImmediately);
+
+    /// <summary>
+    /// Retrieves the current Stripe balance for the provided <paramref name="subscriber"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to retrieve the account credit for.</param>
+    /// <returns>The <see cref="Customer.Balance"/> of the subscriber's Stripe <see cref="Customer"/></returns>
+    Task<long?> GetAccountCredit(
+        ISubscriber subscriber);
 
     /// <summary>
     /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
@@ -47,6 +56,24 @@ public interface ISubscriberService
         CustomerGetOptions customerGetOptions = null);
 
     /// <summary>
+    /// Retrieves the account credit, a masked representation of the default payment method and the tax information for the
+    /// provided <paramref name="subscriber"/>. This is essentially a consolidated invocation of the <see cref="GetAccountCredit"/>, <see cref="GetPaymentMethod"/>
+    /// and <see cref="GetTaxInformation"/> methods in order to cut down on Stripe API calls.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to retrieve payment information for.</param>
+    /// <returns>A <see cref="PaymentInformationDTO"/> containing the subscriber's account credit, payment method and tax information.</returns>
+    Task<PaymentInformationDTO> GetPaymentInformation(
+        ISubscriber subscriber);
+
+    /// <summary>
+    /// Retrieves a masked representation of the subscriber's payment method for presentation to a client.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to retrieve the payment method for.</param>
+    /// <returns>A <see cref="PaymentMethodDTO"/> representing the subscriber's payment method.</returns>
+    Task<PaymentMethodDTO> GetPaymentMethod(
+        ISubscriber subscriber);
+
+    /// <summary>
     /// Retrieves a Stripe <see cref="Subscription"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> property.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the Stripe subscription for.</param>
@@ -72,29 +99,55 @@ public interface ISubscriberService
         SubscriptionGetOptions subscriptionGetOptions = null);
 
     /// <summary>
+    /// Retrieves the tax information for the provided <see cref="subscriber"/> using the <paramref name="subscriber"/>'s Stripe <see cref="Stripe.Customer"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to retrieve the tax information for.</param>
+    /// <returns>The <paramref name="subscriber"/>'s <see cref="TaxInfo"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
+    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
+    Task<TaxInformationDTO> GetTaxInformation(
+        ISubscriber subscriber);
+
+    /// <summary>
     /// Attempts to remove a subscriber's saved payment method. If the Stripe <see cref="Stripe.Customer"/> representing the
     /// <paramref name="subscriber"/> contains a valid <b>"btCustomerId"</b> key in its <see cref="Stripe.Customer.Metadata"/> property,
     /// this command will attempt to remove the Braintree <see cref="Braintree.PaymentMethod"/>. Otherwise, it will attempt to remove the
     /// Stripe <see cref="Stripe.PaymentMethod"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber to remove the saved payment method for.</param>
-    Task RemovePaymentMethod(ISubscriber subscriber);
+    Task RemovePaymentMethod(
+        ISubscriber subscriber);
+
 
     /// <summary>
-    /// Retrieves a Stripe <see cref="TaxInfo"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
+    /// Updates the payment method for the provided <paramref name="subscriber"/> using the <paramref name="tokenizedPaymentMethod"/>.
+    /// The following payment method types are supported: [<see cref="PaymentMethodType.Card"/>, <see cref="PaymentMethodType.BankAccount"/>, <see cref="PaymentMethodType.PayPal"/>].
+    /// For each type, updating the payment method will attempt to establish a new payment method using the token in the <see cref="TokenizedPaymentMethodDTO"/>. Then, it will
+    /// remove the exising payment method(s) linked to the subscriber's customer.
     /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the Stripe customer for.</param>
-    /// <returns>A Stripe <see cref="TaxInfo"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<TaxInfo> GetTaxInformationAsync(ISubscriber subscriber);
+    /// <param name="subscriber">The subscriber to update the tax information and/or payment method for.</param>
+    /// <param name="tokenizedPaymentMethod">A DTO representing a tokenized payment method.</param>
+    Task UpdatePaymentMethod(
+        ISubscriber subscriber,
+        TokenizedPaymentMethodDTO tokenizedPaymentMethod);
 
     /// <summary>
-    /// Retrieves a Stripe <see cref="BillingInfo.BillingSource"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
+    /// Updates the tax information for the provided <paramref name="subscriber"/> using the <paramref name="taxInformation"/>.
     /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the Stripe customer for.</param>
-    /// <returns>A Stripe <see cref="BillingInfo.BillingSource"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<BillingInfo.BillingSource> GetPaymentMethodAsync(ISubscriber subscriber);
+    /// <param name="subscriber">The subscriber to update the tax information for.</param>
+    /// <param name="taxInformation">A DTO representing updated tax information.</param>
+    Task UpdateTaxInformation(
+        ISubscriber subscriber,
+        TaxInformationDTO taxInformation);
+
+    /// <summary>
+    /// Verifies the subscriber's pending bank account using the provided <paramref name="microdeposits"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to verify the bank account for.</param>
+    /// <param name="microdeposits">Deposits made to the subscriber's bank account in order to ensure they have access to it.
+    /// <a href="https://docs.stripe.com/payments/ach-debit/set-up-payment">Learn more.</a></param>
+    /// <returns></returns>
+    Task VerifyBankAccount(
+        ISubscriber subscriber,
+        (long, long) microdeposits);
 }

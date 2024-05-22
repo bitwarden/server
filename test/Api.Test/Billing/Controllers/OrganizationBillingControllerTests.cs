@@ -1,5 +1,7 @@
 ﻿using Bit.Api.Billing.Controllers;
+using Bit.Api.Billing.Controllers.Organizations;
 using Bit.Api.Billing.Models.Responses;
+using Bit.Api.Billing.Models.Responses.Organizations;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Test.Common.AutoFixture;

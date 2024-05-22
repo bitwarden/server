@@ -9,6 +9,7 @@ public interface IStripeAdapter
     Task<Stripe.Customer> CustomerGetAsync(string id, Stripe.CustomerGetOptions options = null);
     Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null);
     Task<Stripe.Customer> CustomerDeleteAsync(string id);
+    Task<List<PaymentMethod>> CustomerListPaymentMethods(string id, CustomerListPaymentMethodsOptions options = null);
     Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions subscriptionCreateOptions);
     Task<Stripe.Subscription> SubscriptionGetAsync(string id, Stripe.SubscriptionGetOptions options = null);
     Task<List<Stripe.Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions subscriptionSearchOptions);
@@ -38,5 +39,11 @@ public interface IStripeAdapter
     Task<Stripe.BankAccount> BankAccountCreateAsync(string customerId, Stripe.BankAccountCreateOptions options = null);
     Task<Stripe.BankAccount> BankAccountDeleteAsync(string customerId, string bankAccount, Stripe.BankAccountDeleteOptions options = null);
     Task<Stripe.StripeList<Stripe.Price>> PriceListAsync(Stripe.PriceListOptions options = null);
+    Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options);
+    Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options);
+    Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null);
+    Task<SetupIntent> SetupIntentUpdate(string id, SetupIntentUpdateOptions options);
+    Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null);
+    Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options);
     Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
 }

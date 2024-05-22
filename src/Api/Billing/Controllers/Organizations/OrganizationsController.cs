@@ -24,7 +24,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Billing.Controllers;
+namespace Bit.Api.Billing.Controllers.Organizations;
 
 [Route("organizations")]
 [Authorize("Application")]
@@ -304,7 +304,7 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        var taxInfo = await subscriberService.GetTaxInformationAsync(organization);
+        var taxInfo = await paymentService.GetTaxInfoAsync(organization);
         return new TaxInfoResponseModel(taxInfo);
     }
 
