@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -60,6 +61,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IProviderRepository _providerRepository;
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
@@ -94,6 +96,7 @@ public class OrganizationService : IOrganizationService
         IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
         IFeatureService featureService)
     {
@@ -123,6 +126,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _providerRepository = providerRepository;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
@@ -809,6 +813,23 @@ public class OrganizationService : IOrganizationService
 
             throw;
         }
+    }
+
+    public async Task InitiateDeleteAsync(Organization organization, string orgAdminEmail)
+    {
+        var orgAdmin = await _userRepository.GetByEmailAsync(orgAdminEmail);
+        if (orgAdmin == null)
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+        var orgAdminOrgUser = await _organizationUserRepository.GetDetailsByUserAsync(orgAdmin.Id, organization.Id);
+        if (orgAdminOrgUser == null || orgAdminOrgUser.Status != OrganizationUserStatusType.Confirmed ||
+            (orgAdminOrgUser.Type != OrganizationUserType.Admin && orgAdminOrgUser.Type != OrganizationUserType.Owner))
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, 1));
+        await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
     }
 
     public async Task DeleteAsync(Organization organization)
