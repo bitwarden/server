@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
-using Bit.Core.AdminConsole.Extensions;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.AdminConsole.OrganizationAuth.Models;
 using Bit.Core.Auth.Entities;
@@ -79,7 +78,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
 
     public async Task UpdateAsync(Guid organizationId, IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates)
     {
-        await new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(
+        var processor = new BatchAuthRequestUpdateProcessor<OrganizationAdminAuthRequest>(
             await FetchManyOrganizationAuthRequestsFromTheDatabase(organizationId, authRequestUpdates.Select(aru => aru.Id)),
             authRequestUpdates,
             new AuthRequestUpdateProcessorConfiguration()
@@ -87,12 +86,12 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
                 OrganizationId = organizationId,
                 AuthRequestExpiresAfter = _globalSettings.PasswordlessAuth.AdminRequestExpiration
             }
-        )
-        .Process((Exception e) => _logger.LogError(e.Message))
-        .Save((IEnumerable<OrganizationAdminAuthRequest> authRequests) => _authRequestRepository.UpdateManyAsync(authRequests))
-        .Then(p => p.SendPushNotifications((ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar)))
-        .Then(p => p.SendNewDeviceEmails(PushTrustedDeviceEmail))
-        .Then(p => p.SendEventLogs(SendOrganizationEventLogs));
+        );
+        processor.Process((Exception e) => _logger.LogError(e.Message));
+        await processor.Save((IEnumerable<OrganizationAdminAuthRequest> authRequests) => _authRequestRepository.UpdateManyAsync(authRequests));
+        await processor.SendPushNotifications((ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar));
+        await processor.SendNewDeviceEmails(PushTrustedDeviceEmail);
+        await processor.SendEventLogs(SendOrganizationEventLogs);
     }
 
     async Task<ICollection<OrganizationAdminAuthRequest>> FetchManyOrganizationAuthRequestsFromTheDatabase(Guid organizationId, IEnumerable<Guid> authRequestIds)
