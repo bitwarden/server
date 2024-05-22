@@ -85,4 +85,12 @@ public interface IProviderBillingService
     /// <param name="provider">The provider to create the <see cref="Stripe.Subscription"/> for.</param>
     Task StartSubscription(
         Provider provider);
+
+    /// <summary>
+    /// Retrieves a provider's billing payment information.
+    /// </summary>
+    /// <param name="providerId">The ID of the provider to retrieve payment information for.</param>
+    /// <returns>A <see cref="ProviderPaymentInfoDTO"/> object containing the provider's Stripe <see cref="Stripe.PaymentMethod"/> and their <see cref="TaxInfo"/>s.</returns>
+    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
+    Task<ProviderPaymentInfoDTO> GetPaymentInformationAsync(Guid providerId);
 }

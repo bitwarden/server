@@ -454,6 +454,39 @@ public class ProviderBillingService(
         await providerRepository.ReplaceAsync(provider);
     }
 
+    public async Task<ProviderPaymentInfoDTO> GetPaymentInformationAsync(Guid providerId)
+    {
+        var provider = await providerRepository.GetByIdAsync(providerId);
+
+        if (provider == null)
+        {
+            logger.LogError(
+                "Could not find provider ({ID}) when retrieving payment information.",
+                providerId);
+
+            return null;
+        }
+
+        if (provider.Type == ProviderType.Reseller)
+        {
+            logger.LogError("payment information cannot be retrieved for reseller-type provider ({ID})", providerId);
+
+            throw ContactSupport("Consolidated billing does not support reseller-type providers");
+        }
+
+        var taxInformation = await subscriberService.GetTaxInformationAsync(provider);
+        var billingInformation = await subscriberService.GetPaymentMethodAsync(provider);
+
+        if (taxInformation == null && billingInformation == null)
+        {
+            return null;
+        }
+
+        return new ProviderPaymentInfoDTO(
+            billingInformation,
+            taxInformation);
+    }
+
     private Func<int, int, Task> CurrySeatScalingUpdate(
         Provider provider,
         ProviderPlan providerPlan,

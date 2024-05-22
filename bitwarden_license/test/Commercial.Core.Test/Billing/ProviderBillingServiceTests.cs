@@ -1005,4 +1005,106 @@ public class ProviderBillingServiceTests
     }
 
     #endregion
+
+    #region GetPaymentInformationAsync
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformationAsync_NullProvider_ReturnsNull(
+        SutProvider<ProviderBillingService> sutProvider,
+        Guid providerId)
+    {
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(providerId).ReturnsNull();
+
+        var paymentService = sutProvider.GetDependency<ISubscriberService>();
+        paymentService.GetTaxInformationAsync(Arg.Any<Provider>()).ReturnsNull();
+        paymentService.GetPaymentMethodAsync(Arg.Any<Provider>()).ReturnsNull();
+
+        var sut = sutProvider.Sut;
+
+        var paymentInfo = await sut.GetPaymentInformationAsync(providerId);
+
+        Assert.Null(paymentInfo);
+        await providerRepository.Received(1).GetByIdAsync(providerId);
+        await paymentService.DidNotReceive().GetTaxInformationAsync(Arg.Any<Provider>());
+        await paymentService.DidNotReceive().GetPaymentMethodAsync(Arg.Any<Provider>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformationAsync_NullSubscription_ReturnsNull(
+        SutProvider<ProviderBillingService> sutProvider,
+        Guid providerId,
+        Provider provider)
+    {
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+
+        providerRepository.GetByIdAsync(providerId).Returns(provider);
+
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
+
+        subscriberService.GetTaxInformationAsync(provider).ReturnsNull();
+        subscriberService.GetPaymentMethodAsync(provider).ReturnsNull();
+
+        var paymentInformation = await sutProvider.Sut.GetPaymentInformationAsync(providerId);
+
+        Assert.Null(paymentInformation);
+        await providerRepository.Received(1).GetByIdAsync(providerId);
+        await subscriberService.Received(1).GetTaxInformationAsync(provider);
+        await subscriberService.Received(1).GetPaymentMethodAsync(provider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformationAsync_ResellerProvider_ThrowContactSupport(
+        SutProvider<ProviderBillingService> sutProvider,
+        Guid providerId,
+        Provider provider)
+    {
+        provider.Id = providerId;
+        provider.Type = ProviderType.Reseller;
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(providerId).Returns(provider);
+
+        var exception = await Assert.ThrowsAsync<BillingException>(
+            () => sutProvider.Sut.GetPaymentInformationAsync(providerId));
+
+        Assert.Equal("Consolidated billing does not support reseller-type providers", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformationAsync_Success_ReturnsProviderPaymentInfoDTO(
+        SutProvider<ProviderBillingService> sutProvider,
+        Guid providerId,
+        Provider provider)
+    {
+        provider.Id = providerId;
+        provider.Type = ProviderType.Msp;
+        var taxInformation = new TaxInfo { TaxIdNumber = "12345" };
+        var paymentMethod = new PaymentMethod
+        {
+            Id = "pm_test123",
+            Type = "card",
+            Card = new PaymentMethodCard
+            {
+                Brand = "visa",
+                Last4 = "4242",
+                ExpMonth = 12,
+                ExpYear = 2024
+            }
+        };
+        var billingInformation = new BillingInfo { PaymentSource = new BillingInfo.BillingSource(paymentMethod) };
+
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(providerId).Returns(provider);
+
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
+        subscriberService.GetTaxInformationAsync(provider).Returns(taxInformation);
+        subscriberService.GetPaymentMethodAsync(provider).Returns(billingInformation.PaymentSource);
+
+        var result = await sutProvider.Sut.GetPaymentInformationAsync(providerId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(billingInformation.PaymentSource, result.billingSource);
+        Assert.Equal(taxInformation, result.taxInfo);
+    }
+    #endregion
 }

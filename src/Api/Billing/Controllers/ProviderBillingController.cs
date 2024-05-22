@@ -41,4 +41,31 @@ public class ProviderBillingController(
 
         return TypedResults.Ok(providerSubscriptionResponse);
     }
+
+    [HttpGet("payment-information")]
+    public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
+    {
+        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        {
+            return TypedResults.NotFound();
+        }
+
+        if (!currentContext.ProviderProviderAdmin(providerId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var providerPaymentInformationDto = await providerBillingService.GetPaymentInformationAsync(providerId);
+
+        if (providerPaymentInformationDto == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var (paymentSource, taxInfo) = providerPaymentInformationDto;
+
+        var providerPaymentInformationResponse = PaymentInformationResponse.From(paymentSource, taxInfo);
+
+        return TypedResults.Ok(providerPaymentInformationResponse);
+    }
 }
