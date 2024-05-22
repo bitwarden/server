@@ -1763,6 +1763,18 @@ public class StripePaymentService : IPaymentService
         return paymentSource == null;
     }
 
+    public async Task<bool> HasSecretsManagerStandalone(Organization organization)
+    {
+        if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+        {
+            return false;
+        }
+
+        var customer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId);
+
+        return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
+    }
+
     private PaymentMethod GetLatestCardPaymentMethod(string customerId)
     {
         var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(

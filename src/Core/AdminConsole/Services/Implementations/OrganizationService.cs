@@ -1679,14 +1679,14 @@ public class OrganizationService : IOrganizationService
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
+        IEnumerable<Guid> groups, bool accessSecretsManager)
     {
         // Collection associations validation not required as they are always an empty list - created via system user (scim)
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups, accessSecretsManager);
     }
 
     private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, bool accessSecretsManager = false)
     {
         var invite = new OrganizationUserInvite()
         {
@@ -1694,7 +1694,8 @@ public class OrganizationService : IOrganizationService
             Type = type,
             AccessAll = accessAll,
             Collections = collections,
-            Groups = groups
+            Groups = groups,
+            AccessSecretsManager = accessSecretsManager
         };
         var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
             new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
@@ -1793,6 +1794,8 @@ public class OrganizationService : IOrganizationService
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
 
+            var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+
             var userInvites = new List<(OrganizationUserInvite, string)>();
             foreach (var user in newUsers)
             {
@@ -1809,6 +1812,7 @@ public class OrganizationService : IOrganizationService
                         Type = OrganizationUserType.User,
                         AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
+                        AccessSecretsManager = hasStandaloneSecretsManager
                     };
                     userInvites.Add((invite, user.ExternalId));
                 }
