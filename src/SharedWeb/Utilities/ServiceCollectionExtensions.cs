@@ -150,6 +150,13 @@ public static class ServiceCollectionExtensions
 
     public static void AddTokenizers(this IServiceCollection services)
     {
+        services.AddSingleton<IDataProtectorTokenFactory<OrgDeleteTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<OrgDeleteTokenable>(
+                OrgDeleteTokenable.ClearTextPrefix,
+                OrgDeleteTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<OrgDeleteTokenable>>>())
+        );
         services.AddSingleton<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<EmergencyAccessInviteTokenable>(
                 EmergencyAccessInviteTokenable.ClearTextPrefix,
