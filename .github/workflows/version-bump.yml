@@ -211,7 +211,7 @@ jobs:
       #  run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
 
       - name: Report upcoming release version to Slack
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }} && ${{ inputs.enable_slack_notification == true }}
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' && inputs.enable_slack_notification == true }}
         uses: bitwarden/gh-actions/report-upcoming-release-version@task/BRE-87
         with:
           version: ${{ steps.set-final-version-output.outputs.version }}
