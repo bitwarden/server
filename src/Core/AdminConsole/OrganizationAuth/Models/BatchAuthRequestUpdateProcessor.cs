@@ -67,11 +67,11 @@ public class BatchAuthRequestUpdateProcessor
         return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor> SendNewDeviceEmails(Func<OrganizationAdminAuthRequest, string, Task> callback)
+    public async Task<BatchAuthRequestUpdateProcessor> SendApprovalEmailsForProcessedRequests(Func<OrganizationAdminAuthRequest, string, Task> callback)
     {
         foreach (var processor in _processed)
         {
-            await processor.SendNewDeviceEmail(callback);
+            await processor.SendApprovalEmail(callback);
         }
         return this;
     }

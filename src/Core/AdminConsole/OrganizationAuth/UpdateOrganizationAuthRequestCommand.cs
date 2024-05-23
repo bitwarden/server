@@ -91,7 +91,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         processor.Process((Exception e) => _logger.LogError(e.Message));
         await processor.Save((IEnumerable<OrganizationAdminAuthRequest> authRequests) => _authRequestRepository.UpdateManyAsync(authRequests));
         await processor.SendPushNotifications((ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar));
-        await processor.SendNewDeviceEmails(PushTrustedDeviceEmail);
+        await processor.SendApprovalEmailsForProcessedRequests(SendApprovalEmail);
         await processor.LogOrganizationEventsForProcessedRequests(LogOrganizationEvents);
     }
 
@@ -106,7 +106,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
             : new List<OrganizationAdminAuthRequest>();
     }
 
-    async Task PushTrustedDeviceEmail<T>(T authRequest, string identifier) where T : AuthRequest
+    async Task SendApprovalEmail<T>(T authRequest, string identifier) where T : AuthRequest
     {
         var user = await _userRepository.GetByIdAsync(authRequest.UserId);
 

@@ -64,7 +64,7 @@ public class AuthRequestUpdateProcessor
         return this;
     }
 
-    public async Task<AuthRequestUpdateProcessor> SendNewDeviceEmail(Func<OrganizationAdminAuthRequest, string, Task> callback)
+    public async Task<AuthRequestUpdateProcessor> SendApprovalEmail(Func<OrganizationAdminAuthRequest, string, Task> callback)
     {
         if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
         {

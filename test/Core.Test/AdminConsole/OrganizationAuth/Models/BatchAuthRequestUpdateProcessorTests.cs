@@ -118,7 +118,7 @@ public class BatchAuthRequestUpdateProcessorTests
 
     [Theory]
     [BitAutoData]
-    public async Task SendNewDeviceEmails_NoProcessors_IsHandled
+    public async Task SendApprovalEmailsForProcessedRequests_NoProcessors_IsHandled
     (
         List<OrganizationAuthRequestUpdate> updates,
         AuthRequestUpdateProcessorConfiguration configuration,
@@ -127,12 +127,12 @@ public class BatchAuthRequestUpdateProcessorTests
     {
         var sut = new BatchAuthRequestUpdateProcessor(null, updates, configuration);
         Assert.Empty(sut.Processors);
-        await sut.SendNewDeviceEmails(callback);
+        await sut.SendApprovalEmailsForProcessedRequests(callback);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SendNewDeviceEmails_HasProcessors_Sends
+    public async Task SendApprovalEmailsForProcessedRequests_HasProcessors_Sends
     (
         List<OrganizationAdminAuthRequest> authRequests,
         List<OrganizationAuthRequestUpdate> updates,
@@ -143,7 +143,7 @@ public class BatchAuthRequestUpdateProcessorTests
         (authRequests[0], updates[0], configuration) = UnrespondAndEnsureValid(authRequests[0], updates[0], configuration);
         var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, string, Task>>();
-        await sut.Process(errorHandler).SendNewDeviceEmails(callback);
+        await sut.Process(errorHandler).SendApprovalEmailsForProcessedRequests(callback);
         await callback.ReceivedWithAnyArgs()(Arg.Any<OrganizationAdminAuthRequest>(), Arg.Any<string>());
     }
 
