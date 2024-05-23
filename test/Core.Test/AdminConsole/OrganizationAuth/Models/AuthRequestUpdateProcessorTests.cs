@@ -127,6 +127,9 @@ public class AuthRequestUpdateProcessorTests
         update.Key = "key";
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         sut.Process();
+        Assert.True(sut.ProcessedAuthRequest.Approved);
+        Assert.Equal(sut.ProcessedAuthRequest.Key, update.Key);
+        Assert.NotNull(sut.ProcessedAuthRequest.ResponseDate);
     }
 
     [Theory]
@@ -141,6 +144,9 @@ public class AuthRequestUpdateProcessorTests
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         sut.Process();
+        Assert.False(sut.ProcessedAuthRequest.Approved);
+        Assert.Null(sut.ProcessedAuthRequest.Key);
+        Assert.NotNull(sut.ProcessedAuthRequest.ResponseDate);
     }
 
     [Theory]
