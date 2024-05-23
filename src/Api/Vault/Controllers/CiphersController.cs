@@ -619,7 +619,37 @@ public class CiphersController : Controller
 
         var updatedCipher = await GetByIdAsync(id, userId);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
+
         return new CipherDetailsResponseModel(updatedCipher, _globalSettings, collectionCiphers);
+    }
+
+    [HttpPut("{id}/collections_v2")]
+    [HttpPost("{id}/collections_v2")]
+    public async Task<OptionalCipherDetailsResponseModel> PutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipher = await GetByIdAsync(id, userId);
+        if (cipher == null || !cipher.OrganizationId.HasValue ||
+            !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
+        {
+            throw new NotFoundException();
+        }
+
+        await _cipherService.SaveCollectionsAsync(cipher,
+            model.CollectionIds.Select(c => new Guid(c)), userId, false);
+
+        var updatedCipher = await GetByIdAsync(id, userId);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
+        // If a user removes the last Can Manage access of a cipher, the "updatedCipher" will return null
+        // We will be returning an "Unavailable" property so the client knows the user can no longer access this
+        var response = new OptionalCipherDetailsResponseModel()
+        {
+            Unavailable = updatedCipher is null,
+            Cipher = updatedCipher is null
+                ? null
+                : new CipherDetailsResponseModel(updatedCipher, _globalSettings, collectionCiphers)
+        };
+        return response;
     }
 
     [HttpPut("{id}/collections-admin")]

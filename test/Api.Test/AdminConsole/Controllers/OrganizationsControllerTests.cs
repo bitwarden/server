@@ -5,6 +5,7 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -13,13 +14,14 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
 using Xunit;
@@ -46,7 +48,8 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IProviderBillingService _providerBillingService;
+    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
 
     private readonly OrganizationsController _sut;
 
@@ -69,7 +72,8 @@ public class OrganizationsControllerTests : IDisposable
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
-        _scaleSeatsCommand = Substitute.For<IScaleSeatsCommand>();
+        _providerBillingService = Substitute.For<IProviderBillingService>();
+        _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -89,7 +93,8 @@ public class OrganizationsControllerTests : IDisposable
             _pushNotificationService,
             _organizationEnableCollectionEnhancementsCommand,
             _providerRepository,
-            _scaleSeatsCommand);
+            _providerBillingService,
+            _orgDeleteTokenDataFactory);
     }
 
     public void Dispose()
@@ -228,8 +233,8 @@ public class OrganizationsControllerTests : IDisposable
 
         await _sut.Delete(organizationId.ToString(), requestModel);
 
-        await _scaleSeatsCommand.Received(1)
-            .ScalePasswordManagerSeats(provider, organization.PlanType, -organization.Seats.Value);
+        await _providerBillingService.Received(1)
+            .ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
 
         await _organizationService.Received(1).DeleteAsync(organization);
     }
