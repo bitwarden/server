@@ -282,14 +282,14 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
 
+                    b.Property<byte?>("Gateway")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("GatewayCustomerId")
                         .HasColumnType("text");
 
                     b.Property<string>("GatewaySubscriptionId")
                         .HasColumnType("text");
-
-                    b.Property<byte?>("GatewayType")
-                        .HasColumnType("smallint");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");

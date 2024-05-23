@@ -36,26 +36,52 @@ public class TwoFactorDuoResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public string Host { get; set; }
+    //TODO - will remove with PM-8107
     public string SecretKey { get; set; }
+    //TODO - will remove with PM-8107
     public string IntegrationKey { get; set; }
+    public string ClientSecret { get; set; }
+    public string ClientId { get; set; }
 
+    // updated build to assist in the EDD migration for the Duo 2FA provider
     private void Build(TwoFactorProvider provider)
     {
         if (provider?.MetaData != null && provider.MetaData.Count > 0)
         {
             Enabled = provider.Enabled;
 
-            if (provider.MetaData.ContainsKey("Host"))
+            if (provider.MetaData.TryGetValue("Host", out var host))
             {
-                Host = (string)provider.MetaData["Host"];
+                Host = (string)host;
             }
-            if (provider.MetaData.ContainsKey("SKey"))
+            //todo - will remove SKey and IKey with PM-8107
+            // check Skey and IKey first if they exist
+            if (provider.MetaData.TryGetValue("SKey", out var sKey))
             {
-                SecretKey = (string)provider.MetaData["SKey"];
+                ClientSecret = (string)sKey;
+                SecretKey = (string)sKey;
             }
-            if (provider.MetaData.ContainsKey("IKey"))
+            if (provider.MetaData.TryGetValue("IKey", out var iKey))
             {
-                IntegrationKey = (string)provider.MetaData["IKey"];
+                IntegrationKey = (string)iKey;
+                ClientId = (string)iKey;
+            }
+            // Even if IKey and SKey exist prioritize v4 params ClientId and ClientSecret
+            if (provider.MetaData.TryGetValue("ClientSecret", out var clientSecret))
+            {
+                if (!string.IsNullOrWhiteSpace((string)clientSecret))
+                {
+                    ClientSecret = (string)clientSecret;
+                    SecretKey = (string)clientSecret;
+                }
+            }
+            if (provider.MetaData.TryGetValue("ClientId", out var clientId))
+            {
+                if (!string.IsNullOrWhiteSpace((string)clientId))
+                {
+                    ClientId = (string)clientId;
+                    IntegrationKey = (string)clientId;
+                }
             }
         }
         else

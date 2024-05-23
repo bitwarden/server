@@ -42,10 +42,14 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
 
 public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IValidatableObject
 {
-    [Required]
+    [StringLength(50)]
+    public string ClientId { get; set; }
+    [StringLength(50)]
+    public string ClientSecret { get; set; }
+    //todo - will remove SKey and IKey with PM-8107
     [StringLength(50)]
     public string IntegrationKey { get; set; }
-    [Required]
+    //todo - will remove SKey and IKey with PM-8107
     [StringLength(50)]
     public string SecretKey { get; set; }
     [Required]
@@ -64,12 +68,17 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
             providers.Remove(TwoFactorProviderType.Duo);
         }
 
+        Temporary_SyncDuoParams();
+
         providers.Add(TwoFactorProviderType.Duo, new TwoFactorProvider
         {
             MetaData = new Dictionary<string, object>
             {
+                //todo - will remove SKey and IKey with PM-8107
                 ["SKey"] = SecretKey,
                 ["IKey"] = IntegrationKey,
+                ["ClientSecret"] = ClientSecret,
+                ["ClientId"] = ClientId,
                 ["Host"] = Host
             },
             Enabled = true
@@ -90,12 +99,17 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
             providers.Remove(TwoFactorProviderType.OrganizationDuo);
         }
 
+        Temporary_SyncDuoParams();
+
         providers.Add(TwoFactorProviderType.OrganizationDuo, new TwoFactorProvider
         {
             MetaData = new Dictionary<string, object>
             {
+                //todo - will remove SKey and IKey with PM-8107
                 ["SKey"] = SecretKey,
                 ["IKey"] = IntegrationKey,
+                ["ClientSecret"] = ClientSecret,
+                ["ClientId"] = ClientId,
                 ["Host"] = Host
             },
             Enabled = true
@@ -109,6 +123,30 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         if (!DuoApi.ValidHost(Host))
         {
             yield return new ValidationResult("Host is invalid.", new string[] { nameof(Host) });
+        }
+    }
+    /*
+        use this method to ensure that both v2 params and v4 params are in sync
+        todo will be removed in pm-8107
+    */
+    private void Temporary_SyncDuoParams()
+    {
+        if (!string.IsNullOrWhiteSpace(SecretKey))
+        {
+            ClientSecret = SecretKey;
+        }
+        if (!string.IsNullOrWhiteSpace(IntegrationKey))
+        {
+            ClientId = IntegrationKey;
+        }
+        // Even if IKey and SKey exist prioritize v4 params ClientId and ClientSecret
+        if (!string.IsNullOrWhiteSpace(ClientSecret))
+        {
+            SecretKey = ClientSecret;
+        }
+        if (!string.IsNullOrWhiteSpace(ClientId))
+        {
+            IntegrationKey = ClientId;
         }
     }
 }
