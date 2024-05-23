@@ -19,8 +19,8 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -55,7 +55,7 @@ public class OrganizationsController : Controller
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
 
     public OrganizationsController(
@@ -76,7 +76,7 @@ public class OrganizationsController : Controller
         IPushNotificationService pushNotificationService,
         IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
         IProviderRepository providerRepository,
-        IScaleSeatsCommand scaleSeatsCommand,
+        IProviderBillingService providerBillingService,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory)
     {
         _organizationRepository = organizationRepository;
@@ -96,7 +96,7 @@ public class OrganizationsController : Controller
         _pushNotificationService = pushNotificationService;
         _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
         _providerRepository = providerRepository;
-        _scaleSeatsCommand = scaleSeatsCommand;
+        _providerBillingService = providerBillingService;
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
     }
 
@@ -274,7 +274,7 @@ public class OrganizationsController : Controller
 
             if (provider.IsBillable())
             {
-                await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                await _providerBillingService.ScaleSeats(
                     provider,
                     organization.PlanType,
                     -organization.Seats ?? 0);
@@ -305,7 +305,7 @@ public class OrganizationsController : Controller
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
             if (provider.IsBillable())
             {
-                await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                await _providerBillingService.ScaleSeats(
                     provider,
                     organization.PlanType,
                     -organization.Seats ?? 0);
