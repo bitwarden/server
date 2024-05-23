@@ -266,6 +266,35 @@ public class OrganizationsController : Controller
         return RedirectToAction("Index");
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Org_Delete)]
+    public async Task<IActionResult> DeleteInitiation(Guid id, OrganizationInitiateDeleteModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = ModelState.GetErrorMessage();
+        }
+        else
+        {
+            try
+            {
+                var organization = await _organizationRepository.GetByIdAsync(id);
+                if (organization != null)
+                {
+                    await _organizationService.InitiateDeleteAsync(organization, model.AdminEmail);
+                    TempData["Success"] = "The request to initiate deletion of the organization has been sent.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+        }
+
+        return RedirectToAction("Edit", new { id });
+    }
+
     public async Task<IActionResult> TriggerBillingSync(Guid id)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);

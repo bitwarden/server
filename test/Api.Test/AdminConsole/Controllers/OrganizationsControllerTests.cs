@@ -5,6 +5,7 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -20,6 +21,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
 using Xunit;
@@ -47,6 +49,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
 
     private readonly OrganizationsController _sut;
 
@@ -70,6 +73,7 @@ public class OrganizationsControllerTests : IDisposable
         _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerBillingService = Substitute.For<IProviderBillingService>();
+        _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -89,7 +93,8 @@ public class OrganizationsControllerTests : IDisposable
             _pushNotificationService,
             _organizationEnableCollectionEnhancementsCommand,
             _providerRepository,
-            _providerBillingService);
+            _providerBillingService,
+            _orgDeleteTokenDataFactory);
     }
 
     public void Dispose()
