@@ -102,11 +102,6 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
-    public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
-    public const string PasswordlessLogin = "passwordless-login";
-    public const string TrustedDeviceEncryption = "trusted-device-encryption";
-    public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string VaultOnboarding = "vault-onboarding";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -119,10 +114,6 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
-    /// <summary>
-    /// Enables flexible collections improvements for new organizations on creation
-    /// </summary>
-    public const string FlexibleCollectionsSignup = "flexible-collections-signup";
     /// <summary>
     /// Exposes a migration button in the web vault which allows users to migrate an existing organization to
     /// flexible collections
@@ -140,6 +131,7 @@ public static class FeatureFlagKeys
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
     public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
+    public const string VaultBulkManagementAction = "vault-bulk-management-action";
 
     public static List<string> GetAllKeys()
     {
@@ -154,11 +146,8 @@ public static class FeatureFlagKeys
         // place overriding values when needed locally (offline), or return null
         return new Dictionary<string, string>()
         {
-            { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" },
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"},
-            { FlexibleCollectionsSignup, "true" }
+            { UnassignedItemsBanner, "true"}
         };
     }
 }

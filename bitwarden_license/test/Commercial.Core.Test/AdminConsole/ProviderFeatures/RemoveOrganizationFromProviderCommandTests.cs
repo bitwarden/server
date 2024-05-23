@@ -14,6 +14,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Stripe;
 using Xunit;
+using IMailService = Bit.Core.Services.IMailService;
 
 namespace Bit.Commercial.Core.Test.AdminConsole.ProviderFeatures;
 
@@ -81,6 +82,55 @@ public class RemoveOrganizationFromProviderCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization));
 
         Assert.Equal("Organization must have at least one confirmed owner.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveOrganizationFromProvider_NoStripeObjects_MakesCorrectInvocations(
+        Provider provider,
+        ProviderOrganization providerOrganization,
+        Organization organization,
+        SutProvider<RemoveOrganizationFromProviderCommand> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+        organization.GatewaySubscriptionId = null;
+
+        providerOrganization.ProviderId = provider.Id;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+                providerOrganization.OrganizationId,
+                Array.Empty<Guid>(),
+                includeProvider: false)
+            .Returns(true);
+
+        var organizationOwnerEmails = new List<string> { "a@gmail.com", "b@gmail.com" };
+
+        organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns(organizationOwnerEmails);
+
+        await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
+
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+            org => org.Id == organization.Id && org.BillingEmail == "a@gmail.com"));
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        await stripeAdapter.DidNotReceiveWithAnyArgs().CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+
+        await stripeAdapter.DidNotReceiveWithAnyArgs().SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+
+        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendProviderUpdatePaymentMethod(
+            Arg.Any<Guid>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<IEnumerable<string>>());
+
+        await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
+            .DeleteAsync(providerOrganization);
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventAsync(
+            providerOrganization,
+            EventType.ProviderOrganization_Removed);
     }
 
     [Theory, BitAutoData]

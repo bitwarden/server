@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -60,6 +61,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IProviderRepository _providerRepository;
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
@@ -94,6 +96,7 @@ public class OrganizationService : IOrganizationService
         IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
         IFeatureService featureService)
     {
@@ -123,6 +126,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _providerRepository = providerRepository;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
@@ -434,9 +438,6 @@ public class OrganizationService : IOrganizationService
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var flexibleCollectionsV1Enabled =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
@@ -478,14 +479,12 @@ public class OrganizationService : IOrganizationService
             // Secrets Manager not available for purchase with Consolidated Billing.
             UseSecretsManager = false,
 
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
+            // AC-1714 will remove this flag after all old code has been removed.
+            FlexibleCollections = true,
 
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
+            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
 
@@ -529,9 +528,6 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var flexibleCollectionsV1IsEnabled =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
@@ -573,14 +569,12 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
 
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
+            // AC-1714 will remove this flag after all old code has been removed.
+            FlexibleCollections = true,
 
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
+            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
         };
 
@@ -661,9 +655,6 @@ public class OrganizationService : IOrganizationService
 
         await ValidateSignUpPoliciesAsync(owner.Id);
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var organization = new Organization
         {
             Name = license.Name,
@@ -709,7 +700,7 @@ public class OrganizationService : IOrganizationService
 
             // This feature flag indicates that new organizations should be automatically onboarded to
             // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            FlexibleCollections = true,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -809,6 +800,23 @@ public class OrganizationService : IOrganizationService
 
             throw;
         }
+    }
+
+    public async Task InitiateDeleteAsync(Organization organization, string orgAdminEmail)
+    {
+        var orgAdmin = await _userRepository.GetByEmailAsync(orgAdminEmail);
+        if (orgAdmin == null)
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+        var orgAdminOrgUser = await _organizationUserRepository.GetDetailsByUserAsync(orgAdmin.Id, organization.Id);
+        if (orgAdminOrgUser == null || orgAdminOrgUser.Status != OrganizationUserStatusType.Confirmed ||
+            (orgAdminOrgUser.Type != OrganizationUserType.Admin && orgAdminOrgUser.Type != OrganizationUserType.Owner))
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, 1));
+        await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
     }
 
     public async Task DeleteAsync(Organization organization)
@@ -1323,7 +1331,6 @@ public class OrganizationService : IOrganizationService
         var validOrganizationUserIds = validOrganizationUsers.Select(u => u.UserId.Value).ToList();
 
         var organization = await GetOrgById(organizationId);
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
         var usersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validOrganizationUserIds);
         var users = await _userRepository.GetManyAsync(validOrganizationUserIds);
 
@@ -1355,7 +1362,7 @@ public class OrganizationService : IOrganizationService
                     }
                 }
 
-                await CheckPolicies(policies, organizationId, user, orgUsers, userService);
+                await CheckPolicies(organizationId, user, orgUsers, userService);
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
@@ -1449,22 +1456,29 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task CheckPolicies(ICollection<Policy> policies, Guid organizationId, User user,
+    private async Task CheckPolicies(Guid organizationId, User user,
         ICollection<OrganizationUser> userOrgs, IUserService userService)
     {
-        var usingTwoFactorPolicy = policies.Any(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-        if (usingTwoFactorPolicy && !await userService.TwoFactorIsEnabledAsync(user))
+        // Enforce Two Factor Authentication Policy for this organization
+        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)).Any(p => p.OrganizationId == organizationId);
+        if (orgRequiresTwoFactor && !await userService.TwoFactorIsEnabledAsync(user))
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }
 
-        var usingSingleOrgPolicy = policies.Any(p => p.Type == PolicyType.SingleOrg && p.Enabled);
-        if (usingSingleOrgPolicy)
+        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
+        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
+        var otherSingleOrgPolicies =
+            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
+        // Enforce Single Organization Policy for this organization
+        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
         {
-            if (userOrgs.Any(ou => ou.OrganizationId != organizationId && ou.Status != OrganizationUserStatusType.Invited))
-            {
-                throw new BadRequestException("User is a member of another organization.");
-            }
+            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
+        }
+        // Enforce Single Organization Policy of other organizations user is a member of
+        if (otherSingleOrgPolicies.Any())
+        {
+            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
         }
     }
 
@@ -1673,14 +1687,14 @@ public class OrganizationService : IOrganizationService
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
+        IEnumerable<Guid> groups, bool accessSecretsManager)
     {
         // Collection associations validation not required as they are always an empty list - created via system user (scim)
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups, accessSecretsManager);
     }
 
     private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, bool accessSecretsManager = false)
     {
         var invite = new OrganizationUserInvite()
         {
@@ -1688,7 +1702,8 @@ public class OrganizationService : IOrganizationService
             Type = type,
             AccessAll = accessAll,
             Collections = collections,
-            Groups = groups
+            Groups = groups,
+            AccessSecretsManager = accessSecretsManager
         };
         var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
             new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
@@ -1787,6 +1802,8 @@ public class OrganizationService : IOrganizationService
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
 
+            var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+
             var userInvites = new List<(OrganizationUserInvite, string)>();
             foreach (var user in newUsers)
             {
@@ -1803,6 +1820,7 @@ public class OrganizationService : IOrganizationService
                         Type = OrganizationUserType.User,
                         AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
+                        AccessSecretsManager = hasStandaloneSecretsManager
                     };
                     userInvites.Add((invite, user.ExternalId));
                 }
