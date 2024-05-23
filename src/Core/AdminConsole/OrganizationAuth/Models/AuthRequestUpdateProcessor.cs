@@ -10,7 +10,7 @@ public class AuthRequestUpdateProcessor
     public OrganizationAdminAuthRequest ProcessedAuthRequest { get; private set; }
 
     private OrganizationAdminAuthRequest _unprocessedAuthRequest { get; }
-    private OrganizationAuthRequestUpdate _updates { get; }
+    private OrganizationAuthRequestUpdate _update { get; }
     private AuthRequestUpdateProcessorConfiguration _configuration { get; }
 
     public EventType OrganizationEventType => ProcessedAuthRequest?.Approved.Value ?? false
@@ -19,12 +19,12 @@ public class AuthRequestUpdateProcessor
 
     public AuthRequestUpdateProcessor(
         OrganizationAdminAuthRequest authRequest,
-        OrganizationAuthRequestUpdate updates,
+        OrganizationAuthRequestUpdate update,
         AuthRequestUpdateProcessorConfiguration configuration
     )
     {
         _unprocessedAuthRequest = authRequest;
-        _updates = updates;
+        _update = update;
         _configuration = configuration;
     }
 
@@ -43,13 +43,13 @@ public class AuthRequestUpdateProcessor
             _unprocessedAuthRequest.AuthenticationDate.HasValue;
         var canBeProcessed = !isExpired &&
             !isSpent &&
-            _unprocessedAuthRequest.Id == _updates.Id &&
+            _unprocessedAuthRequest.Id == _update.Id &&
             _unprocessedAuthRequest.OrganizationId == _configuration.OrganizationId;
         if (!canBeProcessed)
         {
             throw new AuthRequestUpdateCouldNotBeProcessedException(_unprocessedAuthRequest.Id);
         }
-        return _updates.Approved
+        return _update.Approved
             ? Approve()
             : Deny();
     }
@@ -86,12 +86,12 @@ public class AuthRequestUpdateProcessor
 
     private AuthRequestUpdateProcessor Approve()
     {
-        if (string.IsNullOrWhiteSpace(_updates.Key))
+        if (string.IsNullOrWhiteSpace(_update.Key))
         {
-            throw new ApprovedAuthRequestIsMissingKeyException(_updates.Id);
+            throw new ApprovedAuthRequestIsMissingKeyException(_update.Id);
         }
         ProcessedAuthRequest = _unprocessedAuthRequest;
-        ProcessedAuthRequest.Key = _updates.Key;
+        ProcessedAuthRequest.Key = _update.Key;
         ProcessedAuthRequest.Approved = true;
         ProcessedAuthRequest.ResponseDate = DateTime.UtcNow;
         return this;
