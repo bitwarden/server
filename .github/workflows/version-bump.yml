@@ -12,6 +12,10 @@ on:
         description: "Cut RC branch?"
         default: true
         type: boolean
+      enable_slack_notification:
+        description: "Enable Slack notifications for upcoming release?"
+        default: false
+        type: boolean
 
 jobs:
   bump_version:
@@ -199,7 +203,7 @@ jobs:
         run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
 
       - name: Report upcoming release version to Slack
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }} && ${{ inputs.enable_slack_notification == true }}
         uses: bitwarden/gh-actions/report-upcoming-release-version@main
         with:
           version: ${{ steps.set-final-version-output.outputs.version }}
