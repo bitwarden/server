@@ -155,7 +155,8 @@ public class AuthRequestUpdateProcessorTests
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, Task>>();
-        await sut.Process().SendPushNotification(callback);
+        sut.Process();
+        await sut.SendPushNotification(callback);
         await callback.DidNotReceiveWithAnyArgs()(sut.ProcessedAuthRequest);
     }
 
@@ -172,7 +173,8 @@ public class AuthRequestUpdateProcessorTests
         update.Key = "key";
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, Task>>();
-        await sut.Process().SendPushNotification(callback);
+        sut.Process();
+        await sut.SendPushNotification(callback);
         await callback.Received()(sut.ProcessedAuthRequest);
     }
 
@@ -188,7 +190,8 @@ public class AuthRequestUpdateProcessorTests
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, string, Task>>();
-        await sut.Process().SendApprovalEmail(callback);
+        sut.Process();
+        await sut.SendApprovalEmail(callback);
         await callback.DidNotReceiveWithAnyArgs()(sut.ProcessedAuthRequest, "string");
     }
 
@@ -207,7 +210,8 @@ public class AuthRequestUpdateProcessorTests
         update.Key = "key";
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, string, Task>>();
-        await sut.Process().SendApprovalEmail(callback);
+        sut.Process();
+        await sut.SendApprovalEmail(callback);
         await callback.Received()(sut.ProcessedAuthRequest, "iOS - device-id");
     }
 

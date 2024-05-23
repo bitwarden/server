@@ -28,7 +28,7 @@ public class AuthRequestUpdateProcessor
         _configuration = configuration;
     }
 
-    public AuthRequestUpdateProcessor Process()
+    public void Process()
     {
         if (_unprocessedAuthRequest == null)
         {
@@ -49,26 +49,28 @@ public class AuthRequestUpdateProcessor
         {
             throw new AuthRequestUpdateCouldNotBeProcessedException(_unprocessedAuthRequest.Id);
         }
-        return _update.Approved
-            ? Approve()
-            : Deny();
+        if (_update.Approved)
+        {
+            Approve();
+            return;
+        }
+        Deny();
     }
 
-    public async Task<AuthRequestUpdateProcessor> SendPushNotification(Func<OrganizationAdminAuthRequest, Task> callback)
+    public async Task SendPushNotification(Func<OrganizationAdminAuthRequest, Task> callback)
     {
         if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
         {
-            return this;
+            return;
         }
         await callback(ProcessedAuthRequest);
-        return this;
     }
 
-    public async Task<AuthRequestUpdateProcessor> SendApprovalEmail(Func<OrganizationAdminAuthRequest, string, Task> callback)
+    public async Task SendApprovalEmail(Func<OrganizationAdminAuthRequest, string, Task> callback)
     {
         if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
         {
-            return this;
+            return;
         }
         var deviceTypeDisplayName = _unprocessedAuthRequest.RequestDeviceType.GetType()
             .GetMember(_unprocessedAuthRequest.RequestDeviceType.ToString())
@@ -81,10 +83,9 @@ public class AuthRequestUpdateProcessor
                 ? deviceTypeDisplayName
                 : $"{deviceTypeDisplayName} - {_unprocessedAuthRequest.RequestDeviceIdentifier}";
         await callback(ProcessedAuthRequest, deviceTypeAndIdentifierDisplayString);
-        return this;
     }
 
-    private AuthRequestUpdateProcessor Approve()
+    private void Approve()
     {
         if (string.IsNullOrWhiteSpace(_update.Key))
         {
@@ -94,14 +95,12 @@ public class AuthRequestUpdateProcessor
         ProcessedAuthRequest.Key = _update.Key;
         ProcessedAuthRequest.Approved = true;
         ProcessedAuthRequest.ResponseDate = DateTime.UtcNow;
-        return this;
     }
 
-    private AuthRequestUpdateProcessor Deny()
+    private void Deny()
     {
         ProcessedAuthRequest = _unprocessedAuthRequest;
         ProcessedAuthRequest.Approved = false;
         ProcessedAuthRequest.ResponseDate = DateTime.UtcNow;
-        return this;
     }
 }
