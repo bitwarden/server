@@ -171,37 +171,37 @@ jobs:
           PR_BRANCH: ${{ steps.create-branch.outputs.name }}
         run: git push -u origin $PR_BRANCH
 
-      #- name: Create version PR
-      #  if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-      #  id: create-pr
-      #  env:
-      #    GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
-      #    PR_BRANCH: ${{ steps.create-branch.outputs.name }}
-      #    TITLE: "Bump version to ${{ steps.set-final-version-output.outputs.version }}"
-      #  run: |
-      #    PR_URL=$(gh pr create --title "$TITLE" \
-      #      --base "main" \
-      #      --head "$PR_BRANCH" \
-      #      --label "version update" \
-      #      --label "automated pr" \
-      #      --body "
-      #        ## Type of change
-      #        - [ ] Bug fix
-      #        - [ ] New feature development
-      #        - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
-      #        - [ ] Build/deploy pipeline (DevOps)
-      #        - [X] Other
-#
-      #        ## Objective
-      #        Automated version bump to ${{ steps.set-final-version-output.outputs.version }}")
-      #    echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
+      - name: Create version PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
+          TITLE: "Bump version to ${{ steps.set-final-version-output.outputs.version }}"
+        run: |
+          PR_URL=$(gh pr create --title "$TITLE" \
+            --base "main" \
+            --head "$PR_BRANCH" \
+            --label "version update" \
+            --label "automated pr" \
+            --body "
+              ## Type of change
+              - [ ] Bug fix
+              - [ ] New feature development
+              - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
+              - [ ] Build/deploy pipeline (DevOps)
+              - [X] Other
 
-      #- name: Approve PR
-      #  if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-      #  env:
-      #    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #    PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
-      #  run: gh pr review $PR_NUMBER --approve
+              ## Objective
+              Automated version bump to ${{ steps.set-final-version-output.outputs.version }}")
+          echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
+
+      - name: Approve PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr review $PR_NUMBER --approve
 
       #- name: Merge PR
       #  if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
