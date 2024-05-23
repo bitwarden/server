@@ -30,6 +30,14 @@ jobs:
         with:
           version: ${{ inputs.version_number_override }}
 
+      - name: Slack Notification Check
+        run: |
+          if [[ "${{ inputs.enable_slack_notification }}" == true ]]; then
+            echo "Slack notifications enabled."
+          else
+            echo "Slack notifications disabled."
+          fi
+
       - name: Check out branch
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
