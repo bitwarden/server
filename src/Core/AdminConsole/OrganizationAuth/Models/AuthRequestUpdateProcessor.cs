@@ -59,7 +59,7 @@ public class AuthRequestUpdateProcessor
 
     public async Task SendPushNotification(Func<OrganizationAdminAuthRequest, Task> callback)
     {
-        if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
+        if (!ProcessedAuthRequest?.Approved ?? false)
         {
             return;
         }
@@ -68,7 +68,7 @@ public class AuthRequestUpdateProcessor
 
     public async Task SendApprovalEmail(Func<OrganizationAdminAuthRequest, string, Task> callback)
     {
-        if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
+        if (!ProcessedAuthRequest?.Approved ?? false)
         {
             return;
         }
