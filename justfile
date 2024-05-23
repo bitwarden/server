@@ -13,13 +13,13 @@ build:
   # Login to ACR
   az acr login -n bitwardenprod.azurecr.io
   if `grep "pull" <<< "${GITHUB_REF}"`; then
-    IMAGE_TAG := `echo "${GITHUB_HEAD_REF}" | sed "s#/#-#g"`
+  IMAGE_TAG := `echo "${GITHUB_HEAD_REF}" | sed "s#/#-#g"`
   else
-    IMAGE_TAG := `echo "${GITHUB_REF:11}" | sed "s#/#-#g"`
+  IMAGE_TAG := `echo "${GITHUB_REF:11}" | sed "s#/#-#g"`
   fi
 
   if "${IMAGE_TAG}" == "main"; then
-    IMAGE_TAG := dev
+  IMAGE_TAG := dev
   fi
 
   echo ${PROJECT_NAME}
