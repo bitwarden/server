@@ -715,6 +715,23 @@ public class StripeController : Controller
                 await SendEmails(new List<string> { user.Email });
             }
         }
+        else if (providerId.HasValue)
+        {
+            var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+
+            if (provider == null)
+            {
+                _logger.LogError(
+                    "Received invoice.Upcoming webhook ({EventID}) for Provider ({ProviderID}) that does not exist",
+                    parsedEvent.Id,
+                    providerId.Value);
+
+                return;
+            }
+
+            await SendEmails(new List<string> { provider.BillingEmail });
+
+        }
 
         return;
 
