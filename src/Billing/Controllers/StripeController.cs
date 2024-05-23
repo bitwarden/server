@@ -775,7 +775,7 @@ public class StripeController : Controller
             }
         }
 
-        if (organizationId.HasValue || userId.HasValue)
+        if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
         {
             return (organizationId, userId, providerId);
         }
@@ -794,7 +794,7 @@ public class StripeController : Controller
 
             (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
-            if (organizationId.HasValue || userId.HasValue)
+            if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
             {
                 return (organizationId, userId, providerId);
             }
