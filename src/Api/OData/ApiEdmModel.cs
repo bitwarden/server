@@ -1,6 +1,4 @@
 ﻿using Bit.Api.AdminConsole.Models.Response;
-using Bit.Api.AdminConsole.Public.Models.Response;
-using Bit.Api.Models.Public.Response;
 using Microsoft.OData.Edm;
 using Microsoft.OData.ModelBuilder;
 
@@ -13,13 +11,25 @@ public static class ApiEdmModel
         var modelBuilder = new ODataConventionModelBuilder();
 
 
-        modelBuilder.EntitySet<ProfileOrganizationResponseModel>("Organizations");
-        modelBuilder.EntitySet<MemberResponseModel>("Members");
+        // modelBuilder.EntitySet<ProfileOrganizationResponseModel>("Organizations");
+        // modelBuilder.EntitySet<MemberResponseModel>("Members");
 
-        modelBuilder.EntityType<ListResponseModel<CollectionResponseModel>>();
-        modelBuilder.EntitySet<CollectionResponseModel>("Collections");
+        // modelBuilder.EntityType<ListResponseModel<CollectionResponseModel>>();
+
+        // modelBuilder.EntitySet<CollectionResponseModel>("Collections");
 
         // var collectionConfig = modelBuilder.EntitySet<ListResponseModel<CollectionResponseModel>>("Collections");
+        // add complest type and structural node. modelBuilder.AddComplexType
+
+        // var user = modelBuilder.EntitySet<OrganizationUserUserDetailsResponseModel>("users");
+        // user.
+        // modelBuilder.EntityType<Permissions>();        
+        // mod
+
+        // var groups = modelBuilder.EntitySet<string>("groups");
+        // groups.EntityType.HasKey(x => )
+
+        modelBuilder.EntitySet<GroupDetailsResponseModel>("groups");
 
         return modelBuilder.GetEdmModel();
     }

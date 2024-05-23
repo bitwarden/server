@@ -1,68 +1,57 @@
-﻿using Bit.Api.AdminConsole.Models.Response;
-using Bit.Api.AdminConsole.Public.Models.Response;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
+﻿using Api.AdminConsole.Services;
+using Api.Services;
+using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Models.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OData.Formatter;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 
 namespace Bit.Api.Controllers;
 
-public class TestOdata
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
-}
-
 [Route("report")]
 [Authorize("Application")]
 public class ReportController : ODataController
 {
-    private readonly ICollectionService _collectionService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IUserService _userService;
+    private readonly IOrganizationUserControllerService _organizationUserControllerService;
+    private readonly IGroupsControllerService _groupsControllerService;
+    private readonly ICollectionsControllerService _collectionsControllerService;
 
-    public ReportController(ICollectionService collectionService, IOrganizationUserRepository organizationUserRepository, IUserService userService)
+    public ReportController(
+        IOrganizationUserControllerService organizationUserControllerService,
+        IGroupsControllerService groupsControllerService,
+        ICollectionsControllerService collectionsControllerService)
     {
-        _collectionService = collectionService;
-        _organizationUserRepository = organizationUserRepository;
-        _userService = userService;
+        _organizationUserControllerService = organizationUserControllerService;
+        _groupsControllerService = groupsControllerService;
+        _collectionsControllerService = collectionsControllerService;
     }
 
-    [HttpGet("UserOrganizations")]
+    [HttpGet("organizations({key})/members")]
     [EnableQuery]
-    public async Task<IEnumerable<ProfileOrganizationResponseModel>> GetOrganizations()
+    public async Task<IEnumerable<OrganizationUserUserDetailsResponseModel>> GetMemberAccess(
+        Guid key,
+        bool includeGroups = false,
+        bool includeCollections = false)
     {
-        var userId = _userService.GetProperUserId(User);
-        var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value,
-            OrganizationUserStatusType.Confirmed);
-        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o));
-        return responseData;
+        var orgUsers = await _organizationUserControllerService.GetOrganizationUserUserDetails(User, key, includeGroups, includeCollections);
+        return orgUsers;
     }
 
-    [HttpGet("Members({key})")]
+    [HttpGet("Organizations({key})/groups")]
     [EnableQuery]
-    public async Task<IEnumerable<MemberResponseModel>> GetOrganizationMembers([FromODataUri] Guid key)
+    public async Task<IEnumerable<GroupDetailsResponseModel>> GetOrganizationGroups(Guid key)
     {
-        var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(key);
-        var memberResponsesTasks = users.Select(async u => new MemberResponseModel(u,
-                await _userService.TwoFactorIsEnabledAsync(u), null, false));
-        var memberResponses = await Task.WhenAll(memberResponsesTasks);
-        return memberResponses;
+        var orgGroups = await _groupsControllerService.GetGroups(User, key);
+        return orgGroups;
     }
 
-    // [HttpGet("")]
-    // [EnableQuery]
-    // public IEnumerable<TestOdata> Get()
-    // {
-    //   return new List<TestOdata> 
-    //   { 
-    //     new TestOdata { Id = 1, Name = "TestOne" },
-    //     new TestOdata { Id = 2, Name = "TestTwo" },
-    //     new TestOdata { Id = 3, Name = "TestThree" }
-    //   };
-    // }
+    [HttpGet("Organizations({key})/collections")]
+    [EnableQuery]
+    public async Task<IEnumerable<CollectionResponseModel>> GetOrganizationCollections(Guid key)
+    {
+        var orgCollections = await _collectionsControllerService.GetOrganizationCollections(User, key);
+        return orgCollections;
+    }
 }

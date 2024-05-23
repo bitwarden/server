@@ -31,7 +31,10 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.OData;
-using Api.OData;
+using Api.AdminConsole.Services;
+using Api.Services;
+
+
 
 
 
@@ -100,6 +103,15 @@ public class Startup
 
         // BitPay
         services.AddSingleton<BitPayClient>();
+
+        // Organizations
+        services.AddScoped<IOrganizationUserControllerService, OrganizationUserControllerService>();
+
+        // Groups
+        services.AddScoped<IGroupsControllerService, GroupsControllerService>();
+
+        // Collections
+        services.AddScoped<ICollectionsControllerService, CollectionsControllerService>();
 
         if (!globalSettings.SelfHosted)
         {
@@ -209,21 +221,9 @@ public class Startup
 
         // Define any EDM model relations needed here. Inject the OData methods
         // into the existing controllers. 
-        // services.AddControllers()
-        //         .AddOData(options => options
-        //         .AddRouteComponents(ApiEdmModel.GetEdmModel())
-        //         .Select().Filter().Count().OrderBy().Expand());
-
-        // services.AddControllers()
-        //         .AddOData(options => options
-        //         .Select().Filter().Count().OrderBy().Expand());
-
         services.AddControllers()
-            .AddOData((options) =>
-            {
-                options.AddRouteComponents(ApiEdmModel.GetEdmModel());
-                options.Select().Filter().Count().OrderBy().Expand();
-            });
+                .AddOData(options => options
+                .Select().Filter().Count().OrderBy().Expand()); ;
 
         services.AddSwagger(globalSettings);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
