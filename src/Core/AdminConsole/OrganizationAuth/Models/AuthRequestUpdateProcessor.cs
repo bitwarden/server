@@ -30,6 +30,10 @@ public class AuthRequestUpdateProcessor
 
     public AuthRequestUpdateProcessor Process()
     {
+        if (_unprocessedAuthRequest == null)
+        {
+            throw new AuthRequestUpdateCouldNotBeProcessedException();
+        }
         var isExpired = DateTime.UtcNow >
             _unprocessedAuthRequest.CreationDate
             .Add(_configuration.AuthRequestExpiresAfter);

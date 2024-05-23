@@ -13,6 +13,17 @@ public class AuthRequestUpdateProcessorTests
 {
     [Theory]
     [BitAutoData]
+    public void Process_NoAuthRequestLoaded_Throws(
+        OrganizationAuthRequestUpdate update,
+        AuthRequestUpdateProcessorConfiguration processorConfiguration
+    )
+    {
+        var sut = new AuthRequestUpdateProcessor(null, update, processorConfiguration);
+        Assert.ThrowsAny<AuthRequestUpdateCouldNotBeProcessedException>(() => sut.Process());
+    }
+
+    [Theory]
+    [BitAutoData]
     public void Process_RequestIsAlreadyApproved_Throws(
         OrganizationAdminAuthRequest authRequest,
         OrganizationAuthRequestUpdate update,
