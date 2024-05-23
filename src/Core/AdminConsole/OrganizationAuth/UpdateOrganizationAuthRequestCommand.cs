@@ -92,7 +92,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         await processor.Save((IEnumerable<OrganizationAdminAuthRequest> authRequests) => _authRequestRepository.UpdateManyAsync(authRequests));
         await processor.SendPushNotifications((ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar));
         await processor.SendNewDeviceEmails(PushTrustedDeviceEmail);
-        await processor.SendEventLogs(SendOrganizationEventLogs);
+        await processor.LogOrganizationEventsForProcessedRequests(LogOrganizationEvents);
     }
 
     async Task<ICollection<OrganizationAdminAuthRequest>> FetchManyOrganizationAuthRequestsFromTheDatabase(Guid organizationId, IEnumerable<Guid> authRequestIds)
@@ -125,7 +125,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         );
     }
 
-    async Task SendOrganizationEventLogs(IEnumerable<(OrganizationAdminAuthRequest AuthRequest, EventType EventType)> events)
+    async Task LogOrganizationEvents(IEnumerable<(OrganizationAdminAuthRequest AuthRequest, EventType EventType)> events)
     {
         var organizationUsers = await _organizationUserRepository.GetManyAsync(events.Select(e => e.AuthRequest.OrganizationUserId));
         await _eventService.LogOrganizationUserEventsAsync(

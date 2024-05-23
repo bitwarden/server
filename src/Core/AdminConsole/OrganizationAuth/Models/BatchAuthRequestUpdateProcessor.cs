@@ -76,7 +76,7 @@ public class BatchAuthRequestUpdateProcessor
         return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor> SendEventLogs(Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task> callback)
+    public async Task<BatchAuthRequestUpdateProcessor> LogOrganizationEventsForProcessedRequests(Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task> callback)
     {
         if (_processed.Any())
         {

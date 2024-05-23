@@ -149,7 +149,7 @@ public class BatchAuthRequestUpdateProcessorTests
 
     [Theory]
     [BitAutoData]
-    public async Task SendEventLogs_NoProcessedAuthRequests_IsHandled
+    public async Task LogOrganizationEventsForProcessedRequests_NoProcessedAuthRequests_IsHandled
     (
         List<OrganizationAuthRequestUpdate> updates,
         AuthRequestUpdateProcessorConfiguration configuration
@@ -158,13 +158,13 @@ public class BatchAuthRequestUpdateProcessorTests
         var sut = new BatchAuthRequestUpdateProcessor(null, updates, configuration);
         var callback = Substitute.For<Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task>>();
         Assert.Empty(sut.Processors);
-        await sut.SendEventLogs(callback);
+        await sut.LogOrganizationEventsForProcessedRequests(callback);
         await callback.DidNotReceiveWithAnyArgs()(Arg.Any<IEnumerable<(OrganizationAdminAuthRequest, EventType)>>());
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SendEventLogs_HasProcessedAuthRequests_IsHandled
+    public async Task LogOrganizationEventsForProcessedRequests_HasProcessedAuthRequests_IsHandled
     (
         List<OrganizationAdminAuthRequest> authRequests,
         List<OrganizationAuthRequestUpdate> updates,
@@ -175,7 +175,7 @@ public class BatchAuthRequestUpdateProcessorTests
         (authRequests[0], updates[0], configuration) = UnrespondAndEnsureValid(authRequests[0], updates[0], configuration);
         var sut = new BatchAuthRequestUpdateProcessor(authRequests, updates, configuration);
         var callback = Substitute.For<Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task>>();
-        await sut.Process(errorHandler).SendEventLogs(callback);
+        await sut.Process(errorHandler).LogOrganizationEventsForProcessedRequests(callback);
         await callback.ReceivedWithAnyArgs()(Arg.Any<IEnumerable<(OrganizationAdminAuthRequest, EventType)>>());
     }
 
