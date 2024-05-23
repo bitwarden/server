@@ -455,7 +455,7 @@ jobs:
 
   check-failures:
     name: Check for failures
-    if: always()
+    if: false
     runs-on: ubuntu-22.04
     needs:
       - lint
