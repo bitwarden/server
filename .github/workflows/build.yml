@@ -24,6 +24,11 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
+      - name: Install just
+        uses: taiki-e/install-action@4fedbddde88aab767a45a011661f832d68202716 # v2.33.28
+        with:
+          tool: just
+
       - name: Lint
         run: just lint
 
@@ -85,6 +90,11 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Install just
+        uses: taiki-e/install-action@4fedbddde88aab767a45a011661f832d68202716 # v2.33.28
+        with:
+          tool: just
 
       - name: Check branch to publish
         env:
