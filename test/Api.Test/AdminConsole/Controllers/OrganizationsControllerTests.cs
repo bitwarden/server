@@ -5,6 +5,7 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
@@ -19,6 +20,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using NSubstitute;
 using Xunit;
@@ -45,6 +47,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IProviderRepository _providerRepository;
     private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
 
     private readonly OrganizationsController _sut;
 
@@ -67,6 +70,7 @@ public class OrganizationsControllerTests : IDisposable
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _scaleSeatsCommand = Substitute.For<IScaleSeatsCommand>();
+        _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -85,7 +89,8 @@ public class OrganizationsControllerTests : IDisposable
             _globalSettings,
             _pushNotificationService,
             _providerRepository,
-            _scaleSeatsCommand);
+            _scaleSeatsCommand,
+            _orgDeleteTokenDataFactory);
     }
 
     public void Dispose()

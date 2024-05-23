@@ -114,10 +114,6 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
-    /// <summary>
-    /// Enables flexible collections improvements for new organizations on creation
-    /// </summary>
-    public const string FlexibleCollectionsSignup = "flexible-collections-signup";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
@@ -146,8 +142,7 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"},
-            { FlexibleCollectionsSignup, "true" }
+            { UnassignedItemsBanner, "true"}
         };
     }
 }
