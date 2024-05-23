@@ -24,8 +24,8 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
-      - name: Verify format
-        run: dotnet format --verify-no-changes
+      - name: Lint
+        run: just lint
 
   build-docker:
     name: Build Docker images
@@ -33,6 +33,9 @@ jobs:
     permissions:
       security-events: write
     needs: lint
+    env:
+      PROJECT_NAME: ${{ matrix.project_name }}
+      BASE_PATH: ${{ matrix.base_path}}
     strategy:
       fail-fast: false
       matrix:
@@ -109,33 +112,39 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to PROD ACR
-        run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
+      # - name: Login to PROD ACR
+      #   run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
 
-      ########## Generate image tag and build Docker image ##########
-      - name: Generate Docker image tag
-        id: tag
-        run: |
-          if [[ $(grep "pull" <<< "${GITHUB_REF}") ]]; then
-            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s#/#-#g")
-          else
-            IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
-          fi
+      # ########## Generate image tag and build Docker image ##########
+      # - name: Generate Docker image tag
+      #   id: tag
+      #   run: |
+      #     if [[ $(grep "pull" <<< "${GITHUB_REF}") ]]; then
+      #       IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s#/#-#g")
+      #     else
+      #       IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
+      #     fi
 
-          if [[ "$IMAGE_TAG" == "main" ]]; then
-            IMAGE_TAG=dev
-          fi
+      #     if [[ "$IMAGE_TAG" == "main" ]]; then
+      #       IMAGE_TAG=dev
+      #     fi
 
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "### :mega: Docker Image Tag: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+      #     echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+      #     echo "### :mega: Docker Image Tag: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
 
-      - name: Set up project name
-        id: setup
-        run: |
-          PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
-          echo "Matrix name: ${{ matrix.project_name }}"
-          echo "PROJECT_NAME: $PROJECT_NAME"
-          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+      # - name: Set up project name
+      #   id: setup
+      #   run: |
+      #     PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
+      #     echo "Matrix name: ${{ matrix.project_name }}"
+      #     echo "PROJECT_NAME: $PROJECT_NAME"
+      #     echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Justfile
+        run: just build
+
+      - name: TEST FAIL
+        run: exit 1
 
       - name: Generate image tags(s)
         id: image-tags
