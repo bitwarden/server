@@ -13,9 +13,9 @@ public class AuthRequestUpdateProcessor
     private OrganizationAuthRequestUpdate _updates { get; }
     private AuthRequestUpdateProcessorConfiguration _configuration { get; }
 
-    public EventType OrganizationEventType => ProcessedAuthRequest?.Approved.Value ?? false ?
-        EventType.OrganizationUser_ApprovedAuthRequest :
-        EventType.OrganizationUser_RejectedAuthRequest;
+    public EventType OrganizationEventType => ProcessedAuthRequest?.Approved.Value ?? false
+        ? EventType.OrganizationUser_ApprovedAuthRequest
+        : EventType.OrganizationUser_RejectedAuthRequest;
 
     public AuthRequestUpdateProcessor(
         OrganizationAdminAuthRequest authRequest,
@@ -45,9 +45,9 @@ public class AuthRequestUpdateProcessor
         {
             throw new AuthRequestUpdateCouldNotBeProcessedException(_unprocessedAuthRequest.Id);
         }
-        return _updates.Approved ?
-            Approve() :
-            Deny();
+        return _updates.Approved
+            ? Approve()
+            : Deny();
     }
 
     public async Task<AuthRequestUpdateProcessor> SendPushNotification(Func<OrganizationAdminAuthRequest, Task> callback)
@@ -73,9 +73,9 @@ public class AuthRequestUpdateProcessor
             // with no display attribute. Faith and trust are required!
             .GetCustomAttribute<DisplayAttribute>()?.Name ?? "Unknown Device Type";
         var deviceTypeAndIdentifierDisplayString =
-            string.IsNullOrWhiteSpace(_unprocessedAuthRequest.RequestDeviceIdentifier) ?
-                deviceTypeDisplayName :
-                $"{deviceTypeDisplayName} - {_unprocessedAuthRequest.RequestDeviceIdentifier}";
+            string.IsNullOrWhiteSpace(_unprocessedAuthRequest.RequestDeviceIdentifier)
+                ? deviceTypeDisplayName
+                : $"{deviceTypeDisplayName} - {_unprocessedAuthRequest.RequestDeviceIdentifier}";
         await callback(ProcessedAuthRequest, deviceTypeAndIdentifierDisplayString);
         return this;
     }

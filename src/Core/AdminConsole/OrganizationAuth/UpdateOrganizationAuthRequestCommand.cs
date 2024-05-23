@@ -97,13 +97,13 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
 
     async Task<ICollection<OrganizationAdminAuthRequest>> FetchManyOrganizationAuthRequestsFromTheDatabase(Guid organizationId, IEnumerable<Guid> authRequestIds)
     {
-        return authRequestIds != null && authRequestIds.Any() ?
-            await _authRequestRepository
+        return authRequestIds != null && authRequestIds.Any()
+            ? await _authRequestRepository
             .GetManyAdminApprovalRequestsByManyIdsAsync(
                 organizationId,
                 authRequestIds
-            ) :
-            new List<OrganizationAdminAuthRequest>();
+            )
+            : new List<OrganizationAdminAuthRequest>();
     }
 
     async Task PushTrustedDeviceEmail<T>(T authRequest, string identifier) where T : AuthRequest
