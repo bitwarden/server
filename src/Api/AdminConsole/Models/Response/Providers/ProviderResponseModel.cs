@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
 
@@ -24,6 +25,7 @@ public class ProviderResponseModel : ResponseModel
         BusinessTaxNumber = provider.BusinessTaxNumber;
         BillingEmail = provider.BillingEmail;
         CreationDate = provider.CreationDate;
+        Type = provider.Type;
     }
 
     public Guid Id { get; set; }
@@ -37,4 +39,5 @@ public class ProviderResponseModel : ResponseModel
     public string BusinessTaxNumber { get; set; }
     public string BillingEmail { get; set; }
     public DateTime CreationDate { get; set; }
+    public ProviderType Type { get; set; }
 }

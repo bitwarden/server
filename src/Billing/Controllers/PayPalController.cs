@@ -75,11 +75,11 @@ public class PayPalController : Controller
 
         if (string.IsNullOrEmpty(transactionModel.TransactionId))
         {
-            _logger.LogError("PayPal IPN: Transaction ID is missing");
+            _logger.LogWarning("PayPal IPN: Transaction ID is missing");
             return Ok();
         }
 
-        var entityId = transactionModel.UserId ?? transactionModel.OrganizationId;
+        var entityId = transactionModel.UserId ?? transactionModel.OrganizationId ?? transactionModel.ProviderId;
 
         if (!entityId.HasValue)
         {
@@ -152,6 +152,7 @@ public class PayPalController : Controller
                             CreationDate = transactionModel.PaymentDate,
                             OrganizationId = transactionModel.OrganizationId,
                             UserId = transactionModel.UserId,
+                            ProviderId = transactionModel.ProviderId,
                             Type = transactionModel.IsAccountCredit ? TransactionType.Credit : TransactionType.Charge,
                             Gateway = GatewayType.PayPal,
                             GatewayId = transactionModel.TransactionId,
@@ -217,6 +218,7 @@ public class PayPalController : Controller
                             CreationDate = transactionModel.PaymentDate,
                             OrganizationId = transactionModel.OrganizationId,
                             UserId = transactionModel.UserId,
+                            ProviderId = transactionModel.ProviderId,
                             Type = TransactionType.Refund,
                             Gateway = GatewayType.PayPal,
                             GatewayId = transactionModel.TransactionId,

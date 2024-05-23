@@ -126,8 +126,14 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         if (hideSensitiveData)
         {
             BillingEmail = null;
-            Subscription.Items = null;
-            UpcomingInvoice.Amount = null;
+            if (Subscription != null)
+            {
+                Subscription.Items = null;
+            }
+            if (UpcomingInvoice != null)
+            {
+                UpcomingInvoice.Amount = null;
+            }
         }
     }
 
@@ -136,12 +142,13 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     {
         if (license != null)
         {
-            // License expiration should always include grace period - See OrganizationLicense.cs
+            // License expiration should always include grace period (unless it's in a Trial) - See OrganizationLicense.cs.
             Expiration = license.Expires;
-            // Use license.ExpirationWithoutGracePeriod if available, otherwise assume license expiration minus grace period
-            ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ??
-                                             license.Expires?.AddDays(-Constants
-                                                 .OrganizationSelfHostSubscriptionGracePeriodDays);
+
+            // Use license.ExpirationWithoutGracePeriod if available, otherwise assume license expiration minus grace period unless it's in a Trial.
+            ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
+                ? license.Expires
+                : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
         }
     }
 

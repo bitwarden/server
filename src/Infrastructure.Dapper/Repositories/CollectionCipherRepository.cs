@@ -111,4 +111,28 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
                 commandType: CommandType.StoredProcedure);
         }
     }
+
+    public async Task AddCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[CollectionCipher_AddCollectionsForManyCiphers]",
+                new { CipherIds = cipherIds.ToGuidIdArrayTVP(), OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task RemoveCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[CollectionCipher_RemoveCollectionsForManyCiphers]",
+                new { CipherIds = cipherIds.ToGuidIdArrayTVP(), OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
 }

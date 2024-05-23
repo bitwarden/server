@@ -248,4 +248,47 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public async Task AddCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var availableCollections = await (from c in dbContext.Collections
+                                              join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                              where o.Id == organizationId && o.Enabled
+                                              select c).ToListAsync();
+
+            var currentCollectionCiphers = await (from cc in dbContext.CollectionCiphers
+                                                  where cipherIds.Contains(cc.CipherId)
+                                                  select cc).ToListAsync();
+
+            var insertData = from collectionId in collectionIds
+                             from cipherId in cipherIds
+                             where
+                                 availableCollections.Select(c => c.Id).Contains(collectionId) &&
+                                 !currentCollectionCiphers.Any(cc => cc.CipherId == cipherId && cc.CollectionId == collectionId)
+                             select new Models.CollectionCipher { CollectionId = collectionId, CipherId = cipherId, };
+
+            await dbContext.AddRangeAsync(insertData);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoveCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var currentCollectionCiphersToBeRemoved = await (from cc in dbContext.CollectionCiphers
+                                                             where cipherIds.Contains(cc.CipherId) && collectionIds.Contains(cc.CollectionId)
+                                                             select cc).ToListAsync();
+            dbContext.RemoveRange(currentCollectionCiphersToBeRemoved);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
+        }
+    }
 }

@@ -28,6 +28,8 @@ public record TeamsStarterPlan : Plan
 
         PasswordManager = new TeamsStarterPasswordManagerFeatures();
         SecretsManager = new TeamsStarterSecretsManagerFeatures();
+
+        LegacyYear = 2024;
     }
 
     private record TeamsStarterSecretsManagerFeatures : SecretsManagerPlanFeatures
@@ -36,7 +38,7 @@ public record TeamsStarterPlan : Plan
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 50;
+            BaseServiceAccount = 20;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -45,9 +47,9 @@ public record TeamsStarterPlan : Plan
             AllowServiceAccountsAutoscale = true;
 
             StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
-            StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
+            StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
             SeatPrice = 7;
-            AdditionalPricePerServiceAccount = 0.5M;
+            AdditionalPricePerServiceAccount = 1;
         }
     }
 

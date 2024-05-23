@@ -43,7 +43,28 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
-    public async Task<IEnumerable<SecretPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdAsync(
+        Guid organizationId, Guid userId, AccessClientType accessType)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Secret
+            .Include(c => c.Projects)
+            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
+            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null)
+        };
+
+        var secrets = await query.OrderBy(c => c.RevisionDate).ToListAsync();
+        return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+    }
+
+    public async Task<IEnumerable<SecretPermissionDetails>> GetManyDetailsByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -82,7 +103,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
-    public async Task<IEnumerable<SecretPermissionDetails>> GetManyByOrganizationIdInTrashAsync(Guid organizationId)
+    public async Task<IEnumerable<SecretPermissionDetails>> GetManyDetailsByOrganizationIdInTrashAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -103,7 +124,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
-    public async Task<IEnumerable<SecretPermissionDetails>> GetManyByProjectIdAsync(Guid projectId, Guid userId, AccessClientType accessType)
+    public async Task<IEnumerable<SecretPermissionDetails>> GetManyDetailsByProjectIdAsync(Guid projectId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -115,106 +136,124 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return await secrets.ToListAsync();
     }
 
-    public override async Task<Core.SecretsManager.Entities.Secret> CreateAsync(Core.SecretsManager.Entities.Secret secret)
+    public override async Task<Core.SecretsManager.Entities.Secret> CreateAsync(
+        Core.SecretsManager.Entities.Secret secret)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            secret.SetNewId();
-            var entity = Mapper.Map<Secret>(secret);
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        secret.SetNewId();
+        var entity = Mapper.Map<Secret>(secret);
 
-            if (secret.Projects?.Count > 0)
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        if (secret.Projects?.Count > 0)
+        {
+            foreach (var project in entity.Projects)
             {
-                foreach (var p in entity.Projects)
-                {
-                    dbContext.Attach(p);
-                }
+                dbContext.Attach(project);
             }
 
-            await dbContext.AddAsync(entity);
-            await dbContext.SaveChangesAsync();
-            secret.Id = entity.Id;
-            return secret;
+            var projectIds = entity.Projects.Select(p => p.Id).ToList();
+            await UpdateServiceAccountRevisionsByProjectIdsAsync(dbContext, projectIds);
         }
+
+        await dbContext.AddAsync(entity);
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
+        secret.Id = entity.Id;
+        return secret;
     }
 
     public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        var mappedEntity = Mapper.Map<Secret>(secret);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var entity = await dbContext.Secret
+            .Include(s => s.Projects)
+            .FirstAsync(s => s.Id == secret.Id);
+
+        var projectsToRemove = entity.Projects.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)).ToList();
+        var projectsToAdd = mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)).ToList();
+
+        foreach (var p in projectsToRemove)
         {
-            var dbContext = GetDatabaseContext(scope);
-            var mappedEntity = Mapper.Map<Secret>(secret);
-
-            var entity = await dbContext.Secret
-                .Include("Projects")
-                .FirstAsync(s => s.Id == secret.Id);
-
-            foreach (var p in entity.Projects.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
-            {
-                entity.Projects.Remove(p);
-            }
-
-            // Add new relationships
-            foreach (var project in mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
-            {
-                var p = dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
-                entity.Projects.Add(p);
-            }
-
-            dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-            await dbContext.SaveChangesAsync();
+            entity.Projects.Remove(p);
         }
+
+        foreach (var project in projectsToAdd)
+        {
+            var p = dbContext.AttachToOrGet<Project>(x => x.Id == project.Id, () => project);
+            entity.Projects.Add(p);
+        }
+
+        var projectIds = projectsToRemove.Select(p => p.Id).Concat(projectsToAdd.Select(p => p.Id)).ToList();
+        if (projectIds.Count > 0)
+        {
+            await UpdateServiceAccountRevisionsByProjectIdsAsync(dbContext, projectIds);
+        }
+
+        await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
+        dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return secret;
     }
 
     public async Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var utcNow = DateTime.UtcNow;
-            var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
-            await secrets.ForEachAsync(secret =>
-            {
-                dbContext.Attach(secret);
-                secret.DeletedDate = utcNow;
-                secret.RevisionDate = utcNow;
-            });
-            await dbContext.SaveChangesAsync();
-        }
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var secretIds = ids.ToList();
+        await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, secretIds);
+
+        var utcNow = DateTime.UtcNow;
+
+        await dbContext.Secret.Where(c => secretIds.Contains(c.Id))
+            .ExecuteUpdateAsync(setters =>
+                setters.SetProperty(s => s.RevisionDate, utcNow)
+                    .SetProperty(s => s.DeletedDate, utcNow));
+
+        await transaction.CommitAsync();
     }
 
     public async Task HardDeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
-            await secrets.ForEachAsync(secret =>
-            {
-                dbContext.Attach(secret);
-                dbContext.Remove(secret);
-            });
-            await dbContext.SaveChangesAsync();
-        }
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var secretIds = ids.ToList();
+        await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, secretIds);
+
+        await dbContext.Secret.Where(c => secretIds.Contains(c.Id))
+            .ExecuteDeleteAsync();
+
+        await transaction.CommitAsync();
     }
 
     public async Task RestoreManyByIdAsync(IEnumerable<Guid> ids)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var utcNow = DateTime.UtcNow;
-            var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
-            await secrets.ForEachAsync(secret =>
-            {
-                dbContext.Attach(secret);
-                secret.DeletedDate = null;
-                secret.RevisionDate = utcNow;
-            });
-            await dbContext.SaveChangesAsync();
-        }
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var secretIds = ids.ToList();
+        await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, secretIds);
+
+        var utcNow = DateTime.UtcNow;
+
+        await dbContext.Secret.Where(c => secretIds.Contains(c.Id))
+            .ExecuteUpdateAsync(setters =>
+                setters.SetProperty(s => s.RevisionDate, utcNow)
+                    .SetProperty(s => s.DeletedDate, (DateTime?)null));
+
+        await transaction.CommitAsync();
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> ImportAsync(IEnumerable<Core.SecretsManager.Entities.Secret> secrets)
@@ -246,24 +285,6 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             await dbContext.SaveChangesAsync();
         }
         return secrets;
-    }
-
-    public async Task UpdateRevisionDates(IEnumerable<Guid> ids)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var utcNow = DateTime.UtcNow;
-            var secrets = dbContext.Secret.Where(s => ids.Contains(s.Id));
-
-            await secrets.ForEachAsync(secret =>
-            {
-                dbContext.Attach(secret);
-                secret.RevisionDate = utcNow;
-            });
-
-            await dbContext.SaveChangesAsync();
-        }
     }
 
     public async Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType)
@@ -357,4 +378,60 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             p.UserAccessPolicies.Any(ap => ap.OrganizationUser.UserId == userId && ap.Read) ||
             p.GroupAccessPolicies.Any(ap =>
                 ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.UserId == userId && ap.Read)));
+
+    private static async Task UpdateServiceAccountRevisionsByProjectIdsAsync(DatabaseContext dbContext,
+        List<Guid> projectIds)
+    {
+        if (projectIds.Count == 0)
+        {
+            return;
+        }
+
+        var serviceAccountIds = await dbContext.Project.Where(p => projectIds.Contains(p.Id))
+            .Include(p => p.ServiceAccountAccessPolicies)
+            .SelectMany(p => p.ServiceAccountAccessPolicies.Select(ap => ap.ServiceAccountId!.Value))
+            .Distinct()
+            .ToListAsync();
+
+        await UpdateServiceAccountRevisionsAsync(dbContext, serviceAccountIds);
+    }
+
+    private static async Task UpdateServiceAccountRevisionsBySecretIdsAsync(DatabaseContext dbContext,
+        List<Guid> secretIds)
+    {
+        if (secretIds.Count == 0)
+        {
+            return;
+        }
+
+        var projectAccessServiceAccountIds = await dbContext.Secret
+            .Where(s => secretIds.Contains(s.Id))
+            .SelectMany(s =>
+                s.Projects.SelectMany(p => p.ServiceAccountAccessPolicies.Select(ap => ap.ServiceAccountId!.Value)))
+            .Distinct()
+            .ToListAsync();
+
+        var directAccessServiceAccountIds = await dbContext.Secret
+            .Where(s => secretIds.Contains(s.Id))
+            .SelectMany(s => s.ServiceAccountAccessPolicies.Select(ap => ap.ServiceAccountId!.Value))
+            .Distinct()
+            .ToListAsync();
+
+        var serviceAccountIds =
+            directAccessServiceAccountIds.Concat(projectAccessServiceAccountIds).Distinct().ToList();
+
+        await UpdateServiceAccountRevisionsAsync(dbContext, serviceAccountIds);
+    }
+
+    private static async Task UpdateServiceAccountRevisionsAsync(DatabaseContext dbContext,
+        List<Guid> serviceAccountIds)
+    {
+        if (serviceAccountIds.Count > 0)
+        {
+            var utcNow = DateTime.UtcNow;
+            await dbContext.ServiceAccount
+                .Where(sa => serviceAccountIds.Contains(sa.Id))
+                .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.RevisionDate, utcNow));
+        }
+    }
 }

@@ -243,4 +243,15 @@ public class ReferenceEvent
     /// the value should be <see langword="null" />.
     /// </value>
     public string SignupInitiationPath { get; set; }
+
+    /// <summary>
+    /// The upgrade applied to an account. The current plan is listed first,
+    /// followed by the plan they are migrating to. For example,
+    /// "Teams Starter → Teams, Enterprise".
+    /// </summary>
+    /// <value>
+    /// <see langword="null"/> when the event was not originated by an application,
+    /// or when a downgrade occurred.
+    /// </value>
+    public string PlanUpgradePath { get; set; }
 }

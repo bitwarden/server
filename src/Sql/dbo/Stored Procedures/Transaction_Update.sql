@@ -10,7 +10,8 @@
     @PaymentMethodType TINYINT,
     @Gateway TINYINT,
     @GatewayId VARCHAR(50),
-    @CreationDate DATETIME2(7)
+    @CreationDate DATETIME2(7),
+    @ProviderId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -28,7 +29,8 @@ BEGIN
         [PaymentMethodType] = @PaymentMethodType,
         [Gateway] = @Gateway,
         [GatewayId] = @GatewayId,
-        [CreationDate] = @CreationDate
+        [CreationDate] = @CreationDate,
+        [ProviderId] = @ProviderId
     WHERE
         [Id] = @Id
 END

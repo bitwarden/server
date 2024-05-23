@@ -24,6 +24,7 @@
   <ItemGroup>
     <EmbeddedResource Include="HelperScripts\2023-12-04_00_Up_GrantIndexes.sql" />
     <EmbeddedResource Include="HelperScripts\2023-12-04_00_Down_GrantIndexes.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-04-25_00_EnableOrgsCollectionEnhancements.sql" />
   </ItemGroup>
 
 </Project>

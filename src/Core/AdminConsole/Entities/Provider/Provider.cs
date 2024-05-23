@@ -1,11 +1,12 @@
 ﻿using System.Net;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Entities.Provider;
 
-public class Provider : ITableObject<Guid>
+public class Provider : ITableObject<Guid>, ISubscriber
 {
     public Guid Id { get; set; }
     /// <summary>
@@ -29,6 +30,29 @@ public class Provider : ITableObject<Guid>
     public bool Enabled { get; set; } = true;
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+    public GatewayType? Gateway { get; set; }
+    public string GatewayCustomerId { get; set; }
+    public string GatewaySubscriptionId { get; set; }
+
+    public string BillingEmailAddress() => BillingEmail?.ToLowerInvariant().Trim();
+
+    public string BillingName() => DisplayBusinessName();
+
+    public string SubscriberName() => DisplayName();
+
+    public string BraintreeCustomerIdPrefix() => "p";
+
+    public string BraintreeIdField() => "provider_id";
+
+    public string BraintreeCloudRegionField() => "region";
+
+    public bool IsOrganization() => false;
+
+    public bool IsUser() => false;
+
+    public string SubscriberType() => "Provider";
+
+    public bool IsExpired() => false;
 
     public void SetNewId()
     {

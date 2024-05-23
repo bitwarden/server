@@ -19,7 +19,6 @@ using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using Duende.IdentityServer;
-using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
 using IdentityModel;
@@ -704,8 +703,10 @@ public class AccountController : Controller
             var idp = User.FindFirst(JwtClaimTypes.IdentityProvider)?.Value;
             if (idp != null && idp != IdentityServerConstants.LocalIdentityProvider)
             {
-                var providerSupportsSignout = await HttpContext.GetSchemeSupportsSignOutAsync(idp);
-                if (providerSupportsSignout)
+                var provider = HttpContext.RequestServices.GetRequiredService<IAuthenticationHandlerProvider>();
+                var handler = await provider.GetHandlerAsync(HttpContext, idp);
+
+                if (handler is IAuthenticationSignOutHandler)
                 {
                     if (logoutId == null)
                     {

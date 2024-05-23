@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -28,6 +29,12 @@ public interface IPaymentService
         int newlyPurchasedAdditionalStorage,
         DateTime? prorationDate = null);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
+    Task<string> AdjustSeats(
+        Provider provider,
+        Plan plan,
+        int currentlySubscribedSeats,
+        int newlySubscribedSeats,
+        DateTime? prorationDate = null);
     Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
 
@@ -42,7 +49,6 @@ public interface IPaymentService
     Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber);
     Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber);
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
-    Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber);
     Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo);
     Task<TaxRate> CreateTaxRateAsync(TaxRate taxRate);
     Task UpdateTaxRateAsync(TaxRate taxRate);
@@ -50,4 +56,5 @@ public interface IPaymentService
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
         int additionalServiceAccount, DateTime? prorationDate = null);
     Task<bool> RisksSubscriptionFailure(Organization organization);
+    Task<bool> HasSecretsManagerStandalone(Organization organization);
 }

@@ -26,12 +26,15 @@ public interface IOrganizationService
     /// <returns>A tuple containing the new organization, the initial organizationUser (if any) and the default collection (if any)</returns>
 #nullable enable
     Task<(Organization organization, OrganizationUser? organizationUser, Collection? defaultCollection)> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
+
+    Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
 #nullable disable
     /// <summary>
     /// Create a new organization on a self-hosted instance
     /// </summary>
     Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(OrganizationLicense license, User owner,
         string ownerKey, string collectionName, string publicKey, string privateKey);
+    Task InitiateDeleteAsync(Organization organization, string orgAdminEmail);
     Task DeleteAsync(Organization organization);
     Task EnableAsync(Guid organizationId, DateTime? expirationDate);
     Task DisableAsync(Guid organizationId, DateTime? expirationDate);
@@ -47,14 +50,13 @@ public interface IOrganizationService
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
         OrganizationUserType type, bool accessAll, string externalId, ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, bool accessSecretsManager);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
     Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId, IUserService userService);
-    Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
     [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
@@ -91,4 +93,5 @@ public interface IOrganizationService
     void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions);
+    Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType);
 }

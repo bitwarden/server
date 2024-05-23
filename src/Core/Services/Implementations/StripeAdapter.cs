@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.BitStripe;
+using Stripe;
 
 namespace Bit.Core.Services;
 
@@ -102,6 +103,9 @@ public class StripeAdapter : IStripeAdapter
 
         return invoices;
     }
+
+    public async Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options)
+        => (await _invoiceService.SearchAsync(options)).Data;
 
     public Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options)
     {

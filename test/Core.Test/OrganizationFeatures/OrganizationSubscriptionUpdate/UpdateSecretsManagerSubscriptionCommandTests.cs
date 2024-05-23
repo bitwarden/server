@@ -447,7 +447,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Organization has no service accounts limit, no need to adjust service accounts", exception.Message);
+        Assert.Contains("Organization has no machine accounts limit, no need to adjust machine accounts", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -460,7 +460,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustServiceAccounts(-2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Cannot use autoscaling to subtract service accounts.", exception.Message);
+        Assert.Contains("Cannot use autoscaling to subtract machine accounts.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -475,7 +475,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("You have reached the maximum number of service accounts (3) for this plan",
+        Assert.Contains("You have reached the maximum number of machine accounts (3) for this plan",
             exception.Message, StringComparison.InvariantCultureIgnoreCase);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
@@ -492,7 +492,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustServiceAccounts(2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Secrets Manager service account limit has been reached.", exception.Message);
+        Assert.Contains("Secrets Manager machine account limit has been reached.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -516,7 +516,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Cannot set max service accounts autoscaling below service account amount", exception.Message);
+        Assert.Contains("Cannot set max machine accounts autoscaling below machine account amount", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -526,7 +526,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        const int newSmServiceAccounts = 199;
+        const int newSmServiceAccounts = 49;
 
         organization.SmServiceAccounts = newSmServiceAccounts - 10;
 
@@ -537,7 +537,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Plan has a minimum of 200 service accounts", exception.Message);
+        Assert.Contains("Plan has a minimum of 50 machine accounts", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -570,7 +570,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .Returns(currentServiceAccounts);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Your organization currently has 301 service accounts. You cannot decrease your subscription below your current service account usage", exception.Message);
+        Assert.Contains("Your organization currently has 301 machine accounts. You cannot decrease your subscription below your current machine account usage", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -648,7 +648,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var update = new SecretsManagerSubscriptionUpdate(organization, false) { MaxAutoscaleSmServiceAccounts = 3 };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Your plan does not allow service accounts autoscaling.", exception.Message);
+        Assert.Contains("Your plan does not allow machine accounts autoscaling.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 

@@ -74,7 +74,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         if (FlexibleCollections)
         {
             // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-            if (Type == OrganizationUserType.Custom)
+            if (Type == OrganizationUserType.Custom && Permissions is not null)
             {
                 if ((Permissions.EditAssignedCollections || Permissions.DeleteAssignedCollections) &&
                     Permissions is
@@ -98,8 +98,11 @@ public class ProfileOrganizationResponseModel : ResponseModel
             }
 
             // Set 'Edit/Delete Assigned Collections' custom permissions to false
-            Permissions.EditAssignedCollections = false;
-            Permissions.DeleteAssignedCollections = false;
+            if (Permissions is not null)
+            {
+                Permissions.EditAssignedCollections = false;
+                Permissions.DeleteAssignedCollections = false;
+            }
         }
     }
 

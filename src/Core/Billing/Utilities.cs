@@ -1,8 +1,11 @@
-﻿using Bit.Core.Exceptions;
-
-namespace Bit.Core.Billing;
+﻿namespace Bit.Core.Billing;
 
 public static class Utilities
 {
-    public static GatewayException ContactSupport() => new("Something went wrong with your request. Please contact support.");
+    public const string BraintreeCustomerIdKey = "btCustomerId";
+
+    public static BillingException ContactSupport(
+        string internalMessage = null,
+        Exception innerException = null) => new("Something went wrong with your request. Please contact support.",
+        internalMessage, innerException);
 }
