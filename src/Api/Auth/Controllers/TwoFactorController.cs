@@ -144,7 +144,6 @@ public class TwoFactorController : Controller
         return response;
     }
 
-    #region Duo
     [HttpPost("get-duo")]
     public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody] SecretVerificationRequestModel model)
     {
@@ -245,9 +244,7 @@ public class TwoFactorController : Controller
         var response = new TwoFactorDuoResponseModel(organization);
         return response;
     }
-    #endregion
 
-    #region Webauthn
     [HttpPost("get-webauthn")]
     public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody] SecretVerificationRequestModel model)
     {
@@ -291,9 +288,7 @@ public class TwoFactorController : Controller
         var response = new TwoFactorWebAuthnResponseModel(user);
         return response;
     }
-    #endregion
 
-    #region Email
     [HttpPost("get-email")]
     public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody] SecretVerificationRequestModel model)
     {
@@ -372,7 +367,6 @@ public class TwoFactorController : Controller
         var response = new TwoFactorEmailResponseModel(user);
         return response;
     }
-    #endregion
 
     [HttpPut("disable")]
     [HttpPost("disable")]
