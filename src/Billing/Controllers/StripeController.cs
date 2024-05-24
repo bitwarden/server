@@ -1034,21 +1034,39 @@ public class StripeController : Controller
 
         var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
         var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription?.Metadata);
-        if (!organizationId.HasValue && !userId.HasValue)
+        if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
             _logger.LogWarning(
-                "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId");
+                "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId or ");
             return false;
         }
 
         var orgTransaction = organizationId.HasValue;
-        var btObjIdField = orgTransaction ? "organization_id" : "user_id";
-        var btObjId = organizationId ?? userId.Value;
+        string btObjIdField;
+        Guid btObjId;
+        if (organizationId.HasValue)
+        {
+            btObjIdField = "organization_id";
+            btObjId = organizationId.Value;
+        }
+        else if (userId.HasValue)
+        {
+            btObjIdField = "user_id";
+            btObjId = userId.Value;
+        }
+        else
+        {
+            btObjIdField = "provider_id";
+            btObjId = providerId.Value;
+        }
         var btInvoiceAmount = invoice.AmountDue / 100M;
 
-        var existingTransactions = orgTransaction ?
-            await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value) :
-            await _transactionRepository.GetManyByUserIdAsync(userId.Value);
+        var existingTransactions = organizationId.HasValue
+            ? await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value)
+            : userId.HasValue
+                ? await _transactionRepository.GetManyByUserIdAsync(userId.Value)
+                : await _transactionRepository.GetManyByProviderIdAsync(providerId.Value);
+
         var duplicateTimeSpan = TimeSpan.FromHours(24);
         var now = DateTime.UtcNow;
         var duplicateTransaction = existingTransactions?
