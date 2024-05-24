@@ -36,9 +36,9 @@ public class TwoFactorDuoResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public string Host { get; set; }
-    //TODO - will remove with PM-8107
+    //TODO - will remove SecretKey with PM-8107
     public string SecretKey { get; set; }
-    //TODO - will remove with PM-8107
+    //TODO - will remove IntegrationKey with PM-8107
     public string IntegrationKey { get; set; }
     public string ClientSecret { get; set; }
     public string ClientId { get; set; }
@@ -54,6 +54,7 @@ public class TwoFactorDuoResponseModel : ResponseModel
             {
                 Host = (string)host;
             }
+
             //todo - will remove SKey and IKey with PM-8107
             // check Skey and IKey first if they exist
             if (provider.MetaData.TryGetValue("SKey", out var sKey))
@@ -66,6 +67,7 @@ public class TwoFactorDuoResponseModel : ResponseModel
                 IntegrationKey = (string)iKey;
                 ClientId = (string)iKey;
             }
+
             // Even if IKey and SKey exist prioritize v4 params ClientId and ClientSecret
             if (provider.MetaData.TryGetValue("ClientSecret", out var clientSecret))
             {
@@ -87,6 +89,29 @@ public class TwoFactorDuoResponseModel : ResponseModel
         else
         {
             Enabled = false;
+        }
+    }
+
+    /*
+    use this method to ensure that both v2 params and v4 params are in sync
+    todo will be removed in pm-8107
+    */
+    private void Temporary_SyncDuoParams()
+    {
+        // Even if IKey and SKey exist prioritize v4 params ClientId and ClientSecret
+        if (!string.IsNullOrWhiteSpace(ClientSecret) && !string.IsNullOrWhiteSpace(ClientId))
+        {
+            SecretKey = ClientSecret;
+            IntegrationKey = ClientId;
+        }
+        else if (!string.IsNullOrWhiteSpace(SecretKey) && !string.IsNullOrWhiteSpace(IntegrationKey))
+        {
+            ClientSecret = SecretKey;
+            ClientId = IntegrationKey;
+        }
+        else
+        {
+            throw new InvalidDataException("Invalid Duo parameters.");
         }
     }
 }
