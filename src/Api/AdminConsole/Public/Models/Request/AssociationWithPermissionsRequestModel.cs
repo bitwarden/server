@@ -1,5 +1,4 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;
 
