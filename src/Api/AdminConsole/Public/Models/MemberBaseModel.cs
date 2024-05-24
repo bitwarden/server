@@ -12,14 +12,14 @@ public abstract class MemberBaseModel
 {
     public MemberBaseModel() { }
 
-    public MemberBaseModel(OrganizationUser user, bool flexibleCollectionsEnabled)
+    public MemberBaseModel(OrganizationUser user)
     {
         if (user == null)
         {
             throw new ArgumentNullException(nameof(user));
         }
 
-        Type = flexibleCollectionsEnabled ? GetFlexibleCollectionsUserType(user.Type, user.GetPermissions()) : user.Type;
+        Type = GetFlexibleCollectionsUserType(user.Type, user.GetPermissions());
         AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
@@ -30,14 +30,14 @@ public abstract class MemberBaseModel
         }
     }
 
-    public MemberBaseModel(OrganizationUserUserDetails user, bool flexibleCollectionsEnabled)
+    public MemberBaseModel(OrganizationUserUserDetails user)
     {
         if (user == null)
         {
             throw new ArgumentNullException(nameof(user));
         }
 
-        Type = flexibleCollectionsEnabled ? GetFlexibleCollectionsUserType(user.Type, user.GetPermissions()) : user.Type;
+        Type = GetFlexibleCollectionsUserType(user.Type, user.GetPermissions());
         AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
