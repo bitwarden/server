@@ -1,8 +1,7 @@
 ﻿using Bit.Api.Billing.Models.Responses;
 using Bit.Api.Models.Response;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -14,15 +13,15 @@ namespace Bit.Api.Billing.Controllers;
 [Route("organizations/{organizationId:guid}/billing")]
 [Authorize("Application")]
 public class OrganizationBillingController(
-    IOrganizationBillingQueries organizationBillingQueries,
     ICurrentContext currentContext,
+    IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService) : Controller
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
-        var metadata = await organizationBillingQueries.GetMetadata(organizationId);
+        var metadata = await organizationBillingService.GetMetadata(organizationId);
 
         if (metadata == null)
         {
@@ -36,20 +35,24 @@ public class OrganizationBillingController(
 
     [HttpGet]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<BillingResponseModel> GetBilling(Guid organizationId)
+    public async Task<IResult> GetBillingAsync(Guid organizationId)
     {
         if (!await currentContext.ViewBillingHistory(organizationId))
         {
-            throw new NotFoundException();
+            return TypedResults.Unauthorized();
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
+
         if (organization == null)
         {
-            throw new NotFoundException();
+            return TypedResults.NotFound();
         }
 
         var billingInfo = await paymentService.GetBillingAsync(organization);
-        return new BillingResponseModel(billingInfo);
+
+        var response = new BillingResponseModel(billingInfo);
+
+        return TypedResults.Ok(response);
     }
 }
