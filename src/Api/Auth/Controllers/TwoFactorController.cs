@@ -213,12 +213,7 @@ public class TwoFactorController : Controller
             throw new NotFoundException();
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
         try
         {
             // for backwards compatibility - will be removed with PM-8107
@@ -231,6 +226,7 @@ public class TwoFactorController : Controller
             {
                 duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
             }
+            await duoApi.JSONApiCall("GET", "/auth/v2/check");
         }
         catch (DuoException)
         {
