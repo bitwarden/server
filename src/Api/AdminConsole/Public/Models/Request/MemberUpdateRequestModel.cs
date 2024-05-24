@@ -19,7 +19,6 @@ public class MemberUpdateRequestModel : MemberBaseModel, IValidatableObject
     public virtual OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
         existingUser.Type = Type.Value;
-        existingUser.AccessAll = AccessAll.Value;
         existingUser.ExternalId = ExternalId;
 
         // Permissions property is optional for backwards compatibility with existing usage
