@@ -5,11 +5,11 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Stripe;
 
-namespace Bit.Core.Billing.Queries.Implementations;
+namespace Bit.Core.Billing.Services.Implementations;
 
-public class OrganizationBillingQueries(
+public class OrganizationBillingService(
     IOrganizationRepository organizationRepository,
-    ISubscriberQueries subscriberQueries) : IOrganizationBillingQueries
+    ISubscriberService subscriberService) : IOrganizationBillingService
 {
     public async Task<OrganizationMetadataDTO> GetMetadata(Guid organizationId)
     {
@@ -20,12 +20,12 @@ public class OrganizationBillingQueries(
             return null;
         }
 
-        var customer = await subscriberQueries.GetCustomer(organization, new CustomerGetOptions
+        var customer = await subscriberService.GetCustomer(organization, new CustomerGetOptions
         {
             Expand = ["discount.coupon.applies_to"]
         });
 
-        var subscription = await subscriberQueries.GetSubscription(organization);
+        var subscription = await subscriberService.GetSubscription(organization);
 
         if (customer == null || subscription == null)
         {

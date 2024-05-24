@@ -533,8 +533,8 @@ public class StripeController : Controller
         if (parentTransaction == null)
         {
             // Attempt to create a transaction for the charge if it doesn't exist
-            var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
-            var tx = FromChargeToTransaction(charge, organizationId, userId);
+            var (organizationId, userId, providerId) = await GetEntityIdsFromChargeAsync(charge);
+            var tx = FromChargeToTransaction(charge, organizationId, userId, providerId);
             try
             {
                 parentTransaction = await _transactionRepository.CreateAsync(tx);
@@ -605,14 +605,14 @@ public class StripeController : Controller
             return;
         }
 
-        var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
+        var (organizationId, userId, providerId) = await GetEntityIdsFromChargeAsync(charge);
         if (!organizationId.HasValue && !userId.HasValue)
         {
             _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
             return;
         }
 
-        var transaction = FromChargeToTransaction(charge, organizationId, userId);
+        var transaction = FromChargeToTransaction(charge, organizationId, userId, providerId);
         if (!transaction.PaymentMethodType.HasValue)
         {
             _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);
@@ -759,7 +759,7 @@ public class StripeController : Controller
     /// </summary>
     /// <param name="charge"></param>
     /// <returns></returns>
-    private async Task<(Guid?, Guid?)> GetEntityIdsFromChargeAsync(Charge charge)
+    private async Task<(Guid?, Guid?, Guid?)> GetEntityIdsFromChargeAsync(Charge charge)
     {
         Guid? organizationId = null;
         Guid? userId = null;
@@ -775,9 +775,9 @@ public class StripeController : Controller
             }
         }
 
-        if (organizationId.HasValue || userId.HasValue)
+        if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
         {
-            return (organizationId, userId);
+            return (organizationId, userId, providerId);
         }
 
         var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
@@ -794,13 +794,13 @@ public class StripeController : Controller
 
             (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
-            if (organizationId.HasValue || userId.HasValue)
+            if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
             {
-                return (organizationId, userId);
+                return (organizationId, userId, providerId);
             }
         }
 
-        return (null, null);
+        return (null, null, null);
     }
 
     /// <summary>
@@ -809,8 +809,9 @@ public class StripeController : Controller
     /// <param name="charge"></param>
     /// <param name="organizationId"></param>
     /// <param name="userId"></param>
+    /// /// <param name="providerId"></param>
     /// <returns></returns>
-    private static Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId)
+    private static Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId)
     {
         var transaction = new Transaction
         {
@@ -818,6 +819,7 @@ public class StripeController : Controller
             CreationDate = charge.Created,
             OrganizationId = organizationId,
             UserId = userId,
+            ProviderId = providerId,
             Type = TransactionType.Charge,
             Gateway = GatewayType.Stripe,
             GatewayId = charge.Id
