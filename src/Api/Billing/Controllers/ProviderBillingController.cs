@@ -1,6 +1,6 @@
 ﻿using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +13,7 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderBillingController(
     ICurrentContext currentContext,
     IFeatureService featureService,
-    IProviderBillingQueries providerBillingQueries) : Controller
+    IProviderBillingService providerBillingService) : Controller
 {
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
@@ -28,7 +28,7 @@ public class ProviderBillingController(
             return TypedResults.Unauthorized();
         }
 
-        var providerSubscriptionDTO = await providerBillingQueries.GetSubscriptionDTO(providerId);
+        var providerSubscriptionDTO = await providerBillingService.GetSubscriptionDTO(providerId);
 
         if (providerSubscriptionDTO == null)
         {
@@ -40,5 +40,32 @@ public class ProviderBillingController(
         var providerSubscriptionResponse = ProviderSubscriptionResponse.From(providerPlans, subscription);
 
         return TypedResults.Ok(providerSubscriptionResponse);
+    }
+
+    [HttpGet("payment-information")]
+    public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
+    {
+        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        {
+            return TypedResults.NotFound();
+        }
+
+        if (!currentContext.ProviderProviderAdmin(providerId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var providerPaymentInformationDto = await providerBillingService.GetPaymentInformationAsync(providerId);
+
+        if (providerPaymentInformationDto == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var (paymentSource, taxInfo) = providerPaymentInformationDto;
+
+        var providerPaymentInformationResponse = PaymentInformationResponse.From(paymentSource, taxInfo);
+
+        return TypedResults.Ok(providerPaymentInformationResponse);
     }
 }

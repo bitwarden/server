@@ -4,8 +4,6 @@ using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -26,7 +24,6 @@ public class ProviderOrganizationsController : Controller
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
-    private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
     private readonly IUserService _userService;
 
     public ProviderOrganizationsController(
@@ -36,7 +33,6 @@ public class ProviderOrganizationsController : Controller
         IProviderRepository providerRepository,
         IProviderService providerService,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IRemovePaymentMethodCommand removePaymentMethodCommand,
         IUserService userService)
     {
         _currentContext = currentContext;
@@ -45,7 +41,6 @@ public class ProviderOrganizationsController : Controller
         _providerRepository = providerRepository;
         _providerService = providerService;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
-        _removePaymentMethodCommand = removePaymentMethodCommand;
         _userService = userService;
     }
 
@@ -112,10 +107,5 @@ public class ProviderOrganizationsController : Controller
             provider,
             providerOrganization,
             organization);
-
-        if (organization.IsStripeEnabled())
-        {
-            await _removePaymentMethodCommand.RemovePaymentMethod(organization);
-        }
     }
 }
