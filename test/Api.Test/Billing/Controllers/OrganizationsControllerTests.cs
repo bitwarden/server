@@ -10,8 +10,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -45,9 +44,8 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly ISubscriberQueries _subscriberQueries;
     private readonly IReferenceEventService _referenceEventService;
+    private readonly ISubscriberService _subscriberService;
 
     private readonly OrganizationsController _sut;
 
@@ -68,9 +66,8 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
-        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
-        _subscriberQueries = Substitute.For<ISubscriberQueries>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
+        _subscriberService = Substitute.For<ISubscriberService>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -85,9 +82,8 @@ public class OrganizationsControllerTests : IDisposable
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
-            _cancelSubscriptionCommand,
-            _subscriberQueries,
-            _referenceEventService);
+            _referenceEventService,
+            _subscriberService);
     }
 
     public void Dispose()
