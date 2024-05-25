@@ -10,61 +10,66 @@ public class AuthRequestUpdateProcessor
     public OrganizationAdminAuthRequest ProcessedAuthRequest { get; private set; }
 
     private OrganizationAdminAuthRequest _unprocessedAuthRequest { get; }
-    private OrganizationAuthRequestUpdate _updates { get; }
+    private OrganizationAuthRequestUpdate _update { get; }
     private AuthRequestUpdateProcessorConfiguration _configuration { get; }
 
-    public EventType OrganizationEventType => ProcessedAuthRequest?.Approved.Value ?? false ?
-        EventType.OrganizationUser_ApprovedAuthRequest :
-        EventType.OrganizationUser_RejectedAuthRequest;
+    public EventType OrganizationEventType => ProcessedAuthRequest?.Approved.Value ?? false
+        ? EventType.OrganizationUser_ApprovedAuthRequest
+        : EventType.OrganizationUser_RejectedAuthRequest;
 
     public AuthRequestUpdateProcessor(
         OrganizationAdminAuthRequest authRequest,
-        OrganizationAuthRequestUpdate updates,
+        OrganizationAuthRequestUpdate update,
         AuthRequestUpdateProcessorConfiguration configuration
     )
     {
         _unprocessedAuthRequest = authRequest;
-        _updates = updates;
+        _update = update;
         _configuration = configuration;
     }
 
-    public AuthRequestUpdateProcessor Process()
+    public void Process()
     {
+        if (_unprocessedAuthRequest == null)
+        {
+            throw new AuthRequestUpdateCouldNotBeProcessedException();
+        }
         var isExpired = DateTime.UtcNow >
             _unprocessedAuthRequest.CreationDate
             .Add(_configuration.AuthRequestExpiresAfter);
-        var isSpent = _unprocessedAuthRequest == null ||
-            _unprocessedAuthRequest.Approved != null ||
+        var isSpent = _unprocessedAuthRequest.Approved != null ||
             _unprocessedAuthRequest.ResponseDate.HasValue ||
             _unprocessedAuthRequest.AuthenticationDate.HasValue;
         var canBeProcessed = !isExpired &&
             !isSpent &&
-            _unprocessedAuthRequest.Id == _updates.Id &&
+            _unprocessedAuthRequest.Id == _update.Id &&
             _unprocessedAuthRequest.OrganizationId == _configuration.OrganizationId;
         if (!canBeProcessed)
         {
             throw new AuthRequestUpdateCouldNotBeProcessedException(_unprocessedAuthRequest.Id);
         }
-        return _updates.Approved ?
-            Approve() :
-            Deny();
+        if (_update.Approved)
+        {
+            Approve();
+            return;
+        }
+        Deny();
     }
 
-    public async Task<AuthRequestUpdateProcessor> SendPushNotification(Func<OrganizationAdminAuthRequest, Task> callback)
+    public async Task SendPushNotification(Func<OrganizationAdminAuthRequest, Task> callback)
     {
-        if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
+        if (!ProcessedAuthRequest?.Approved ?? false)
         {
-            return this;
+            return;
         }
         await callback(ProcessedAuthRequest);
-        return this;
     }
 
-    public async Task<AuthRequestUpdateProcessor> SendNewDeviceEmail(Func<OrganizationAdminAuthRequest, string, Task> callback)
+    public async Task SendApprovalEmail(Func<OrganizationAdminAuthRequest, string, Task> callback)
     {
-        if (!ProcessedAuthRequest?.Approved ?? false || callback == null)
+        if (!ProcessedAuthRequest?.Approved ?? false)
         {
-            return this;
+            return;
         }
         var deviceTypeDisplayName = _unprocessedAuthRequest.RequestDeviceType.GetType()
             .GetMember(_unprocessedAuthRequest.RequestDeviceType.ToString())
@@ -73,31 +78,28 @@ public class AuthRequestUpdateProcessor
             // with no display attribute. Faith and trust are required!
             .GetCustomAttribute<DisplayAttribute>()?.Name ?? "Unknown Device Type";
         var deviceTypeAndIdentifierDisplayString =
-            string.IsNullOrWhiteSpace(_unprocessedAuthRequest.RequestDeviceIdentifier) ?
-                deviceTypeDisplayName :
-                $"{deviceTypeDisplayName} - {_unprocessedAuthRequest.RequestDeviceIdentifier}";
+            string.IsNullOrWhiteSpace(_unprocessedAuthRequest.RequestDeviceIdentifier)
+                ? deviceTypeDisplayName
+                : $"{deviceTypeDisplayName} - {_unprocessedAuthRequest.RequestDeviceIdentifier}";
         await callback(ProcessedAuthRequest, deviceTypeAndIdentifierDisplayString);
-        return this;
     }
 
-    private AuthRequestUpdateProcessor Approve()
+    private void Approve()
     {
-        if (string.IsNullOrWhiteSpace(_updates.Key))
+        if (string.IsNullOrWhiteSpace(_update.Key))
         {
-            throw new ApprovedAuthRequestIsMissingKeyException(_updates.Id);
+            throw new ApprovedAuthRequestIsMissingKeyException(_update.Id);
         }
         ProcessedAuthRequest = _unprocessedAuthRequest;
-        ProcessedAuthRequest.Key = _updates.Key;
+        ProcessedAuthRequest.Key = _update.Key;
         ProcessedAuthRequest.Approved = true;
         ProcessedAuthRequest.ResponseDate = DateTime.UtcNow;
-        return this;
     }
 
-    private AuthRequestUpdateProcessor Deny()
+    private void Deny()
     {
         ProcessedAuthRequest = _unprocessedAuthRequest;
         ProcessedAuthRequest.Approved = false;
         ProcessedAuthRequest.ResponseDate = DateTime.UtcNow;
-        return this;
     }
 }

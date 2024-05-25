@@ -91,22 +91,22 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         processor.Process((Exception e) => _logger.LogError(e.Message));
         await processor.Save((IEnumerable<OrganizationAdminAuthRequest> authRequests) => _authRequestRepository.UpdateManyAsync(authRequests));
         await processor.SendPushNotifications((ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar));
-        await processor.SendNewDeviceEmails(PushTrustedDeviceEmail);
-        await processor.SendEventLogs(SendOrganizationEventLogs);
+        await processor.SendApprovalEmailsForProcessedRequests(SendApprovalEmail);
+        await processor.LogOrganizationEventsForProcessedRequests(LogOrganizationEvents);
     }
 
     async Task<ICollection<OrganizationAdminAuthRequest>> FetchManyOrganizationAuthRequestsFromTheDatabase(Guid organizationId, IEnumerable<Guid> authRequestIds)
     {
-        return authRequestIds != null && authRequestIds.Any() ?
-            await _authRequestRepository
+        return authRequestIds != null && authRequestIds.Any()
+            ? await _authRequestRepository
             .GetManyAdminApprovalRequestsByManyIdsAsync(
                 organizationId,
                 authRequestIds
-            ) :
-            new List<OrganizationAdminAuthRequest>();
+            )
+            : new List<OrganizationAdminAuthRequest>();
     }
 
-    async Task PushTrustedDeviceEmail<T>(T authRequest, string identifier) where T : AuthRequest
+    async Task SendApprovalEmail<T>(T authRequest, string identifier) where T : AuthRequest
     {
         var user = await _userRepository.GetByIdAsync(authRequest.UserId);
 
@@ -125,13 +125,13 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         );
     }
 
-    async Task SendOrganizationEventLogs(IEnumerable<(OrganizationAdminAuthRequest AuthRequest, EventType EventType)> events)
+    async Task LogOrganizationEvents(IEnumerable<(OrganizationAdminAuthRequest AuthRequest, EventType EventType)> events)
     {
         var organizationUsers = await _organizationUserRepository.GetManyAsync(events.Select(e => e.AuthRequest.OrganizationUserId));
         await _eventService.LogOrganizationUserEventsAsync(
             organizationUsers.Select(ou =>
             {
-                var e = events.FirstOrDefault(e => e.AuthRequest.OrganizationId == ou.Id);
+                var e = events.FirstOrDefault(e => e.AuthRequest.OrganizationUserId == ou.Id);
                 return (ou, e.EventType, e.AuthRequest.ResponseDate);
             })
         );

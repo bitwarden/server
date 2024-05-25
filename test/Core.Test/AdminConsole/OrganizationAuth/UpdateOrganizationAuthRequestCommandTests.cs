@@ -107,9 +107,10 @@ public class UpdateOrganizationAuthRequestCommandTests
     public async Task UpdateAsync_BatchUpdate_ValidRequest_SavesAndFiresAllEvents(
         SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider,
         List<OrganizationAuthRequestUpdate> updates,
-        OrganizationAdminAuthRequest unprocessedAuthRequest,
+        List<OrganizationAdminAuthRequest> unprocessedAuthRequests,
         AuthRequestUpdateProcessorConfiguration configuration,
-        User user
+        List<OrganizationUser> organizationUsers,
+        List<User> users
     )
     {
         // For this command to work we need the following from external
@@ -117,15 +118,21 @@ public class UpdateOrganizationAuthRequestCommandTests
         // 1. A configured expiration timespan for organization auth requests
         // 2. Some unresponded to auth requests that match the ids provided
         // 3. A valid user to send emails to
+        // 4. A valid organization user to log events for
 
-        var unprocessedAuthRequests = new List<OrganizationAdminAuthRequest>();
-        unprocessedAuthRequest = UnrespondAndEnsureValid(unprocessedAuthRequest, configuration.OrganizationId);
-        foreach (var update in updates)
+        for (int i = 0; i < updates.Count(); i++)
         {
-            update.Approved = true;
-            update.Key = "key";
-            unprocessedAuthRequest.Id = update.Id;
-            unprocessedAuthRequests.Add(unprocessedAuthRequest);
+            unprocessedAuthRequests[i] = UnrespondAndEnsureValid(unprocessedAuthRequests[i], configuration.OrganizationId);
+            updates[i].Approved = true;
+            updates[i].Key = "key";
+            unprocessedAuthRequests[i].Id = updates[i].Id;
+            unprocessedAuthRequests[i].RequestDeviceType = DeviceType.iOS;
+            unprocessedAuthRequests[i].OrganizationUserId = organizationUsers[i].Id;
+            organizationUsers[i].OrganizationId = configuration.OrganizationId;
+            users[i].Id = unprocessedAuthRequests[i].UserId;
+            organizationUsers[i].UserId = unprocessedAuthRequests[i].UserId;
+
+            sutProvider.GetDependency<IUserRepository>().GetByIdAsync(Arg.Is(users[i].Id)).Returns(users[i]);
         };
 
         sutProvider.GetDependency<IGlobalSettings>().PasswordlessAuth.AdminRequestExpiration.Returns(TimeSpan.FromDays(7));
@@ -135,24 +142,43 @@ public class UpdateOrganizationAuthRequestCommandTests
             updates.Select(ar => ar.Id)
         ).ReturnsForAnyArgs(unprocessedAuthRequests);
 
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Is<IEnumerable<Guid>>(
+            list => list.All(x => organizationUsers.Select(y => y.Id).Contains(x)))).Returns(organizationUsers);
 
         // Call the SUT
         await sutProvider.Sut.UpdateAsync(configuration.OrganizationId, updates);
 
         // Assert that because we passed in good data we call a save
         // operation and raise all events
-        await sutProvider.GetDependency<IAuthRequestRepository>().ReceivedWithAnyArgs().UpdateManyAsync(Arg.Any<IEnumerable<OrganizationAdminAuthRequest>>());
-        await sutProvider.GetDependency<IPushNotificationService>().ReceivedWithAnyArgs().PushAuthRequestResponseAsync(Arg.Any<AuthRequest>());
-        await sutProvider.GetDependency<IMailService>().ReceivedWithAnyArgs().SendTrustedDeviceAdminApprovalEmailAsync(
-            Arg.Any<string>(),
-            Arg.Any<DateTime>(),
-            Arg.Any<string>(),
-            Arg.Any<string>()
-        );
-        await sutProvider.GetDependency<IEventService>().ReceivedWithAnyArgs().LogOrganizationUserEventsAsync(
-            Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>()
-        );
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received()
+            .UpdateManyAsync(
+                Arg.Is<IEnumerable<OrganizationAdminAuthRequest>>(list =>
+                    list.Any() &&
+                    list.All(x =>
+                        x.Approved.Value &&
+                        x.Key == "key" &&
+                        x.ResponseDate != null &&
+                        unprocessedAuthRequests.Select(y => y.Id).Contains(x.Id))));
+
+        foreach (var authRequest in unprocessedAuthRequests)
+        {
+            await sutProvider.GetDependency<IPushNotificationService>().Received()
+                .PushAuthRequestResponseAsync(Arg.Is<OrganizationAdminAuthRequest>
+                        (ar => ar.Id == authRequest.Id && ar.Approved == true && ar.Key == "key"));
+
+            await sutProvider.GetDependency<IMailService>().Received().SendTrustedDeviceAdminApprovalEmailAsync(
+                users.FirstOrDefault(x => x.Id == authRequest.UserId).Email,
+                Arg.Any<DateTime>(),
+                authRequest.RequestIpAddress,
+                $"iOS - {authRequest.RequestDeviceIdentifier}"
+            );
+        }
+
+        await sutProvider.GetDependency<IEventService>().Received().LogOrganizationUserEventsAsync(
+            Arg.Is<IEnumerable<(OrganizationUser o, EventType e, DateTime? d)>>(list =>
+                list.Any() && list.All(x => organizationUsers.Any(y => y.Id == x.o.Id) && x.e == EventType.OrganizationUser_ApprovedAuthRequest)
+        ));
     }
 
     [Theory]

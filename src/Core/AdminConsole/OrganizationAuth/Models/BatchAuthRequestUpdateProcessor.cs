@@ -42,13 +42,12 @@ public class BatchAuthRequestUpdateProcessor
         return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor> Save(Func<IEnumerable<OrganizationAdminAuthRequest>, Task> callback)
+    public async Task Save(Func<IEnumerable<OrganizationAdminAuthRequest>, Task> callback)
     {
         if (_processed.Any())
         {
             await callback(_processed.Select(p => p.ProcessedAuthRequest));
         }
-        return this;
     }
 
     // Currently push notifications and emails are still done per-request in
@@ -58,25 +57,23 @@ public class BatchAuthRequestUpdateProcessor
     //
     // Adding bulk notification and email methods is being tracked as tech
     // debt on https://bitwarden.atlassian.net/browse/AC-2629
-    public async Task<BatchAuthRequestUpdateProcessor> SendPushNotifications(Func<OrganizationAdminAuthRequest, Task> callback)
+    public async Task SendPushNotifications(Func<OrganizationAdminAuthRequest, Task> callback)
     {
         foreach (var processor in _processed)
         {
             await processor.SendPushNotification(callback);
         }
-        return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor> SendNewDeviceEmails(Func<OrganizationAdminAuthRequest, string, Task> callback)
+    public async Task SendApprovalEmailsForProcessedRequests(Func<OrganizationAdminAuthRequest, string, Task> callback)
     {
         foreach (var processor in _processed)
         {
-            await processor.SendNewDeviceEmail(callback);
+            await processor.SendApprovalEmail(callback);
         }
-        return this;
     }
 
-    public async Task<BatchAuthRequestUpdateProcessor> SendEventLogs(Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task> callback)
+    public async Task LogOrganizationEventsForProcessedRequests(Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task> callback)
     {
         if (_processed.Any())
         {
@@ -85,6 +82,5 @@ public class BatchAuthRequestUpdateProcessor
                 return (p.ProcessedAuthRequest, p.OrganizationEventType);
             }));
         }
-        return this;
     }
 }

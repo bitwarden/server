@@ -13,6 +13,17 @@ public class AuthRequestUpdateProcessorTests
 {
     [Theory]
     [BitAutoData]
+    public void Process_NoAuthRequestLoaded_Throws(
+        OrganizationAuthRequestUpdate update,
+        AuthRequestUpdateProcessorConfiguration processorConfiguration
+    )
+    {
+        var sut = new AuthRequestUpdateProcessor(null, update, processorConfiguration);
+        Assert.ThrowsAny<AuthRequestUpdateCouldNotBeProcessedException>(() => sut.Process());
+    }
+
+    [Theory]
+    [BitAutoData]
     public void Process_RequestIsAlreadyApproved_Throws(
         OrganizationAdminAuthRequest authRequest,
         OrganizationAuthRequestUpdate update,
@@ -116,6 +127,9 @@ public class AuthRequestUpdateProcessorTests
         update.Key = "key";
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         sut.Process();
+        Assert.True(sut.ProcessedAuthRequest.Approved);
+        Assert.Equal(sut.ProcessedAuthRequest.Key, update.Key);
+        Assert.NotNull(sut.ProcessedAuthRequest.ResponseDate);
     }
 
     [Theory]
@@ -130,6 +144,9 @@ public class AuthRequestUpdateProcessorTests
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         sut.Process();
+        Assert.False(sut.ProcessedAuthRequest.Approved);
+        Assert.Null(sut.ProcessedAuthRequest.Key);
+        Assert.NotNull(sut.ProcessedAuthRequest.ResponseDate);
     }
 
     [Theory]
@@ -144,7 +161,8 @@ public class AuthRequestUpdateProcessorTests
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, Task>>();
-        await sut.Process().SendPushNotification(callback);
+        sut.Process();
+        await sut.SendPushNotification(callback);
         await callback.DidNotReceiveWithAnyArgs()(sut.ProcessedAuthRequest);
     }
 
@@ -161,13 +179,14 @@ public class AuthRequestUpdateProcessorTests
         update.Key = "key";
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, Task>>();
-        await sut.Process().SendPushNotification(callback);
+        sut.Process();
+        await sut.SendPushNotification(callback);
         await callback.Received()(sut.ProcessedAuthRequest);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SendNewDeviceEmail_RequestIsDenied_DoesNotSend(
+    public async Task SendApprovalEmail_RequestIsDenied_DoesNotSend(
         OrganizationAdminAuthRequest authRequest,
         OrganizationAuthRequestUpdate update,
         AuthRequestUpdateProcessorConfiguration processorConfiguration
@@ -177,13 +196,14 @@ public class AuthRequestUpdateProcessorTests
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, string, Task>>();
-        await sut.Process().SendNewDeviceEmail(callback);
+        sut.Process();
+        await sut.SendApprovalEmail(callback);
         await callback.DidNotReceiveWithAnyArgs()(sut.ProcessedAuthRequest, "string");
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SendNewDeviceEmail_RequestIsApproved_DoesSend(
+    public async Task SendApprovalEmail_RequestIsApproved_DoesSend(
         OrganizationAdminAuthRequest authRequest,
         OrganizationAuthRequestUpdate update,
         AuthRequestUpdateProcessorConfiguration processorConfiguration
@@ -196,7 +216,8 @@ public class AuthRequestUpdateProcessorTests
         update.Key = "key";
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, string, Task>>();
-        await sut.Process().SendNewDeviceEmail(callback);
+        sut.Process();
+        await sut.SendApprovalEmail(callback);
         await callback.Received()(sut.ProcessedAuthRequest, "iOS - device-id");
     }
 
