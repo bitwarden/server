@@ -37,8 +37,7 @@ public class AuthRequestUpdateProcessor
         var isExpired = DateTime.UtcNow >
             _unprocessedAuthRequest.CreationDate
             .Add(_configuration.AuthRequestExpiresAfter);
-        var isSpent = _unprocessedAuthRequest == null ||
-            _unprocessedAuthRequest.Approved != null ||
+        var isSpent = _unprocessedAuthRequest.Approved != null ||
             _unprocessedAuthRequest.ResponseDate.HasValue ||
             _unprocessedAuthRequest.AuthenticationDate.HasValue;
         var canBeProcessed = !isExpired &&
