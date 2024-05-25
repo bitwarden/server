@@ -131,7 +131,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         await _eventService.LogOrganizationUserEventsAsync(
             organizationUsers.Select(ou =>
             {
-                var e = events.FirstOrDefault(e => e.AuthRequest.OrganizationId == ou.Id);
+                var e = events.FirstOrDefault(e => e.AuthRequest.OrganizationUserId == ou.Id);
                 return (ou, e.EventType, e.AuthRequest.ResponseDate);
             })
         );
