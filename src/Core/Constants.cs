@@ -102,9 +102,9 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string VaultOnboarding = "vault-onboarding";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
+    public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
 
     /// <summary>
     /// Deprecated - never used, do not use. Will always default to false. Will be deleted as part of Flexible Collections cleanup
@@ -127,6 +127,8 @@ public static class FeatureFlagKeys
     public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
+    public const string BulkDeviceApproval = "bulk-device-approval";
+    public const string MemberAccessReport = "ac-2059-member-access-report";
 
     public static List<string> GetAllKeys()
     {
