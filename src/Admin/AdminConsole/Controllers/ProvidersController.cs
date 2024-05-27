@@ -305,9 +305,8 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        var flexibleCollectionsSignupEnabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
         var flexibleCollectionsV1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-        var organization = model.CreateOrganization(provider, flexibleCollectionsSignupEnabled, flexibleCollectionsV1Enabled);
+        var organization = model.CreateOrganization(provider, flexibleCollectionsV1Enabled);
         await _organizationService.CreatePendingOrganization(organization, model.Owners, User, _userService, model.SalesAssistedTrialStarted);
         await _providerService.AddOrganization(providerId, organization.Id, null);
 

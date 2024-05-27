@@ -102,9 +102,9 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string VaultOnboarding = "vault-onboarding";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
+    public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
 
     /// <summary>
     /// Deprecated - never used, do not use. Will always default to false. Will be deleted as part of Flexible Collections cleanup
@@ -114,15 +114,6 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
-    /// <summary>
-    /// Enables flexible collections improvements for new organizations on creation
-    /// </summary>
-    public const string FlexibleCollectionsSignup = "flexible-collections-signup";
-    /// <summary>
-    /// Exposes a migration button in the web vault which allows users to migrate an existing organization to
-    /// flexible collections
-    /// </summary>
-    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
@@ -137,6 +128,7 @@ public static class FeatureFlagKeys
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string BulkDeviceApproval = "bulk-device-approval";
+    public const string MemberAccessReport = "ac-2059-member-access-report";
 
     public static List<string> GetAllKeys()
     {
@@ -152,8 +144,7 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"},
-            { FlexibleCollectionsSignup, "true" }
+            { UnassignedItemsBanner, "true"}
         };
     }
 }

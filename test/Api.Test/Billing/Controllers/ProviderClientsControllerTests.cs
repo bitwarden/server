@@ -6,7 +6,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -185,7 +185,7 @@ public class ProviderClientsControllerTests
 
         Assert.IsType<Ok>(result);
 
-        await sutProvider.GetDependency<ICreateCustomerCommand>().Received(1).CreateCustomer(
+        await sutProvider.GetDependency<IProviderBillingService>().Received(1).CreateCustomerForClientOrganization(
             provider,
             clientOrganization);
     }
@@ -327,7 +327,7 @@ public class ProviderClientsControllerTests
 
         var result = await sutProvider.Sut.UpdateAsync(providerId, providerOrganizationId, requestBody);
 
-        await sutProvider.GetDependency<IAssignSeatsToClientOrganizationCommand>().Received(1)
+        await sutProvider.GetDependency<IProviderBillingService>().Received(1)
             .AssignSeatsToClientOrganization(
                 provider,
                 organization,
@@ -368,7 +368,7 @@ public class ProviderClientsControllerTests
 
         var result = await sutProvider.Sut.UpdateAsync(providerId, providerOrganizationId, requestBody);
 
-        await sutProvider.GetDependency<IAssignSeatsToClientOrganizationCommand>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IProviderBillingService>().DidNotReceiveWithAnyArgs()
             .AssignSeatsToClientOrganization(
                 Arg.Any<Provider>(),
                 Arg.Any<Organization>(),
