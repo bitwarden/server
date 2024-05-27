@@ -538,11 +538,6 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (!organization.FlexibleCollections)
-        {
-            throw new BadRequestException("Organization does not have collection enhancements enabled");
-        }
-
         var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
         if (!v1Enabled)
