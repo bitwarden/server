@@ -16,6 +16,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.CardService _cardService;
     private readonly Stripe.BankAccountService _bankAccountService;
     private readonly Stripe.PriceService _priceService;
+    private readonly Stripe.SetupIntentService _setupIntentService;
     private readonly Stripe.TestHelpers.TestClockService _testClockService;
 
     public StripeAdapter()
@@ -31,6 +32,7 @@ public class StripeAdapter : IStripeAdapter
         _cardService = new Stripe.CardService();
         _bankAccountService = new Stripe.BankAccountService();
         _priceService = new Stripe.PriceService();
+        _setupIntentService = new SetupIntentService();
         _testClockService = new Stripe.TestHelpers.TestClockService();
     }
 
@@ -221,6 +223,9 @@ public class StripeAdapter : IStripeAdapter
     {
         return await _priceService.ListAsync(options);
     }
+
+    public Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options)
+        => _setupIntentService.CreateAsync(options);
 
     public async Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync()
     {
