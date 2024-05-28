@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Bit.Core;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
@@ -59,16 +58,16 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
-            if (context.Result.ValidatedRequest.GrantType == "refresh_token")
+        if (context.Result.ValidatedRequest.GrantType == "refresh_token")
+        {
+            // Force legacy users to the web for migration
+            if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
+                context.Result.ValidatedRequest.ClientId != "web")
             {
-                // Force legacy users to the web for migration
-                if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
-                    context.Result.ValidatedRequest.ClientId != "web")
-                {
-                    await FailAuthForLegacyUserAsync(null, context);
-                    return;
-                }
+                await FailAuthForLegacyUserAsync(null, context);
+                return;
             }
+        }
 
         string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
