@@ -342,6 +342,54 @@ public class SubscriberService(
         }
     }
 
+    public async Task UpdateTaxInformation(
+        ISubscriber subscriber,
+        TaxInformationDTO taxInformation)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        ArgumentNullException.ThrowIfNull(taxInformation);
+
+        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        {
+            Expand = ["tax_ids"]
+        });
+
+        await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
+            {
+                Country = taxInformation.Country,
+                PostalCode = taxInformation.PostalCode,
+                Line1 = taxInformation.Line1 ?? string.Empty,
+                Line2 = taxInformation.Line2,
+                City = taxInformation.City,
+                State = taxInformation.State
+            }
+        });
+
+        if (!subscriber.IsUser())
+        {
+            var taxId = customer.TaxIds?.FirstOrDefault();
+
+            if (taxId != null)
+            {
+                await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
+            }
+
+            var taxIdType = taxInformation.GetTaxIdType();
+
+            if (!string.IsNullOrWhiteSpace(taxInformation.TaxId) &&
+                !string.IsNullOrWhiteSpace(taxIdType))
+            {
+                await stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
+                {
+                    Type = taxIdType,
+                    Value = taxInformation.TaxId,
+                });
+            }
+        }
+    }
+
     public async Task<BillingInfo.BillingSource> GetPaymentMethodAsync(ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);

@@ -797,6 +797,62 @@ public class SubscriberServiceTests
     }
     #endregion
 
+    #region UpdateTaxInformation
+
+    [Theory, BitAutoData]
+    public async Task UpdateTaxInformation_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(
+        () => sutProvider.Sut.UpdateTaxInformation(null, null));
+
+    [Theory, BitAutoData]
+    public async Task UpdateTaxInformation_NullTaxInformation_ThrowsArgumentNullException(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => sutProvider.Sut.UpdateTaxInformation(provider, null));
+
+    [Theory, BitAutoData]
+    public async Task UpdateTaxInformation_NonUser_MakesCorrectInvocations(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        var customer = new Customer { Id = provider.GatewayCustomerId, TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1" }] } };
+
+        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId, Arg.Is<CustomerGetOptions>(
+            options => options.Expand.Contains("tax_ids"))).Returns(customer);
+
+        var taxInformation = new TaxInformationDTO(
+            "US",
+            "12345",
+            "123456789",
+            "123 Example St.",
+            null,
+            "Example Town",
+            "NY");
+
+        await sutProvider.Sut.UpdateTaxInformation(provider, taxInformation);
+
+        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
+            options =>
+                options.Address.Country == taxInformation.Country &&
+                options.Address.PostalCode == taxInformation.PostalCode &&
+                options.Address.Line1 == taxInformation.Line1 &&
+                options.Address.Line2 == taxInformation.Line2 &&
+                options.Address.City == taxInformation.City &&
+                options.Address.State == taxInformation.State));
+
+        await stripeAdapter.Received(1).TaxIdDeleteAsync(provider.GatewayCustomerId, "tax_id_1");
+
+        await stripeAdapter.Received(1).TaxIdCreateAsync(provider.GatewayCustomerId, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == "us_ein" &&
+                       options.Value == taxInformation.TaxId));
+    }
+
+    #endregion
+
     #region GetPaymentMethodAsync
     [Theory, BitAutoData]
     public async Task GetPaymentMethodAsync_NullSubscriber_ThrowsArgumentNullException(
