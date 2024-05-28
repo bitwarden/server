@@ -144,14 +144,14 @@ public class ProviderBillingControllerTests
 
         Assert.IsType<Ok<ConsolidatedBillingSubscriptionResponse>>(result);
 
-        var providerSubscriptionResponse = ((Ok<ConsolidatedBillingSubscriptionResponse>)result).Value;
+        var response = ((Ok<ConsolidatedBillingSubscriptionResponse>)result).Value;
 
-        Assert.Equal(providerSubscriptionResponse.Status, subscription.Status);
-        Assert.Equal(providerSubscriptionResponse.CurrentPeriodEndDate, subscription.CurrentPeriodEnd);
-        Assert.Equal(providerSubscriptionResponse.DiscountPercentage, subscription.Customer!.Discount!.Coupon!.PercentOff);
+        Assert.Equal(response.Status, subscription.Status);
+        Assert.Equal(response.CurrentPeriodEndDate, subscription.CurrentPeriodEnd);
+        Assert.Equal(response.DiscountPercentage, subscription.Customer!.Discount!.Coupon!.PercentOff);
 
         var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var providerTeamsPlan = providerSubscriptionResponse.Plans.FirstOrDefault(plan => plan.PlanName == teamsPlan.Name);
+        var providerTeamsPlan = response.Plans.FirstOrDefault(plan => plan.PlanName == teamsPlan.Name);
         Assert.NotNull(providerTeamsPlan);
         Assert.Equal(50, providerTeamsPlan.SeatMinimum);
         Assert.Equal(10, providerTeamsPlan.PurchasedSeats);
@@ -160,7 +160,7 @@ public class ProviderBillingControllerTests
         Assert.Equal("Monthly", providerTeamsPlan.Cadence);
 
         var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
-        var providerEnterprisePlan = providerSubscriptionResponse.Plans.FirstOrDefault(plan => plan.PlanName == enterprisePlan.Name);
+        var providerEnterprisePlan = response.Plans.FirstOrDefault(plan => plan.PlanName == enterprisePlan.Name);
         Assert.NotNull(providerEnterprisePlan);
         Assert.Equal(100, providerEnterprisePlan.SeatMinimum);
         Assert.Equal(0, providerEnterprisePlan.PurchasedSeats);
@@ -203,11 +203,11 @@ public class ProviderBillingControllerTests
 
         Assert.IsType<Ok<PaymentMethodResponse>>(result);
 
-        var paymentMethodResponse = ((Ok<PaymentMethodResponse>)result).Value;
+        var response = ((Ok<PaymentMethodResponse>)result).Value;
 
-        Assert.Equal(PaymentMethodType.Card, paymentMethodResponse.Type);
-        Assert.Equal("Description", paymentMethodResponse.Description);
-        Assert.False(paymentMethodResponse.NeedsVerification);
+        Assert.Equal(PaymentMethodType.Card, response.Type);
+        Assert.Equal("Description", response.Description);
+        Assert.False(response.NeedsVerification);
     }
 
     #endregion
@@ -296,15 +296,15 @@ public class ProviderBillingControllerTests
 
         Assert.IsType<Ok<TaxInformationResponse>>(result);
 
-        var taxInformationResponse = ((Ok<TaxInformationResponse>)result).Value;
+        var response = ((Ok<TaxInformationResponse>)result).Value;
 
-        Assert.Equal("US", taxInformationResponse.Country);
-        Assert.Equal("12345", taxInformationResponse.PostalCode);
-        Assert.Equal("123456789", taxInformationResponse.TaxId);
-        Assert.Equal("123 Example St.", taxInformationResponse.Line1);
-        Assert.Null(taxInformationResponse.Line2);
-        Assert.Equal("Example Town", taxInformationResponse.City);
-        Assert.Equal("NY", taxInformationResponse.State);
+        Assert.Equal("US", response.Country);
+        Assert.Equal("12345", response.PostalCode);
+        Assert.Equal("123456789", response.TaxId);
+        Assert.Equal("123 Example St.", response.Line1);
+        Assert.Null(response.Line2);
+        Assert.Equal("Example Town", response.City);
+        Assert.Equal("NY", response.State);
     }
 
     #endregion

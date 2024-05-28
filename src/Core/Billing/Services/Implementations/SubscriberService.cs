@@ -310,17 +310,12 @@ public class SubscriberService(
     {
         ArgumentNullException.ThrowIfNull(subscriber);
 
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
-        {
-            throw ContactSupport();
-        }
-
-        var stripeCustomer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
         {
             Expand = ["invoice_settings.default_payment_method", "sources"]
         });
 
-        if (stripeCustomer.Metadata?.TryGetValue(BraintreeCustomerIdKey, out var braintreeCustomerId) ?? false)
+        if (customer.Metadata?.TryGetValue(BraintreeCustomerIdKey, out var braintreeCustomerId) ?? false)
         {
             var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
 
@@ -333,7 +328,7 @@ public class SubscriberService(
 
             if (braintreeCustomer.DefaultPaymentMethod != null)
             {
-                await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, null);
+                await RemoveBraintreePaymentMethodAsync(braintreeCustomer);
             }
             else
             {
@@ -342,7 +337,7 @@ public class SubscriberService(
         }
         else
         {
-            await RemoveStripePaymentMethodsAsync(stripeCustomer);
+            await RemoveStripePaymentMethodsAsync(customer);
         }
     }
 
@@ -721,6 +716,33 @@ public class SubscriberService(
         await Task.WhenAll(paymentMethods.Select(pm => stripeAdapter.PaymentMethodDetachAsync(pm.Id)));
     }
 
+    private async Task RemoveBraintreePaymentMethodAsync(
+        Braintree.Customer customer)
+    {
+        var existingDefaultPaymentMethod = customer.DefaultPaymentMethod;
+
+        var updateCustomerResult = await braintreeGateway.Customer.UpdateAsync(
+            customer.Id,
+            new CustomerRequest { DefaultPaymentMethodToken = null });
+
+        if (!updateCustomerResult.IsSuccess())
+        {
+            logger.LogError("Failed to remove payment method for Braintree customer ({ID}) | Error: {Error}",
+                customer.Id, updateCustomerResult.Message);
+
+            throw ContactSupport();
+        }
+
+        var deletePaymentMethodResult = await braintreeGateway.PaymentMethod.DeleteAsync(existingDefaultPaymentMethod.Token);
+
+        if (!deletePaymentMethodResult.IsSuccess())
+        {
+            logger.LogWarning(
+                "Failed to delete removed payment method for Braintree customer ({ID}) - outdated payment method still exists | Error: {Error}",
+                customer.Id, deletePaymentMethodResult.Message);
+        }
+    }
+
     private async Task ReplaceBraintreePaymentMethodAsync(
         Braintree.Customer customer,
         string defaultPaymentMethodToken)
@@ -754,7 +776,7 @@ public class SubscriberService(
             if (!deletePaymentMethodResult.IsSuccess())
             {
                 logger.LogWarning(
-                    "Failed to delete existing payment method for Braintree customer ({ID}) - outdated payment method still exists | Error: {Error}",
+                    "Failed to delete replaced payment method for Braintree customer ({ID}) - outdated payment method still exists | Error: {Error}",
                     customer.Id, deletePaymentMethodResult.Message);
             }
         }

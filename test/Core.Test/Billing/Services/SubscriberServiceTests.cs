@@ -194,6 +194,41 @@ public class SubscriberServiceTests
 
     #endregion
 
+    #region GetAccountCredit
+
+    [Theory, BitAutoData]
+    public async Task GetAccountCredit_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GetAccountCredit(null));
+
+    [Theory, BitAutoData]
+    public async Task GetAccountCredit_NoCustomer_ReturnsNull(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .ReturnsNull();
+
+        var accountCredit = await sutProvider.Sut.GetAccountCredit(provider);
+
+        Assert.Null(accountCredit);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAccountCredit_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer { Balance = -2500 });
+
+        var accountCredit = await sutProvider.Sut.GetAccountCredit(provider);
+
+        Assert.Equal(25, accountCredit);
+    }
+
+    #endregion
+
     #region GetCustomer
 
     [Theory, BitAutoData]
@@ -744,7 +779,7 @@ public class SubscriberServiceTests
     {
         const string braintreeCustomerId = "1";
 
-        var stripeCustomer = new Customer
+        var customer = new Customer
         {
             Metadata = new Dictionary<string, string>
             {
@@ -754,7 +789,7 @@ public class SubscriberServiceTests
 
         sutProvider.GetDependency<IStripeAdapter>()
             .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(stripeCustomer);
+            .Returns(customer);
 
         var (braintreeGateway, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
 
@@ -779,7 +814,7 @@ public class SubscriberServiceTests
     {
         const string braintreeCustomerId = "1";
 
-        var stripeCustomer = new Customer
+        var customer = new Customer
         {
             Metadata = new Dictionary<string, string>
             {
@@ -789,7 +824,7 @@ public class SubscriberServiceTests
 
         sutProvider.GetDependency<IStripeAdapter>()
             .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(stripeCustomer);
+            .Returns(customer);
 
         var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
 
@@ -816,7 +851,7 @@ public class SubscriberServiceTests
         const string braintreeCustomerId = "1";
         const string braintreePaymentMethodToken = "TOKEN";
 
-        var stripeCustomer = new Customer
+        var customer = new Customer
         {
             Metadata = new Dictionary<string, string>
             {
@@ -826,11 +861,12 @@ public class SubscriberServiceTests
 
         sutProvider.GetDependency<IStripeAdapter>()
             .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(stripeCustomer);
+            .Returns(customer);
 
         var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
 
         var braintreeCustomer = Substitute.For<Braintree.Customer>();
+        braintreeCustomer.Id.Returns(braintreeCustomerId);
 
         var paymentMethod = Substitute.For<Braintree.PaymentMethod>();
         paymentMethod.Token.Returns(braintreePaymentMethodToken);
@@ -864,14 +900,14 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemovePaymentMethod_Braintree_PaymentMethodDeleteFails_RollBack_ContactSupport(
+    public async Task RemovePaymentMethod_Braintree_Success(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
         const string braintreeCustomerId = "1";
         const string braintreePaymentMethodToken = "TOKEN";
 
-        var stripeCustomer = new Customer
+        var customer = new Customer
         {
             Metadata = new Dictionary<string, string>
             {
@@ -881,11 +917,12 @@ public class SubscriberServiceTests
 
         sutProvider.GetDependency<IStripeAdapter>()
             .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(stripeCustomer);
+            .Returns(customer);
 
         var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
 
         var braintreeCustomer = Substitute.For<Braintree.Customer>();
+        braintreeCustomer.Id.Returns(braintreeCustomerId);
 
         var paymentMethod = Substitute.For<Braintree.PaymentMethod>();
         paymentMethod.Token.Returns(braintreePaymentMethodToken);
@@ -904,11 +941,11 @@ public class SubscriberServiceTests
             .Returns(updateBraintreeCustomerResult);
 
         var deleteBraintreePaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
-        deleteBraintreePaymentMethodResult.IsSuccess().Returns(false);
+        deleteBraintreePaymentMethodResult.IsSuccess().Returns(true);
 
         paymentMethodGateway.DeleteAsync(paymentMethod.Token).Returns(deleteBraintreePaymentMethodResult);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.RemovePaymentMethod(organization));
+        await sutProvider.Sut.RemovePaymentMethod(organization);
 
         await customerGateway.Received(1).FindAsync(braintreeCustomerId);
 
@@ -916,9 +953,6 @@ public class SubscriberServiceTests
             request.DefaultPaymentMethodToken == null));
 
         await paymentMethodGateway.Received(1).DeleteAsync(paymentMethod.Token);
-
-        await customerGateway.Received(1).UpdateAsync(braintreeCustomerId, Arg.Is<CustomerRequest>(request =>
-            request.DefaultPaymentMethodToken == paymentMethod.Token));
     }
 
     [Theory, BitAutoData]
@@ -934,23 +968,27 @@ public class SubscriberServiceTests
             new BankAccount { Id = bankAccountId }, new Card { Id = cardId }
         };
 
-        var stripeCustomer = new Customer { Sources = new StripeList<IPaymentSource> { Data = sources } };
+        var customer = new Customer
+        {
+            Id = organization.GatewayCustomerId,
+            Sources = new StripeList<IPaymentSource> { Data = sources }
+        };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
             .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(stripeCustomer);
+            .Returns(customer);
 
         stripeAdapter
-            .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
-            .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>()));
+            .CustomerListPaymentMethods(organization.GatewayCustomerId)
+            .Returns([]);
 
         await sutProvider.Sut.RemovePaymentMethod(organization);
 
-        await stripeAdapter.Received(1).BankAccountDeleteAsync(stripeCustomer.Id, bankAccountId);
+        await stripeAdapter.Received(1).BankAccountDeleteAsync(customer.Id, bankAccountId);
 
-        await stripeAdapter.Received(1).CardDeleteAsync(stripeCustomer.Id, cardId);
+        await stripeAdapter.Received(1).CardDeleteAsync(customer.Id, cardId);
 
         await stripeAdapter.DidNotReceiveWithAnyArgs()
             .PaymentMethodDetachAsync(Arg.Any<string>(), Arg.Any<PaymentMethodDetachOptions>());
@@ -966,7 +1004,11 @@ public class SubscriberServiceTests
 
         var sources = new List<IPaymentSource>();
 
-        var stripeCustomer = new Customer { Sources = new StripeList<IPaymentSource> { Data = sources } };
+        var stripeCustomer = new Customer
+        {
+            Id = organization.GatewayCustomerId,
+            Sources = new StripeList<IPaymentSource> { Data = sources }
+        };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -975,18 +1017,11 @@ public class SubscriberServiceTests
             .Returns(stripeCustomer);
 
         stripeAdapter
-            .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
-            .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>
-            {
-                new ()
-                {
-                    Id = bankAccountId
-                },
-                new ()
-                {
-                    Id = cardId
-                }
-            }));
+            .CustomerListPaymentMethods(organization.GatewayCustomerId)
+            .Returns([
+                new PaymentMethod { Id = bankAccountId },
+                new PaymentMethod { Id = cardId }
+            ]);
 
         await sutProvider.Sut.RemovePaymentMethod(organization);
 
@@ -999,17 +1034,6 @@ public class SubscriberServiceTests
 
         await stripeAdapter.Received(1)
             .PaymentMethodDetachAsync(cardId);
-    }
-
-    private static async IAsyncEnumerable<PaymentMethod> GetPaymentMethodsAsync(
-        IEnumerable<PaymentMethod> paymentMethods)
-    {
-        foreach (var paymentMethod in paymentMethods)
-        {
-            yield return paymentMethod;
-        }
-
-        await Task.CompletedTask;
     }
 
     private static (IBraintreeGateway, ICustomerGateway, IPaymentMethodGateway) SetupBraintree(
