@@ -79,6 +79,14 @@ public class StripeController : Controller
         return Ok();
     }
 
+    /// <summary>
+    /// Selects the appropriate Stripe webhook secret based on the API version specified in the webhook body.
+    /// </summary>
+    /// <param name="webhookBody">The body of the webhook request received from Stripe.</param>
+    /// <returns>
+    /// The Stripe webhook secret corresponding to the API version found in the webhook body.
+    /// Returns null if the API version is unrecognized.
+    /// </returns>
     private string PickStripeWebhookSecret(string webhookBody)
     {
         var versionContainer = JsonSerializer.Deserialize<StripeWebhookVersionContainer>(webhookBody);
