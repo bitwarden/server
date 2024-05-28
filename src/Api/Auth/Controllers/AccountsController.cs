@@ -21,9 +21,8 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -67,8 +66,7 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -102,8 +100,7 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
-        ICancelSubscriptionCommand cancelSubscriptionCommand,
-        ISubscriberQueries subscriberQueries,
+        ISubscriberService subscriberService,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
@@ -131,8 +128,7 @@ public class AccountsController : Controller
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
-        _cancelSubscriptionCommand = cancelSubscriptionCommand;
-        _subscriberQueries = subscriberQueries;
+        _subscriberService = subscriberService;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _cipherValidator = cipherValidator;
@@ -798,9 +794,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(user);
-
-        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+        await _subscriberService.CancelSubscription(user,
             new OffboardingSurveyResponse
             {
                 UserId = user.Id,
@@ -841,7 +835,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var taxInfo = await _paymentService.GetTaxInfoAsync(user);
+        var taxInfo = await _subscriberService.GetTaxInformationAsync(user);
         return new TaxInfoResponseModel(taxInfo);
     }
 

@@ -252,7 +252,7 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
-    public async Task SignUp_WithFlexibleCollections_SetsAccessAllToFalse
+    public async Task SignUp_EnablesFlexibleCollectionsFeatures
         (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.Plan = planType;
@@ -261,16 +261,16 @@ public class OrganizationServiceTests
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
-            .Returns(true);
-
         // Extract orgUserId when created
         Guid? orgUserId = null;
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .CreateAsync(Arg.Do<OrganizationUser>(ou => orgUserId = ou.Id));
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
+
+        // Assert: Organization.FlexibleCollections is enabled
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
+            .CreateAsync(Arg.Is<Organization>(o => o.FlexibleCollections));
 
         // Assert: AccessAll is not used
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
@@ -290,33 +290,6 @@ public class OrganizationServiceTests
                     !c.ReadOnly &&
                     !c.HidePasswords &&
                     c.Manage)));
-
-        Assert.NotNull(result.Item1);
-        Assert.NotNull(result.Item2);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.FamiliesAnnually)]
-    public async Task SignUp_WithoutFlexibleCollections_SetsAccessAllToTrue
-        (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
-    {
-        signup.Plan = planType;
-        var plan = StaticStore.GetPlan(signup.Plan);
-        signup.AdditionalSeats = 0;
-        signup.PaymentMethodType = PaymentMethodType.Card;
-        signup.PremiumAccessAddon = false;
-        signup.UseSecretsManager = false;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup)
-            .Returns(false);
-
-        var result = await sutProvider.Sut.SignUpAsync(signup);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
-            Arg.Is<OrganizationUser>(o =>
-                o.UserId == signup.Owner.Id &&
-                o.AccessAll == true));
 
         Assert.NotNull(result.Item1);
         Assert.NotNull(result.Item2);
