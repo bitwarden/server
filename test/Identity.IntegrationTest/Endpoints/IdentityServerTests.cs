@@ -374,7 +374,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "ErrorModel", JsonValueKind.Object);
         var message = AssertHelper.AssertJsonProperty(error, "Message", JsonValueKind.String).GetString();
-        Assert.Equal("Legacy user detected. Please login on web vault to migrate your account", message);
+        Assert.StartsWith("Encryption key migration is required.", message);
     }
 
 
