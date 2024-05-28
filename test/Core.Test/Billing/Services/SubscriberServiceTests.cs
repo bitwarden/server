@@ -14,6 +14,7 @@ using Stripe;
 using Xunit;
 
 using static Bit.Core.Test.Billing.Utilities;
+using Address = Stripe.Address;
 using Customer = Stripe.Customer;
 using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
@@ -443,6 +444,65 @@ public class SubscriberServiceTests
     }
     #endregion
 
+    #region GetTaxInformation
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformation_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GetTaxInformation(null));
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformation_NullAddress_ReturnsNull(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns(new Customer());
+
+        var taxInformation = await sutProvider.Sut.GetTaxInformation(organization);
+
+        Assert.Null(taxInformation);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformation_Success(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var address = new Address
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Example St.",
+            Line2 = "Unit 1",
+            City = "Example Town",
+            State = "NY"
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .Returns(new Customer
+            {
+                Address = address,
+                TaxIds = new StripeList<TaxId>
+                {
+                    Data = [new TaxId { Value = "tax_id" }]
+                }
+            });
+
+        var taxInformation = await sutProvider.Sut.GetTaxInformation(organization);
+
+        Assert.NotNull(taxInformation);
+        Assert.Equal(address.Country, taxInformation.Country);
+        Assert.Equal(address.PostalCode, taxInformation.PostalCode);
+        Assert.Equal("tax_id", taxInformation.TaxId);
+        Assert.Equal(address.Line1, taxInformation.Line1);
+        Assert.Equal(address.Line2, taxInformation.Line2);
+        Assert.Equal(address.City, taxInformation.City);
+        Assert.Equal(address.State, taxInformation.State);
+    }
+
+    #endregion
+
     #region RemovePaymentMethod
     [Theory, BitAutoData]
     public async Task RemovePaymentMethod_NullSubscriber_ArgumentNullException(
@@ -734,85 +794,6 @@ public class SubscriberServiceTests
         braintreeGateway.PaymentMethod.Returns(paymentMethodGateway);
 
         return (braintreeGateway, customerGateway, paymentMethodGateway);
-    }
-    #endregion
-
-    #region GetTaxInformationAsync
-    [Theory, BitAutoData]
-    public async Task GetTaxInformationAsync_NullSubscriber_ThrowsArgumentNullException(
-        SutProvider<SubscriberService> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await sutProvider.Sut.GetTaxInformationAsync(null));
-
-    [Theory, BitAutoData]
-    public async Task GetTaxInformationAsync_NoGatewayCustomerId_ReturnsNull(
-        Provider subscriber,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        subscriber.GatewayCustomerId = null;
-
-        var taxInfo = await sutProvider.Sut.GetTaxInformationAsync(subscriber);
-
-        Assert.Null(taxInfo);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetTaxInformationAsync_NoCustomer_ReturnsNull(
-        Provider subscriber,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns((Customer)null);
-
-        await Assert.ThrowsAsync<BillingException>(
-            () => sutProvider.Sut.GetTaxInformationAsync(subscriber));
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetTaxInformationAsync_StripeException_ReturnsNull(
-        Provider subscriber,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .ThrowsAsync(new StripeException());
-
-        await Assert.ThrowsAsync<BillingException>(
-            () => sutProvider.Sut.GetTaxInformationAsync(subscriber));
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetTaxInformationAsync_Succeeds(
-        Provider subscriber,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var customer = new Customer
-        {
-            Address = new Stripe.Address
-            {
-                Line1 = "123 Main St",
-                Line2 = "Apt 4B",
-                City = "Metropolis",
-                State = "NY",
-                PostalCode = "12345",
-                Country = "US"
-            }
-        };
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(customer);
-
-        var taxInfo = await sutProvider.Sut.GetTaxInformationAsync(subscriber);
-
-        Assert.NotNull(taxInfo);
-        Assert.Equal("123 Main St", taxInfo.BillingAddressLine1);
-        Assert.Equal("Apt 4B", taxInfo.BillingAddressLine2);
-        Assert.Equal("Metropolis", taxInfo.BillingAddressCity);
-        Assert.Equal("NY", taxInfo.BillingAddressState);
-        Assert.Equal("12345", taxInfo.BillingAddressPostalCode);
-        Assert.Equal("US", taxInfo.BillingAddressCountry);
     }
     #endregion
 
