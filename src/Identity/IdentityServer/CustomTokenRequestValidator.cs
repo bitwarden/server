@@ -59,21 +59,16 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
-        if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
-        {
             if (context.Result.ValidatedRequest.GrantType == "refresh_token")
             {
                 // Force legacy users to the web for migration
                 if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
                     context.Result.ValidatedRequest.ClientId != "web")
                 {
-                    await BuildErrorResultAsync(
-                        "Legacy user detected. Please login on web vault to migrate your account",
-                        false, context, null);
+                    await FailAuthForLegacyUserAsync(null, context);
                     return;
                 }
             }
-        }
 
         string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
