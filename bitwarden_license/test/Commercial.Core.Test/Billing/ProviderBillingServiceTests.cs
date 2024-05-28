@@ -701,60 +701,33 @@ public class ProviderBillingServiceTests
 
     #endregion
 
-    #region GetSubscriptionData
+    #region GetConsolidatedBillingSubscription
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionData_NullProvider_ReturnsNull(
-        SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId)
-    {
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-
-        providerRepository.GetByIdAsync(providerId).ReturnsNull();
-
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
-
-        Assert.Null(subscriptionData);
-
-        await providerRepository.Received(1).GetByIdAsync(providerId);
-    }
+    public async Task GetConsolidatedBillingSubscription_NullProvider_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GetConsolidatedBillingSubscription(null));
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionData_NullSubscription_ReturnsNull(
+    public async Task GetConsolidatedBillingSubscription_NullSubscription_ReturnsNull(
         SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId,
         Provider provider)
     {
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var consolidatedBillingSubscription = await sutProvider.Sut.GetConsolidatedBillingSubscription(provider);
 
-        providerRepository.GetByIdAsync(providerId).Returns(provider);
+        Assert.Null(consolidatedBillingSubscription);
 
-        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
-
-        subscriberService.GetSubscription(provider).ReturnsNull();
-
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
-
-        Assert.Null(subscriptionData);
-
-        await providerRepository.Received(1).GetByIdAsync(providerId);
-
-        await subscriberService.Received(1).GetSubscription(
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).GetSubscription(
             provider,
             Arg.Is<SubscriptionGetOptions>(
                 options => options.Expand.Count == 1 && options.Expand.First() == "customer"));
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionData_Success(
+    public async Task GetConsolidatedBillingSubscription_Success(
         SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId,
         Provider provider)
     {
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-
-        providerRepository.GetByIdAsync(providerId).Returns(provider);
-
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
         var subscription = new Subscription();
@@ -767,7 +740,7 @@ public class ProviderBillingServiceTests
         var enterprisePlan = new ProviderPlan
         {
             Id = Guid.NewGuid(),
-            ProviderId = providerId,
+            ProviderId = provider.Id,
             PlanType = PlanType.EnterpriseMonthly,
             SeatMinimum = 100,
             PurchasedSeats = 0,
@@ -777,7 +750,7 @@ public class ProviderBillingServiceTests
         var teamsPlan = new ProviderPlan
         {
             Id = Guid.NewGuid(),
-            ProviderId = providerId,
+            ProviderId = provider.Id,
             PlanType = PlanType.TeamsMonthly,
             SeatMinimum = 50,
             PurchasedSeats = 10,
@@ -786,36 +759,27 @@ public class ProviderBillingServiceTests
 
         var providerPlans = new List<ProviderPlan> { enterprisePlan, teamsPlan, };
 
-        providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
+        providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
+        var consolidatedBillingSubscription = await sutProvider.Sut.GetConsolidatedBillingSubscription(provider);
 
-        Assert.NotNull(subscriptionData);
+        Assert.NotNull(consolidatedBillingSubscription);
 
-        Assert.Equivalent(subscriptionData.Subscription, subscription);
+        Assert.Equivalent(consolidatedBillingSubscription.Subscription, subscription);
 
-        Assert.Equal(2, subscriptionData.ProviderPlans.Count);
+        Assert.Equal(2, consolidatedBillingSubscription.ProviderPlans.Count);
 
         var configuredEnterprisePlan =
-            subscriptionData.ProviderPlans.FirstOrDefault(configuredPlan =>
+            consolidatedBillingSubscription.ProviderPlans.FirstOrDefault(configuredPlan =>
                 configuredPlan.PlanType == PlanType.EnterpriseMonthly);
 
         var configuredTeamsPlan =
-            subscriptionData.ProviderPlans.FirstOrDefault(configuredPlan =>
+            consolidatedBillingSubscription.ProviderPlans.FirstOrDefault(configuredPlan =>
                 configuredPlan.PlanType == PlanType.TeamsMonthly);
 
         Compare(enterprisePlan, configuredEnterprisePlan);
 
         Compare(teamsPlan, configuredTeamsPlan);
-
-        await providerRepository.Received(1).GetByIdAsync(providerId);
-
-        await subscriberService.Received(1).GetSubscription(
-            provider,
-            Arg.Is<SubscriptionGetOptions>(
-                options => options.Expand.Count == 1 && options.Expand.First() == "customer"));
-
-        await providerPlanRepository.Received(1).GetByProviderId(providerId);
 
         return;
 

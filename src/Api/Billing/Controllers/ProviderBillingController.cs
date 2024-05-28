@@ -1,5 +1,8 @@
 ﻿using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
@@ -13,33 +16,29 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderBillingController(
     ICurrentContext currentContext,
     IFeatureService featureService,
-    IProviderBillingService providerBillingService) : Controller
+    IProviderBillingService providerBillingService,
+    IProviderRepository providerRepository) : Controller
 {
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var consolidatedBillingSubscription = await providerBillingService.GetConsolidatedBillingSubscription(provider);
+
+        if (consolidatedBillingSubscription == null)
         {
             return TypedResults.NotFound();
         }
 
-        if (!currentContext.ProviderProviderAdmin(providerId))
-        {
-            return TypedResults.Unauthorized();
-        }
+        var response = ConsolidatedBillingSubscriptionResponse.From(consolidatedBillingSubscription);
 
-        var providerSubscriptionDTO = await providerBillingService.GetSubscriptionDTO(providerId);
-
-        if (providerSubscriptionDTO == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var (providerPlans, subscription) = providerSubscriptionDTO;
-
-        var providerSubscriptionResponse = ProviderSubscriptionResponse.From(providerPlans, subscription);
-
-        return TypedResults.Ok(providerSubscriptionResponse);
+        return TypedResults.Ok(response);
     }
 
     [HttpGet("payment-information")]
@@ -67,5 +66,32 @@ public class ProviderBillingController(
         var providerPaymentInformationResponse = PaymentInformationResponse.From(paymentSource, taxInfo);
 
         return TypedResults.Ok(providerPaymentInformationResponse);
+    }
+
+    private async Task<(Provider, IResult)> GetAuthorizedBillableProviderOrResultAsync(Guid providerId)
+    {
+        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        {
+            return (null, TypedResults.NotFound());
+        }
+
+        var provider = await providerRepository.GetByIdAsync(providerId);
+
+        if (provider == null)
+        {
+            return (null, TypedResults.NotFound());
+        }
+
+        if (!currentContext.ProviderProviderAdmin(providerId))
+        {
+            return (null, TypedResults.Unauthorized());
+        }
+
+        if (!provider.IsBillable())
+        {
+            return (null, TypedResults.Unauthorized());
+        }
+
+        return (provider, null);
     }
 }

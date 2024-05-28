@@ -226,22 +226,14 @@ public class ProviderBillingService(
             .Sum(providerOrganization => providerOrganization.Seats ?? 0);
     }
 
-    public async Task<ProviderSubscriptionDTO> GetSubscriptionDTO(Guid providerId)
+    public async Task<ConsolidatedBillingSubscriptionDTO> GetConsolidatedBillingSubscription(
+        Provider provider)
     {
-        var provider = await providerRepository.GetByIdAsync(providerId);
-
-        if (provider == null)
-        {
-            logger.LogError(
-                "Could not find provider ({ID}) when retrieving subscription data.",
-                providerId);
-
-            return null;
-        }
+        ArgumentNullException.ThrowIfNull(provider);
 
         if (provider.Type == ProviderType.Reseller)
         {
-            logger.LogError("Subscription data cannot be retrieved for reseller-type provider ({ID})", providerId);
+            logger.LogError("Consolidated billing subscription cannot be retrieved for reseller-type provider ({ID})", provider.Id);
 
             throw ContactSupport("Consolidated billing does not support reseller-type providers");
         }
@@ -256,14 +248,14 @@ public class ProviderBillingService(
             return null;
         }
 
-        var providerPlans = await providerPlanRepository.GetByProviderId(providerId);
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
         var configuredProviderPlans = providerPlans
             .Where(providerPlan => providerPlan.IsConfigured())
             .Select(ConfiguredProviderPlanDTO.From)
             .ToList();
 
-        return new ProviderSubscriptionDTO(
+        return new ConsolidatedBillingSubscriptionDTO(
             configuredProviderPlans,
             subscription);
     }
