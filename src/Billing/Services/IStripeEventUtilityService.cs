@@ -17,6 +17,15 @@ public interface IStripeEventUtilityService
     /// <param name="metadata"></param>
     /// <returns></returns>
     Tuple<Guid?, Guid?, Guid?> GetIdsFromMetadata(Dictionary<string, string> metadata);
+
+    /// <summary>
+    /// Determines whether the specified subscription is a sponsored subscription.
+    /// </summary>
+    /// <param name="subscription">The subscription to be evaluated.</param>
+    /// <returns>
+    /// A boolean value indicating whether the subscription is a sponsored subscription.
+    /// Returns <c>true</c> if the subscription matches any of the sponsored plans; otherwise, <c>false</c>.
+    /// </returns>
     bool IsSponsoredSubscription(Subscription subscription);
 
     /// <summary>
