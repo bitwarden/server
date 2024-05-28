@@ -223,7 +223,7 @@ public class Startup
         // into the existing controllers. 
         services.AddControllers()
                 .AddOData(options => options
-                .Select().Filter().Count().OrderBy().Expand()); ;
+                .Select().Filter().Count().OrderBy().Expand());
 
         services.AddSwagger(globalSettings);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
