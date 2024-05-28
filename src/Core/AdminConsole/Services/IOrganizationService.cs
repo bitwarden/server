@@ -34,6 +34,7 @@ public interface IOrganizationService
     /// </summary>
     Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(OrganizationLicense license, User owner,
         string ownerKey, string collectionName, string publicKey, string privateKey);
+    Task InitiateDeleteAsync(Organization organization, string orgAdminEmail);
     Task DeleteAsync(Organization organization);
     Task EnableAsync(Guid organizationId, DateTime? expirationDate);
     Task DisableAsync(Guid organizationId, DateTime? expirationDate);
@@ -49,7 +50,7 @@ public interface IOrganizationService
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
         OrganizationUserType type, bool accessAll, string externalId, ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, bool accessSecretsManager);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
     Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,

@@ -79,5 +79,6 @@ public interface IMailService
     Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier);
     Task SendTrialInitiationEmailAsync(string email);
     Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
+    Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
 }
 
