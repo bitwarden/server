@@ -9,7 +9,7 @@ public record PaymentMethodResponse(
     bool NeedsVerification)
 {
     public static PaymentMethodResponse From(PaymentMethodDTO paymentMethod)
-        => new (
+        => new(
             paymentMethod.Type,
             paymentMethod.Description,
             paymentMethod.NeedsVerification);

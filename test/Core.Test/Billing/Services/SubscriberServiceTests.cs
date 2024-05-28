@@ -712,7 +712,7 @@ public class SubscriberServiceTests
                 Address = address,
                 TaxIds = new StripeList<TaxId>
                 {
-                    Data = [ new TaxId { Value = "tax_id" } ]
+                    Data = [new TaxId { Value = "tax_id" }]
                 }
             });
 

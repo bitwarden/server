@@ -8,7 +8,7 @@ public record PaymentInformationResponse(
     TaxInformationDTO TaxInformation)
 {
     public static PaymentInformationResponse From(PaymentInformationDTO paymentInformation) =>
-        new (
+        new(
             paymentInformation.AccountCredit,
             paymentInformation.PaymentMethod,
             paymentInformation.TaxInformation);

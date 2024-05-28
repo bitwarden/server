@@ -1,5 +1,4 @@
-﻿using Bit.Api.Billing.Models.Requests;
-using Bit.Api.Billing.Models.Requests.Providers;
+﻿using Bit.Api.Billing.Models.Requests.Providers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;

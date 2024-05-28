@@ -54,37 +54,37 @@ public record PaymentMethodDTO(
         switch (defaultPaymentMethod)
         {
             case Braintree.PayPalAccount payPalAccount:
-            {
-                return new PaymentMethodDTO(
-                    PaymentMethodType.PayPal,
-                    payPalAccount.Email,
-                    false);
-            }
+                {
+                    return new PaymentMethodDTO(
+                        PaymentMethodType.PayPal,
+                        payPalAccount.Email,
+                        false);
+                }
             case Braintree.CreditCard creditCard:
-            {
-                var formattedExpirationMonth =
-                    string.Concat(creditCard.ExpirationMonth.Length == 1 ? "0" : string.Empty,
-                        creditCard.ExpirationMonth);
+                {
+                    var formattedExpirationMonth =
+                        string.Concat(creditCard.ExpirationMonth.Length == 1 ? "0" : string.Empty,
+                            creditCard.ExpirationMonth);
 
-                var description =
-                    $"{creditCard.CardType}, *{creditCard.LastFour}, {formattedExpirationMonth}/{creditCard.ExpirationYear}";
+                    var description =
+                        $"{creditCard.CardType}, *{creditCard.LastFour}, {formattedExpirationMonth}/{creditCard.ExpirationYear}";
 
-                return new PaymentMethodDTO(
-                    PaymentMethodType.Card,
-                    description,
-                    false);
-            }
+                    return new PaymentMethodDTO(
+                        PaymentMethodType.Card,
+                        description,
+                        false);
+                }
             case Braintree.UsBankAccount bankAccount:
-            {
-                return new PaymentMethodDTO(
-                    PaymentMethodType.BankAccount,
-                    $"{bankAccount.BankName}, *{bankAccount.Last4}",
-                    false);
-            }
+                {
+                    return new PaymentMethodDTO(
+                        PaymentMethodType.BankAccount,
+                        $"{bankAccount.BankName}, *{bankAccount.Last4}",
+                        false);
+                }
             default:
-            {
-                return null;
-            }
+                {
+                    return null;
+                }
         }
     }
 
@@ -99,7 +99,7 @@ public record PaymentMethodDTO(
     }
 
     private static PaymentMethodDTO FromStripeCardPaymentMethod(Stripe.PaymentMethodCard card)
-        => new (
+        => new(
             PaymentMethodType.Card,
             GetCardDescription(card.Brand, card.Last4, card.ExpMonth, card.ExpYear),
             false);
@@ -135,13 +135,13 @@ public record PaymentMethodDTO(
     }
 
     private static PaymentMethodDTO FromStripeCardLegacySource(Stripe.Card card)
-        => new (
+        => new(
             PaymentMethodType.Card,
             GetCardDescription(card.Brand, card.Last4, card.ExpMonth, card.ExpYear),
             false);
 
     private static PaymentMethodDTO FromStripeSourceCardLegacySource(Stripe.SourceCard card)
-        => new (
+        => new(
             PaymentMethodType.Card,
             GetCardDescription(card.Brand, card.Last4, card.ExpMonth, card.ExpYear),
             false);
