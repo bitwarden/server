@@ -240,6 +240,16 @@ public class SubscriberService(
         }
     }
 
+    public async Task<TaxInformationDTO> GetTaxInformation(
+        ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions { Expand = ["tax_ids"] });
+
+        return GetTaxInformationDTOFrom(customer);
+    }
+
     public async Task RemovePaymentMethod(
         ISubscriber subscriber)
     {
@@ -332,39 +342,6 @@ public class SubscriberService(
         }
     }
 
-    public async Task<TaxInfo> GetTaxInformationAsync(ISubscriber subscriber)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
-        {
-            logger.LogError("Cannot retrieve GatewayCustomerId for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
-
-            return null;
-        }
-
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions { Expand = ["tax_ids"] });
-
-        if (customer is null)
-        {
-            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
-                subscriber.GatewayCustomerId, subscriber.Id);
-
-            return null;
-        }
-
-        var address = customer.Address;
-
-        // Line1 is required, so if missing we're using the subscriber name
-        // see: https://stripe.com/docs/api/customers/create#create_customer-address-line1
-        if (address is not null && string.IsNullOrWhiteSpace(address.Line1))
-        {
-            address.Line1 = null;
-        }
-
-        return MapToTaxInfo(customer);
-    }
-
     public async Task<BillingInfo.BillingSource> GetPaymentMethodAsync(ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
@@ -425,20 +402,25 @@ public class SubscriberService(
         return cardPaymentMethods.MaxBy(m => m.Created);
     }
 
-    private TaxInfo MapToTaxInfo(Customer customer)
-    {
-        var address = customer.Address;
-        var taxId = customer.TaxIds?.FirstOrDefault();
+    #region Shared Utilities
 
-        return new TaxInfo
+    private static TaxInformationDTO GetTaxInformationDTOFrom(
+        Customer customer)
+    {
+        if (customer.Address == null)
         {
-            TaxIdNumber = taxId?.Value,
-            BillingAddressLine1 = address?.Line1,
-            BillingAddressLine2 = address?.Line2,
-            BillingAddressCity = address?.City,
-            BillingAddressState = address?.State,
-            BillingAddressPostalCode = address?.PostalCode,
-            BillingAddressCountry = address?.Country,
-        };
+            return null;
+        }
+
+        return new TaxInformationDTO(
+            customer.Address.Country,
+            customer.Address.PostalCode,
+            customer.TaxIds?.FirstOrDefault()?.Value,
+            customer.Address.Line1,
+            customer.Address.Line2,
+            customer.Address.City,
+            customer.Address.State);
     }
+
+    #endregion
 }
