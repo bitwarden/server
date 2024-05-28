@@ -32,4 +32,9 @@ public interface IStripeEventUtilityService
     Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false);
 
     bool ShouldAttemptToPayInvoice(Invoice invoice);
+
+    const string PremiumPlanId = "premium-annually";
+
+    const string PremiumPlanIdAppStore = "premium-annually-app";
+
 }

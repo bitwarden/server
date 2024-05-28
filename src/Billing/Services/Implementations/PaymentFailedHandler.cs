@@ -5,9 +5,6 @@ namespace Bit.Billing.Services.Implementations;
 
 public class PaymentFailedHandler : IPaymentFailedHandler
 {
-    private const string PremiumPlanId = "premium-annually";
-    private const string PremiumPlanIdAppStore = "premium-annually-app";
-
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeFacade _stripeFacade;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
@@ -37,7 +34,7 @@ public class PaymentFailedHandler : IPaymentFailedHandler
         var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
         // attempt count 4 = 11 days after initial failure
         if (invoice.AttemptCount <= 3 ||
-            !subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
+            !subscription.Items.Any(i => i.Price.Id is IStripeEventUtilityService.PremiumPlanId or IStripeEventUtilityService.PremiumPlanIdAppStore))
         {
             await _stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
         }

@@ -14,8 +14,6 @@ namespace Bit.Billing.Services.Implementations;
 
 public class PaymentSucceededHandler : IPaymentSucceededHandler
 {
-    private const string PremiumPlanId = "premium-annually";
-
     private readonly ILogger<PaymentSucceededHandler> _logger;
     private readonly IStripeEventService _stripeEventService;
     private readonly IOrganizationService _organizationService;
@@ -154,7 +152,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         }
         else if (userId.HasValue)
         {
-            if (subscription.Items.All(i => i.Plan.Id != PremiumPlanId))
+            if (subscription.Items.All(i => i.Plan.Id != IStripeEventUtilityService.PremiumPlanId))
             {
                 return;
             }
@@ -165,7 +163,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
                 {
-                    PlanName = PremiumPlanId,
+                    PlanName = IStripeEventUtilityService.PremiumPlanId,
                     Storage = user?.MaxStorageGb,
                 });
         }

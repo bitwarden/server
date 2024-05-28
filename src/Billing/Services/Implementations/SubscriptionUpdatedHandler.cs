@@ -9,9 +9,6 @@ namespace Bit.Billing.Services.Implementations;
 
 public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 {
-    private const string PremiumPlanId = "premium-annually";
-    private const string PremiumPlanIdAppStore = "premium-annually-app";
-
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationService _organizationService;
@@ -60,7 +57,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     }
 
                     if (subscription.Status is StripeSubscriptionStatus.Unpaid &&
-                        subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
+                        subscription.Items.Any(i => i.Price.Id is IStripeEventUtilityService.PremiumPlanId or IStripeEventUtilityService.PremiumPlanIdAppStore))
                     {
                         await CancelSubscription(subscription.Id);
                         await VoidOpenInvoices(subscription.Id);
