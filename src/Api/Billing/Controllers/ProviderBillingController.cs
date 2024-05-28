@@ -8,6 +8,7 @@ using Bit.Core.Context;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NotImplementedException = System.NotImplementedException;
 
 namespace Bit.Api.Billing.Controllers;
 
@@ -44,28 +45,14 @@ public class ProviderBillingController(
     [HttpGet("payment-information")]
     public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+
+        if (provider == null)
         {
-            return TypedResults.NotFound();
+            return result;
         }
 
-        if (!currentContext.ProviderProviderAdmin(providerId))
-        {
-            return TypedResults.Unauthorized();
-        }
-
-        var providerPaymentInformationDto = await providerBillingService.GetPaymentInformationAsync(providerId);
-
-        if (providerPaymentInformationDto == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var (paymentSource, taxInfo) = providerPaymentInformationDto;
-
-        var providerPaymentInformationResponse = PaymentInformationResponse.From(paymentSource, taxInfo);
-
-        return TypedResults.Ok(providerPaymentInformationResponse);
+        throw new NotImplementedException();
     }
 
     private async Task<(Provider, IResult)> GetAuthorizedBillableProviderOrResultAsync(Guid providerId)
