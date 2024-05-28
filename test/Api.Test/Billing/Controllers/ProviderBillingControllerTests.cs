@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Billing.Controllers;
+using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -24,6 +25,7 @@ namespace Bit.Api.Test.Billing.Controllers;
 [SutProviderCustomize]
 public class ProviderBillingControllerTests
 {
+    #region GetSubscriptionAsync
     [Theory, BitAutoData]
     public async Task GetSubscriptionAsync_FFDisabled_NotFound(
         Guid providerId,
@@ -160,6 +162,82 @@ public class ProviderBillingControllerTests
         Assert.Equal(100 * enterprisePlan.PasswordManager.SeatPrice, providerEnterprisePlan.Cost);
         Assert.Equal("Monthly", providerEnterprisePlan.Cadence);
     }
+    #endregion
+
+    #region GetTaxInformation
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformation_TaxInformationNull_NotFound(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ISubscriberService>().GetTaxInformation(provider).ReturnsNull();
+
+        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
+
+        Assert.IsType<NotFound>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetTaxInformation_Ok(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ISubscriberService>().GetTaxInformation(provider).Returns(new TaxInformationDTO(
+            "US",
+            "12345",
+            "123456789",
+            "123 Example St.",
+            null,
+            "Example Town",
+            "NY"));
+
+        var result = await sutProvider.Sut.GetTaxInformationAsync(provider.Id);
+
+        Assert.IsType<Ok<TaxInformationResponse>>(result);
+
+        var response = ((Ok<TaxInformationResponse>)result).Value;
+
+        Assert.Equal("US", response.Country);
+        Assert.Equal("12345", response.PostalCode);
+        Assert.Equal("123456789", response.TaxId);
+        Assert.Equal("123 Example St.", response.Line1);
+        Assert.Null(response.Line2);
+        Assert.Equal("Example Town", response.City);
+        Assert.Equal("NY", response.State);
+    }
+
+    #endregion
+
+    #region UpdateTaxInformation
+
+    [Theory, BitAutoData]
+    public async Task UpdateTaxInformation_Ok(
+        Provider provider,
+        TaxInformationRequestBody requestBody,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
+
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).UpdateTaxInformation(
+            provider, Arg.Is<TaxInformationDTO>(
+                options =>
+                    options.Country == requestBody.Country &&
+                    options.PostalCode == requestBody.PostalCode &&
+                    options.TaxId == requestBody.TaxId &&
+                    options.Line1 == requestBody.Line1 &&
+                    options.Line2 == requestBody.Line2 &&
+                    options.City == requestBody.City &&
+                    options.State == requestBody.State));
+    }
+
+    #endregion
 
     private static void ConfigureStableInputs(
         Provider provider,
