@@ -91,6 +91,15 @@ public interface ISubscriberService
     Task RemovePaymentMethod(ISubscriber subscriber);
 
     /// <summary>
+    /// Updates the tax information for the provided <paramref name="subscriber"/>.
+    /// </summary>
+    /// <param name="subscriber">The <paramref name="subscriber"/> to update the tax information for.</param>
+    /// <param name="taxInformation">A <see cref="TaxInformationDTO"/> representing the <paramref name="subscriber"/>'s updated tax information.</param>
+    Task UpdateTaxInformation(
+        ISubscriber subscriber,
+        TaxInformationDTO taxInformation);
+
+    /// <summary>
     /// Retrieves a Stripe <see cref="BillingInfo.BillingSource"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the Stripe customer for.</param>
