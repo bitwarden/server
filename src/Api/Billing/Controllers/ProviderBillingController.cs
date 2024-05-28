@@ -1,14 +1,15 @@
-﻿using Bit.Api.Billing.Models.Responses;
+﻿using Bit.Api.Billing.Models.Requests;
+using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NotImplementedException = System.NotImplementedException;
 
 namespace Bit.Api.Billing.Controllers;
 
@@ -18,8 +19,22 @@ public class ProviderBillingController(
     ICurrentContext currentContext,
     IFeatureService featureService,
     IProviderBillingService providerBillingService,
-    IProviderRepository providerRepository) : Controller
+    IProviderRepository providerRepository,
+    ISubscriberService subscriberService) : Controller
 {
+    [HttpGet("payment-information")]
+    public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
+    {
+        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        throw new NotImplementedException();
+    }
+
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
@@ -42,8 +57,8 @@ public class ProviderBillingController(
         return TypedResults.Ok(response);
     }
 
-    [HttpGet("payment-information")]
-    public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
+    [HttpGet("tax-information")]
+    public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid providerId)
     {
         var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
 
@@ -52,7 +67,42 @@ public class ProviderBillingController(
             return result;
         }
 
-        throw new NotImplementedException();
+        var taxInformation = await subscriberService.GetTaxInformation(provider);
+
+        if (taxInformation == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var response = TaxInformationResponse.From(taxInformation);
+
+        return TypedResults.Ok(response);
+    }
+
+    [HttpPut("tax-information")]
+    public async Task<IResult> UpdateTaxInformationAsync(
+        [FromRoute] Guid providerId,
+        [FromBody] TaxInformationRequestBody requestBody)
+    {
+        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var taxInformation = new TaxInformationDTO(
+            requestBody.Country,
+            requestBody.PostalCode,
+            requestBody.TaxId,
+            requestBody.Line1,
+            requestBody.Line2,
+            requestBody.City,
+            requestBody.State);
+
+        await subscriberService.UpdateTaxInformation(provider, taxInformation);
+
+        return TypedResults.Ok();
     }
 
     private async Task<(Provider, IResult)> GetAuthorizedBillableProviderOrResultAsync(Guid providerId)
