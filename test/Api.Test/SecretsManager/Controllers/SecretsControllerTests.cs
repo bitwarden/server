@@ -206,7 +206,7 @@ public class SecretsControllerTests
 
         sutProvider.GetDependency<IUpdateSecretCommand>()
             .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
-            .ReturnsForAnyArgs(data.ToSecret(currentSecret.Id, currentSecret.OrganizationId));
+            .ReturnsForAnyArgs(data.ToSecret(currentSecret));
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data));
         await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
@@ -226,7 +226,7 @@ public class SecretsControllerTests
 
         sutProvider.GetDependency<IUpdateSecretCommand>()
             .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
-            .ReturnsForAnyArgs(data.ToSecret(currentSecret.Id, currentSecret.OrganizationId));
+            .ReturnsForAnyArgs(data.ToSecret(currentSecret));
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data));
         await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
@@ -247,7 +247,7 @@ public class SecretsControllerTests
 
         sutProvider.GetDependency<IUpdateSecretCommand>()
             .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
-            .ReturnsForAnyArgs(data.ToSecret(currentSecret.Id, currentSecret.OrganizationId));
+            .ReturnsForAnyArgs(data.ToSecret(currentSecret));
 
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
@@ -635,7 +635,7 @@ public class SecretsControllerTests
             .ReturnsForAnyArgs(accessPoliciesUpdates);
         sutProvider.GetDependency<IUpdateSecretCommand>()
             .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
-            .ReturnsForAnyArgs(data.ToSecret(currentSecret.Id, currentSecret.OrganizationId));
+            .ReturnsForAnyArgs(data.ToSecret(currentSecret));
         return data;
     }
 }

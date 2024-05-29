@@ -109,9 +109,9 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
     {
         var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
 
-        // All projects should be apart of the same organization
+        // All projects should be in the same organization
         if (resource.Projects != null
-            && resource.Projects.Any()
+            && resource.Projects.Count != 0
             && !await _projectRepository.ProjectsAreInOrganization(resource.Projects.Select(p => p.Id).ToList(),
                 resource.OrganizationId))
         {
@@ -176,8 +176,21 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
 
     private async Task<bool> GetAccessToUpdateSecretAsync(Secret resource, Guid userId, AccessClientType accessClient)
     {
-        var newProject = resource.Projects?.FirstOrDefault();
+        // Request was to remove all projects from the secret. This is not allowed for non admin users.
+        if (resource.Projects?.Count == 0)
+        {
+            return false;
+        }
+
         var access = (await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient)).Write;
+
+        // No project mapping changes requested, return secret access.
+        if (resource.Projects == null)
+        {
+            return access;
+        }
+
+        var newProject = resource.Projects?.FirstOrDefault();
         var accessToNew = newProject != null &&
                           (await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient))
                           .Write;

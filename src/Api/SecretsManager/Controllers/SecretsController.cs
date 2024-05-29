@@ -183,7 +183,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        var updatedSecret = updateRequest.ToSecret(id, secret.OrganizationId);
+        var updatedSecret = updateRequest.ToSecret(secret);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, updatedSecret, SecretOperations.Update);
         if (!authorizationResult.Succeeded)
         {

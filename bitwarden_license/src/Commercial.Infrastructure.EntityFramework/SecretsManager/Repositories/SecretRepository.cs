@@ -166,7 +166,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return secret;
     }
 
-    public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
+    public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret,
+        SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -177,14 +178,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             .Include(s => s.Projects)
             .FirstAsync(s => s.Id == secret.Id);
 
-        await UpdateProjectMappingAsync(dbContext, entity, mappedEntity);
-        await UpdateSecretAccessPoliciesAsync(dbContext, accessPoliciesUpdates);
-        await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
         dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+
+        if (secret.Projects != null)
+        {
+            entity = await UpdateProjectMappingAsync(dbContext, entity, mappedEntity);
+        }
+
+        if (accessPoliciesUpdates != null)
+        {
+            await UpdateSecretAccessPoliciesAsync(dbContext, accessPoliciesUpdates);
+        }
+
+        await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
-
-        return secret;
+        return Mapper.Map<Core.SecretsManager.Entities.Secret>(entity);
     }
 
     public async Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids)
@@ -439,7 +448,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
-    private static async Task UpdateProjectMappingAsync(DatabaseContext dbContext, Secret currentEntity, Secret updatedEntity)
+    private static async Task<Secret> UpdateProjectMappingAsync(DatabaseContext dbContext, Secret currentEntity, Secret updatedEntity)
     {
         var projectsToRemove = currentEntity.Projects.Where(p => updatedEntity.Projects.All(mp => mp.Id != p.Id)).ToList();
         var projectsToAdd = updatedEntity.Projects.Where(p => currentEntity.Projects.All(ep => ep.Id != p.Id)).ToList();
@@ -460,6 +469,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             await UpdateServiceAccountRevisionsByProjectIdsAsync(dbContext, projectIds);
         }
+
+        return currentEntity;
     }
 
     private static async Task DeleteSecretAccessPoliciesAsync(DatabaseContext dbContext,
