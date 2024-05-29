@@ -138,6 +138,33 @@ public class SubscriberService(
         }
     }
 
+    public async Task<PaymentInformationDTO> GetPaymentInformation(
+        ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        var customer = await GetCustomer(subscriber, new CustomerGetOptions
+        {
+            Expand = ["default_source", "invoice_settings.default_payment_method", "tax_ids"]
+        });
+
+        if (customer == null)
+        {
+            return null;
+        }
+
+        var accountCredit = customer.Balance * -1 / 100;
+
+        var paymentMethod = await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
+
+        var taxInformation = GetTaxInformationDTOFrom(customer);
+
+        return new PaymentInformationDTO(
+            accountCredit,
+            paymentMethod,
+            taxInformation);
+    }
+
     public async Task<MaskedPaymentMethodDTO> GetPaymentMethod(
         ISubscriber subscriber)
     {

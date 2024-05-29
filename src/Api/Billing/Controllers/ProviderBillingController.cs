@@ -35,7 +35,16 @@ public class ProviderBillingController(
             return result;
         }
 
-        throw new NotImplementedException();
+        var paymentInformation = await subscriberService.GetPaymentInformation(provider);
+
+        if (paymentInformation == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var response = PaymentInformationResponse.From(paymentInformation);
+
+        return TypedResults.Ok(response);
     }
 
     [HttpGet("payment-method")]
