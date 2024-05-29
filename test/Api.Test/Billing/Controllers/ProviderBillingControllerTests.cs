@@ -348,6 +348,27 @@ public class ProviderBillingControllerTests
 
     #endregion
 
+    #region VerifyBankAccount
+
+    [Theory, BitAutoData]
+    public async Task VerifyBankAccount_Ok(
+        Provider provider,
+        VerifyBankAccountRequestBody requestBody,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        var result = await sutProvider.Sut.VerifyBankAccountAsync(provider.Id, requestBody);
+
+        Assert.IsType<Ok>(result);
+
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).VerifyBankAccount(
+            provider,
+            (requestBody.Amount1, requestBody.Amount2));
+    }
+
+    #endregion
+
     private static void ConfigureStableInputs(
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)

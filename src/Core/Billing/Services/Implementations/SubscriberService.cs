@@ -589,6 +589,45 @@ public class SubscriberService(
         }
     }
 
+    public async Task VerifyBankAccount(
+        ISubscriber subscriber,
+        (long, long) microdeposits)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        var setupIntentId = await setupIntentCache.Get(subscriber.Id);
+
+        if (string.IsNullOrEmpty(setupIntentId))
+        {
+            logger.LogError("No setup intent ID exists to verify for subscriber with ID ({SubscriberID})", subscriber.Id);
+
+            throw ContactSupport();
+        }
+
+        var (amount1, amount2) = microdeposits;
+
+        await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId, new SetupIntentVerifyMicrodepositsOptions
+        {
+            Amounts = [amount1, amount2]
+        });
+
+        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
+
+        await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId, new PaymentMethodAttachOptions
+        {
+            Customer = subscriber.GatewayCustomerId
+        });
+
+        await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+            new CustomerUpdateOptions
+            {
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    DefaultPaymentMethod = setupIntent.PaymentMethodId
+                }
+            });
+    }
+
     #region Shared Utilities
 
     private async Task AddBraintreeCustomerIdAsync(
