@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -410,134 +409,134 @@ public class SubscriberService(
         switch (type)
         {
             case PaymentMethodType.BankAccount:
-            {
-                var getSetupIntentsForUpdatedPaymentMethod = stripeAdapter.SetupIntentList(new SetupIntentListOptions
                 {
-                    PaymentMethod = token
-                });
+                    var getSetupIntentsForUpdatedPaymentMethod = stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                    {
+                        PaymentMethod = token
+                    });
 
-                var getExistingSetupIntentsForCustomer = stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                    var getExistingSetupIntentsForCustomer = stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                    {
+                        Customer = subscriber.GatewayCustomerId
+                    });
+
+                    // Find the setup intent for the incoming payment method token.
+                    var setupIntentsForUpdatedPaymentMethod = await getSetupIntentsForUpdatedPaymentMethod;
+
+                    if (setupIntentsForUpdatedPaymentMethod.Count != 1)
+                    {
+                        logger.LogError("There were more than 1 setup intents for subscriber's ({SubscriberID}) updated payment method", subscriber.Id);
+
+                        throw ContactSupport();
+                    }
+
+                    var matchingSetupIntent = setupIntentsForUpdatedPaymentMethod.First();
+
+                    // Find the customer's existing setup intents that should be cancelled.
+                    var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
+                        .Where(si =>
+                            si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
+
+                    // Store the incoming payment method's setup intent ID in the cache for the subscriber so it can be verified later.
+                    await setupIntentCache.Set(subscriber.Id, matchingSetupIntent.Id);
+
+                    // Cancel the customer's other open setup intents.
+                    var postProcessing = existingSetupIntentsForCustomer.Select(si =>
+                        stripeAdapter.SetupIntentCancel(si.Id,
+                            new SetupIntentCancelOptions { CancellationReason = "abandoned" })).ToList();
+
+                    // Remove the customer's other attached Stripe payment methods.
+                    postProcessing.Add(RemoveStripePaymentMethodsAsync(customer));
+
+                    // Remove the customer's Braintree customer ID.
+                    postProcessing.Add(RemoveBraintreeCustomerIdAsync(customer));
+
+                    await Task.WhenAll(postProcessing);
+
+                    break;
+                }
+            case PaymentMethodType.Card:
                 {
-                    Customer = subscriber.GatewayCustomerId
-                });
+                    var getExistingSetupIntentsForCustomer = stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                    {
+                        Customer = subscriber.GatewayCustomerId
+                    });
 
-                // Find the setup intent for the incoming payment method token.
-                var setupIntentsForUpdatedPaymentMethod = await getSetupIntentsForUpdatedPaymentMethod;
+                    // Remove the customer's other attached Stripe payment methods.
+                    await RemoveStripePaymentMethodsAsync(customer);
 
-                if (setupIntentsForUpdatedPaymentMethod.Count != 1)
+                    // Attach the incoming payment method.
+                    await stripeAdapter.PaymentMethodAttachAsync(token,
+                        new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
+
+                    // Find the customer's existing setup intents that should be cancelled.
+                    var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
+                        .Where(si =>
+                            si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
+
+                    // Cancel the customer's other open setup intents.
+                    var postProcessing = existingSetupIntentsForCustomer.Select(si =>
+                        stripeAdapter.SetupIntentCancel(si.Id,
+                            new SetupIntentCancelOptions { CancellationReason = "abandoned" })).ToList();
+
+                    var metadata = customer.Metadata;
+
+                    if (metadata.ContainsKey(BraintreeCustomerIdKey))
+                    {
+                        metadata[BraintreeCustomerIdKey] = null;
+                    }
+
+                    // Set the customer's default payment method in Stripe and remove their Braintree customer ID.
+                    postProcessing.Add(stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
+                    {
+                        InvoiceSettings = new CustomerInvoiceSettingsOptions
+                        {
+                            DefaultPaymentMethod = token
+                        },
+                        Metadata = metadata
+                    }));
+
+                    await Task.WhenAll(postProcessing);
+
+                    break;
+                }
+            case PaymentMethodType.PayPal:
                 {
-                    logger.LogError("There were more than 1 setup intents for subscriber's ({SubscriberID}) updated payment method", subscriber.Id);
+                    string braintreeCustomerId;
+
+                    if (customer.Metadata != null)
+                    {
+                        var hasBraintreeCustomerId = customer.Metadata.TryGetValue(BraintreeCustomerIdKey, out braintreeCustomerId);
+
+                        if (hasBraintreeCustomerId)
+                        {
+                            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
+
+                            if (braintreeCustomer == null)
+                            {
+                                logger.LogError("Failed to retrieve Braintree customer ({BraintreeCustomerId}) when updating payment method for subscriber ({SubscriberID})", braintreeCustomerId, subscriber.Id);
+
+                                throw ContactSupport();
+                            }
+
+                            await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, token);
+
+                            return;
+                        }
+                    }
+
+                    braintreeCustomerId = await CreateBraintreeCustomerAsync(subscriber, token);
+
+                    await AddBraintreeCustomerIdAsync(customer, braintreeCustomerId);
+
+                    break;
+                }
+            default:
+                {
+                    logger.LogError("Cannot update subscriber's ({SubscriberID}) payment method to type ({PaymentMethodType}) as it is not supported", subscriber.Id, type.ToString());
 
                     throw ContactSupport();
                 }
-
-                var matchingSetupIntent = setupIntentsForUpdatedPaymentMethod.First();
-
-                // Find the customer's existing setup intents that should be cancelled.
-                var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
-                    .Where(si =>
-                        si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
-
-                // Store the incoming payment method's setup intent ID in the cache for the subscriber so it can be verified later.
-                await setupIntentCache.Set(subscriber.Id, matchingSetupIntent.Id);
-
-                // Cancel the customer's other open setup intents.
-                var postProcessing = existingSetupIntentsForCustomer.Select(si =>
-                    stripeAdapter.SetupIntentCancel(si.Id,
-                        new SetupIntentCancelOptions { CancellationReason = "abandoned" })).ToList();
-
-                // Remove the customer's other attached Stripe payment methods.
-                postProcessing.Add(RemoveStripePaymentMethodsAsync(customer));
-
-                // Remove the customer's Braintree customer ID.
-                postProcessing.Add(RemoveBraintreeCustomerIdAsync(customer));
-
-                await Task.WhenAll(postProcessing);
-
-                break;
-            }
-            case PaymentMethodType.Card:
-            {
-                var getExistingSetupIntentsForCustomer = stripeAdapter.SetupIntentList(new SetupIntentListOptions
-                {
-                    Customer = subscriber.GatewayCustomerId
-                });
-
-                // Remove the customer's other attached Stripe payment methods.
-                await RemoveStripePaymentMethodsAsync(customer);
-
-                // Attach the incoming payment method.
-                await stripeAdapter.PaymentMethodAttachAsync(token,
-                    new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
-
-                // Find the customer's existing setup intents that should be cancelled.
-                var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
-                    .Where(si =>
-                        si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
-
-                // Cancel the customer's other open setup intents.
-                var postProcessing = existingSetupIntentsForCustomer.Select(si =>
-                    stripeAdapter.SetupIntentCancel(si.Id,
-                        new SetupIntentCancelOptions { CancellationReason = "abandoned" })).ToList();
-
-                var metadata = customer.Metadata;
-
-                if (metadata.ContainsKey(BraintreeCustomerIdKey))
-                {
-                    metadata[BraintreeCustomerIdKey] = null;
-                }
-
-                // Set the customer's default payment method in Stripe and remove their Braintree customer ID.
-                postProcessing.Add(stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
-                {
-                    InvoiceSettings = new CustomerInvoiceSettingsOptions
-                    {
-                        DefaultPaymentMethod = token
-                    },
-                    Metadata = metadata
-                }));
-
-                await Task.WhenAll(postProcessing);
-
-                break;
-            }
-            case PaymentMethodType.PayPal:
-            {
-                string braintreeCustomerId;
-
-                if (customer.Metadata != null)
-                {
-                    var hasBraintreeCustomerId = customer.Metadata.TryGetValue(BraintreeCustomerIdKey, out braintreeCustomerId);
-
-                    if (hasBraintreeCustomerId)
-                    {
-                        var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
-
-                        if (braintreeCustomer == null)
-                        {
-                            logger.LogError("Failed to retrieve Braintree customer ({BraintreeCustomerId}) when updating payment method for subscriber ({SubscriberID})", braintreeCustomerId, subscriber.Id);
-
-                            throw ContactSupport();
-                        }
-
-                        await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, token);
-
-                        return;
-                    }
-                }
-
-                braintreeCustomerId = await CreateBraintreeCustomerAsync(subscriber, token);
-
-                await AddBraintreeCustomerIdAsync(customer, braintreeCustomerId);
-
-                break;
-            }
-            default:
-            {
-                logger.LogError("Cannot update subscriber's ({SubscriberID}) payment method to type ({PaymentMethodType}) as it is not supported", subscriber.Id, type.ToString());
-
-                throw ContactSupport();
-            }
         }
     }
 

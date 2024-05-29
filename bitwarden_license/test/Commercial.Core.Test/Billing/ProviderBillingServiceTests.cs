@@ -21,7 +21,6 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
 using static Bit.Core.Test.Billing.Utilities;

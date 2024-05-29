@@ -12,7 +12,7 @@ public record TaxInformationResponse(
     string State)
 {
     public static TaxInformationResponse From(TaxInformationDTO taxInformation)
-        => new (
+        => new(
             taxInformation.Country,
             taxInformation.PostalCode,
             taxInformation.TaxId,
