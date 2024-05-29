@@ -97,6 +97,24 @@ public class ProviderBillingController(
         return TypedResults.Ok();
     }
 
+    [HttpPost]
+    [Route("payment-method/verify-bank-account")]
+    public async Task<IResult> VerifyBankAccountAsync(
+        [FromRoute] Guid providerId,
+        [FromBody] VerifyBankAccountRequestBody requestBody)
+    {
+        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        await subscriberService.VerifyBankAccount(provider, (requestBody.Amount1, requestBody.Amount2));
+
+        return TypedResults.Ok();
+    }
+
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {

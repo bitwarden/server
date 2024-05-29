@@ -43,5 +43,6 @@ public interface IStripeAdapter
     Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options);
     Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null);
     Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null);
+    Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options);
     Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
 }

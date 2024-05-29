@@ -128,4 +128,15 @@ public interface ISubscriberService
     Task UpdateTaxInformation(
         ISubscriber subscriber,
         TaxInformationDTO taxInformation);
+
+    /// <summary>
+    /// Verifies the subscriber's pending bank account using the provided <paramref name="microdeposits"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to verify the bank account for.</param>
+    /// <param name="microdeposits">Deposits made to the subscriber's bank account in order to ensure they have access to it.
+    /// <a href="https://docs.stripe.com/payments/ach-debit/set-up-payment">Learn more.</a></param>
+    /// <returns></returns>
+    Task VerifyBankAccount(
+        ISubscriber subscriber,
+        (long, long) microdeposits);
 }

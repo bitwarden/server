@@ -1572,4 +1572,49 @@ public class SubscriberServiceTests
     }
 
     #endregion
+
+    #region VerifyBankAccount
+
+    [Theory, BitAutoData]
+    public async Task VerifyBankAccount_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider) => await Assert.ThrowsAsync<ArgumentNullException>(
+        () => sutProvider.Sut.VerifyBankAccount(null, (0, 0)));
+
+    [Theory, BitAutoData]
+    public async Task VerifyBankAccount_NoSetupIntentId_ContactSupport(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider) => await ThrowsContactSupportAsync(() => sutProvider.Sut.VerifyBankAccount(provider, (1, 1)));
+
+    [Theory, BitAutoData]
+    public async Task VerifyBankAccount_MakesCorrectInvocations(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var setupIntent = new SetupIntent
+        {
+            Id = "setup_intent_id",
+            PaymentMethodId = "payment_method_id"
+        };
+
+        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntent.Id);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.SetupIntentGet(setupIntent.Id).Returns(setupIntent);
+
+        await sutProvider.Sut.VerifyBankAccount(provider, (1, 1));
+
+        await stripeAdapter.Received(1).SetupIntentVerifyMicroDeposit(setupIntent.Id,
+            Arg.Is<SetupIntentVerifyMicrodepositsOptions>(
+                options => options.Amounts[0] == 1 && options.Amounts[1] == 1));
+
+        await stripeAdapter.Received(1).PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
+            Arg.Is<PaymentMethodAttachOptions>(
+                options => options.Customer == provider.GatewayCustomerId));
+
+        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
+            options => options.InvoiceSettings.DefaultPaymentMethod == setupIntent.PaymentMethodId));
+    }
+
+    #endregion
 }

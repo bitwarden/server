@@ -247,6 +247,9 @@ public class StripeAdapter : IStripeAdapter
     public Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null)
         => _setupIntentService.GetAsync(id, options);
 
+    public Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options)
+        => _setupIntentService.VerifyMicrodepositsAsync(id, options);
+
     public async Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync()
     {
         var items = new List<Stripe.TestHelpers.TestClock>();
