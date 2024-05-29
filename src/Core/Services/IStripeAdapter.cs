@@ -42,5 +42,6 @@ public interface IStripeAdapter
     Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options);
     Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options);
     Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null);
+    Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null);
     Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
 }

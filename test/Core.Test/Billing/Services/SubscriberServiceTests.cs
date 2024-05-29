@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.Billing;
 using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
@@ -318,6 +318,305 @@ public class SubscriberServiceTests
 
         Assert.Equivalent(customer, gotCustomer);
     }
+    #endregion
+
+    #region GetPaymentMethod
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GetPaymentMethod(null));
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Braintree_NoDefaultPaymentMethod_ReturnsNull(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string braintreeCustomerId = "braintree_customer_id";
+
+        var customer = new Customer
+        {
+            Id = provider.GatewayCustomerId,
+            Metadata = new Dictionary<string, string>
+            {
+                [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(
+                    options => options.Expand.Contains("default_source") &&
+                               options.Expand.Contains("invoice_settings.default_payment_method")))
+            .Returns(customer);
+
+        var (_, customerGateway, _) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
+
+        var braintreeCustomer = Substitute.For<Braintree.Customer>();
+
+        braintreeCustomer.Id.Returns(braintreeCustomerId);
+
+        braintreeCustomer.PaymentMethods.Returns([]);
+
+        customerGateway.FindAsync(braintreeCustomerId).Returns(braintreeCustomer);
+
+        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+
+        Assert.Null(paymentMethod);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Braintree_PayPalAccount_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string braintreeCustomerId = "braintree_customer_id";
+
+        var customer = new Customer
+        {
+            Id = provider.GatewayCustomerId,
+            Metadata = new Dictionary<string, string>
+            {
+                [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(
+                    options => options.Expand.Contains("default_source") &&
+                               options.Expand.Contains("invoice_settings.default_payment_method")))
+            .Returns(customer);
+
+        var (_, customerGateway, _) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
+
+        var braintreeCustomer = Substitute.For<Braintree.Customer>();
+
+        braintreeCustomer.Id.Returns(braintreeCustomerId);
+
+        var payPalAccount = Substitute.For<PayPalAccount>();
+
+        payPalAccount.IsDefault.Returns(true);
+
+        payPalAccount.Email.Returns("a@example.com");
+
+        braintreeCustomer.PaymentMethods.Returns([payPalAccount]);
+
+        customerGateway.FindAsync(braintreeCustomerId).Returns(braintreeCustomer);
+
+        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+
+        Assert.Equal(PaymentMethodType.PayPal, paymentMethod.Type);
+        Assert.Equal("a@example.com", paymentMethod.Description);
+        Assert.False(paymentMethod.NeedsVerification);
+    }
+
+    // TODO: Determine if we need to test Braintree.CreditCard
+
+    // TODO: Determine if we need to test Braintree.UsBankAccount
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Stripe_BankAccountPaymentMethod_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethod = new PaymentMethod
+                {
+                    Type = StripeConstants.PaymentMethodTypes.USBankAccount,
+                    UsBankAccount = new PaymentMethodUsBankAccount
+                    {
+                        BankName = "Chase",
+                        Last4 = "9999"
+                    }
+                }
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(
+                    options => options.Expand.Contains("default_source") &&
+                               options.Expand.Contains("invoice_settings.default_payment_method")))
+            .Returns(customer);
+
+        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+
+        Assert.Equal(PaymentMethodType.BankAccount, paymentMethod.Type);
+        Assert.Equal("Chase, *9999", paymentMethod.Description);
+        Assert.False(paymentMethod.NeedsVerification);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Stripe_CardPaymentMethod_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethod = new PaymentMethod
+                {
+                    Type = StripeConstants.PaymentMethodTypes.Card,
+                    Card = new PaymentMethodCard
+                    {
+                        Brand = "Visa",
+                        Last4 = "9999",
+                        ExpMonth = 9,
+                        ExpYear = 2028
+                    }
+                }
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(
+                    options => options.Expand.Contains("default_source") &&
+                               options.Expand.Contains("invoice_settings.default_payment_method")))
+            .Returns(customer);
+
+        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+
+        Assert.Equal(PaymentMethodType.Card, paymentMethod.Type);
+        Assert.Equal("VISA, *9999, 09/2028", paymentMethod.Description);
+        Assert.False(paymentMethod.NeedsVerification);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Stripe_SetupIntentForBankAccount_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer
+        {
+            Id = provider.GatewayCustomerId
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(
+                    options => options.Expand.Contains("default_source") &&
+                               options.Expand.Contains("invoice_settings.default_payment_method")))
+            .Returns(customer);
+
+        var setupIntent = new SetupIntent
+        {
+            Id = "setup_intent_id",
+            Status = "requires_action",
+            NextAction = new SetupIntentNextAction
+            {
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+            },
+            PaymentMethod = new PaymentMethod
+            {
+                UsBankAccount = new PaymentMethodUsBankAccount
+                {
+                    BankName = "Chase",
+                    Last4 = "9999"
+                }
+            }
+        };
+
+        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntent.Id);
+
+        sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntent.Id, Arg.Is<SetupIntentGetOptions>(
+            options => options.Expand.Contains("payment_method"))).Returns(setupIntent);
+
+        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+
+        Assert.Equal(PaymentMethodType.BankAccount, paymentMethod.Type);
+        Assert.Equal("Chase, *9999", paymentMethod.Description);
+        Assert.True(paymentMethod.NeedsVerification);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Stripe_LegacyBankAccount_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer
+        {
+            DefaultSource = new BankAccount
+            {
+                Status = "verified",
+                BankName = "Chase",
+                Last4 = "9999"
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(
+                    options => options.Expand.Contains("default_source") &&
+                               options.Expand.Contains("invoice_settings.default_payment_method")))
+            .Returns(customer);
+
+        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+
+        Assert.Equal(PaymentMethodType.BankAccount, paymentMethod.Type);
+        Assert.Equal("Chase, *9999 - Verified", paymentMethod.Description);
+        Assert.False(paymentMethod.NeedsVerification);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Stripe_LegacyCard_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer
+        {
+            DefaultSource = new Card
+            {
+                Brand = "Visa",
+                Last4 = "9999",
+                ExpMonth = 9,
+                ExpYear = 2028
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(
+                    options => options.Expand.Contains("default_source") &&
+                               options.Expand.Contains("invoice_settings.default_payment_method")))
+            .Returns(customer);
+
+        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+
+        Assert.Equal(PaymentMethodType.Card, paymentMethod.Type);
+        Assert.Equal("VISA, *9999, 09/2028", paymentMethod.Description);
+        Assert.False(paymentMethod.NeedsVerification);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Stripe_LegacySourceCard_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var customer = new Customer
+        {
+            DefaultSource = new Source
+            {
+                Card = new SourceCard
+                {
+                    Brand = "Visa",
+                    Last4 = "9999",
+                    ExpMonth = 9,
+                    ExpYear = 2028
+                }
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(
+                    options => options.Expand.Contains("default_source") &&
+                               options.Expand.Contains("invoice_settings.default_payment_method")))
+            .Returns(customer);
+
+        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+
+        Assert.Equal(PaymentMethodType.Card, paymentMethod.Type);
+        Assert.Equal("VISA, *9999, 09/2028", paymentMethod.Description);
+        Assert.False(paymentMethod.NeedsVerification);
+    }
+
     #endregion
 
     #region GetSubscription
@@ -1272,68 +1571,5 @@ public class SubscriberServiceTests
                        options.Value == taxInformation.TaxId));
     }
 
-    #endregion
-
-    #region GetPaymentMethodAsync
-    [Theory, BitAutoData]
-    public async Task GetPaymentMethodAsync_NullSubscriber_ThrowsArgumentNullException(
-        SutProvider<SubscriberService> sutProvider)
-    {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await sutProvider.Sut.GetPaymentMethodAsync(null));
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetPaymentMethodAsync_NoCustomer_ReturnsNull(
-        Provider subscriber,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        subscriber.GatewayCustomerId = null;
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns((Customer)null);
-
-        await Assert.ThrowsAsync<BillingException>(() => sutProvider.Sut.GetPaymentMethodAsync(subscriber));
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetPaymentMethodAsync_StripeCardPaymentMethod_ReturnsBillingSource(
-        Provider subscriber,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var customer = new Customer();
-        var paymentMethod = CreateSamplePaymentMethod();
-        subscriber.GatewayCustomerId = "test_customer_id";
-        customer.InvoiceSettings = new CustomerInvoiceSettings
-        {
-            DefaultPaymentMethod = paymentMethod
-        };
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(subscriber.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(customer);
-
-        var billingSource = await sutProvider.Sut.GetPaymentMethodAsync(subscriber);
-
-        Assert.NotNull(billingSource);
-        Assert.Equal(paymentMethod.Card.Brand, billingSource.CardBrand);
-    }
-
-    private static PaymentMethod CreateSamplePaymentMethod()
-    {
-        var paymentMethod = new PaymentMethod
-        {
-            Id = "pm_test123",
-            Type = "card",
-            Card = new PaymentMethodCard
-            {
-                Brand = "visa",
-                Last4 = "4242",
-                ExpMonth = 12,
-                ExpYear = 2024
-            }
-        };
-        return paymentMethod;
-    }
     #endregion
 }

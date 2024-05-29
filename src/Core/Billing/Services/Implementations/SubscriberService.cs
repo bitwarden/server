@@ -138,6 +138,19 @@ public class SubscriberService(
         }
     }
 
+    public async Task<MaskedPaymentMethodDTO> GetPaymentMethod(
+        ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        {
+            Expand = ["default_source", "invoice_settings.default_payment_method"]
+        });
+
+        return await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
+    }
+
     public async Task<Customer> GetCustomerOrThrow(
         ISubscriber subscriber,
         CustomerGetOptions customerGetOptions = null)
@@ -549,66 +562,6 @@ public class SubscriberService(
         }
     }
 
-    public async Task<BillingInfo.BillingSource> GetPaymentMethodAsync(ISubscriber subscriber)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        var customer = await GetCustomerOrThrow(subscriber, GetCustomerPaymentOptions());
-        if (customer == null)
-        {
-            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
-                subscriber.GatewayCustomerId, subscriber.Id);
-            return null;
-        }
-
-        if (customer.Metadata?.ContainsKey("btCustomerId") ?? false)
-        {
-            try
-            {
-                var braintreeCustomer = await braintreeGateway.Customer.FindAsync(
-                    customer.Metadata["btCustomerId"]);
-                if (braintreeCustomer?.DefaultPaymentMethod != null)
-                {
-                    return new BillingInfo.BillingSource(
-                        braintreeCustomer.DefaultPaymentMethod);
-                }
-            }
-            catch (Braintree.Exceptions.NotFoundException ex)
-            {
-                logger.LogError("An error occurred while trying to retrieve braintree customer ({SubscriberID}): {Error}", subscriber.Id, ex.Message);
-            }
-        }
-
-        if (customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card")
-        {
-            return new BillingInfo.BillingSource(
-                customer.InvoiceSettings.DefaultPaymentMethod);
-        }
-
-        if (customer.DefaultSource != null &&
-            (customer.DefaultSource is Card || customer.DefaultSource is BankAccount))
-        {
-            return new BillingInfo.BillingSource(customer.DefaultSource);
-        }
-
-        var paymentMethod = GetLatestCardPaymentMethod(customer.Id);
-        return paymentMethod != null ? new BillingInfo.BillingSource(paymentMethod) : null;
-    }
-
-    private static CustomerGetOptions GetCustomerPaymentOptions()
-    {
-        var customerOptions = new CustomerGetOptions();
-        customerOptions.AddExpand("default_source");
-        customerOptions.AddExpand("invoice_settings.default_payment_method");
-        return customerOptions;
-    }
-
-    private Stripe.PaymentMethod GetLatestCardPaymentMethod(string customerId)
-    {
-        var cardPaymentMethods = stripeAdapter.PaymentMethodListAutoPaging(
-            new PaymentMethodListOptions { Customer = customerId, Type = "card" });
-        return cardPaymentMethods.MaxBy(m => m.Created);
-    }
-
     #region Shared Utilities
 
     private async Task AddBraintreeCustomerIdAsync(
@@ -654,6 +607,48 @@ public class SubscriberService(
         logger.LogError("Failed to create Braintree customer for subscriber ({ID})", subscriber.Id);
 
         throw ContactSupport();
+    }
+
+    private async Task<MaskedPaymentMethodDTO> GetMaskedPaymentMethodDTOAsync(
+        Guid subscriberId,
+        Customer customer)
+    {
+        if (customer.Metadata != null)
+        {
+            var hasBraintreeCustomerId = customer.Metadata.TryGetValue(BraintreeCustomerIdKey, out var braintreeCustomerId);
+
+            if (hasBraintreeCustomerId)
+            {
+                var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
+
+                return MaskedPaymentMethodDTO.From(braintreeCustomer);
+            }
+        }
+
+        var attachedPaymentMethodDTO = MaskedPaymentMethodDTO.From(customer);
+
+        if (attachedPaymentMethodDTO != null)
+        {
+            return attachedPaymentMethodDTO;
+        }
+
+        /*
+         * attachedPaymentMethodDTO being null represents a case where we could be looking for the SetupIntent for an unverified "us_bank_account".
+         * We store the ID of this SetupIntent in the cache when we originally update the payment method.
+         */
+        var setupIntentId = await setupIntentCache.Get(subscriberId);
+
+        if (string.IsNullOrEmpty(setupIntentId))
+        {
+            return null;
+        }
+
+        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+        {
+            Expand = ["payment_method"]
+        });
+
+        return MaskedPaymentMethodDTO.From(setupIntent);
     }
 
     private static TaxInformationDTO GetTaxInformationDTOFrom(
