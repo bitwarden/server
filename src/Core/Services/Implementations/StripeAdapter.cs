@@ -56,6 +56,13 @@ public class StripeAdapter : IStripeAdapter
         return _customerService.DeleteAsync(id);
     }
 
+    public async Task<List<PaymentMethod>> CustomerListPaymentMethods(string id,
+        CustomerListPaymentMethodsOptions options = null)
+    {
+        var paymentMethods = await _customerService.ListPaymentMethodsAsync(id, options);
+        return paymentMethods.Data;
+    }
+
     public Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions options)
     {
         return _subscriptionService.CreateAsync(options);
@@ -226,6 +233,16 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options)
         => _setupIntentService.CreateAsync(options);
+
+    public async Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options)
+    {
+        var setupIntents = await _setupIntentService.ListAsync(options);
+
+        return setupIntents.Data;
+    }
+
+    public Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null)
+        => _setupIntentService.CancelAsync(id, options);
 
     public async Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync()
     {

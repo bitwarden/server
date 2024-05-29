@@ -1,9 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing;
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Implementations;
+using Bit.Core.Enums;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
@@ -795,6 +798,424 @@ public class SubscriberServiceTests
 
         return (braintreeGateway, customerGateway, paymentMethodGateway);
     }
+    #endregion
+
+    #region UpdatePaymentMethod
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_NullSubscriber_ArgumentNullException(
+        SutProvider<SubscriberService> sutProvider)
+        => await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdatePaymentMethod(null, null));
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_NullTokenizedPaymentMethod_ArgumentNullException(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+        => await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdatePaymentMethod(provider, null));
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_NoToken_ContactSupport(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer());
+
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.Card, null)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_UnsupportedPaymentMethod_ContactSupport(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer());
+
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.BitPay, "TOKEN")));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_BankAccount_IncorrectNumberOfSetupIntentsForToken_ContactSupport(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer());
+
+        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.PaymentMethod == "TOKEN"))
+            .Returns([new SetupIntent(), new SetupIntent()]);
+
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.BankAccount, "TOKEN")));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_BankAccount_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Metadata = new Dictionary<string, string>
+                {
+                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = "braintree_customer_id"
+                }
+            });
+
+        var matchingSetupIntent = new SetupIntent { Id = "setup_intent_1" };
+
+        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.PaymentMethod == "TOKEN"))
+            .Returns([matchingSetupIntent]);
+
+        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.Customer == provider.GatewayCustomerId))
+            .Returns([
+                new SetupIntent { Id = "setup_intent_2", Status = "requires_payment_method" },
+                new SetupIntent { Id = "setup_intent_3", Status = "succeeded" }
+            ]);
+
+        stripeAdapter.CustomerListPaymentMethods(provider.GatewayCustomerId).Returns([
+            new PaymentMethod { Id = "payment_method_1" }
+        ]);
+
+        await sutProvider.Sut.UpdatePaymentMethod(provider,
+            new TokenizedPaymentMethodDTO(PaymentMethodType.BankAccount, "TOKEN"));
+
+        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Set(provider.Id, "setup_intent_1");
+
+        await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_2",
+            Arg.Is<SetupIntentCancelOptions>(options => options.CancellationReason == "abandoned"));
+
+        await stripeAdapter.Received(1).PaymentMethodDetachAsync("payment_method_1");
+
+        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
+            options => options.Metadata[Core.Billing.Utilities.BraintreeCustomerIdKey] == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_Card_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Metadata = new Dictionary<string, string>
+                {
+                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = "braintree_customer_id"
+                }
+            });
+
+        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.Customer == provider.GatewayCustomerId))
+            .Returns([
+                new SetupIntent { Id = "setup_intent_2", Status = "requires_payment_method" },
+                new SetupIntent { Id = "setup_intent_3", Status = "succeeded" }
+            ]);
+
+        stripeAdapter.CustomerListPaymentMethods(provider.GatewayCustomerId).Returns([
+            new PaymentMethod { Id = "payment_method_1" }
+        ]);
+
+        await sutProvider.Sut.UpdatePaymentMethod(provider,
+            new TokenizedPaymentMethodDTO(PaymentMethodType.Card, "TOKEN"));
+
+        await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_2",
+            Arg.Is<SetupIntentCancelOptions>(options => options.CancellationReason == "abandoned"));
+
+        await stripeAdapter.Received(1).PaymentMethodDetachAsync("payment_method_1");
+
+        await stripeAdapter.Received(1).PaymentMethodAttachAsync("TOKEN", Arg.Is<PaymentMethodAttachOptions>(
+            options => options.Customer == provider.GatewayCustomerId));
+
+        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
+            options =>
+                options.InvoiceSettings.DefaultPaymentMethod == "TOKEN" &&
+                options.Metadata[Core.Billing.Utilities.BraintreeCustomerIdKey] == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_Braintree_NullCustomer_ContactSupport(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string braintreeCustomerId = "braintree_customer_id";
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Metadata = new Dictionary<string, string>
+                {
+                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
+                }
+            });
+
+        var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
+
+        customerGateway.FindAsync(braintreeCustomerId).ReturnsNull();
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN")));
+
+        await paymentMethodGateway.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<PaymentMethodRequest>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_CreatePaymentMethodFails_ContactSupport(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string braintreeCustomerId = "braintree_customer_id";
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Metadata = new Dictionary<string, string>
+                {
+                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
+                }
+            });
+
+        var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
+
+        var customer = Substitute.For<Braintree.Customer>();
+
+        customer.Id.Returns(braintreeCustomerId);
+
+        customerGateway.FindAsync(braintreeCustomerId).Returns(customer);
+
+        var createPaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
+
+        createPaymentMethodResult.IsSuccess().Returns(false);
+
+        paymentMethodGateway.CreateAsync(Arg.Is<PaymentMethodRequest>(
+                options => options.CustomerId == braintreeCustomerId && options.PaymentMethodNonce == "TOKEN"))
+            .Returns(createPaymentMethodResult);
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN")));
+
+        await customerGateway.DidNotReceiveWithAnyArgs().UpdateAsync(Arg.Any<string>(), Arg.Any<CustomerRequest>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_UpdateCustomerFails_DeletePaymentMethod_ContactSupport(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string braintreeCustomerId = "braintree_customer_id";
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Metadata = new Dictionary<string, string>
+                {
+                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
+                }
+            });
+
+        var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
+
+        var customer = Substitute.For<Braintree.Customer>();
+
+        customer.Id.Returns(braintreeCustomerId);
+
+        customerGateway.FindAsync(braintreeCustomerId).Returns(customer);
+
+        var createPaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
+
+        var createdPaymentMethod = Substitute.For<Braintree.PaymentMethod>();
+
+        createdPaymentMethod.Token.Returns("TOKEN");
+
+        createPaymentMethodResult.IsSuccess().Returns(true);
+
+        createPaymentMethodResult.Target.Returns(createdPaymentMethod);
+
+        paymentMethodGateway.CreateAsync(Arg.Is<PaymentMethodRequest>(
+                options => options.CustomerId == braintreeCustomerId && options.PaymentMethodNonce == "TOKEN"))
+            .Returns(createPaymentMethodResult);
+
+        var updateCustomerResult = Substitute.For<Result<Braintree.Customer>>();
+
+        updateCustomerResult.IsSuccess().Returns(false);
+
+        customerGateway.UpdateAsync(braintreeCustomerId, Arg.Is<CustomerRequest>(options =>
+                options.DefaultPaymentMethodToken == createPaymentMethodResult.Target.Token))
+            .Returns(updateCustomerResult);
+
+        await ThrowsContactSupportAsync(() => sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN")));
+
+        await paymentMethodGateway.Received(1).DeleteAsync(createPaymentMethodResult.Target.Token);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_Success(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string braintreeCustomerId = "braintree_customer_id";
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Metadata = new Dictionary<string, string>
+                {
+                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
+                }
+            });
+
+        var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
+
+        var customer = Substitute.For<Braintree.Customer>();
+
+        var existingPaymentMethod = Substitute.For<Braintree.PaymentMethod>();
+
+        existingPaymentMethod.Token.Returns("OLD_TOKEN");
+
+        existingPaymentMethod.IsDefault.Returns(true);
+
+        customer.PaymentMethods.Returns([existingPaymentMethod]);
+
+        customer.Id.Returns(braintreeCustomerId);
+
+        customerGateway.FindAsync(braintreeCustomerId).Returns(customer);
+
+        var createPaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
+
+        var updatedPaymentMethod = Substitute.For<Braintree.PaymentMethod>();
+
+        updatedPaymentMethod.Token.Returns("TOKEN");
+
+        createPaymentMethodResult.IsSuccess().Returns(true);
+
+        createPaymentMethodResult.Target.Returns(updatedPaymentMethod);
+
+        paymentMethodGateway.CreateAsync(Arg.Is<PaymentMethodRequest>(
+                options => options.CustomerId == braintreeCustomerId && options.PaymentMethodNonce == "TOKEN"))
+            .Returns(createPaymentMethodResult);
+
+        var updateCustomerResult = Substitute.For<Result<Braintree.Customer>>();
+
+        updateCustomerResult.IsSuccess().Returns(true);
+
+        customerGateway.UpdateAsync(braintreeCustomerId, Arg.Is<CustomerRequest>(options =>
+                options.DefaultPaymentMethodToken == createPaymentMethodResult.Target.Token))
+            .Returns(updateCustomerResult);
+
+        var deletePaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
+
+        deletePaymentMethodResult.IsSuccess().Returns(true);
+
+        paymentMethodGateway.DeleteAsync(existingPaymentMethod.Token).Returns(deletePaymentMethodResult);
+
+        await sutProvider.Sut.UpdatePaymentMethod(provider,
+            new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN"));
+
+        await paymentMethodGateway.Received(1).DeleteAsync(existingPaymentMethod.Token);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_Braintree_CreateCustomer_CustomerUpdateFails_ContactSupport(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string braintreeCustomerId = "braintree_customer_id";
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId
+            });
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
+            .Returns(new Settings.GlobalSettings.BaseServiceUriSettings(new Settings.GlobalSettings())
+            {
+                CloudRegion = "US"
+            });
+
+        var (_, customerGateway, _) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
+
+        var createCustomerResult = Substitute.For<Result<Braintree.Customer>>();
+
+        createCustomerResult.IsSuccess().Returns(false);
+
+        customerGateway.CreateAsync(Arg.Is<CustomerRequest>(
+                options =>
+                    options.Id == braintreeCustomerId &&
+                    options.CustomFields[provider.BraintreeIdField()] == provider.Id.ToString() &&
+                    options.CustomFields[provider.BraintreeCloudRegionField()] == "US" &&
+                    options.Email == provider.BillingEmailAddress() &&
+                    options.PaymentMethodNonce == "TOKEN"))
+            .Returns(createCustomerResult);
+
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.UpdatePaymentMethod(provider,
+                new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN")));
+
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_Braintree_CreateCustomer_Succeeds(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string braintreeCustomerId = "braintree_customer_id";
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId
+            });
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
+            .Returns(new Settings.GlobalSettings.BaseServiceUriSettings(new Settings.GlobalSettings())
+            {
+                CloudRegion = "US"
+            });
+
+        var (_, customerGateway, _) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
+
+        var createCustomerResult = Substitute.For<Result<Braintree.Customer>>();
+
+        var createdCustomer = Substitute.For<Braintree.Customer>();
+
+        createdCustomer.Id.Returns(braintreeCustomerId);
+
+        createCustomerResult.IsSuccess().Returns(true);
+
+        createCustomerResult.Target.Returns(createdCustomer);
+
+        customerGateway.CreateAsync(Arg.Is<CustomerRequest>(
+                options =>
+                    options.CustomFields[provider.BraintreeIdField()] == provider.Id.ToString() &&
+                    options.CustomFields[provider.BraintreeCloudRegionField()] == "US" &&
+                    options.Email == provider.BillingEmailAddress() &&
+                    options.PaymentMethodNonce == "TOKEN"))
+            .Returns(createCustomerResult);
+
+        await sutProvider.Sut.UpdatePaymentMethod(provider,
+            new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN"));
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(provider.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(
+                options => options.Metadata[Core.Billing.Utilities.BraintreeCustomerIdKey] == braintreeCustomerId));
+    }
+
     #endregion
 
     #region UpdateTaxInformation
