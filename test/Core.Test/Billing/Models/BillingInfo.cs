@@ -1,7 +1,7 @@
-﻿using Bit.Core.Models.Business;
+﻿using Bit.Core.Billing.Models;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Business;
+namespace Bit.Core.Test.Billing.Models;
 
 public class BillingInfoTests
 {

@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Business;
+﻿using Bit.Core.Billing.Models;
 
 namespace Bit.Admin.Models;
 

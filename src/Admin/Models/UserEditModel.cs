@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
-using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;

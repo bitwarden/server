@@ -1,4 +1,4 @@
-﻿using Bit.Api.Models.Response;
+﻿using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
