@@ -244,6 +244,9 @@ public class StripeAdapter : IStripeAdapter
     public Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null)
         => _setupIntentService.CancelAsync(id, options);
 
+    public Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null)
+        => _setupIntentService.GetAsync(id, options);
+
     public async Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync()
     {
         var items = new List<Stripe.TestHelpers.TestClock>();

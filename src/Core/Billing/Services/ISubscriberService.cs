@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Stripe;
 
 namespace Bit.Core.Billing.Services;
@@ -46,6 +45,14 @@ public interface ISubscriberService
     Task<Customer> GetCustomerOrThrow(
         ISubscriber subscriber,
         CustomerGetOptions customerGetOptions = null);
+
+    /// <summary>
+    /// Retrieves a masked representation of the subscriber's payment method for presentation to a client.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to retrieve the masked payment method for.</param>
+    /// <returns>A <see cref="MaskedPaymentMethodDTO"/> containing a non-identifiable description of the subscriber's payment method.</returns>
+    Task<MaskedPaymentMethodDTO> GetPaymentMethod(
+        ISubscriber subscriber);
 
     /// <summary>
     /// Retrieves a Stripe <see cref="Subscription"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> property.
@@ -111,13 +118,4 @@ public interface ISubscriberService
     Task UpdateTaxInformation(
         ISubscriber subscriber,
         TaxInformationDTO taxInformation);
-
-    /// <summary>
-    /// Retrieves a Stripe <see cref="BillingInfo.BillingSource"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the Stripe customer for.</param>
-    /// <returns>A Stripe <see cref="BillingInfo.BillingSource"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<BillingInfo.BillingSource> GetPaymentMethodAsync(ISubscriber subscriber);
 }
