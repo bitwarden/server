@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Stripe;
 
@@ -89,6 +90,18 @@ public interface ISubscriberService
     /// </summary>
     /// <param name="subscriber">The subscriber to remove the saved payment method for.</param>
     Task RemovePaymentMethod(ISubscriber subscriber);
+
+    /// <summary>
+    /// Updates the payment method for the provided <paramref name="subscriber"/> using the <paramref name="tokenizedPaymentMethod"/>.
+    /// The following payment method types are supported: [<see cref="PaymentMethodType.Card"/>, <see cref="PaymentMethodType.BankAccount"/>, <see cref="PaymentMethodType.PayPal"/>].
+    /// For each type, updating the payment method will attempt to establish a new payment method using the token in the <see cref="TokenizedPaymentMethodDTO"/>. Then, it will
+    /// remove the exising payment method(s) linked to the subscriber's customer.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to update the payment method for.</param>
+    /// <param name="tokenizedPaymentMethod">A DTO representing a tokenized payment method.</param>
+    Task UpdatePaymentMethod(
+        ISubscriber subscriber,
+        TokenizedPaymentMethodDTO tokenizedPaymentMethod);
 
     /// <summary>
     /// Updates the tax information for the provided <paramref name="subscriber"/>.
