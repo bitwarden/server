@@ -1573,10 +1573,10 @@ public class StripePaymentService : IPaymentService
         return billingInfo;
     }
 
-    public async Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber)
+    public async Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber)
     {
         var customer = await GetCustomerAsync(subscriber.GatewayCustomerId);
-        var billingInfo = new BillingInfo
+        var billingInfo = new BillingHistoryInfo
         {
             Transactions = await GetBillingTransactionsAsync(subscriber, 20),
             Invoices = await GetBillingInvoicesAsync(customer, 20)
@@ -1849,7 +1849,7 @@ public class StripePaymentService : IPaymentService
         return customer;
     }
 
-    private async Task<IEnumerable<BillingInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber, int? limit = null)
+    private async Task<IEnumerable<BillingHistoryInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber, int? limit = null)
     {
         var transactions = subscriber switch
         {
@@ -1859,10 +1859,10 @@ public class StripePaymentService : IPaymentService
         };
 
         return transactions?.OrderByDescending(i => i.CreationDate)
-            .Select(t => new BillingInfo.BillingTransaction(t));
+            .Select(t => new BillingHistoryInfo.BillingTransaction(t));
     }
 
-    private async Task<IEnumerable<BillingInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer,
+    private async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer,
         long? limit = null)
     {
         if (customer == null)
@@ -1904,7 +1904,7 @@ public class StripePaymentService : IPaymentService
 
             return invoices
                 .OrderByDescending(invoice => invoice.Created)
-                .Select(invoice => new BillingInfo.BillingInvoice(invoice));
+                .Select(invoice => new BillingHistoryInfo.BillingInvoice(invoice));
         }
         catch (StripeException exception)
         {

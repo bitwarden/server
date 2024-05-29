@@ -47,7 +47,7 @@ public interface IPaymentService
         string paymentToken, TaxInfo taxInfo = null);
     Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
     Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
-    Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber);
+    Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber);
     Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber);
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
     Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo);

@@ -14,7 +14,7 @@ public class BillingInfoTests
             Total = 2000,
         };
 
-        var billingInvoice = new BillingInfo.BillingInvoice(invoice);
+        var billingInvoice = new BillingHistoryInfo.BillingInvoice(invoice);
 
         // Should have been set from Total
         Assert.Equal(20M, billingInvoice.Amount);
