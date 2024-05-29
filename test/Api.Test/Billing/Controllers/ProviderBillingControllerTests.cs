@@ -5,6 +5,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -164,7 +165,46 @@ public class ProviderBillingControllerTests
     }
     #endregion
 
-    #region GetTaxInformation
+    #region GetPaymentMethodAsync
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_PaymentMethodNull_NotFound(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ISubscriberService>().GetPaymentMethod(provider).ReturnsNull();
+
+        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
+
+        Assert.IsType<NotFound>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Ok(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ISubscriberService>().GetPaymentMethod(provider).Returns(new MaskedPaymentMethodDTO(
+            PaymentMethodType.Card, "Description", false));
+
+        var result = await sutProvider.Sut.GetPaymentMethodAsync(provider.Id);
+
+        Assert.IsType<Ok<MaskedPaymentMethodResponse>>(result);
+
+        var response = ((Ok<MaskedPaymentMethodResponse>)result).Value;
+
+        Assert.Equal(PaymentMethodType.Card, response.Type);
+        Assert.Equal("Description", response.Description);
+        Assert.False(response.NeedsVerification);
+    }
+
+    #endregion
+
+    #region GetTaxInformationAsync
 
     [Theory, BitAutoData]
     public async Task GetTaxInformation_TaxInformationNull_NotFound(
@@ -213,7 +253,30 @@ public class ProviderBillingControllerTests
 
     #endregion
 
-    #region UpdateTaxInformation
+    #region UpdatePaymentMethodAsync
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_Ok(
+        Provider provider,
+        TokenizedPaymentMethodRequestBody requestBody,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        await sutProvider.Sut.UpdatePaymentMethodAsync(provider.Id, requestBody);
+
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).UpdatePaymentMethod(
+            provider, Arg.Is<TokenizedPaymentMethodDTO>(
+                options => options.Type == requestBody.Type && options.Token == requestBody.Token));
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).SubscriptionUpdateAsync(
+            provider.GatewaySubscriptionId, Arg.Is<SubscriptionUpdateOptions>(
+                options => options.CollectionMethod == StripeConstants.CollectionMethod.ChargeAutomatically));
+    }
+
+    #endregion
+
+    #region UpdateTaxInformationAsync
 
     [Theory, BitAutoData]
     public async Task UpdateTaxInformation_Ok(
