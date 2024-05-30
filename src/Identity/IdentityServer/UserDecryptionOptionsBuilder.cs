@@ -95,10 +95,12 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             return;
         }
 
+        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted();
+
         var ssoConfigurationData = _ssoConfig.GetData();
         if (
             (ssoConfigurationData is not { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
-            && !(_user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted())
+            && !isTdeOffboarding
         )
         {
             return;
@@ -133,12 +135,6 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             hasManageResetPasswordPermission = await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
         }
 
-        // If tde was disabled the user can reset master pw
-        if (_user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted())
-        {
-            hasManageResetPasswordPermission = true;
-        }
-
         var hasAdminApproval = false;
         if (_user != null)
         {
@@ -153,6 +149,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             hasAdminApproval,
             hasLoginApprovingDevice,
             hasManageResetPasswordPermission,
+            isTdeOffboarding,
             encryptedPrivateKey,
             encryptedUserKey);
     }
