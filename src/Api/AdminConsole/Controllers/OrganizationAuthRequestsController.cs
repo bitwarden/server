@@ -1,12 +1,14 @@
 ﻿using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -73,7 +75,15 @@ public class OrganizationAuthRequestsController : Controller
         }
     }
 
-    private async Task ValidateAdminRequest(Guid orgId)
+    [RequireFeature(FeatureFlagKeys.BulkDeviceApproval)]
+    [HttpPost("")]
+    public async Task UpdateManyAuthRequests(Guid orgId, [FromBody] IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> model)
+    {
+        await ValidateAdminRequest(orgId);
+        await _updateOrganizationAuthRequestCommand.UpdateAsync(orgId, model.Select(x => x.ToOrganizationAuthRequestUpdate()));
+    }
+
+    public async Task ValidateAdminRequest(Guid orgId)
     {
         if (!await _currentContext.ManageResetPassword(orgId))
         {
