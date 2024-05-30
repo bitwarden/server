@@ -140,4 +140,25 @@ public class OrganizationUserRotationValidatorTests
         await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ValidateAsync(user, resetPasswordKeys));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_NoOrganizationsInRequestButInDatabase_Throws(
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        IEnumerable<ResetPasswordWithOrgIdRequestModel> resetPasswordKeys)
+    {
+        var existingUserResetPassword = resetPasswordKeys
+            .Select(a =>
+                new OrganizationUser
+                {
+                    Id = new Guid(),
+                    ResetPasswordKey = a.ResetPasswordKey,
+                    OrganizationId = a.OrganizationId
+                }).ToList();
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
+            .Returns(existingUserResetPassword);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.ValidateAsync(user, Enumerable.Empty<ResetPasswordWithOrgIdRequestModel>()));
+    }
 }
