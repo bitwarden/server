@@ -14,76 +14,66 @@ public class BillingInfo
 
         public BillingSource(PaymentMethod method)
         {
-            if (method.Card != null)
+            if (method.Card == null)
             {
-                Type = PaymentMethodType.Card;
-                Description = $"{method.Card.Brand?.ToUpperInvariant()}, *{method.Card.Last4}, " +
-                    string.Format("{0}/{1}",
-                        string.Concat(method.Card.ExpMonth < 10 ?
-                            "0" : string.Empty, method.Card.ExpMonth),
-                        method.Card.ExpYear);
-                CardBrand = method.Card.Brand;
+                return;
             }
+
+            Type = PaymentMethodType.Card;
+            var card = method.Card;
+            Description = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}, {card.ExpMonth:00}/{card.ExpYear}";
+            CardBrand = card.Brand;
         }
 
         public BillingSource(IPaymentSource source)
         {
-            if (source is BankAccount bankAccount)
+            switch (source)
             {
-                Type = PaymentMethodType.BankAccount;
-                Description = $"{bankAccount.BankName}, *{bankAccount.Last4} - " +
-                    (bankAccount.Status == "verified" ? "verified" :
-                    bankAccount.Status == "errored" ? "invalid" :
-                    bankAccount.Status == "verification_failed" ? "verification failed" : "unverified");
-                NeedsVerification = bankAccount.Status == "new" || bankAccount.Status == "validated";
-            }
-            else if (source is Card card)
-            {
-                Type = PaymentMethodType.Card;
-                Description = $"{card.Brand}, *{card.Last4}, " +
-                    string.Format("{0}/{1}",
-                        string.Concat(card.ExpMonth < 10 ?
-                            "0" : string.Empty, card.ExpMonth),
-                        card.ExpYear);
-                CardBrand = card.Brand;
-            }
-            else if (source is Source src && src.Card != null)
-            {
-                Type = PaymentMethodType.Card;
-                Description = $"{src.Card.Brand}, *{src.Card.Last4}, " +
-                    string.Format("{0}/{1}",
-                        string.Concat(src.Card.ExpMonth < 10 ?
-                            "0" : string.Empty, src.Card.ExpMonth),
-                        src.Card.ExpYear);
-                CardBrand = src.Card.Brand;
+                case BankAccount bankAccount:
+                    var bankStatus = bankAccount.Status switch
+                    {
+                        "verified" => "verified",
+                        "errored" => "invalid",
+                        "verification_failed" => "verification failed",
+                        _ => "unverified"
+                    };
+                    Type = PaymentMethodType.BankAccount;
+                    Description = $"{bankAccount.BankName}, *{bankAccount.Last4} - {bankStatus}";
+                    NeedsVerification = bankAccount.Status is "new" or "validated";
+                    break;
+                case Card card:
+                    Type = PaymentMethodType.Card;
+                    Description = $"{card.Brand}, *{card.Last4}, {card.ExpMonth:00}/{card.ExpYear}";
+                    CardBrand = card.Brand;
+                    break;
+                case Source { Card: not null } src:
+                    Type = PaymentMethodType.Card;
+                    Description = $"{src.Card.Brand}, *{src.Card.Last4}, {src.Card.ExpMonth:00}/{src.Card.ExpYear}";
+                    CardBrand = src.Card.Brand;
+                    break;
             }
         }
 
         public BillingSource(Braintree.PaymentMethod method)
         {
-            if (method is Braintree.PayPalAccount paypal)
+            switch (method)
             {
-                Type = PaymentMethodType.PayPal;
-                Description = paypal.Email;
-            }
-            else if (method is Braintree.CreditCard card)
-            {
-                Type = PaymentMethodType.Card;
-                Description = $"{card.CardType.ToString()}, *{card.LastFour}, " +
-                    string.Format("{0}/{1}",
-                        string.Concat(card.ExpirationMonth.Length == 1 ?
-                            "0" : string.Empty, card.ExpirationMonth),
-                        card.ExpirationYear);
-                CardBrand = card.CardType.ToString();
-            }
-            else if (method is Braintree.UsBankAccount bank)
-            {
-                Type = PaymentMethodType.BankAccount;
-                Description = $"{bank.BankName}, *{bank.Last4}";
-            }
-            else
-            {
-                throw new NotSupportedException("Method not supported.");
+                case Braintree.PayPalAccount paypal:
+                    Type = PaymentMethodType.PayPal;
+                    Description = paypal.Email;
+                    break;
+                case Braintree.CreditCard card:
+                    Type = PaymentMethodType.Card;
+                    Description = $"{card.CardType.ToString()}, *{card.LastFour}, " +
+                                  $"{card.ExpirationMonth.PadLeft(2, '0')}/{card.ExpirationYear}";
+                    CardBrand = card.CardType.ToString();
+                    break;
+                case Braintree.UsBankAccount bank:
+                    Type = PaymentMethodType.BankAccount;
+                    Description = $"{bank.BankName}, *{bank.Last4}";
+                    break;
+                default:
+                    throw new NotSupportedException("Method not supported.");
             }
         }
 
