@@ -4,22 +4,22 @@ using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
-public class ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel : ResponseModel
+public class GrantedProjectAccessPolicyPermissionDetailsResponseModel : ResponseModel
 {
     private const string _objectName = "serviceAccountProjectAccessPolicyPermissionDetails";
 
-    public ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel(
+    public GrantedProjectAccessPolicyPermissionDetailsResponseModel(
         ServiceAccountProjectAccessPolicyPermissionDetails apPermissionDetails, string obj = _objectName) : base(obj)
     {
-        AccessPolicy = new ServiceAccountProjectAccessPolicyResponseModel(apPermissionDetails.AccessPolicy);
+        AccessPolicy = new GrantedProjectAccessPolicyResponseModel(apPermissionDetails.AccessPolicy);
         HasPermission = apPermissionDetails.HasPermission;
     }
 
-    public ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel()
+    public GrantedProjectAccessPolicyPermissionDetailsResponseModel()
         : base(_objectName)
     {
     }
 
-    public ServiceAccountProjectAccessPolicyResponseModel AccessPolicy { get; set; } = new();
+    public GrantedProjectAccessPolicyResponseModel AccessPolicy { get; set; } = new();
     public bool HasPermission { get; set; }
 }
