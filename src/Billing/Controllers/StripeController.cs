@@ -1039,11 +1039,10 @@ public class StripeController : Controller
         if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
             _logger.LogWarning(
-                "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId or ");
+                "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId or providerId");
             return false;
         }
 
-        var orgTransaction = organizationId.HasValue;
         string btObjIdField;
         Guid btObjId;
         if (organizationId.HasValue)
