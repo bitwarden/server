@@ -1,10 +1,4 @@
-IF OBJECT_ID('[dbo].[Transaction_ReadByOrganizationId]') IS NOT NULL
-    BEGIN
-        DROP PROCEDURE [dbo].[Transaction_ReadByOrganizationId]
-    END
-GO
-
-CREATE PROCEDURE [dbo].[Transaction_ReadByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[Transaction_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
     @Limit INT
 AS
