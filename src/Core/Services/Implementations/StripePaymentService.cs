@@ -1561,18 +1561,6 @@ public class StripePaymentService : IPaymentService
         return billingInfo;
     }
 
-    public async Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber)
-    {
-        var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
-        var billingInfo = new BillingInfo
-        {
-            Balance = GetBillingBalance(customer),
-            PaymentSource = await GetBillingPaymentSourceAsync(customer)
-        };
-
-        return billingInfo;
-    }
-
     public async Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber)
     {
         var customer = await GetCustomerAsync(subscriber.GatewayCustomerId);

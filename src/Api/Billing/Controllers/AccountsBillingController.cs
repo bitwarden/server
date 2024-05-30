@@ -36,7 +36,7 @@ public class AccountsBillingController(
             throw new UnauthorizedAccessException();
         }
 
-        var billingInfo = await paymentService.GetBillingBalanceAndSourceAsync(user);
+        var billingInfo = await paymentService.GetBillingAsync(user);
         return new BillingPaymentResponseModel(billingInfo);
     }
 }
