@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Billing.Models.Responses;
-using Bit.Api.Models.Response;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
