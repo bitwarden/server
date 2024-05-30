@@ -378,6 +378,21 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> emails, string organizationName, string requestingUserName, string emailContent)
+    {
+        var message = CreateDefaultMessage("Access Requested for Secrets Manager", emails);
+        var model = new RequestSecretsManagerAccessViewModel
+        {
+            OrgName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            UserNameRequestingAccess = CoreHelpers.SanitizeForEmail(requestingUserName, false),
+            EmailContent = CoreHelpers.SanitizeForEmail(emailContent),
+            TrySecretsManagerUrl = "https://bitwarden.com/contact-sales/"
+        };
+        await AddMessageContentAsync(message, "SecretsManagerAccessRequest", model);
+        message.Category = "SecretsManagerAccessRequest";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
     {
         var message = CreateDefaultMessage($"New Device Logged In From {deviceType}", email);

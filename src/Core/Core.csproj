@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="MailTemplates\Handlebars\SecretsManagerAccessRequest.html.hbs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit.Redis" Version="2.0.0" />
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.300.95" />
     <PackageReference Include="AWSSDK.SQS" Version="3.7.301.8" />

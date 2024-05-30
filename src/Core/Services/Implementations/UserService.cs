@@ -392,6 +392,20 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
     }
 
+
+    public async Task<bool> SendRequestAccessToSM(Guid organizationId, User user, string emailContent)
+    {
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var emailList = orgUsers.Where(o => o.Type <= OrganizationUserType.Admin || o.GetPermissions()?.ManageSso == true)
+            .Select(a => a.Email).Distinct().ToList();
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+        await _mailService.SendRequestSMAccessToAdminEmailAsync(emailList, organization.Name, user.Name, emailContent);
+        return true;
+    }
+
+
     public async Task SendTwoFactorEmailAsync(User user)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);

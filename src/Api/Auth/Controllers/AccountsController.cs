@@ -255,6 +255,18 @@ public class AccountsController : Controller
         await _userService.SendEmailVerificationAsync(user);
     }
 
+    [HttpPost("request-sm-access")]
+    public async Task RequestSMAccessFromAdmins([FromBody] RequestSMAccessRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _userService.SendRequestAccessToSM(Guid.Parse(model.OrganizationId), user, model.EmailContent);
+    }
+
     [HttpPost("verify-email-token")]
     [AllowAnonymous]
     public async Task PostVerifyEmailToken([FromBody] VerifyEmailRequestModel model)

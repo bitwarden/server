@@ -76,4 +76,5 @@ public interface IUserService
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret);
+    Task<bool> SendRequestAccessToSM(Guid organizationId, User user, string EmailContent);
 }
