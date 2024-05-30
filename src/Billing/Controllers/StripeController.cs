@@ -582,6 +582,7 @@ public class StripeController : Controller
                 CreationDate = refund.Created,
                 OrganizationId = parentTransaction.OrganizationId,
                 UserId = parentTransaction.UserId,
+                ProviderId = parentTransaction.ProviderId,
                 Type = TransactionType.Refund,
                 Gateway = GatewayType.Stripe,
                 GatewayId = refund.Id,
@@ -606,7 +607,7 @@ public class StripeController : Controller
         }
 
         var (organizationId, userId, providerId) = await GetEntityIdsFromChargeAsync(charge);
-        if (!organizationId.HasValue && !userId.HasValue)
+        if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
             _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
             return;

@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Bit.Billing.Models;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -21,6 +22,7 @@ public class PayPalController : Controller
     private readonly IPaymentService _paymentService;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IProviderRepository _providerRepository;
 
     public PayPalController(
         IOptions<BillingSettings> billingSettings,
@@ -29,7 +31,8 @@ public class PayPalController : Controller
         IOrganizationRepository organizationRepository,
         IPaymentService paymentService,
         ITransactionRepository transactionRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IProviderRepository providerRepository)
     {
         _billingSettings = billingSettings?.Value;
         _logger = logger;
@@ -38,6 +41,7 @@ public class PayPalController : Controller
         _paymentService = paymentService;
         _transactionRepository = transactionRepository;
         _userRepository = userRepository;
+        _providerRepository = providerRepository;
     }
 
     [HttpPost("ipn")]
@@ -83,7 +87,7 @@ public class PayPalController : Controller
 
         if (!entityId.HasValue)
         {
-            _logger.LogError("PayPal IPN ({Id}): 'custom' did not contain a User ID or Organization ID", transactionModel.TransactionId);
+            _logger.LogError("PayPal IPN ({Id}): 'custom' did not contain a User ID or Organization ID or provider ID", transactionModel.TransactionId);
             return BadRequest();
         }
 
@@ -258,6 +262,17 @@ public class PayPalController : Controller
                 await _userRepository.ReplaceAsync(user);
 
                 billingEmail = user.BillingEmailAddress();
+            }
+        }
+        else if (transaction.ProviderId.HasValue)
+        {
+            var provider = await _providerRepository.GetByIdAsync(transaction.ProviderId.Value);
+
+            if (await _paymentService.CreditAccountAsync(provider, transaction.Amount))
+            {
+                await _providerRepository.ReplaceAsync(provider);
+
+                billingEmail = provider.BillingEmailAddress();
             }
         }
 
