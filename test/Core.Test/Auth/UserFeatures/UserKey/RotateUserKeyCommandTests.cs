@@ -49,4 +49,5 @@ public class RotateUserKeyCommandTests
         await sutProvider.GetDependency<IPushNotificationService>().ReceivedWithAnyArgs()
             .PushLogOutAsync(default, default);
     }
+
 }
