@@ -96,7 +96,10 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         }
 
         var ssoConfigurationData = _ssoConfig.GetData();
-        if (ssoConfigurationData is not { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
+        if (
+            (ssoConfigurationData is not { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
+            && !(_user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted())
+        )
         {
             return;
         }
@@ -128,6 +131,12 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         {
             // TDE requires single org so grabbing first org & id is fine.
             hasManageResetPasswordPermission = await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
+        }
+
+        // If tde was disabled the user can reset master pw
+        if (_user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted())
+        {
+            hasManageResetPasswordPermission = true;
         }
 
         var hasAdminApproval = false;
