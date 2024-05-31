@@ -139,7 +139,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public Guid? UserId { get; set; }
-    public Guid? OrganizationUserId { get; set; }
+    public Guid OrganizationUserId { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
     public Guid? ProviderId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
