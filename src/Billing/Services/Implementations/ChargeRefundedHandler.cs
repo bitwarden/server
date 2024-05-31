@@ -86,6 +86,7 @@ public class ChargeRefundedHandler : IChargeRefundedHandler
                 CreationDate = refund.Created,
                 OrganizationId = parentTransaction.OrganizationId,
                 UserId = parentTransaction.UserId,
+                ProviderId = parentTransaction.ProviderId,
                 Type = TransactionType.Refund,
                 Gateway = GatewayType.Stripe,
                 GatewayId = refund.Id,
