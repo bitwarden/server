@@ -40,7 +40,7 @@ public class ChargeSucceededHandler : IChargeSucceededHandler
         }
 
         var (organizationId, userId, providerId) = await _stripeEventUtilityService.GetEntityIdsFromChargeAsync(charge);
-        if (!organizationId.HasValue && !userId.HasValue)
+        if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
             _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
             return;
