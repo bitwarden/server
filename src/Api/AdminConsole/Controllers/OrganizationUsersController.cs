@@ -225,7 +225,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.InviteUsersAsync(orgId, userId.Value,
+        await _organizationService.InviteUsersAsync(orgId, userId.Value, systemUser: null,
             new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
     }
 
