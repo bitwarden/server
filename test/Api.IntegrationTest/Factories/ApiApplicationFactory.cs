@@ -73,4 +73,13 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     {
         return await _identityApplicationFactory.TokenFromAccessTokenAsync(clientId, clientSecret);
     }
+
+    /// <summary>
+    /// Helper for logging in with an Organization api key.
+    /// Currently used for the Public Api
+    /// </summary>
+    public async Task<string> LoginWithOrganizationApiKeyAsync(string clientId, string clientSecret)
+    {
+        return await _identityApplicationFactory.TokenFromOrganizationApiKeyAsync(clientId, clientSecret);
+    }
 }

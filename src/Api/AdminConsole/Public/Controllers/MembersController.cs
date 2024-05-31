@@ -127,10 +127,11 @@ public class MembersController : Controller
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
         var flexibleCollectionsIsEnabled = await FlexibleCollectionsIsEnabledAsync(_currentContext.OrganizationId.Value);
-        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection(flexibleCollectionsIsEnabled)).ToList();
+        var invite = model.ToOrganizationUserInvite(flexibleCollectionsIsEnabled);
+
         var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
-            model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
-        var response = new MemberResponseModel(user, associations, flexibleCollectionsIsEnabled);
+            systemUser: null, invite, model.ExternalId);
+        var response = new MemberResponseModel(user, invite.Collections, flexibleCollectionsIsEnabled);
         return new JsonResult(response);
     }
 
