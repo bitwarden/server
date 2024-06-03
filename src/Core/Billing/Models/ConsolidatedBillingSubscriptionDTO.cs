@@ -2,6 +2,6 @@
 
 namespace Bit.Core.Billing.Models;
 
-public record ProviderSubscriptionDTO(
+public record ConsolidatedBillingSubscriptionDTO(
     List<ConfiguredProviderPlanDTO> ProviderPlans,
     Subscription Subscription);

@@ -17,8 +17,8 @@ public interface IOrganizationService
     Task ReinstateSubscriptionAsync(Guid organizationId);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
     Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
-    Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null);
-    Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null);
+    Task AutoAddSeatsAsync(Organization organization, int seatsToAdd);
+    Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
     /// <summary>
     /// Create a new organization in a cloud environment
