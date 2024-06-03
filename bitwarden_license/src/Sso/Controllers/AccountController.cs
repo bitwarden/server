@@ -497,7 +497,6 @@ public class AccountController : Controller
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var initialSeatCount = organization.Seats.Value;
             var availableSeats = initialSeatCount - occupiedSeats;
-            var prorationDate = DateTime.UtcNow;
             if (availableSeats < 1)
             {
                 try
@@ -507,13 +506,13 @@ public class AccountController : Controller
                         throw new Exception("Cannot autoscale on self-hosted instance.");
                     }
 
-                    await _organizationService.AutoAddSeatsAsync(organization, 1, prorationDate);
+                    await _organizationService.AutoAddSeatsAsync(organization, 1);
                 }
                 catch (Exception e)
                 {
                     if (organization.Seats.Value != initialSeatCount)
                     {
-                        await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
+                        await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value);
                     }
                     _logger.LogInformation(e, "SSO auto provisioning failed");
                     throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
