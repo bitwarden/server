@@ -282,7 +282,7 @@ public class OrganizationService : IOrganizationService
         await ReplaceAndUpdateCacheAsync(organization);
     }
 
-    public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null)
+    public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -290,10 +290,10 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        return await AdjustSeatsAsync(organization, seatAdjustment, prorationDate);
+        return await AdjustSeatsAsync(organization, seatAdjustment);
     }
 
-    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null, IEnumerable<string> ownerEmails = null)
+    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, IEnumerable<string> ownerEmails = null)
     {
         if (organization.Seats == null)
         {
@@ -349,7 +349,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
+        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
             {
@@ -957,12 +957,53 @@ public class OrganizationService : IOrganizationService
         await UpdateAsync(organization);
     }
 
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
+        OrganizationUserInvite invite, string externalId)
+    {
+        // Ideally OrganizationUserInvite should represent a single user so that this doesn't have to be a runtime check
+        if (invite.Emails.Count() > 1)
+        {
+            throw new BadRequestException("This method can only be used to invite a single user.");
+        }
+
+        // Validate Collection associations if org is using latest collection enhancements
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (organizationAbility?.FlexibleCollections ?? false)
+        {
+            var invalidAssociations = invite.Collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            if (invalidAssociations?.Any() ?? false)
+            {
+                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+            }
+        }
+
+        var results = await InviteUsersAsync(organizationId, invitingUserId, systemUser,
+            new (OrganizationUserInvite, string)[] { (invite, externalId) });
+
+        var result = results.FirstOrDefault();
+        if (result == null)
+        {
+            throw new BadRequestException("This user has already been invited.");
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Invite users to an organization.
+    /// </summary>
+    /// <param name="organizationId">The organization Id</param>
+    /// <param name="invitingUserId">The current authenticated user who is sending the invite. Only used when inviting via a client app; null if using SCIM or Public API.</param>
+    /// <param name="systemUser">The system user which is sending the invite. Only used when inviting via SCIM; null if using a client app or Public API</param>
+    /// <param name="invites">Details about the users being invited</param>
+    /// <returns></returns>
+    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
         var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
             .Select(i => i.invite.Type.Value));
 
+        // If authenticating via a client app, verify the inviting user has permissions
+        // cf. SCIM and Public API have superuser permissions here
         if (invitingUserId.HasValue && inviteTypes.Count > 0)
         {
             foreach (var (invite, _) in invites)
@@ -972,25 +1013,24 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser: null);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
 
-        await _eventService.LogOrganizationUserEventsAsync(events);
-
-        return organizationUsers;
-    }
-
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
-    {
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser);
-
-        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser, e.Item3)));
+        if (systemUser.HasValue)
+        {
+            // Log SCIM event
+            await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser.Value, e.Item3)));
+        }
+        else
+        {
+            // Log client app or Public Api event
+            await _eventService.LogOrganizationUserEventsAsync(events);
+        }
 
         return organizationUsers;
     }
 
     private async Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)> SaveUsersSendInvitesAsync(Guid organizationId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser)
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
         var organization = await GetOrgById(organizationId);
         var initialSeatCount = organization.Seats;
@@ -1087,9 +1127,9 @@ public class OrganizationService : IOrganizationService
                         RevisionDate = DateTime.UtcNow,
                     };
 
-                    if (invite.Permissions != null)
+                    if (invite.Type == OrganizationUserType.Custom)
                     {
-                        orgUser.Permissions = JsonSerializer.Serialize(invite.Permissions, JsonHelpers.CamelCase);
+                        orgUser.SetPermissions(invite.Permissions ?? new Permissions());
                     }
 
                     if (!orgUser.AccessAll && invite.Collections.Any())
@@ -1121,7 +1161,6 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        var prorationDate = DateTime.UtcNow;
         try
         {
             await _organizationUserRepository.CreateManyAsync(orgUsers);
@@ -1140,11 +1179,10 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
 
-            await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
+            await AutoAddSeatsAsync(organization, newSeatsRequired);
 
             if (additionalSmSeatsRequired > 0)
             {
-                smSubscriptionUpdate.ProrationDate = prorationDate;
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
 
@@ -1166,7 +1204,7 @@ public class OrganizationService : IOrganizationService
             // Revert autoscaling
             if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
             {
-                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value, prorationDate);
+                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value);
             }
 
             // Revert SmSeat autoscaling
@@ -1175,8 +1213,7 @@ public class OrganizationService : IOrganizationService
             {
                 var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
                 {
-                    SmSeats = initialSmSeatCount.Value,
-                    ProrationDate = prorationDate
+                    SmSeats = initialSmSeatCount.Value
                 };
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
             }
@@ -1417,7 +1454,7 @@ public class OrganizationService : IOrganizationService
         return (true, failureReason);
     }
 
-    public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
+    public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd)
     {
         if (seatsToAdd < 1 || !organization.Seats.HasValue)
         {
@@ -1445,7 +1482,7 @@ public class OrganizationService : IOrganizationService
         }
         var initialSeatCount = organization.Seats.Value;
 
-        await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
+        await AdjustSeatsAsync(organization, seatsToAdd, ownerEmails);
 
         if (!organization.OwnersNotifiedOfAutoscaling.HasValue)
         {
@@ -1667,55 +1704,6 @@ public class OrganizationService : IOrganizationService
             EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
     }
 
-    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, ICollection<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
-    {
-        // Validate Collection associations if org is using latest collection enhancements
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (organizationAbility?.FlexibleCollections ?? false)
-        {
-            var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-            if (invalidAssociations?.Any() ?? false)
-            {
-                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-            }
-        }
-
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId, systemUser: null, email, type, accessAll, externalId, collections, groups);
-    }
-
-    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups, bool accessSecretsManager)
-    {
-        // Collection associations validation not required as they are always an empty list - created via system user (scim)
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups, accessSecretsManager);
-    }
-
-    private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, bool accessSecretsManager = false)
-    {
-        var invite = new OrganizationUserInvite()
-        {
-            Emails = new List<string> { email },
-            Type = type,
-            AccessAll = accessAll,
-            Collections = collections,
-            Groups = groups,
-            AccessSecretsManager = accessSecretsManager
-        };
-        var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) });
-        var result = results.FirstOrDefault();
-        if (result == null)
-        {
-            throw new BadRequestException("This user has already been invited.");
-        }
-        return result;
-    }
-
     public async Task ImportAsync(Guid organizationId,
         Guid? importingUserId,
         IEnumerable<ImportedGroup> groups,
@@ -1831,7 +1819,7 @@ public class OrganizationService : IOrganizationService
                 }
             }
 
-            var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, userInvites);
+            var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, systemUser: null, userInvites);
             foreach (var invitedUser in invitedUsers)
             {
                 existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
@@ -2373,7 +2361,7 @@ public class OrganizationService : IOrganizationService
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         if (availableSeats < 1)
         {
-            await AutoAddSeatsAsync(organization, 1, DateTime.UtcNow);
+            await AutoAddSeatsAsync(organization, 1);
         }
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
@@ -2400,7 +2388,7 @@ public class OrganizationService : IOrganizationService
         var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
-        await AutoAddSeatsAsync(organization, newSeatsRequired, DateTime.UtcNow);
+        await AutoAddSeatsAsync(organization, newSeatsRequired);
 
         var deletingUserIsOwner = false;
         if (restoringUserId.HasValue)

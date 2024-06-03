@@ -35,4 +35,9 @@ public class OrganizationUser : ITableObject<Guid>, IExternal
         return string.IsNullOrWhiteSpace(Permissions) ? null
             : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
     }
+
+    public void SetPermissions(Permissions permissions)
+    {
+        Permissions = CoreHelpers.ClassToJsonData(permissions);
+    }
 }

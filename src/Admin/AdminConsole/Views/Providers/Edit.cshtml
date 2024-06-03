@@ -78,9 +78,9 @@
                     <div class="input-group">
                         <input type="text" class="form-control" asp-for="GatewayCustomerId">
                         <div class="input-group-append">
-                            <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                            <a href="@Model.GatewayCustomerUrl" class="btn btn-secondary" target="_blank">
                                 <i class="fa fa-external-link"></i>
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -91,9 +91,9 @@
                     <div class="input-group">
                         <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
                         <div class="input-group-append">
-                            <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                            <a href="@Model.GatewaySubscriptionUrl" class="btn btn-secondary" target="_blank">
                                 <i class="fa fa-external-link"></i>
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>

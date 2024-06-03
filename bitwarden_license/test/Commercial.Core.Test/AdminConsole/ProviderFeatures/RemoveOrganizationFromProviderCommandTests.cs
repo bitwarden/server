@@ -156,6 +156,9 @@ public class RemoveOrganizationFromProviderCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
             .Returns(false);
 
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .Returns(GetSubscription(organization.GatewaySubscriptionId));
+
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -262,4 +265,25 @@ public class RemoveOrganizationFromProviderCommandTests
                 provider.Name,
                 Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
     }
+
+    private static Subscription GetSubscription(string subscriptionId) =>
+        new()
+        {
+            Id = subscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = "sub_item_123",
+                        Price = new Price()
+                        {
+                            Id = "2023-enterprise-org-seat-annually"
+                        }
+                    }
+                }
+            }
+        };
 }

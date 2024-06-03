@@ -127,7 +127,7 @@ public class OrganizationUsersControllerTests
         await sutProvider.Sut.Invite(organizationAbility.Id, model);
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUsersAsync(organizationAbility.Id,
-            userId, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites =>
+            userId, systemUser: null, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites =>
                 invites.Count() == 1 &&
                 invites.First().Item1.Emails.SequenceEqual(model.Emails) &&
                 invites.First().Item1.Type == model.Type &&
