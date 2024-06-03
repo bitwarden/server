@@ -827,6 +827,31 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
+    public async Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string newMasterPassword, string key, string hint)
+    {
+        if (user.HasMasterPassword())
+        {
+            throw new BadRequestException("User already has a master password.");
+        }
+
+        var result = await UpdatePasswordHash(user, newMasterPassword);
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+        user.ForcePasswordReset = false;
+        user.Key = key;
+        user.MasterPasswordHint = hint;
+
+        await _userRepository.ReplaceAsync(user);
+        await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
+        await _pushService.PushLogOutAsync(user.Id);
+
+        return IdentityResult.Success;
+    }
+
     public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
         string key, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {

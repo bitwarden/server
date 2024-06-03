@@ -35,6 +35,7 @@ public interface IUserService
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
+    Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
         KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
