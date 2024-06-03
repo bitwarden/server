@@ -129,6 +129,7 @@ public static class FeatureFlagKeys
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string BulkDeviceApproval = "bulk-device-approval";
     public const string MemberAccessReport = "ac-2059-member-access-report";
+    public const string BlockLegacyUsers = "block-legacy-users";
 
     public static List<string> GetAllKeys()
     {
