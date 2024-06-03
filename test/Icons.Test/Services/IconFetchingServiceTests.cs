@@ -5,7 +5,7 @@ namespace Bit.Icons.Test.Services;
 
 public class IconFetchingServiceTests : ServiceTestBase<IconFetchingService>
 {
-    [Theory]
+    [Theory(Skip = "Run ad-hoc")]
     [InlineData("www.twitter.com")] // https site
     [InlineData("www.google.com")] // https site
     [InlineData("neverssl.com")] // http site
