@@ -87,7 +87,6 @@ public class ProviderBillingController(
 
         await subscriberService.UpdatePaymentMethod(provider, tokenizedPaymentMethod);
 
-        // TODO: Do we need to try and pay the outstanding invoices here?
         await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
             new SubscriptionUpdateOptions
             {

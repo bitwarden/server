@@ -54,41 +54,40 @@ public record MaskedPaymentMethodDTO(
         switch (defaultPaymentMethod)
         {
             case Braintree.PayPalAccount payPalAccount:
-                {
-                    return new MaskedPaymentMethodDTO(
-                        PaymentMethodType.PayPal,
-                        payPalAccount.Email,
-                        false);
-                }
+            {
+                return new MaskedPaymentMethodDTO(
+                    PaymentMethodType.PayPal,
+                    payPalAccount.Email,
+                    false);
+            }
             case Braintree.CreditCard creditCard:
-                {
-                    var formattedExpirationMonth =
-                        string.Concat(creditCard.ExpirationMonth.Length == 1 ? "0" : string.Empty,
-                            creditCard.ExpirationMonth);
+            {
+                var paddedExpirationMonth = creditCard.ExpirationMonth.PadLeft(2, '0');
 
-                    var description =
-                        $"{creditCard.CardType}, *{creditCard.LastFour}, {formattedExpirationMonth}/{creditCard.ExpirationYear}";
+                var description =
+                    $"{creditCard.CardType}, *{creditCard.LastFour}, {paddedExpirationMonth}/{creditCard.ExpirationYear}";
 
-                    return new MaskedPaymentMethodDTO(
-                        PaymentMethodType.Card,
-                        description,
-                        false);
-                }
+                return new MaskedPaymentMethodDTO(
+                    PaymentMethodType.Card,
+                    description,
+                    false);
+            }
             case Braintree.UsBankAccount bankAccount:
-                {
-                    return new MaskedPaymentMethodDTO(
-                        PaymentMethodType.BankAccount,
-                        $"{bankAccount.BankName}, *{bankAccount.Last4}",
-                        false);
-                }
+            {
+                return new MaskedPaymentMethodDTO(
+                    PaymentMethodType.BankAccount,
+                    $"{bankAccount.BankName}, *{bankAccount.Last4}",
+                    false);
+            }
             default:
-                {
-                    return null;
-                }
+            {
+                return null;
+            }
         }
     }
 
-    private static MaskedPaymentMethodDTO FromStripeBankAccountPaymentMethod(Stripe.PaymentMethodUsBankAccount bankAccount)
+    private static MaskedPaymentMethodDTO FromStripeBankAccountPaymentMethod(
+        Stripe.PaymentMethodUsBankAccount bankAccount)
     {
         var description = $"{bankAccount.BankName}, *{bankAccount.Last4}";
 
@@ -105,6 +104,7 @@ public record MaskedPaymentMethodDTO(
             false);
 
     #region Legacy Source Payments
+
     private static MaskedPaymentMethodDTO FromStripeLegacyPaymentSource(Stripe.IPaymentSource paymentSource)
         => paymentSource switch
         {
@@ -145,16 +145,12 @@ public record MaskedPaymentMethodDTO(
             PaymentMethodType.Card,
             GetCardDescription(card.Brand, card.Last4, card.ExpMonth, card.ExpYear),
             false);
+
     #endregion
 
     private static string GetCardDescription(
         string brand,
         string last4,
         long expirationMonth,
-        long expirationYear)
-    {
-        var formattedExpirationMonth = string.Concat(expirationMonth < 10 ? "0" : string.Empty, expirationMonth);
-
-        return $"{brand.ToUpperInvariant()}, *{last4}, {formattedExpirationMonth}/{expirationYear}";
-    }
+        long expirationYear) => $"{brand.ToUpperInvariant()}, *{last4}, {expirationMonth:00}/{expirationYear}";
 }
