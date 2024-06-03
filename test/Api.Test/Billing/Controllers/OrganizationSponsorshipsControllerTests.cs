@@ -1,4 +1,4 @@
-﻿using Bit.Api.Controllers;
+﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
@@ -14,7 +14,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Controllers;
+namespace Bit.Api.Test.Billing.Controllers;
 
 [ControllerCustomize(typeof(OrganizationSponsorshipsController))]
 [SutProviderCustomize]
