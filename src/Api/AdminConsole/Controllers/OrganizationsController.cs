@@ -14,7 +14,6 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -53,7 +52,6 @@ public class OrganizationsController : Controller
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
@@ -74,7 +72,6 @@ public class OrganizationsController : Controller
         IFeatureService featureService,
         GlobalSettings globalSettings,
         IPushNotificationService pushNotificationService,
-        IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
         IProviderRepository providerRepository,
         IProviderBillingService providerBillingService,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory)
@@ -94,7 +91,6 @@ public class OrganizationsController : Controller
         _featureService = featureService;
         _globalSettings = globalSettings;
         _pushNotificationService = pushNotificationService;
-        _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
         _providerRepository = providerRepository;
         _providerBillingService = providerBillingService;
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
@@ -542,11 +538,6 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (!organization.FlexibleCollections)
-        {
-            throw new BadRequestException("Organization does not have collection enhancements enabled");
-        }
-
         var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
         if (!v1Enabled)
@@ -557,39 +548,5 @@ public class OrganizationsController : Controller
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization), eventType: EventType.Organization_CollectionManagement_Updated);
         return new OrganizationResponseModel(organization);
-    }
-
-    /// <summary>
-    /// Migrates user, collection, and group data to the new Flexible Collections permissions scheme,
-    /// then sets organization.FlexibleCollections to true to enable these new features for the organization.
-    /// This is irreversible.
-    /// </summary>
-    /// <param name="organizationId"></param>
-    /// <exception cref="NotFoundException"></exception>
-    [HttpPost("{id}/enable-collection-enhancements")]
-    [RequireFeature(FeatureFlagKeys.FlexibleCollectionsMigration)]
-    public async Task EnableCollectionEnhancements(Guid id)
-    {
-        if (!await _currentContext.OrganizationOwner(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationEnableCollectionEnhancementsCommand.EnableCollectionEnhancements(organization);
-
-        // Force a vault sync for all owners and admins of the organization so that changes show immediately
-        // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
-        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, null);
-        await Task.WhenAll(orgUsers
-            .Where(ou => ou.UserId.HasValue &&
-                         ou.Status == OrganizationUserStatusType.Confirmed &&
-                         ou.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
-            .Select(ou => _pushNotificationService.PushSyncOrganizationsAsync(ou.UserId.Value)));
     }
 }

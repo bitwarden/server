@@ -1,29 +1,29 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Utilities;
-using Stripe;
 
 namespace Bit.Api.Billing.Models.Responses;
 
-public record ProviderSubscriptionResponse(
+public record ConsolidatedBillingSubscriptionResponse(
     string Status,
     DateTime CurrentPeriodEndDate,
     decimal? DiscountPercentage,
-    IEnumerable<ProviderPlanDTO> Plans)
+    IEnumerable<ProviderPlanResponse> Plans)
 {
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
 
-    public static ProviderSubscriptionResponse From(
-        IEnumerable<ConfiguredProviderPlanDTO> providerPlans,
-        Subscription subscription)
+    public static ConsolidatedBillingSubscriptionResponse From(
+        ConsolidatedBillingSubscriptionDTO consolidatedBillingSubscription)
     {
+        var (providerPlans, subscription) = consolidatedBillingSubscription;
+
         var providerPlansDTO = providerPlans
             .Select(providerPlan =>
             {
                 var plan = StaticStore.GetPlan(providerPlan.PlanType);
                 var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.SeatPrice;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
-                return new ProviderPlanDTO(
+                return new ProviderPlanResponse(
                     plan.Name,
                     providerPlan.SeatMinimum,
                     providerPlan.PurchasedSeats,
@@ -32,7 +32,7 @@ public record ProviderSubscriptionResponse(
                     cadence);
             });
 
-        return new ProviderSubscriptionResponse(
+        return new ConsolidatedBillingSubscriptionResponse(
             subscription.Status,
             subscription.CurrentPeriodEnd,
             subscription.Customer?.Discount?.Coupon?.PercentOff,
@@ -40,7 +40,7 @@ public record ProviderSubscriptionResponse(
     }
 }
 
-public record ProviderPlanDTO(
+public record ProviderPlanResponse(
     string PlanName,
     int SeatMinimum,
     int PurchasedSeats,

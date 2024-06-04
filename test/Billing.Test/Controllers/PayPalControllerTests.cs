@@ -2,6 +2,7 @@
 using Bit.Billing.Controllers;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -32,6 +33,7 @@ public class PayPalControllerTests
     private readonly IPaymentService _paymentService = Substitute.For<IPaymentService>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
 
     private const string _defaultWebhookKey = "webhook-key";
 
@@ -110,7 +112,7 @@ public class PayPalControllerTests
 
         HasStatusCode(result, 400);
 
-        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): 'custom' did not contain a User ID or Organization ID");
+        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): 'custom' did not contain a User ID or Organization ID or provider ID");
     }
 
     [Fact]
@@ -542,7 +544,8 @@ public class PayPalControllerTests
             _organizationRepository,
             _paymentService,
             _transactionRepository,
-            _userRepository);
+            _userRepository,
+            _providerRepository);
 
         var httpContext = new DefaultHttpContext();
 

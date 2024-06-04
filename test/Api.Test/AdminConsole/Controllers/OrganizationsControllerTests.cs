@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -46,7 +45,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
@@ -70,7 +68,6 @@ public class OrganizationsControllerTests : IDisposable
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
-        _organizationEnableCollectionEnhancementsCommand = Substitute.For<IOrganizationEnableCollectionEnhancementsCommand>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerBillingService = Substitute.For<IProviderBillingService>();
         _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
@@ -91,7 +88,6 @@ public class OrganizationsControllerTests : IDisposable
             _featureService,
             _globalSettings,
             _pushNotificationService,
-            _organizationEnableCollectionEnhancementsCommand,
             _providerRepository,
             _providerBillingService,
             _orgDeleteTokenDataFactory);
@@ -160,48 +156,6 @@ public class OrganizationsControllerTests : IDisposable
 
         await _organizationService.DeleteUserAsync(orgId, user.Id);
         await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
-    }
-
-    [Theory, AutoData]
-    public async Task EnableCollectionEnhancements_Success(Organization organization)
-    {
-        organization.FlexibleCollections = false;
-        var admin = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Admin, Status = OrganizationUserStatusType.Confirmed };
-        var owner = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.Owner, Status = OrganizationUserStatusType.Confirmed };
-        var user = new OrganizationUser { UserId = Guid.NewGuid(), Type = OrganizationUserType.User, Status = OrganizationUserStatusType.Confirmed };
-        var invited = new OrganizationUser
-        {
-            UserId = null,
-            Type = OrganizationUserType.Admin,
-            Email = "invited@example.com",
-            Status = OrganizationUserStatusType.Invited
-        };
-        var orgUsers = new List<OrganizationUser> { admin, owner, user, invited };
-
-        _currentContext.OrganizationOwner(organization.Id).Returns(true);
-        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-        _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null).Returns(orgUsers);
-
-        await _sut.EnableCollectionEnhancements(organization.Id);
-
-        await _organizationEnableCollectionEnhancementsCommand.Received(1).EnableCollectionEnhancements(organization);
-        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(admin.UserId.Value);
-        await _pushNotificationService.Received(1).PushSyncOrganizationsAsync(owner.UserId.Value);
-        await _pushNotificationService.DidNotReceive().PushSyncOrganizationsAsync(user.UserId.Value);
-        // Invited orgUser does not have a UserId we can use to assert here, but sut will throw if that null isn't handled
-    }
-
-    [Theory, AutoData]
-    public async Task EnableCollectionEnhancements_WhenNotOwner_Throws(Organization organization)
-    {
-        organization.FlexibleCollections = false;
-        _currentContext.OrganizationOwner(organization.Id).Returns(false);
-        _organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        await Assert.ThrowsAsync<NotFoundException>(async () => await _sut.EnableCollectionEnhancements(organization.Id));
-
-        await _organizationEnableCollectionEnhancementsCommand.DidNotReceiveWithAnyArgs().EnableCollectionEnhancements(Arg.Any<Organization>());
-        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushSyncOrganizationsAsync(Arg.Any<Guid>());
     }
 
     [Theory, AutoData]
