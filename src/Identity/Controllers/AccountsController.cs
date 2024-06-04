@@ -11,7 +11,9 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +29,7 @@ public class AccountsController : Controller
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
+    private readonly GlobalSettings _globalSettings;
 
     public AccountsController(
         ILogger<AccountsController> logger,
@@ -34,7 +37,9 @@ public class AccountsController : Controller
         IUserService userService,
         ICaptchaValidationService captchaValidationService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
-        IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand)
+        IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
+        GlobalSettings globalSettings
+        )
     {
         _logger = logger;
         _userRepository = userRepository;
@@ -42,6 +47,7 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
+        _globalSettings = globalSettings;
     }
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
@@ -96,5 +102,40 @@ public class AccountsController : Controller
             Options = options,
             Token = token
         };
+    }
+
+    [RequireFeature(FeatureFlagKeys.EmailVerification)]
+    [HttpPost("register/send-email-verification")]
+    public async Task<IActionResult> PostRegisterSendEmailVerification([FromBody] RegisterSendEmailVerificationRequestModel model)
+    {
+        //TODO: ask about reference data (tracking information that we collect today) and how it will be handled as part of this endpoint
+        if (!ModelState.IsValid)
+        {
+            // return BadRequest(ModelState);
+            throw new BadRequestException(ModelState);
+        }
+
+        // Check to see if the user already exists
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+
+        if (_globalSettings.EnableEmailVerification)
+        {
+            // TODO: create command to execute this
+            // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
+            // an email with a link to verify their email address
+            // return a 200 regardless of whether the email was sent or not
+            return Ok();
+        }
+        else
+        {
+            // TODO: create command to execute this
+            // if email exists, return the same error as existing endpoint to user
+            // if email doesn't exist, return with a EmailVerificationTokenable in the response body.
+        }
+
+        // Add a standard delay to prevent timing attacks but only in error scenarios
+        await Task.Delay(2000);
+
+        return Ok();
     }
 }
