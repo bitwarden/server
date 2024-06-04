@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -39,6 +40,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IUserRepository _userRepository;
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly ISsoUserRepository _ssoUserRepository;
+    private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushService;
@@ -92,7 +95,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        ISsoUserRepository ssoUserRepository,
+        ISsoConfigRepository ssoConfigRepository)
         : base(
               store,
               optionsAccessor,
@@ -130,6 +135,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _ssoUserRepository = ssoUserRepository;
+        _ssoConfigRepository = ssoConfigRepository;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -832,6 +839,29 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (user.HasMasterPassword())
         {
             throw new BadRequestException("User already has a master password.");
+        }
+        var orgUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
+        orgUserDetails = orgUserDetails.Where(x => x.UseSso).ToList();
+        if (orgUserDetails.Count == 0)
+        {
+            throw new BadRequestException("User is not part of any organization that has SSO enabled.");
+        }
+
+        var orgSSOUsers = await Task.WhenAll(orgUserDetails.Select(async x => await _ssoUserRepository.GetByUserIdOrganizationIdAsync(x.OrganizationId, user.Id)));
+        if (orgSSOUsers.Length != 1)
+        {
+            throw new BadRequestException("User is part of no or multiple SSO configurations.");
+        }
+
+        var orgUser = orgUserDetails.First();
+        var orgSSOConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgUser.OrganizationId);
+        if (orgSSOConfig == null)
+        {
+            throw new BadRequestException("Organization SSO configuration not found.");
+        }
+        else if (orgSSOConfig.GetData().MemberDecryptionType != MemberDecryptionType.MasterPassword)
+        {
+            throw new BadRequestException("Organization SSO Member Decryption Type is not Master Password.");
         }
 
         var result = await UpdatePasswordHash(user, newMasterPassword);
