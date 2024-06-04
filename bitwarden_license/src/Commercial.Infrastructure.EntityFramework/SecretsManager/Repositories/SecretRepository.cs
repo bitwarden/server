@@ -289,35 +289,13 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
     public async Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
         var secret = dbContext.Secret
             .Where(s => s.Id == id);
 
-        var query = accessType switch
-        {
-            AccessClientType.NoAccessCheck => secret.Select(_ => new { Read = true, Write = true }),
-            AccessClientType.User => secret.Select(s => new
-            {
-                Read = s.Projects.Any(p =>
-                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
-                    p.GroupAccessPolicies.Any(ap =>
-                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
-                Write = s.Projects.Any(p =>
-                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                    p.GroupAccessPolicies.Any(ap =>
-                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
-            }),
-            AccessClientType.ServiceAccount => secret.Select(s => new
-            {
-                Read = s.Projects.Any(p =>
-                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read)),
-                Write = s.Projects.Any(p =>
-                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)),
-            }),
-            _ => secret.Select(_ => new { Read = false, Write = false }),
-        };
+        var query = BuildSecretAccessQuery(secret, userId, accessType);
 
         var policy = await query.FirstOrDefaultAsync();
 
@@ -361,19 +339,27 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     private Expression<Func<Secret, SecretPermissionDetails>> SecretToPermissionsUser(Guid userId, bool read) =>
         s => new SecretPermissionDetails
         {
-            Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
+            Secret = Mapper.Map<Core.SecretsManager.Entities.Secret>(s),
             Read = read,
-            Write = s.Projects.Any(p =>
-                p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                p.GroupAccessPolicies.Any(ap =>
-                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
+            Write =
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                s.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)) ||
+                s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)))
         };
 
     private static Expression<Func<Secret, bool>> ServiceAccountHasReadAccessToSecret(Guid serviceAccountId) => s =>
+        s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == serviceAccountId && ap.Read) ||
         s.Projects.Any(p =>
             p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read));
 
     private static Expression<Func<Secret, bool>> UserHasReadAccessToSecret(Guid userId) => s =>
+        s.UserAccessPolicies.Any(ap => ap.OrganizationUser.UserId == userId && ap.Read) ||
+        s.GroupAccessPolicies.Any(ap =>
+            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.UserId == userId && ap.Read)) ||
         s.Projects.Any(p =>
             p.UserAccessPolicies.Any(ap => ap.OrganizationUser.UserId == userId && ap.Read) ||
             p.GroupAccessPolicies.Any(ap =>
@@ -434,4 +420,40 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.RevisionDate, utcNow));
         }
     }
+
+    private static IQueryable<SecretAccess> BuildSecretAccessQuery(IQueryable<Secret> secrets, Guid userId,
+        AccessClientType accessType) =>
+        accessType switch
+        {
+            AccessClientType.NoAccessCheck => secrets.Select(s => new SecretAccess(s.Id, true, true)),
+            AccessClientType.User => secrets.Select(s => new SecretAccess(
+                s.Id,
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                s.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)) ||
+                s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                s.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)) ||
+                s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)))
+            )),
+            AccessClientType.ServiceAccount => secrets.Select(s => new SecretAccess(
+                s.Id,
+                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read) ||
+                s.Projects.Any(p =>
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read)),
+                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write) ||
+                s.Projects.Any(p =>
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write))
+            )),
+            _ => secrets.Select(s => new SecretAccess(s.Id, false, false))
+        };
+
+    private record SecretAccess(Guid Id, bool Read, bool Write);
 }

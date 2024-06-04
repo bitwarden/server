@@ -135,39 +135,29 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
     }
 
     public async Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdWithSecretsDetailsAsync(
-    Guid organizationId, Guid userId, AccessClientType accessType)
+        Guid organizationId, Guid userId, AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = from sa in dbContext.ServiceAccount
-                    join ap in dbContext.ServiceAccountProjectAccessPolicy
-                        on sa.Id equals ap.ServiceAccountId into grouping
-                    from ap in grouping.DefaultIfEmpty()
-                    where sa.OrganizationId == organizationId
-                    select new
-                    {
-                        ServiceAccount = sa,
-                        AccessToSecrets = ap.GrantedProject.Secrets.Count(s => s.DeletedDate == null)
-                    };
 
-        query = accessType switch
-        {
-            AccessClientType.NoAccessCheck => query,
-            AccessClientType.User => query.Where(c =>
-                c.ServiceAccount.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
-                c.ServiceAccount.GroupAccessPolicies.Any(ap =>
-                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
-            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
-        };
+        var projectSecretsAccessQuery =
+            ApplyAccessCheck(BuildProjectSecretsAccessQuery(dbContext, organizationId), userId, accessType);
+        var directSecretAccessQuery =
+            ApplyAccessCheck(BuildDirectSecretAccessQuery(dbContext, organizationId), userId, accessType);
 
-        var results = (await query.ToListAsync())
+        var projectSecretsAccessResults = await projectSecretsAccessQuery.ToListAsync();
+        var directSecretAccessResults = await directSecretAccessQuery.ToListAsync();
+
+        var applicableDirectSecretAccessResults = FilterDirectSecretAccessResults(projectSecretsAccessResults, directSecretAccessResults);
+
+        var results = projectSecretsAccessResults.Concat(applicableDirectSecretAccessResults)
             .GroupBy(g => g.ServiceAccount)
             .Select(g =>
-                new ServiceAccountSecretsDetails
-                {
-                    ServiceAccount = Mapper.Map<Core.SecretsManager.Entities.ServiceAccount>(g.Key),
-                    AccessToSecrets = g.Sum(x => x.AccessToSecrets),
-                }).OrderBy(c => c.ServiceAccount.RevisionDate).ToList();
+            new ServiceAccountSecretsDetails
+            {
+                ServiceAccount = Mapper.Map<Core.SecretsManager.Entities.ServiceAccount>(g.Key),
+                AccessToSecrets = g.Sum(x => x.SecretIds.Count())
+            }).OrderBy(c => c.ServiceAccount.RevisionDate).ToList();
 
         return results;
     }
@@ -200,4 +190,57 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
     private static Expression<Func<ServiceAccount, bool>> UserHasWriteAccessToServiceAccount(Guid userId) => sa =>
         sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
         sa.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write));
+
+    private static IQueryable<ServiceAccountSecretsAccess> BuildProjectSecretsAccessQuery(DatabaseContext dbContext,
+        Guid organizationId) =>
+        from sa in dbContext.ServiceAccount
+        join ap in dbContext.ServiceAccountProjectAccessPolicy
+            on sa.Id equals ap.ServiceAccountId into grouping
+        from ap in grouping.DefaultIfEmpty()
+        where sa.OrganizationId == organizationId
+        select new ServiceAccountSecretsAccess
+        (
+            sa, ap.GrantedProject.Secrets.Where(s => s.DeletedDate == null).Select(s => s.Id)
+        );
+
+    private static IQueryable<ServiceAccountSecretsAccess> BuildDirectSecretAccessQuery(DatabaseContext dbContext,
+        Guid organizationId) =>
+        from sa in dbContext.ServiceAccount
+        join ap in dbContext.ServiceAccountSecretAccessPolicy
+            on sa.Id equals ap.ServiceAccountId into grouping
+        from ap in grouping.DefaultIfEmpty()
+        where sa.OrganizationId == organizationId && ap.GrantedSecret.DeletedDate == null
+        select new ServiceAccountSecretsAccess(sa,
+            ap.GrantedSecretId.HasValue
+                ? new List<Guid> { ap.GrantedSecretId.Value }
+                : new List<Guid>());
+
+    private static IQueryable<ServiceAccountSecretsAccess> ApplyAccessCheck(
+        IQueryable<ServiceAccountSecretsAccess> query, Guid userId, AccessClientType accessType) =>
+        accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(c =>
+                c.ServiceAccount.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                c.ServiceAccount.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null)
+        };
+
+    private static List<ServiceAccountSecretsAccess> FilterDirectSecretAccessResults(
+        List<ServiceAccountSecretsAccess> projectSecretsAccessResults,
+        List<ServiceAccountSecretsAccess> directSecretAccessResults) =>
+        directSecretAccessResults
+            .Where(directSecretAccess =>
+                directSecretAccess.SecretIds.Any() && (
+                    projectSecretsAccessResults.All(projectAccess =>
+                        projectAccess.ServiceAccount.Id != directSecretAccess.ServiceAccount.Id) ||
+                    projectSecretsAccessResults.Any(projectAccess =>
+                        projectAccess.ServiceAccount.Id == directSecretAccess.ServiceAccount.Id &&
+                        !projectAccess.SecretIds.Contains(directSecretAccess.SecretIds.First())
+                    ))
+            )
+            .ToList();
+
+    private record ServiceAccountSecretsAccess(ServiceAccount ServiceAccount, IEnumerable<Guid> SecretIds);
 }
