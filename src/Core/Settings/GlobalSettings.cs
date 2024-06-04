@@ -82,6 +82,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
 
+    public virtual bool EnableEmailVerification { get; set; }
+
     public string BuildExternalUri(string explicitValue, string name)
     {
         if (!string.IsNullOrWhiteSpace(explicitValue))
