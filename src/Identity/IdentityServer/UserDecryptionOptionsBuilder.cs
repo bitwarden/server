@@ -95,13 +95,9 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             return;
         }
 
-        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted();
-
-        var ssoConfigurationData = _ssoConfig.GetData();
-        if (
-            (ssoConfigurationData is not { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
-            && !isTdeOffboarding
-        )
+        var isTdeActive = _ssoConfig.GetData() is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption };
+        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted() && !isTdeActive;
+        if (!isTdeActive && !isTdeOffboarding)
         {
             return;
         }
