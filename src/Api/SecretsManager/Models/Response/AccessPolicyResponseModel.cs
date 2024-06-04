@@ -122,7 +122,7 @@ public class ServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResponseM
 
 public class GrantedProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel
 {
-    private const string _objectName = "serviceAccountProjectAccessPolicy";
+    private const string _objectName = "grantedProjectAccessPolicy";
 
     public GrantedProjectAccessPolicyResponseModel(ServiceAccountProjectAccessPolicy accessPolicy)
         : base(accessPolicy, _objectName)

@@ -6,7 +6,7 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class GrantedProjectAccessPolicyPermissionDetailsResponseModel : ResponseModel
 {
-    private const string _objectName = "serviceAccountProjectAccessPolicyPermissionDetails";
+    private const string _objectName = "grantedProjectAccessPolicyPermissionDetails";
 
     public GrantedProjectAccessPolicyPermissionDetailsResponseModel(
         ServiceAccountProjectAccessPolicyPermissionDetails apPermissionDetails, string obj = _objectName) : base(obj)
