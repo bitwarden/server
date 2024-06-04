@@ -14,7 +14,9 @@ public class ProviderEditModel : ProviderViewModel
         Provider provider,
         IEnumerable<ProviderUserUserDetails> providerUsers,
         IEnumerable<ProviderOrganizationOrganizationDetails> organizations,
-        IReadOnlyCollection<ProviderPlan> providerPlans) : base(provider, providerUsers, organizations)
+        IReadOnlyCollection<ProviderPlan> providerPlans,
+        string gatewayCustomerUrl = null,
+        string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations)
     {
         Name = provider.DisplayName();
         BusinessName = provider.DisplayBusinessName();
@@ -25,6 +27,8 @@ public class ProviderEditModel : ProviderViewModel
         Gateway = provider.Gateway;
         GatewayCustomerId = provider.GatewayCustomerId;
         GatewaySubscriptionId = provider.GatewaySubscriptionId;
+        GatewayCustomerUrl = gatewayCustomerUrl;
+        GatewaySubscriptionUrl = gatewaySubscriptionUrl;
     }
 
     [Display(Name = "Billing Email")]
@@ -45,6 +49,8 @@ public class ProviderEditModel : ProviderViewModel
     public string GatewayCustomerId { get; set; }
     [Display(Name = "Gateway Subscription Id")]
     public string GatewaySubscriptionId { get; set; }
+    public string GatewayCustomerUrl { get; }
+    public string GatewaySubscriptionUrl { get; }
 
     public virtual Provider ToProvider(Provider existingProvider)
     {
