@@ -834,54 +834,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string newMasterPassword, string key, string hint)
-    {
-        if (user.HasMasterPassword())
-        {
-            throw new BadRequestException("User already has a master password.");
-        }
-        var orgUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
-        orgUserDetails = orgUserDetails.Where(x => x.UseSso).ToList();
-        if (orgUserDetails.Count == 0)
-        {
-            throw new BadRequestException("User is not part of any organization that has SSO enabled.");
-        }
-
-        var orgSSOUsers = await Task.WhenAll(orgUserDetails.Select(async x => await _ssoUserRepository.GetByUserIdOrganizationIdAsync(x.OrganizationId, user.Id)));
-        if (orgSSOUsers.Length != 1)
-        {
-            throw new BadRequestException("User is part of no or multiple SSO configurations.");
-        }
-
-        var orgUser = orgUserDetails.First();
-        var orgSSOConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgUser.OrganizationId);
-        if (orgSSOConfig == null)
-        {
-            throw new BadRequestException("Organization SSO configuration not found.");
-        }
-        else if (orgSSOConfig.GetData().MemberDecryptionType != MemberDecryptionType.MasterPassword)
-        {
-            throw new BadRequestException("Organization SSO Member Decryption Type is not Master Password.");
-        }
-
-        var result = await UpdatePasswordHash(user, newMasterPassword);
-        if (!result.Succeeded)
-        {
-            return result;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.ForcePasswordReset = false;
-        user.Key = key;
-        user.MasterPasswordHint = hint;
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
-        await _pushService.PushLogOutAsync(user.Id);
-
-        return IdentityResult.Success;
-    }
-
     public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
         string key, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {

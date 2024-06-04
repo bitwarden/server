@@ -18,6 +18,7 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
@@ -64,6 +65,7 @@ public class AccountsController : Controller
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
     private readonly ISubscriberService _subscriberService;
@@ -98,6 +100,7 @@ public class AccountsController : Controller
         ICaptchaValidationService captchaValidationService,
         IPolicyService policyService,
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
+        ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
         ISubscriberService subscriberService,
@@ -126,6 +129,7 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
+        _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
         _subscriberService = subscriberService;
@@ -948,7 +952,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
+        var result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
         if (result.Succeeded)
         {
             return;
