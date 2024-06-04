@@ -56,13 +56,13 @@ public interface IProviderBillingService
         PlanType planType);
 
     /// <summary>
-    /// Retrieves a provider's billing subscription data.
+    /// Retrieves the <paramref name="provider"/>'s consolidated billing subscription, which includes their Stripe subscription and configured provider plans.
     /// </summary>
-    /// <param name="providerId">The ID of the provider to retrieve subscription data for.</param>
-    /// <returns>A <see cref="ProviderSubscriptionDTO"/> object containing the provider's Stripe <see cref="Stripe.Subscription"/> and their <see cref="ConfiguredProviderPlanDTO"/>s.</returns>
+    /// <param name="provider">The provider to retrieve the consolidated billing subscription for.</param>
+    /// <returns>A <see cref="ConsolidatedBillingSubscriptionDTO"/> containing the provider's Stripe <see cref="Stripe.Subscription"/> and a list of <see cref="ConfiguredProviderPlanDTO"/>s representing their configured plans.</returns>
     /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<ProviderSubscriptionDTO> GetSubscriptionDTO(
-        Guid providerId);
+    Task<ConsolidatedBillingSubscriptionDTO> GetConsolidatedBillingSubscription(
+        Provider provider);
 
     /// <summary>
     /// Scales the <paramref name="provider"/>'s seats for the specified <paramref name="planType"/> using the provided <paramref name="seatAdjustment"/>.
@@ -85,12 +85,4 @@ public interface IProviderBillingService
     /// <param name="provider">The provider to create the <see cref="Stripe.Subscription"/> for.</param>
     Task StartSubscription(
         Provider provider);
-
-    /// <summary>
-    /// Retrieves a provider's billing payment information.
-    /// </summary>
-    /// <param name="providerId">The ID of the provider to retrieve payment information for.</param>
-    /// <returns>A <see cref="ProviderPaymentInfoDTO"/> object containing the provider's Stripe <see cref="Stripe.PaymentMethod"/> and their <see cref="TaxInfo"/>s.</returns>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<ProviderPaymentInfoDTO> GetPaymentInformationAsync(Guid providerId);
 }

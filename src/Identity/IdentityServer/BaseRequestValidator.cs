@@ -162,6 +162,17 @@ public abstract class BaseRequestValidator<T> where T : class
             twoFactorToken = null;
         }
 
+
+        // Force legacy users to the web for migration
+        if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
+        {
+            if (UserService.IsLegacyUser(user) && request.ClientId != "web")
+            {
+                await FailAuthForLegacyUserAsync(user, context);
+                return;
+            }
+        }
+
         // Returns true if can finish validation process
         if (await IsValidAuthTypeAsync(user, request.GrantType))
         {
@@ -182,6 +193,13 @@ public abstract class BaseRequestValidator<T> where T : class
                     { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
                 });
         }
+    }
+
+    protected async Task FailAuthForLegacyUserAsync(User user, T context)
+    {
+        await BuildErrorResultAsync(
+            $"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}",
+            false, context, user);
     }
 
     protected abstract Task<bool> ValidateContextAsync(T context, CustomValidatorRequestContext validatorContext);

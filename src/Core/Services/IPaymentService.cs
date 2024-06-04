@@ -26,20 +26,17 @@ public interface IPaymentService
         bool subscribedToSecretsManager,
         int? newlyPurchasedSecretsManagerSeats,
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
-        int newlyPurchasedAdditionalStorage,
-        DateTime? prorationDate = null);
-    Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
+        int newlyPurchasedAdditionalStorage);
+    Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats);
     Task<string> AdjustSeats(
         Provider provider,
         Plan plan,
         int currentlySubscribedSeats,
-        int newlySubscribedSeats,
-        DateTime? prorationDate = null);
-    Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
-    Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
+        int newlySubscribedSeats);
+    Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats);
+    Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
 
-    Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts,
-        DateTime? prorationDate = null);
+    Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts);
     Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
     Task ReinstateSubscriptionAsync(ISubscriber subscriber);
     Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
@@ -49,12 +46,13 @@ public interface IPaymentService
     Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber);
     Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber);
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
+    Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber);
     Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo);
     Task<TaxRate> CreateTaxRateAsync(TaxRate taxRate);
     Task UpdateTaxRateAsync(TaxRate taxRate);
     Task ArchiveTaxRateAsync(TaxRate taxRate);
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
-        int additionalServiceAccount, DateTime? prorationDate = null);
+        int additionalServiceAccount);
     Task<bool> RisksSubscriptionFailure(Organization organization);
     Task<bool> HasSecretsManagerStandalone(Organization organization);
 }
