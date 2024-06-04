@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -40,8 +39,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IUserRepository _userRepository;
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly ISsoUserRepository _ssoUserRepository;
-    private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushService;
@@ -95,9 +92,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        ISsoUserRepository ssoUserRepository,
-        ISsoConfigRepository ssoConfigRepository)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
         : base(
               store,
               optionsAccessor,
@@ -135,8 +130,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _ssoUserRepository = ssoUserRepository;
-        _ssoConfigRepository = ssoConfigRepository;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
