@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Bit.Api.Auth.Models.Request.Accounts;
+﻿namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class RequestSMAccessRequestModel
 {
