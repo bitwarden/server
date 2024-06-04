@@ -258,6 +258,11 @@ public class AccountsController : Controller
     [HttpPost("request-sm-access")]
     public async Task RequestSMAccessFromAdmins([FromBody] RequestSMAccessRequestModel model)
     {
+        if (model?.EmailContent == null || model?.OrganizationId == null)
+        {
+            throw new BadRequestException();
+        }
+
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {

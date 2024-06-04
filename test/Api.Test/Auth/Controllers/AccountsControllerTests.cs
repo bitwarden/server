@@ -577,6 +577,7 @@ public class AccountsControllerTests : IDisposable
     {
         // Arrange
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        model.OrganizationId = new Guid().ToString();
 
         // Act & Assert
         await _sut.RequestSMAccessFromAdmins(model);
