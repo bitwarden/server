@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Data;
+﻿using Bit.Api.Auth.Models.Request.Webauthn;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -6,7 +7,7 @@ using Bit.Core.Services;
 
 namespace Bit.Api.Auth.Validators;
 
-public class WebauthnKeyRotationValidator : IRotationValidator<IEnumerable<WebauthnRotateCredentialData>, IEnumerable<WebauthnRotateCredentialData>>
+public class WebauthnKeyRotationValidator : IRotationValidator<IEnumerable<WebauthnRotateKeyRequestModel>, IEnumerable<WebauthnRotateKeyData>>
 {
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserService _userService;
@@ -17,9 +18,9 @@ public class WebauthnKeyRotationValidator : IRotationValidator<IEnumerable<Webau
         _userService = userService;
     }
 
-    public async Task<IEnumerable<WebauthnRotateCredentialData>> ValidateAsync(User user, IEnumerable<WebauthnRotateCredentialData> keysToRotate)
+    public async Task<IEnumerable<WebauthnRotateKeyData>> ValidateAsync(User user, IEnumerable<WebauthnRotateKeyRequestModel> keysToRotate)
     {
-        var result = new List<WebauthnRotateCredentialData>();
+        var result = new List<WebauthnRotateKeyData>();
         var existing = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existing == null || !existing.Any())
         {
@@ -45,7 +46,7 @@ public class WebauthnKeyRotationValidator : IRotationValidator<IEnumerable<Webau
                 throw new BadRequestException("Webauthn prf keys must have public-key during rotation.");
             }
 
-            result.Add(keyToRotate);
+            result.Add(keyToRotate.ToWebauthnRotateKeyData());
         }
 
         return result;

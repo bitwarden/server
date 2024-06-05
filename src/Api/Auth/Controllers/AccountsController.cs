@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
@@ -81,7 +82,7 @@ public class AccountsController : Controller
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _organizationUserValidator;
-    private readonly IRotationValidator<IEnumerable<WebauthnRotateCredentialData>, IEnumerable<WebauthnRotateCredentialData>>
+    private readonly IRotationValidator<IEnumerable<WebauthnRotateKeyRequestModel>, IEnumerable<WebauthnRotateKeyData>>
         _webauthnKeyValidator;
 
 
@@ -112,7 +113,7 @@ public class AccountsController : Controller
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
-        IRotationValidator<IEnumerable<WebauthnRotateCredentialData>, IEnumerable<WebauthnRotateCredentialData>> webAuthnKeyValidator
+        IRotationValidator<IEnumerable<WebauthnRotateKeyRequestModel>, IEnumerable<WebauthnRotateKeyData>> webAuthnKeyValidator
         )
     {
         _cipherRepository = cipherRepository;

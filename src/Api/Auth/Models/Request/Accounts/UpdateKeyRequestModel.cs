@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core.Auth.Models.Data;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
@@ -20,6 +20,6 @@ public class UpdateKeyRequestModel
     public IEnumerable<SendWithIdRequestModel> Sends { get; set; }
     public IEnumerable<EmergencyAccessWithIdRequestModel> EmergencyAccessKeys { get; set; }
     public IEnumerable<ResetPasswordWithOrgIdRequestModel> ResetPasswordKeys { get; set; }
-    public IEnumerable<WebauthnRotateCredentialData> WebAuthnKeys { get; set; }
+    public IEnumerable<WebauthnRotateKeyRequestModel> WebAuthnKeys { get; set; }
 
 }

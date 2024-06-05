@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Data;
 
-public class WebauthnRotateCredentialData
+public class WebauthnRotateKeyData
 {
     [Required]
     public Guid Id { get; set; }
