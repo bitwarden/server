@@ -62,6 +62,6 @@ public class TwoFactorDuoRequestModelValidationTests
         var result = model.Validate(new ValidationContext(model));
 
         // Assert
-        Assert.NotNull(result);
+        Assert.Empty(result);
     }
 }
