@@ -282,9 +282,14 @@ public class ProviderBillingControllerTests
             Customer = new Customer { Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } } }
         };
 
+        DateTime? SuspensionDate = new DateTime();
+        DateTime? UnpaidPeriodEndDate = new DateTime();
+        var gracePeriod = 30;
         var consolidatedBillingSubscription = new ConsolidatedBillingSubscriptionDTO(
             configuredProviderPlans,
-            subscription);
+            subscription,
+            SuspensionDate,
+            UnpaidPeriodEndDate);
 
         sutProvider.GetDependency<IProviderBillingService>().GetConsolidatedBillingSubscription(provider)
             .Returns(consolidatedBillingSubscription);
@@ -298,6 +303,10 @@ public class ProviderBillingControllerTests
         Assert.Equal(response.Status, subscription.Status);
         Assert.Equal(response.CurrentPeriodEndDate, subscription.CurrentPeriodEnd);
         Assert.Equal(response.DiscountPercentage, subscription.Customer!.Discount!.Coupon!.PercentOff);
+        Assert.Equal(response.CollectionMethod, subscription.CollectionMethod);
+        Assert.Equal(response.UnpaidPeriodEndDate, UnpaidPeriodEndDate);
+        Assert.Equal(response.GracePeriod, gracePeriod);
+        Assert.Equal(response.SuspensionDate, SuspensionDate);
 
         var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
         var providerTeamsPlan = response.Plans.FirstOrDefault(plan => plan.PlanName == teamsPlan.Name);

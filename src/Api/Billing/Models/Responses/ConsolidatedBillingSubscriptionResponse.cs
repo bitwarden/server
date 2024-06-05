@@ -7,6 +7,10 @@ public record ConsolidatedBillingSubscriptionResponse(
     string Status,
     DateTime CurrentPeriodEndDate,
     decimal? DiscountPercentage,
+    string CollectionMethod,
+    DateTime? UnpaidPeriodEndDate,
+    int? GracePeriod,
+    DateTime? SuspensionDate,
     IEnumerable<ProviderPlanResponse> Plans)
 {
     private const string _annualCadence = "Annual";
@@ -15,7 +19,7 @@ public record ConsolidatedBillingSubscriptionResponse(
     public static ConsolidatedBillingSubscriptionResponse From(
         ConsolidatedBillingSubscriptionDTO consolidatedBillingSubscription)
     {
-        var (providerPlans, subscription) = consolidatedBillingSubscription;
+        var (providerPlans, subscription, suspensionDate, unpaidPeriodEndDate) = consolidatedBillingSubscription;
 
         var providerPlansDTO = providerPlans
             .Select(providerPlan =>
@@ -31,11 +35,15 @@ public record ConsolidatedBillingSubscriptionResponse(
                     cost,
                     cadence);
             });
-
+        var gracePeriod = subscription.CollectionMethod == "charge_automatically" ? 14 : 30;
         return new ConsolidatedBillingSubscriptionResponse(
             subscription.Status,
             subscription.CurrentPeriodEnd,
             subscription.Customer?.Discount?.Coupon?.PercentOff,
+            subscription.CollectionMethod,
+            unpaidPeriodEndDate,
+            gracePeriod,
+            suspensionDate,
             providerPlansDTO);
     }
 }
