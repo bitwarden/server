@@ -1,6 +1,6 @@
-﻿using Bit.Api.Auth.Validators;
+﻿using Bit.Api.Auth.Models.Request.Webauthn;
+using Bit.Api.Auth.Validators;
 using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -19,10 +19,10 @@ public class WebauthnKeyRotationValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_WrongWebauthnKeys_Throws(
         SutProvider<WebauthnKeyRotationValidator> sutProvider, User user,
-        IEnumerable<WebauthnRotateKeyData> webauthnRotateCredentialData)
+        IEnumerable<WebauthnRotateKeyRequestModel> webauthnRotateCredentialData)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
-        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebauthnRotateKeyData
+        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebauthnRotateKeyRequestModel
         {
             Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
             EncryptedPublicKey = e.EncryptedPublicKey,
@@ -45,11 +45,11 @@ public class WebauthnKeyRotationValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_NullUserKey_Throws(
         SutProvider<WebauthnKeyRotationValidator> sutProvider, User user,
-        IEnumerable<WebauthnRotateKeyData> webauthnRotateCredentialData)
+        IEnumerable<WebauthnRotateKeyRequestModel> webauthnRotateCredentialData)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
         var guid = Guid.NewGuid();
-        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebauthnRotateKeyData
+        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebauthnRotateKeyRequestModel
         {
             Id = guid,
             EncryptedPublicKey = e.EncryptedPublicKey,
@@ -72,11 +72,11 @@ public class WebauthnKeyRotationValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_NullPublicKey_Throws(
         SutProvider<WebauthnKeyRotationValidator> sutProvider, User user,
-        IEnumerable<WebauthnRotateKeyData> webauthnRotateCredentialData)
+        IEnumerable<WebauthnRotateKeyRequestModel> webauthnRotateCredentialData)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
         var guid = Guid.NewGuid();
-        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebauthnRotateKeyData
+        var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebauthnRotateKeyRequestModel
         {
             Id = guid,
             EncryptedUserKey = e.EncryptedUserKey,
