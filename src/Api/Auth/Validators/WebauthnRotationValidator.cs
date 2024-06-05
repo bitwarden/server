@@ -26,10 +26,8 @@ public class WebauthnKeyRotationValidator : IRotationValidator<IEnumerable<Webau
         {
             return result;
         }
-        // exclude keys where prf is not used
-        var existingPrf = existing.Where(c => c.EncryptedUserKey != null);
 
-        foreach (var ea in existingPrf)
+        foreach (var ea in existing)
         {
             var keyToRotate = keysToRotate.FirstOrDefault(c => c.Id == ea.Id);
             if (keyToRotate == null)
