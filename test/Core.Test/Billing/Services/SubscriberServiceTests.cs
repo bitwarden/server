@@ -5,6 +5,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
@@ -318,6 +319,109 @@ public class SubscriberServiceTests
 
         Assert.Equivalent(customer, gotCustomer);
     }
+    #endregion
+
+    #region GetInvoices
+
+    [Theory, BitAutoData]
+    public async Task GetInvoices_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider)
+        => await Assert.ThrowsAsync<ArgumentNullException>(
+            async () => await sutProvider.Sut.GetInvoices(null));
+
+    [Theory, BitAutoData]
+    public async Task GetCustomer_NoGatewayCustomerId_ReturnsEmptyList(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+
+        var invoices = await sutProvider.Sut.GetInvoices(organization);
+
+        Assert.Empty(invoices);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetInvoices_StripeException_ReturnsEmptyList(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>()
+            .InvoiceListAsync(Arg.Any<StripeInvoiceListOptions>())
+            .ThrowsAsync<StripeException>();
+
+        var invoices = await sutProvider.Sut.GetInvoices(organization);
+
+        Assert.Empty(invoices);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetInvoices_NullOptions_Succeeds(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var invoices = new List<Invoice>
+        {
+            new ()
+            {
+                Created = new DateTime(2024, 6, 1),
+                Number = "2",
+                Status = "open",
+                Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/2",
+                InvoicePdf = "https://example.com/invoice/2/pdf"
+            },
+            new ()
+            {
+                Created = new DateTime(2024, 5, 1),
+                Number = "1",
+                Status = "paid",
+                Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/1",
+                InvoicePdf = "https://example.com/invoice/1/pdf"
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .InvoiceListAsync(Arg.Is<StripeInvoiceListOptions>(options => options.Customer == organization.GatewayCustomerId))
+            .Returns(invoices);
+
+        var gotInvoices = await sutProvider.Sut.GetInvoices(organization);
+
+        Assert.Equivalent(invoices, gotInvoices);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetInvoices_ProvidedOptions_Succeeds(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var invoices = new List<Invoice>
+        {
+            new ()
+            {
+                Created = new DateTime(2024, 5, 1),
+                Number = "1",
+                Status = "paid",
+                Total = 100000,
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .InvoiceListAsync(Arg.Is<StripeInvoiceListOptions>(
+                options =>
+                    options.Customer == organization.GatewayCustomerId &&
+                    options.Status == "paid"))
+            .Returns(invoices);
+
+        var gotInvoices = await sutProvider.Sut.GetInvoices(organization, new StripeInvoiceListOptions
+        {
+            Status = "paid"
+        });
+
+        Assert.Equivalent(invoices, gotInvoices);
+    }
+
     #endregion
 
     #region GetPaymentMethod

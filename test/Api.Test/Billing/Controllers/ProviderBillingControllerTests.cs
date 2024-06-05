@@ -26,6 +26,160 @@ namespace Bit.Api.Test.Billing.Controllers;
 [SutProviderCustomize]
 public class ProviderBillingControllerTests
 {
+    #region GetInvoices
+
+    [Theory, BitAutoData]
+    public async Task GetInvoices_Ok(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        var invoices = new List<Invoice>
+        {
+            new ()
+            {
+                Created = new DateTime(2024, 7, 1),
+                Status = "draft",
+                Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/3",
+                InvoicePdf = "https://example.com/invoice/3/pdf"
+            },
+            new ()
+            {
+                Created = new DateTime(2024, 6, 1),
+                Number = "2",
+                Status = "open",
+                Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/2",
+                InvoicePdf = "https://example.com/invoice/2/pdf"
+            },
+            new ()
+            {
+                Created = new DateTime(2024, 5, 1),
+                Number = "1",
+                Status = "paid",
+                Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/1",
+                InvoicePdf = "https://example.com/invoice/1/pdf"
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetInvoices(provider).Returns(invoices);
+
+        var result = await sutProvider.Sut.GetInvoicesAsync(provider.Id);
+
+        Assert.IsType<Ok<InvoicesResponse>>(result);
+
+        var response = ((Ok<InvoicesResponse>)result).Value;
+
+        Assert.Equal(2, response.Invoices.Count);
+
+        var openInvoice = response.Invoices.FirstOrDefault(i => i.Status == "open");
+
+        Assert.NotNull(openInvoice);
+        Assert.Equal(new DateTime(2024, 6, 1), openInvoice.Date);
+        Assert.Equal("2", openInvoice.Number);
+        Assert.Equal(1000, openInvoice.Total);
+        Assert.Equal("https://example.com/invoice/2", openInvoice.Url);
+        Assert.Equal("https://example.com/invoice/2/pdf", openInvoice.PdfUrl);
+
+        var paidInvoice = response.Invoices.FirstOrDefault(i => i.Status == "paid");
+        Assert.NotNull(paidInvoice);
+        Assert.Equal(new DateTime(2024, 5, 1), paidInvoice.Date);
+        Assert.Equal("1", paidInvoice.Number);
+        Assert.Equal(1000, paidInvoice.Total);
+        Assert.Equal("https://example.com/invoice/1", paidInvoice.Url);
+        Assert.Equal("https://example.com/invoice/1/pdf", paidInvoice.PdfUrl);
+    }
+
+    #endregion
+
+    #region GetPaymentInformationAsync
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformation_PaymentInformationNull_NotFound(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ISubscriberService>().GetPaymentInformation(provider).ReturnsNull();
+
+        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
+
+        Assert.IsType<NotFound>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformation_Ok(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        var maskedPaymentMethod = new MaskedPaymentMethodDTO(PaymentMethodType.Card, "VISA *1234", false);
+
+        var taxInformation =
+            new TaxInformationDTO("US", "12345", "123456789", "123 Example St.", null, "Example Town", "NY");
+
+        sutProvider.GetDependency<ISubscriberService>().GetPaymentInformation(provider).Returns(new PaymentInformationDTO(
+            100,
+            maskedPaymentMethod,
+            taxInformation));
+
+        var result = await sutProvider.Sut.GetPaymentInformationAsync(provider.Id);
+
+        Assert.IsType<Ok<PaymentInformationResponse>>(result);
+
+        var response = ((Ok<PaymentInformationResponse>)result).Value;
+
+        Assert.Equal(100, response.AccountCredit);
+        Assert.Equal(maskedPaymentMethod.Description, response.PaymentMethod.Description);
+        Assert.Equal(taxInformation.TaxId, response.TaxInformation.TaxId);
+    }
+
+    #endregion
+
+    #region GetPaymentMethodAsync
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_PaymentMethodNull_NotFound(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ISubscriberService>().GetPaymentMethod(provider).ReturnsNull();
+
+        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
+
+        Assert.IsType<NotFound>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentMethod_Ok(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ISubscriberService>().GetPaymentMethod(provider).Returns(new MaskedPaymentMethodDTO(
+            PaymentMethodType.Card, "Description", false));
+
+        var result = await sutProvider.Sut.GetPaymentMethodAsync(provider.Id);
+
+        Assert.IsType<Ok<MaskedPaymentMethodResponse>>(result);
+
+        var response = ((Ok<MaskedPaymentMethodResponse>)result).Value;
+
+        Assert.Equal(PaymentMethodType.Card, response.Type);
+        Assert.Equal("Description", response.Description);
+        Assert.False(response.NeedsVerification);
+    }
+
+    #endregion
+
     #region GetSubscriptionAsync
     [Theory, BitAutoData]
     public async Task GetSubscriptionAsync_FFDisabled_NotFound(
@@ -163,91 +317,6 @@ public class ProviderBillingControllerTests
         Assert.Equal(100 * enterprisePlan.PasswordManager.SeatPrice, providerEnterprisePlan.Cost);
         Assert.Equal("Monthly", providerEnterprisePlan.Cadence);
     }
-    #endregion
-
-    #region GetPaymentInformationAsync
-
-    [Theory, BitAutoData]
-    public async Task GetPaymentInformation_PaymentInformationNull_NotFound(
-        Provider provider,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        ConfigureStableInputs(provider, sutProvider);
-
-        sutProvider.GetDependency<ISubscriberService>().GetPaymentInformation(provider).ReturnsNull();
-
-        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
-
-        Assert.IsType<NotFound>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetPaymentInformation_Ok(
-        Provider provider,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        ConfigureStableInputs(provider, sutProvider);
-
-        var maskedPaymentMethod = new MaskedPaymentMethodDTO(PaymentMethodType.Card, "VISA *1234", false);
-
-        var taxInformation =
-            new TaxInformationDTO("US", "12345", "123456789", "123 Example St.", null, "Example Town", "NY");
-
-        sutProvider.GetDependency<ISubscriberService>().GetPaymentInformation(provider).Returns(new PaymentInformationDTO(
-            100,
-            maskedPaymentMethod,
-            taxInformation));
-
-        var result = await sutProvider.Sut.GetPaymentInformationAsync(provider.Id);
-
-        Assert.IsType<Ok<PaymentInformationResponse>>(result);
-
-        var response = ((Ok<PaymentInformationResponse>)result).Value;
-
-        Assert.Equal(100, response.AccountCredit);
-        Assert.Equal(maskedPaymentMethod.Description, response.PaymentMethod.Description);
-        Assert.Equal(taxInformation.TaxId, response.TaxInformation.TaxId);
-    }
-
-    #endregion
-
-    #region GetPaymentMethodAsync
-
-    [Theory, BitAutoData]
-    public async Task GetPaymentMethod_PaymentMethodNull_NotFound(
-        Provider provider,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        ConfigureStableInputs(provider, sutProvider);
-
-        sutProvider.GetDependency<ISubscriberService>().GetPaymentMethod(provider).ReturnsNull();
-
-        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
-
-        Assert.IsType<NotFound>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Ok(
-        Provider provider,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        ConfigureStableInputs(provider, sutProvider);
-
-        sutProvider.GetDependency<ISubscriberService>().GetPaymentMethod(provider).Returns(new MaskedPaymentMethodDTO(
-            PaymentMethodType.Card, "Description", false));
-
-        var result = await sutProvider.Sut.GetPaymentMethodAsync(provider.Id);
-
-        Assert.IsType<Ok<MaskedPaymentMethodResponse>>(result);
-
-        var response = ((Ok<MaskedPaymentMethodResponse>)result).Value;
-
-        Assert.Equal(PaymentMethodType.Card, response.Type);
-        Assert.Equal("Description", response.Description);
-        Assert.False(response.NeedsVerification);
-    }
-
     #endregion
 
     #region GetTaxInformationAsync
