@@ -442,7 +442,8 @@ public class AccountsController : Controller
             Folders = await _folderValidator.ValidateAsync(user, model.Folders),
             Sends = await _sendValidator.ValidateAsync(user, model.Sends),
             EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys)
+            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys),
+            WebAuthnKeys = model.WebAuthnKeys,
         };
 
         var result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
