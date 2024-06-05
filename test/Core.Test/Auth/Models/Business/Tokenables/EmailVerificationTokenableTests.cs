@@ -1,4 +1,5 @@
 ﻿using AutoFixture.Xunit2;
+using Bit.Core.Tokens;
 
 namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -95,7 +96,6 @@ public class EmailVerificationTokenableTests
         Assert.True(token.Valid);
     }
 
-    // TODO Figure out why this test isn't passing.
     /// <summary>
     /// Tests the token validity when the name is null
     /// </summary>
@@ -107,5 +107,78 @@ public class EmailVerificationTokenableTests
         Assert.True(token.TokenIsValid(email, null));
     }
 
+    /// <summary>
+    /// Tests the token validity when the receiveMarketingEmails input is not provided
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenIsValid_ReceiveMarketingEmailsNotProvided_ReturnsTrue(string email, string name)
+    {
+        var token = new EmailVerificationTokenable(email, name);
 
+        Assert.True(token.TokenIsValid(email, name));
+    }
+
+
+    // TokenIsValid_IncorrectEmail_ReturnsFalse
+
+    /// <summary>
+    /// Tests the token validity when an incorrect email is provided
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenIsValid_WrongEmail_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+
+        Assert.False(token.TokenIsValid("wrong@email.com", name, receiveMarketingEmails));
+    }
+
+    /// <summary>
+    /// Tests the token validity when an incorrect name is provided
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenIsValid_IncorrectName_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+
+        Assert.False(token.TokenIsValid(email, "wrongName", receiveMarketingEmails));
+    }
+
+    /// <summary>
+    /// Tests the token validity when an incorrect receiveMarketingEmails is provided
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenIsValid_IncorrectReceiveMarketingEmails_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+
+        Assert.False(token.TokenIsValid(email, name, !receiveMarketingEmails));
+    }
+
+    /// <summary>
+    /// Tests the token validity when valid inputs are provided
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenIsValid_ValidInputs_ReturnsTrue(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+
+        Assert.True(token.TokenIsValid(email, name, receiveMarketingEmails));
+    }
+
+    /// <summary>
+    /// Tests the deserialization of a token to ensure that the expiration date is preserved.
+    /// </summary>
+    [Theory, AutoData]
+    public void FromToken_SerializedToken_PreservesExpirationDate(string email, string name, bool receiveMarketingEmails)
+    {
+        var expectedDateTime = DateTime.UtcNow.AddHours(-5);
+        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails)
+        {
+            ExpirationDate = expectedDateTime
+        };
+
+        var result = Tokenable.FromToken<EmailVerificationTokenable>(token.ToToken());
+
+        Assert.Equal(expectedDateTime, result.ExpirationDate, precision: _timeTolerance);
+    }
 }

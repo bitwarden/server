@@ -42,7 +42,8 @@ public class EmailVerificationTokenable : ExpiringTokenable
             return false;
         }
 
-        return Name.Equals(name, StringComparison.InvariantCultureIgnoreCase) &&
+        // Note: string.Equals handles nulls without throwing an exception
+        return string.Equals(Name, name, StringComparison.InvariantCultureIgnoreCase) &&
                Email.Equals(email, StringComparison.InvariantCultureIgnoreCase) &&
                ReceiveMarketingEmails == receiveMarketingEmails;
     }
