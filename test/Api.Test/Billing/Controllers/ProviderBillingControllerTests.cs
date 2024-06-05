@@ -43,6 +43,8 @@ public class ProviderBillingControllerTests
                 Created = new DateTime(2024, 7, 1),
                 Status = "draft",
                 Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/3",
+                InvoicePdf = "https://example.com/invoice/3/pdf"
             },
             new ()
             {
@@ -50,6 +52,8 @@ public class ProviderBillingControllerTests
                 Number = "2",
                 Status = "open",
                 Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/2",
+                InvoicePdf = "https://example.com/invoice/2/pdf"
             },
             new ()
             {
@@ -57,6 +61,8 @@ public class ProviderBillingControllerTests
                 Number = "1",
                 Status = "paid",
                 Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/1",
+                InvoicePdf = "https://example.com/invoice/1/pdf"
             }
         };
 
@@ -75,13 +81,17 @@ public class ProviderBillingControllerTests
         Assert.NotNull(openInvoice);
         Assert.Equal(new DateTime(2024, 6, 1), openInvoice.Date);
         Assert.Equal("2", openInvoice.Number);
-        Assert.Equal(100000, openInvoice.Total);
+        Assert.Equal(1000, openInvoice.Total);
+        Assert.Equal("https://example.com/invoice/2", openInvoice.Url);
+        Assert.Equal("https://example.com/invoice/2/pdf", openInvoice.PdfUrl);
 
         var paidInvoice = response.Invoices.FirstOrDefault(i => i.Status == "paid");
         Assert.NotNull(paidInvoice);
         Assert.Equal(new DateTime(2024, 5, 1), paidInvoice.Date);
         Assert.Equal("1", paidInvoice.Number);
-        Assert.Equal(100000, paidInvoice.Total);
+        Assert.Equal(1000, paidInvoice.Total);
+        Assert.Equal("https://example.com/invoice/1", paidInvoice.Url);
+        Assert.Equal("https://example.com/invoice/1/pdf", paidInvoice.PdfUrl);
     }
 
     #endregion

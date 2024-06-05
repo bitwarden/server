@@ -368,6 +368,8 @@ public class SubscriberServiceTests
                 Number = "2",
                 Status = "open",
                 Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/2",
+                InvoicePdf = "https://example.com/invoice/2/pdf"
             },
             new ()
             {
@@ -375,6 +377,8 @@ public class SubscriberServiceTests
                 Number = "1",
                 Status = "paid",
                 Total = 100000,
+                HostedInvoiceUrl = "https://example.com/invoice/1",
+                InvoicePdf = "https://example.com/invoice/1/pdf"
             }
         };
 
