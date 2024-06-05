@@ -16,7 +16,6 @@ public class WebAuthnCredentialResponseModel : ResponseModel
         PrfStatus = credential.GetPrfStatus();
         EncryptedUserKey = credential.EncryptedUserKey;
         EncryptedPublicKey = credential.EncryptedPublicKey;
-        EncryptedPrivateKey = credential.EncryptedPrivateKey;
     }
 
     public string Id { get; set; }
@@ -28,7 +27,4 @@ public class WebAuthnCredentialResponseModel : ResponseModel
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public string EncryptedPublicKey { get; set; }
-    [EncryptedString]
-    [EncryptedStringLength(2000)]
-    public string EncryptedPrivateKey { get; set; }
 }
