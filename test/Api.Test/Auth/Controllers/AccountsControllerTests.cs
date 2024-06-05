@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -67,6 +68,8 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _resetPasswordValidator;
+    private readonly IRotationValidator<IEnumerable<WebauthnRotateCredentialData>, IEnumerable<WebauthnRotateCredentialData>>
+        _webauthnKeyRotationValidator;
 
 
     public AccountsControllerTests()
@@ -97,6 +100,7 @@ public class AccountsControllerTests : IDisposable
         _sendValidator = Substitute.For<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>();
         _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
             IEnumerable<EmergencyAccess>>>();
+        _webauthnKeyRotationValidator = Substitute.For<IRotationValidator<IEnumerable<WebauthnRotateCredentialData>, IEnumerable<WebauthnRotateCredentialData>>>();
         _resetPasswordValidator = Substitute
             .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
                 IReadOnlyList<OrganizationUser>>>();
@@ -125,7 +129,8 @@ public class AccountsControllerTests : IDisposable
             _folderValidator,
             _sendValidator,
             _emergencyAccessValidator,
-            _resetPasswordValidator
+            _resetPasswordValidator,
+            _webauthnKeyRotationValidator
         );
     }
 
