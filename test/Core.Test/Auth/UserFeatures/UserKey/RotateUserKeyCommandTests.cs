@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Models.Data;
+﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Services;
@@ -19,6 +21,16 @@ public class RotateUserKeyCommandTests
     {
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.MasterPasswordHash)
             .Returns(true);
+        foreach (var webauthnCred in model.WebAuthnKeys)
+        {
+            var dbWebauthnCred = new WebAuthnCredential
+            {
+                EncryptedPublicKey = "encryptedPublicKey",
+                EncryptedUserKey = "encryptedUserKey"
+            };
+            sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetByIdAsync(webauthnCred.Id, user.Id)
+                .Returns(dbWebauthnCred);
+        }
 
         var result = await sutProvider.Sut.RotateUserKeyAsync(user, model);
 
@@ -31,6 +43,16 @@ public class RotateUserKeyCommandTests
     {
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.MasterPasswordHash)
             .Returns(false);
+        foreach (var webauthnCred in model.WebAuthnKeys)
+        {
+            var dbWebauthnCred = new WebAuthnCredential
+            {
+                EncryptedPublicKey = "encryptedPublicKey",
+                EncryptedUserKey = "encryptedUserKey"
+            };
+            sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetByIdAsync(webauthnCred.Id, user.Id)
+                .Returns(dbWebauthnCred);
+        }
 
         var result = await sutProvider.Sut.RotateUserKeyAsync(user, model);
 
@@ -43,6 +65,16 @@ public class RotateUserKeyCommandTests
     {
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.MasterPasswordHash)
             .Returns(true);
+        foreach (var webauthnCred in model.WebAuthnKeys)
+        {
+            var dbWebauthnCred = new WebAuthnCredential
+            {
+                EncryptedPublicKey = "encryptedPublicKey",
+                EncryptedUserKey = "encryptedUserKey"
+            };
+            sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetByIdAsync(webauthnCred.Id, user.Id)
+                .Returns(dbWebauthnCred);
+        }
 
         await sutProvider.Sut.RotateUserKeyAsync(user, model);
 
