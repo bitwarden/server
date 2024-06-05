@@ -81,6 +81,8 @@ public class AccountsController : Controller
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _organizationUserValidator;
+    private readonly IRotationValidator<IEnumerable<WebauthnRotateCredentialData>, IEnumerable<WebauthnRotateCredentialData>>
+        _webauthnKeyValidator;
 
 
     public AccountsController(
@@ -109,7 +111,8 @@ public class AccountsController : Controller
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
-            organizationUserValidator
+            organizationUserValidator,
+        IRotationValidator<IEnumerable<WebauthnRotateCredentialData>, IEnumerable<WebauthnRotateCredentialData>> webAuthnKeyValidator
         )
     {
         _cipherRepository = cipherRepository;
@@ -136,6 +139,7 @@ public class AccountsController : Controller
         _sendValidator = sendValidator;
         _emergencyAccessValidator = emergencyAccessValidator;
         _organizationUserValidator = organizationUserValidator;
+        _webauthnKeyValidator = webAuthnKeyValidator;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -443,7 +447,7 @@ public class AccountsController : Controller
             Sends = await _sendValidator.ValidateAsync(user, model.Sends),
             EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
             OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys),
-            WebAuthnKeys = model.WebAuthnKeys,
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.WebAuthnKeys)
         };
 
         var result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
