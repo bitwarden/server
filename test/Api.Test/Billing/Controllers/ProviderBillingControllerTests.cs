@@ -17,7 +17,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
-using NuGet.Frameworks;
 using Stripe;
 using Xunit;
 

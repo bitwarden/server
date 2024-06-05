@@ -5,7 +5,7 @@ namespace Bit.Api.Billing.Models.Responses;
 public record InvoicesResponse(
     List<InvoiceDTO> Invoices)
 {
-    public static InvoicesResponse From(IEnumerable<Invoice> invoices) => new (
+    public static InvoicesResponse From(IEnumerable<Invoice> invoices) => new(
         invoices
             .Where(i => i.Status is "open" or "paid" or "uncollectible")
             .OrderByDescending(i => i.Created)
@@ -20,7 +20,7 @@ public record InvoiceDTO(
     string Url,
     string PdfUrl)
 {
-    public static InvoiceDTO From(Invoice invoice) => new (
+    public static InvoiceDTO From(Invoice invoice) => new(
         invoice.Created,
         invoice.Number,
         invoice.Total / 100M,
