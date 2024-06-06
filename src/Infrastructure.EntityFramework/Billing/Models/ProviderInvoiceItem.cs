@@ -4,15 +4,15 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 namespace Bit.Infrastructure.EntityFramework.Billing.Models;
 
 // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
-public class ProviderPlan : Core.Billing.Entities.ProviderPlan
+public class ProviderInvoiceItem : Core.Billing.Entities.ProviderInvoiceItem
 {
     public virtual Provider Provider { get; set; }
 }
 
-public class ProviderPlanMapperProfile : Profile
+public class ProviderInvoiceItemMapperProfile : Profile
 {
-    public ProviderPlanMapperProfile()
+    public ProviderInvoiceItemMapperProfile()
     {
-        CreateMap<Core.Billing.Entities.ProviderPlan, ProviderPlan>().ReverseMap();
+        CreateMap<Core.Billing.Entities.ProviderInvoiceItem, ProviderInvoiceItem>().ReverseMap();
     }
 }

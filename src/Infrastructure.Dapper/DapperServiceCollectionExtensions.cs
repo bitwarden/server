@@ -51,6 +51,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
+        services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
 
         if (selfHosted)
         {
