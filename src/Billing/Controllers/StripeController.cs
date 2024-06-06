@@ -3,6 +3,7 @@ using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -55,6 +56,7 @@ public class StripeController : Controller
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeFacade _stripeFacade;
     private readonly IFeatureService _featureService;
+    private readonly IProviderRepository _providerRepository;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -74,7 +76,8 @@ public class StripeController : Controller
         ICurrentContext currentContext,
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IProviderRepository providerRepository)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -102,6 +105,7 @@ public class StripeController : Controller
         _stripeEventService = stripeEventService;
         _stripeFacade = stripeFacade;
         _featureService = featureService;
+        _providerRepository = providerRepository;
     }
 
     [HttpPost("webhook")]
@@ -425,7 +429,61 @@ public class StripeController : Controller
         }
 
         var (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
-        if (organizationId.HasValue)
+
+        if (providerId.HasValue)
+        {
+            var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+
+            if (provider == null)
+            {
+                _logger.LogError(
+                    "Received invoice.payment_succeeded webhook ({EventID}) for Provider ({ProviderID}) that does not exist",
+                    parsedEvent.Id,
+                    providerId.Value);
+
+                return;
+            }
+
+            var teamsMonthly = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+            var enterpriseMonthly = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+
+            var teamsMonthlyLineItem =
+                subscription.Items.Data.FirstOrDefault(item =>
+                    item.Plan.Id == teamsMonthly.PasswordManager.StripeSeatPlanId);
+
+            var enterpriseMonthlyLineItem =
+                subscription.Items.Data.FirstOrDefault(item =>
+                    item.Plan.Id == enterpriseMonthly.PasswordManager.StripeSeatPlanId);
+
+            if (teamsMonthlyLineItem == null || enterpriseMonthlyLineItem == null)
+            {
+                _logger.LogError("invoice.payment_succeeded webhook ({EventID}) for Provider ({ProviderID}) indicates missing subscription line items",
+                    parsedEvent.Id,
+                    provider.Id);
+
+                return;
+            }
+
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
+            {
+                Type = ReferenceEventType.Rebilled,
+                Source = ReferenceEventSource.Provider,
+                Id = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                Seats = (int)teamsMonthlyLineItem.Quantity
+            });
+
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
+            {
+                Type = ReferenceEventType.Rebilled,
+                Source = ReferenceEventSource.Provider,
+                Id = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                Seats = (int)enterpriseMonthlyLineItem.Quantity
+            });
+        }
+        else if (organizationId.HasValue)
         {
             if (!subscription.Items.Any(i =>
                     StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
@@ -475,8 +533,8 @@ public class StripeController : Controller
         if (parentTransaction == null)
         {
             // Attempt to create a transaction for the charge if it doesn't exist
-            var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
-            var tx = FromChargeToTransaction(charge, organizationId, userId);
+            var (organizationId, userId, providerId) = await GetEntityIdsFromChargeAsync(charge);
+            var tx = FromChargeToTransaction(charge, organizationId, userId, providerId);
             try
             {
                 parentTransaction = await _transactionRepository.CreateAsync(tx);
@@ -524,6 +582,7 @@ public class StripeController : Controller
                 CreationDate = refund.Created,
                 OrganizationId = parentTransaction.OrganizationId,
                 UserId = parentTransaction.UserId,
+                ProviderId = parentTransaction.ProviderId,
                 Type = TransactionType.Refund,
                 Gateway = GatewayType.Stripe,
                 GatewayId = refund.Id,
@@ -547,14 +606,14 @@ public class StripeController : Controller
             return;
         }
 
-        var (organizationId, userId) = await GetEntityIdsFromChargeAsync(charge);
-        if (!organizationId.HasValue && !userId.HasValue)
+        var (organizationId, userId, providerId) = await GetEntityIdsFromChargeAsync(charge);
+        if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
             _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
             return;
         }
 
-        var transaction = FromChargeToTransaction(charge, organizationId, userId);
+        var transaction = FromChargeToTransaction(charge, organizationId, userId, providerId);
         if (!transaction.PaymentMethodType.HasValue)
         {
             _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);
@@ -657,6 +716,23 @@ public class StripeController : Controller
                 await SendEmails(new List<string> { user.Email });
             }
         }
+        else if (providerId.HasValue)
+        {
+            var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+
+            if (provider == null)
+            {
+                _logger.LogError(
+                    "Received invoice.Upcoming webhook ({EventID}) for Provider ({ProviderID}) that does not exist",
+                    parsedEvent.Id,
+                    providerId.Value);
+
+                return;
+            }
+
+            await SendEmails(new List<string> { provider.BillingEmail });
+
+        }
 
         return;
 
@@ -684,7 +760,7 @@ public class StripeController : Controller
     /// </summary>
     /// <param name="charge"></param>
     /// <returns></returns>
-    private async Task<(Guid?, Guid?)> GetEntityIdsFromChargeAsync(Charge charge)
+    private async Task<(Guid?, Guid?, Guid?)> GetEntityIdsFromChargeAsync(Charge charge)
     {
         Guid? organizationId = null;
         Guid? userId = null;
@@ -700,9 +776,9 @@ public class StripeController : Controller
             }
         }
 
-        if (organizationId.HasValue || userId.HasValue)
+        if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
         {
-            return (organizationId, userId);
+            return (organizationId, userId, providerId);
         }
 
         var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
@@ -719,13 +795,13 @@ public class StripeController : Controller
 
             (organizationId, userId, providerId) = GetIdsFromMetadata(subscription.Metadata);
 
-            if (organizationId.HasValue || userId.HasValue)
+            if (organizationId.HasValue || userId.HasValue || providerId.HasValue)
             {
-                return (organizationId, userId);
+                return (organizationId, userId, providerId);
             }
         }
 
-        return (null, null);
+        return (null, null, null);
     }
 
     /// <summary>
@@ -734,8 +810,9 @@ public class StripeController : Controller
     /// <param name="charge"></param>
     /// <param name="organizationId"></param>
     /// <param name="userId"></param>
+    /// /// <param name="providerId"></param>
     /// <returns></returns>
-    private static Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId)
+    private static Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId)
     {
         var transaction = new Transaction
         {
@@ -743,6 +820,7 @@ public class StripeController : Controller
             CreationDate = charge.Created,
             OrganizationId = organizationId,
             UserId = userId,
+            ProviderId = providerId,
             Type = TransactionType.Charge,
             Gateway = GatewayType.Stripe,
             GatewayId = charge.Id
@@ -1121,7 +1199,9 @@ public class StripeController : Controller
     }
 
     private static bool IsSponsoredSubscription(Subscription subscription) =>
-        StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
+        StaticStore.SponsoredPlans
+            .Any(p => subscription.Items
+                .Any(i => i.Plan.Id == p.StripePlanId));
 
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.PaymentFailed"/> event type from Stripe.

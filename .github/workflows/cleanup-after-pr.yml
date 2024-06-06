@@ -5,36 +5,26 @@ on:
   pull_request:
     types: [closed]
 
+env:
+  _AZ_REGISTRY: "bitwardenprod.azurecr.io"
+
 jobs:
   build-docker:
     name: Remove branch-specific Docker images
     runs-on: ubuntu-22.04
     steps:
-      ########## ACR ##########
-      - name: Log in to Azure - QA Subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
-
-      - name: Log in to Azure ACR
-        run: az acr login -n bitwardenqa
-
       - name: Log in to Azure - production subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Log in to Azure ACR
-        run: az acr login -n bitwardenprod
+        run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
       ########## Remove Docker images ##########
       - name: Remove the Docker image from ACR
         env:
           REF: ${{ github.event.pull_request.head.ref }}
-          REGISTRIES: |
-            registries:
-              - bitwardenprod
-              - bitwardenqa
           SERVICES: |
             services:
               - Admin
@@ -54,24 +44,21 @@ jobs:
         run: |
           for SERVICE in $(echo "${{ env.SERVICES }}" | yq e ".services[]" - )
           do
-            for REGISTRY in $( echo "${{ env.REGISTRIES }}" | yq e ".registries[]" - )
-            do
-              SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
-              IMAGE_TAG=$(echo "${REF}" | sed "s#/#-#g")  # slash safe branch name
+            SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
+            IMAGE_TAG=$(echo "${REF}" | sed "s#/#-#g")  # slash safe branch name
 
-              echo "[*] Checking if remote exists: $REGISTRY.azurecr.io/$SERVICE_NAME:$IMAGE_TAG"
-              TAG_EXISTS=$(
-                az acr repository show-tags --name $REGISTRY --repository $SERVICE_NAME \
-                | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
-              )
+            echo "[*] Checking if remote exists: $_AZ_REGISTRY/$SERVICE_NAME:$IMAGE_TAG"
+            TAG_EXISTS=$(
+              az acr repository show-tags --name $_AZ_REGISTRY --repository $SERVICE_NAME \
+              | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
+            )
 
-              if [[ "$TAG_EXISTS" == "true" ]]; then
-                echo "[*] Tag exists. Removing tag"
-                az acr repository delete --name $REGISTRY --image $SERVICE_NAME:$IMAGE_TAG --yes
-              else
-                echo "[*] Tag does not exist. No action needed"
-              fi
-            done
+            if [[ "$TAG_EXISTS" == "true" ]]; then
+              echo "[*] Tag exists. Removing tag"
+              az acr repository delete --name $_AZ_REGISTRY --image $SERVICE_NAME:$IMAGE_TAG --yes
+            else
+              echo "[*] Tag does not exist. No action needed"
+            fi
           done
 
       - name: Log out of Docker

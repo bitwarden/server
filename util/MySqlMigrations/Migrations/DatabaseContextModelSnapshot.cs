@@ -276,14 +276,14 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<byte?>("Gateway")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<string>("GatewayCustomerId")
                         .HasColumnType("longtext");
 
                     b.Property<string>("GatewaySubscriptionId")
                         .HasColumnType("longtext");
-
-                    b.Property<byte?>("GatewayType")
-                        .HasColumnType("tinyint unsigned");
 
                     b.Property<string>("Name")
                         .HasColumnType("longtext");

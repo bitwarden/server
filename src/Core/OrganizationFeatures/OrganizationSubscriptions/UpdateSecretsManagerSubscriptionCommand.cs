@@ -66,7 +66,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (update.SmSeatsChanged)
         {
-            await _paymentService.AdjustSmSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase, update.ProrationDate);
+            await _paymentService.AdjustSmSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase);
 
             // TODO: call ReferenceEventService - see AC-1481
         }
@@ -74,7 +74,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (update.SmServiceAccountsChanged)
         {
             await _paymentService.AdjustServiceAccountsAsync(update.Organization, update.Plan,
-                update.SmServiceAccountsExcludingBase, update.ProrationDate);
+                update.SmServiceAccountsExcludingBase);
 
             // TODO: call ReferenceEventService - see AC-1481
         }

@@ -6,7 +6,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -185,7 +185,7 @@ public class ProviderClientsControllerTests
 
         Assert.IsType<Ok>(result);
 
-        await sutProvider.GetDependency<ICreateCustomerCommand>().Received(1).CreateCustomer(
+        await sutProvider.GetDependency<IProviderBillingService>().Received(1).CreateCustomerForClientOrganization(
             provider,
             clientOrganization);
     }
@@ -301,7 +301,7 @@ public class ProviderClientsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_NoContent(
+    public async Task UpdateAsync_AssignedSeats_NoContent(
         Guid providerId,
         Guid providerOrganizationId,
         UpdateClientOrganizationRequestBody requestBody,
@@ -327,11 +327,55 @@ public class ProviderClientsControllerTests
 
         var result = await sutProvider.Sut.UpdateAsync(providerId, providerOrganizationId, requestBody);
 
-        await sutProvider.GetDependency<IAssignSeatsToClientOrganizationCommand>().Received(1)
+        await sutProvider.GetDependency<IProviderBillingService>().Received(1)
             .AssignSeatsToClientOrganization(
                 provider,
                 organization,
                 requestBody.AssignedSeats);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<Organization>(org => org.Name == requestBody.Name));
+
+        Assert.IsType<Ok>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_Name_NoContent(
+        Guid providerId,
+        Guid providerOrganizationId,
+        UpdateClientOrganizationRequestBody requestBody,
+        Provider provider,
+        ProviderOrganization providerOrganization,
+        Organization organization,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(providerId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId)
+            .Returns(provider);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
+            .Returns(providerOrganization);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(providerOrganization.OrganizationId)
+            .Returns(organization);
+
+        requestBody.AssignedSeats = organization.Seats!.Value;
+
+        var result = await sutProvider.Sut.UpdateAsync(providerId, providerOrganizationId, requestBody);
+
+        await sutProvider.GetDependency<IProviderBillingService>().DidNotReceiveWithAnyArgs()
+            .AssignSeatsToClientOrganization(
+                Arg.Any<Provider>(),
+                Arg.Any<Organization>(),
+                Arg.Any<int>());
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<Organization>(org => org.Name == requestBody.Name));
 
         Assert.IsType<Ok>(result);
     }

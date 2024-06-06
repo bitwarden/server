@@ -3,6 +3,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Azure.NotificationHubs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
@@ -11,16 +12,19 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationHubPushRegistrationService> _logger;
     private Dictionary<NotificationHubType, NotificationHubClient> _clients = [];
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         GlobalSettings globalSettings,
+        IServiceProvider serviceProvider,
         ILogger<NotificationHubPushRegistrationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
+        _serviceProvider = serviceProvider;
         _logger = logger;
 
         // Is this dirty to do in the ctor?
@@ -72,11 +76,21 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
-                messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-
-                installation.Platform = NotificationPlatform.Fcm;
+                var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
+                if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                {
+                    payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
+                    messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
+                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                    installation.Platform = NotificationPlatform.FcmV1;
+                }
+                else
+                {
+                    payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
+                    messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                    installation.Platform = NotificationPlatform.Fcm;
+                }
                 break;
             case DeviceType.iOS:
                 payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +

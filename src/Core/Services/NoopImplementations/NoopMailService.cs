@@ -270,5 +270,10 @@ public class NoopMailService : IMailService
     }
 
     public Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token) => throw new NotImplementedException();
+
+    public Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
+    {
+        return Task.FromResult(0);
+    }
 }
 
