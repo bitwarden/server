@@ -22,14 +22,13 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
         throw new NotImplementedException();
     }
 
-    public OrganizationUserInvite ToOrganizationUserInvite(bool flexibleCollectionsIsEnabled)
+    public OrganizationUserInvite ToOrganizationUserInvite()
     {
         var invite = new OrganizationUserInvite
         {
             Emails = new[] { Email },
             Type = Type.Value,
-            AccessAll = AccessAll.Value,
-            Collections = Collections?.Select(c => c.ToCollectionAccessSelection(flexibleCollectionsIsEnabled)).ToList(),
+            Collections = Collections?.Select(c => c.ToCollectionAccessSelection()).ToList(),
             Groups = Groups
         };
 
