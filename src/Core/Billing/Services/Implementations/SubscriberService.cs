@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -137,6 +138,76 @@ public class SubscriberService(
         }
     }
 
+    public async Task<Customer> GetCustomerOrThrow(
+        ISubscriber subscriber,
+        CustomerGetOptions customerGetOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            logger.LogError("Cannot retrieve customer for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
+
+            throw ContactSupport();
+        }
+
+        try
+        {
+            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
+
+            if (customer != null)
+            {
+                return customer;
+            }
+
+            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
+                subscriber.GatewayCustomerId, subscriber.Id);
+
+            throw ContactSupport();
+        }
+        catch (StripeException exception)
+        {
+            logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
+                subscriber.GatewayCustomerId, subscriber.Id, exception.Message);
+
+            throw ContactSupport("An error occurred while trying to retrieve a Stripe Customer", exception);
+        }
+    }
+
+    public async Task<List<Invoice>> GetInvoices(
+        ISubscriber subscriber,
+        StripeInvoiceListOptions invoiceListOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            logger.LogError("Cannot retrieve invoices for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
+
+            return [];
+        }
+
+        try
+        {
+            if (invoiceListOptions == null)
+            {
+                invoiceListOptions = new StripeInvoiceListOptions { Customer = subscriber.GatewayCustomerId };
+            }
+            else
+            {
+                invoiceListOptions.Customer = subscriber.GatewayCustomerId;
+            }
+
+            return await stripeAdapter.InvoiceListAsync(invoiceListOptions);
+        }
+        catch (StripeException exception)
+        {
+            logger.LogError("An error occurred while trying to retrieve Stripe invoices for subscriber ({SubscriberID}): {Error}", subscriber.Id, exception.Message);
+
+            return [];
+        }
+    }
+
     public async Task<PaymentInformationDTO> GetPaymentInformation(
         ISubscriber subscriber)
     {
@@ -175,42 +246,6 @@ public class SubscriberService(
         });
 
         return await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
-    }
-
-    public async Task<Customer> GetCustomerOrThrow(
-        ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
-        {
-            logger.LogError("Cannot retrieve customer for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
-
-            throw ContactSupport();
-        }
-
-        try
-        {
-            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
-
-            if (customer != null)
-            {
-                return customer;
-            }
-
-            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
-                subscriber.GatewayCustomerId, subscriber.Id);
-
-            throw ContactSupport();
-        }
-        catch (StripeException exception)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewayCustomerId, subscriber.Id, exception.Message);
-
-            throw ContactSupport("An error occurred while trying to retrieve a Stripe Customer", exception);
-        }
     }
 
     public async Task<Subscription> GetSubscription(
