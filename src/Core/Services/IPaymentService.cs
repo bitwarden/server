@@ -55,4 +55,5 @@ public interface IPaymentService
         int additionalServiceAccount);
     Task<bool> RisksSubscriptionFailure(Organization organization);
     Task<bool> HasSecretsManagerStandalone(Organization organization);
+    Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Stripe.Subscription subscription);
 }
