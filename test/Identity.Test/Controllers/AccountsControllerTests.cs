@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,9 +12,12 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Identity.Controllers;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Identity.Test.Controllers;
@@ -28,6 +32,8 @@ public class AccountsControllerTests : IDisposable
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
+    private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
+
 
     public AccountsControllerTests()
     {
@@ -37,13 +43,15 @@ public class AccountsControllerTests : IDisposable
         _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _assertionOptionsDataProtector = Substitute.For<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>();
         _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
+        _sendVerificationEmailForRegistrationCommand = Substitute.For<ISendVerificationEmailForRegistrationCommand>();
         _sut = new AccountsController(
             _logger,
             _userRepository,
             _userService,
             _captchaValidationService,
             _assertionOptionsDataProtector,
-            _getWebAuthnLoginCredentialAssertionOptionsCommand
+            _getWebAuthnLoginCredentialAssertionOptionsCommand,
+            _sendVerificationEmailForRegistrationCommand
         );
     }
 
@@ -121,5 +129,71 @@ public class AccountsControllerTests : IDisposable
         };
 
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegister(request));
+    }
+
+
+    // TODO: figure out why this isn't throwing as expected.
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WhenModelInvalid_ShouldThrowBadRequestException(string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var model = new RegisterSendEmailVerificationRequestModel
+        {
+            Email = null,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails
+        };
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterSendEmailVerification(model));
+    }
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WhenTokenReturnedFromCommand_Returns200WithToken(string email, string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var model = new RegisterSendEmailVerificationRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails
+        };
+
+        var token = "fakeToken";
+
+        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails).Returns(token);
+
+        // Act
+        var result = await _sut.PostRegisterSendEmailVerification(model);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(token, okResult.Value);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WhenNoTokenIsReturnedFromCommand_Returns204NoContent(string email, string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var model = new RegisterSendEmailVerificationRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails
+        };
+
+        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails).ReturnsNull();
+
+        // Act
+        var result = await _sut.PostRegisterSendEmailVerification(model);
+
+        // Assert
+        var noContentResult = Assert.IsType<NoContentResult>(result);
+        Assert.Equal(204, noContentResult.StatusCode);
     }
 }
