@@ -4,6 +4,7 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
@@ -11,7 +12,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -29,7 +29,7 @@ public class AccountsController : Controller
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
-    private readonly GlobalSettings _globalSettings;
+    private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
 
     public AccountsController(
         ILogger<AccountsController> logger,
@@ -38,7 +38,7 @@ public class AccountsController : Controller
         ICaptchaValidationService captchaValidationService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
-        GlobalSettings globalSettings
+            ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand
         )
     {
         _logger = logger;
@@ -47,7 +47,7 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
-        _globalSettings = globalSettings;
+        _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
     }
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
@@ -71,6 +71,26 @@ public class AccountsController : Controller
 
         await Task.Delay(2000);
         throw new BadRequestException(ModelState);
+    }
+
+    [RequireFeature(FeatureFlagKeys.EmailVerification)]
+    [HttpPost("register/send-email-verification")]
+    public async Task<IActionResult> PostRegisterSendEmailVerification([FromBody] RegisterSendEmailVerificationRequestModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            throw new BadRequestException(ModelState);
+        }
+
+        var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
+            model.ReceiveMarketingEmails);
+
+        if (token != null)
+        {
+            return Ok(token);
+        }
+
+        return NoContent();
     }
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
@@ -104,38 +124,4 @@ public class AccountsController : Controller
         };
     }
 
-    [RequireFeature(FeatureFlagKeys.EmailVerification)]
-    [HttpPost("register/send-email-verification")]
-    public async Task<IActionResult> PostRegisterSendEmailVerification([FromBody] RegisterSendEmailVerificationRequestModel model)
-    {
-        //TODO: ask about reference data (tracking information that we collect today) and how it will be handled as part of this endpoint
-        if (!ModelState.IsValid)
-        {
-            // return BadRequest(ModelState);
-            throw new BadRequestException(ModelState);
-        }
-
-        // Check to see if the user already exists
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-
-        if (_globalSettings.EnableEmailVerification)
-        {
-            // TODO: create command to execute this
-            // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
-            // an email with a link to verify their email address
-            // return a 200 regardless of whether the email was sent or not
-            return Ok();
-        }
-        else
-        {
-            // TODO: create command to execute this
-            // if email exists, return the same error as existing endpoint to user
-            // if email doesn't exist, return with a EmailVerificationTokenable in the response body.
-        }
-
-        // Add a standard delay to prevent timing attacks but only in error scenarios
-        await Task.Delay(2000);
-
-        return Ok();
-    }
 }
