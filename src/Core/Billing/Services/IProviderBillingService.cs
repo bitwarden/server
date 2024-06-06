@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Stripe;
 
 namespace Bit.Core.Billing.Services;
 
@@ -63,6 +64,10 @@ public interface IProviderBillingService
     /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
     Task<ConsolidatedBillingSubscriptionDTO> GetConsolidatedBillingSubscription(
         Provider provider);
+
+    Task RecordInvoiceLineItems(
+        Provider provider,
+        Invoice invoice);
 
     /// <summary>
     /// Scales the <paramref name="provider"/>'s seats for the specified <paramref name="planType"/> using the provided <paramref name="seatAdjustment"/>.

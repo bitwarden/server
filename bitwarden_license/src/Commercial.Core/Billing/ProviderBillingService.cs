@@ -27,6 +27,7 @@ public class ProviderBillingService(
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
+    IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
@@ -274,6 +275,111 @@ public class ProviderBillingService(
             subscription,
             subscriptionSuspensionDate,
             subscriptionUnpaidPeriodEndDate);
+    }
+
+    public async Task RecordInvoiceLineItems(
+        Provider provider,
+        Invoice invoice)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(invoice);
+
+        var clients = (await providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id))
+            .Where(providerOrganization => providerOrganization.Status == OrganizationStatusType.Managed);
+
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+
+        var enterpriseProviderPlan =
+            providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
+
+        if (enterpriseProviderPlan == null)
+        {
+            // TODO
+            throw ContactSupport();
+        }
+
+        var teamsProviderPlan =
+            providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
+
+        if (teamsProviderPlan == null)
+        {
+            // TODO
+            throw ContactSupport();
+        }
+
+        var enterprisePlan = StaticStore.GetPlan(PlanType.TeamsAnnually);
+
+        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        var discountedPercentage = 100 - (invoice.Discount?.Coupon?.PercentOff ?? 0);
+
+        var enterprisePrice = enterprisePlan.PasswordManager.SeatPrice * discountedPercentage;
+
+        var teamsPrice = teamsPlan.PasswordManager.SeatPrice * discountedPercentage;
+
+        var invoiceItems = clients.Select(client => new ProviderInvoiceItem
+        {
+            ProviderId = provider.Id,
+            InvoiceId = invoice.Id,
+            InvoiceNumber = invoice.Number,
+            ClientName = client.OrganizationName,
+            PlanName = client.Plan,
+            AssignedSeats = client.Seats ?? 0,
+            UsedSeats = client.UserCount,
+            Total = client.Plan == teamsPlan.Name
+                ? (client.Seats ?? 0) * teamsPrice
+                : (client.Seats ?? 0) * enterprisePrice
+        }).ToList();
+
+        if (enterpriseProviderPlan.PurchasedSeats is null or 0)
+        {
+            var enterpriseClientSeats = invoiceItems
+                .Where(item => item.PlanName == enterprisePlan.Name)
+                .Sum(item => item.AssignedSeats);
+
+            var unassignedEnterpriseSeats = enterpriseProviderPlan.SeatMinimum - enterpriseClientSeats ?? 0;
+
+            if (unassignedEnterpriseSeats > 0)
+            {
+                invoiceItems.Add(new ProviderInvoiceItem
+                {
+                    ProviderId = provider.Id,
+                    InvoiceId = invoice.Id,
+                    InvoiceNumber = invoice.Number,
+                    ClientName = "Unassigned seats",
+                    PlanName = enterprisePlan.Name,
+                    AssignedSeats = unassignedEnterpriseSeats,
+                    UsedSeats = 0,
+                    Total = unassignedEnterpriseSeats * enterprisePrice
+                });
+            }
+        }
+
+        if (teamsProviderPlan.PurchasedSeats is null or 0)
+        {
+            var teamsClientSeats = invoiceItems
+                .Where(item => item.PlanName == teamsPlan.Name)
+                .Sum(item => item.AssignedSeats);
+
+            var unassignedTeamsSeats = teamsProviderPlan.SeatMinimum - teamsClientSeats ?? 0;
+
+            if (unassignedTeamsSeats > 0)
+            {
+                invoiceItems.Add(new ProviderInvoiceItem
+                {
+                    ProviderId = provider.Id,
+                    InvoiceId = invoice.Id,
+                    InvoiceNumber = invoice.Number,
+                    ClientName = "Unassigned seats",
+                    PlanName = teamsPlan.Name,
+                    AssignedSeats = unassignedTeamsSeats,
+                    UsedSeats = 0,
+                    Total = unassignedTeamsSeats * teamsPrice
+                });
+            }
+        }
+
+        await Task.WhenAll(invoiceItems.Select(providerInvoiceItemRepository.CreateAsync));
     }
 
     public async Task ScaleSeats(
