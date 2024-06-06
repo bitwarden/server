@@ -1807,6 +1807,47 @@ public class StripePaymentService : IPaymentService
         return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }
 
+    public async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
+    {
+        if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
+        {
+            return (null, null);
+        }
+
+        var openInvoices = await _stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+        {
+            Query = $"subscription:'{subscription.Id}' status:'open'"
+        });
+
+        if (openInvoices.Count == 0)
+        {
+            return (null, null);
+        }
+
+        var currentDate = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        switch (subscription.CollectionMethod)
+        {
+            case "charge_automatically":
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                        .MinBy(invoice => invoice.Created);
+
+                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
+                }
+            case "send_invoice":
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.DueDate < currentDate)
+                        .MinBy(invoice => invoice.Created);
+
+                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
+                }
+            default: return (null, null);
+        }
+    }
+
     private PaymentMethod GetLatestCardPaymentMethod(string customerId)
     {
         var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(
@@ -1966,46 +2007,5 @@ public class StripePaymentService : IPaymentService
         return subscriberName.Length <= 30
             ? subscriberName
             : subscriberName[..30];
-    }
-
-    private async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
-    {
-        if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
-        {
-            return (null, null);
-        }
-
-        var openInvoices = await _stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
-        {
-            Query = $"subscription:'{subscription.Id}' status:'open'"
-        });
-
-        if (openInvoices.Count == 0)
-        {
-            return (null, null);
-        }
-
-        var currentDate = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-
-        switch (subscription.CollectionMethod)
-        {
-            case "charge_automatically":
-                {
-                    var firstOverdueInvoice = openInvoices
-                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
-                        .MinBy(invoice => invoice.Created);
-
-                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
-                }
-            case "send_invoice":
-                {
-                    var firstOverdueInvoice = openInvoices
-                        .Where(invoice => invoice.DueDate < currentDate)
-                        .MinBy(invoice => invoice.Created);
-
-                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
-                }
-            default: return (null, null);
-        }
     }
 }
