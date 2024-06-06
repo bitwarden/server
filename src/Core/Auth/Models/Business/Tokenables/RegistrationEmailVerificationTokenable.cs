@@ -3,12 +3,11 @@ using Bit.Core.Tokens;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
-// TODO: rename to include registration in the title.
 // <summary>
 // This token contains encrypted registration information for new users. The token is sent via email for verification as
 // part of a link to complete the registration process.
 // </summary>
-public class EmailVerificationTokenable : ExpiringTokenable
+public class RegistrationEmailVerificationTokenable : ExpiringTokenable
 {
     public static TimeSpan GetTokenLifetime() => TimeSpan.FromMinutes(15);
 
@@ -23,12 +22,12 @@ public class EmailVerificationTokenable : ExpiringTokenable
     public bool ReceiveMarketingEmails { get; set; }
 
     [JsonConstructor]
-    public EmailVerificationTokenable()
+    public RegistrationEmailVerificationTokenable()
     {
         ExpirationDate = DateTime.UtcNow.Add(GetTokenLifetime());
     }
 
-    public EmailVerificationTokenable(string email, string name = default, bool receiveMarketingEmails = default) : this()
+    public RegistrationEmailVerificationTokenable(string email, string name = default, bool receiveMarketingEmails = default) : this()
     {
         Name = name;
         Email = email;

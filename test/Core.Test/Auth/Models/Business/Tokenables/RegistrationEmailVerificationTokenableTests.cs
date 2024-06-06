@@ -5,7 +5,7 @@ namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Xunit;
 
-public class EmailVerificationTokenableTests
+public class RegistrationEmailVerificationTokenableTests
 {
     // Allow a small tolerance for possible execution delays or clock precision to avoid flaky tests.
     private static readonly TimeSpan _timeTolerance = TimeSpan.FromMilliseconds(10);
@@ -16,7 +16,7 @@ public class EmailVerificationTokenableTests
     [Fact]
     public void Constructor_NullInputs_PropertiesSetToDefault()
     {
-        var token = new EmailVerificationTokenable(null, null, default);
+        var token = new RegistrationEmailVerificationTokenable(null, null, default);
 
         Assert.Equal(default, token.Name);
         Assert.Equal(default, token.Email);
@@ -29,7 +29,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void Constructor_ValidInputs_PropertiesSetFromInputs(string email, string name, bool receiveMarketingEmails)
     {
-        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.Equal(email, token.Email);
         Assert.Equal(name, token.Name);
@@ -42,7 +42,7 @@ public class EmailVerificationTokenableTests
     [Fact]
     public void Constructor_AfterInitialization_ExpirationSetToExpectedDuration()
     {
-        var token = new EmailVerificationTokenable();
+        var token = new RegistrationEmailVerificationTokenable();
         var expectedExpiration = DateTime.UtcNow + SsoEmail2faSessionTokenable.GetTokenLifetime();
 
         Assert.True(expectedExpiration - token.ExpirationDate < _timeTolerance);
@@ -55,7 +55,7 @@ public class EmailVerificationTokenableTests
     public void Constructor_CustomExpirationDate_ExpirationMatchesProvidedValue()
     {
         var customExpiration = DateTime.UtcNow.AddHours(3);
-        var token = new EmailVerificationTokenable
+        var token = new RegistrationEmailVerificationTokenable
         {
             ExpirationDate = customExpiration
         };
@@ -69,7 +69,7 @@ public class EmailVerificationTokenableTests
     [Fact]
     public void Valid_NullInputs_ReturnsFalse()
     {
-        var token = new EmailVerificationTokenable(null, null, default);
+        var token = new RegistrationEmailVerificationTokenable(null, null, default);
 
         Assert.False(token.Valid);
     }
@@ -80,7 +80,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void Valid_WrongIdentifier_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
     {
-        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails) { Identifier = "InvalidIdentifier" };
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails) { Identifier = "InvalidIdentifier" };
 
         Assert.False(token.Valid);
     }
@@ -91,7 +91,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void Valid_ValidInputs_ReturnsTrue(string email, string name, bool receiveMarketingEmails)
     {
-        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.True(token.Valid);
     }
@@ -102,7 +102,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_NullName_ReturnsTrue(string email)
     {
-        var token = new EmailVerificationTokenable(email, null);
+        var token = new RegistrationEmailVerificationTokenable(email, null);
 
         Assert.True(token.TokenIsValid(email, null));
     }
@@ -113,7 +113,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_ReceiveMarketingEmailsNotProvided_ReturnsTrue(string email, string name)
     {
-        var token = new EmailVerificationTokenable(email, name);
+        var token = new RegistrationEmailVerificationTokenable(email, name);
 
         Assert.True(token.TokenIsValid(email, name));
     }
@@ -127,7 +127,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_WrongEmail_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
     {
-        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.False(token.TokenIsValid("wrong@email.com", name, receiveMarketingEmails));
     }
@@ -138,7 +138,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_IncorrectName_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
     {
-        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.False(token.TokenIsValid(email, "wrongName", receiveMarketingEmails));
     }
@@ -149,7 +149,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_IncorrectReceiveMarketingEmails_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
     {
-        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.False(token.TokenIsValid(email, name, !receiveMarketingEmails));
     }
@@ -160,7 +160,7 @@ public class EmailVerificationTokenableTests
     [Theory, AutoData]
     public void TokenIsValid_ValidInputs_ReturnsTrue(string email, string name, bool receiveMarketingEmails)
     {
-        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.True(token.TokenIsValid(email, name, receiveMarketingEmails));
     }
@@ -172,12 +172,12 @@ public class EmailVerificationTokenableTests
     public void FromToken_SerializedToken_PreservesExpirationDate(string email, string name, bool receiveMarketingEmails)
     {
         var expectedDateTime = DateTime.UtcNow.AddHours(-5);
-        var token = new EmailVerificationTokenable(email, name, receiveMarketingEmails)
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails)
         {
             ExpirationDate = expectedDateTime
         };
 
-        var result = Tokenable.FromToken<EmailVerificationTokenable>(token.ToToken());
+        var result = Tokenable.FromToken<RegistrationEmailVerificationTokenable>(token.ToToken());
 
         Assert.Equal(expectedDateTime, result.ExpirationDate, precision: _timeTolerance);
     }

@@ -220,12 +220,12 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<ProviderDeleteTokenable>>>())
         );
 
-        services.AddSingleton<IDataProtectorTokenFactory<EmailVerificationTokenable>>(
-            serviceProvider => new DataProtectorTokenFactory<EmailVerificationTokenable>(
-                EmailVerificationTokenable.ClearTextPrefix,
-                EmailVerificationTokenable.DataProtectorPurpose,
+        services.AddSingleton<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<RegistrationEmailVerificationTokenable>(
+                RegistrationEmailVerificationTokenable.ClearTextPrefix,
+                RegistrationEmailVerificationTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
-                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<EmailVerificationTokenable>>>()));
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>>()));
 
     }
 

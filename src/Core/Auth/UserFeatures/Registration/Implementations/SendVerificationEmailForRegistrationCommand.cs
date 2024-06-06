@@ -11,7 +11,7 @@ public class SendVerificationEmailForRegistrationCommand(
     IUserRepository userRepository,
     GlobalSettings globalSettings,
     IMailService mailService,
-    IDataProtectorTokenFactory<EmailVerificationTokenable> tokenDataFactory)
+    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory)
     : ISendVerificationEmailForRegistrationCommand
 {
 
@@ -31,7 +31,7 @@ public class SendVerificationEmailForRegistrationCommand(
         if (!globalSettings.EnableEmailVerification && !userExists)
         {
             // if email doesn't exist, return a EmailVerificationTokenable in the response body.
-            var emailVerificationTokenable = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+            var emailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
             var emailVerificationToken = tokenDataFactory.Protect(emailVerificationTokenable);
 
             return emailVerificationToken;
@@ -44,7 +44,7 @@ public class SendVerificationEmailForRegistrationCommand(
             // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
             // an email with a link to verify their email address
 
-            var emailVerificationTokenable = new EmailVerificationTokenable(email, name, receiveMarketingEmails);
+            var emailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
             var emailVerificationToken = tokenDataFactory.Protect(emailVerificationTokenable);
 
             // TODO: send email
