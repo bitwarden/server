@@ -788,6 +788,45 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(secretIds.Count, result.Data.Count());
     }
 
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task GetSecretsByIds_duplicateIds_fail(PermissionType permissionType)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        var (project, secretIds) = await CreateSecretsAsync(org.Id);
+
+        secretIds.Add(secretIds[0]);
+
+        if (permissionType == PermissionType.RunAsUserWithPermission)
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await _loginHelper.LoginAsync(email);
+
+            var accessPolicies = new List<BaseAccessPolicy>
+            {
+                new UserProjectAccessPolicy
+                {
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                },
+            };
+            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+        }
+        else
+        {
+            var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.Admin, true);
+            await _loginHelper.LoginAsync(email);
+        }
+
+        var request = new GetSecretsRequestModel { Ids = secretIds };
+
+        var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
+        Assert.True(response.StatusCode == HttpStatusCode.BadRequest);
+    }
+
     [Theory]
     [InlineData(false, false, false)]
     [InlineData(false, false, true)]
