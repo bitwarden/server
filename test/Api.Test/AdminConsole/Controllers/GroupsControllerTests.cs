@@ -56,7 +56,7 @@ public class GroupsControllerTests
     {
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true, AllowAdminAccessToAllCollectionItems = false });
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -102,7 +102,7 @@ public class GroupsControllerTests
     {
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true, AllowAdminAccessToAllCollectionItems = false });
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -133,7 +133,7 @@ public class GroupsControllerTests
 
         // Enable FC and v1, set Collection Management Setting
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true, FlexibleCollections = true });
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -177,7 +177,6 @@ public class GroupsControllerTests
             {
                 Id = organization.Id,
                 AllowAdminAccessToAllCollectionItems = false,
-                FlexibleCollections = true
             });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
@@ -218,7 +217,6 @@ public class GroupsControllerTests
             {
                 Id = organization.Id,
                 AllowAdminAccessToAllCollectionItems = false,
-                FlexibleCollections = true
             });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
@@ -274,7 +272,6 @@ public class GroupsControllerTests
             {
                 Id = organization.Id,
                 AllowAdminAccessToAllCollectionItems = false,
-                FlexibleCollections = true
             });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
@@ -314,7 +311,6 @@ public class GroupsControllerTests
         Group group, Organization organization,
         SutProvider<GroupsController> sutProvider, Guid savingUserId)
     {
-        organization.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         Put_Setup(sutProvider, organization, group, savingUserId);
 
@@ -402,7 +398,6 @@ public class GroupsControllerTests
         Group group, Organization organization,
         SutProvider<GroupsController> sutProvider, Guid savingUserId)
     {
-        organization.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         Put_Setup(sutProvider, organization, group, savingUserId);
 
@@ -434,7 +429,6 @@ public class GroupsControllerTests
             .Returns(new OrganizationAbility
             {
                 Id = organization.Id,
-                FlexibleCollections = true,
                 AllowAdminAccessToAllCollectionItems = false
             });
 
