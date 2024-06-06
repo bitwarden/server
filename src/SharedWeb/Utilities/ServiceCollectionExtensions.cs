@@ -219,6 +219,14 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<ProviderDeleteTokenable>>>())
         );
+
+        services.AddSingleton<IDataProtectorTokenFactory<EmailVerificationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<EmailVerificationTokenable>(
+                EmailVerificationTokenable.ClearTextPrefix,
+                EmailVerificationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<EmailVerificationTokenable>>>()));
+
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
