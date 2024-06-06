@@ -3,14 +3,14 @@ using Bit.Core.Tokens;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
+// TODO: rename to include registration in the title.
 // <summary>
 // This token contains encrypted registration information for new users. The token is sent via email for verification as
 // part of a link to complete the registration process.
 // </summary>
 public class EmailVerificationTokenable : ExpiringTokenable
 {
-    // TODO: ask what the token lifetime should be
-    public static TimeSpan GetTokenLifetime() => TimeSpan.FromDays(5);
+    public static TimeSpan GetTokenLifetime() => TimeSpan.FromMinutes(15);
 
     public const string ClearTextPrefix = "BwEmailVerificationToken_";
     public const string DataProtectorPurpose = "EmailVerificationTokenDataProtector";
