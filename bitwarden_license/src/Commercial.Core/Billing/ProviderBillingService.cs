@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -30,7 +31,8 @@ public class ProviderBillingService(
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IProviderBillingService
+    ISubscriberService subscriberService,
+    IFeatureService featureService) : IProviderBillingService
 {
     public async Task AssignSeatsToClientOrganization(
         Provider provider,
@@ -248,6 +250,18 @@ public class ProviderBillingService(
             return null;
         }
 
+        DateTime? subscriptionSuspensionDate = null;
+        DateTime? subscriptionUnpaidPeriodEndDate = null;
+        if (featureService.IsEnabled(FeatureFlagKeys.AC1795_UpdatedSubscriptionStatusSection))
+        {
+            var (suspensionDate, unpaidPeriodEndDate) = await paymentService.GetSuspensionDateAsync(subscription);
+            if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
+            {
+                subscriptionSuspensionDate = suspensionDate;
+                subscriptionUnpaidPeriodEndDate = unpaidPeriodEndDate;
+            }
+        }
+
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
         var configuredProviderPlans = providerPlans
@@ -257,7 +271,9 @@ public class ProviderBillingService(
 
         return new ConsolidatedBillingSubscriptionDTO(
             configuredProviderPlans,
-            subscription);
+            subscription,
+            subscriptionSuspensionDate,
+            subscriptionUnpaidPeriodEndDate);
     }
 
     public async Task ScaleSeats(
