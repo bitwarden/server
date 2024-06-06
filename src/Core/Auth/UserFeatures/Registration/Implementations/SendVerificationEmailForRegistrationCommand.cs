@@ -21,37 +21,38 @@ public class SendVerificationEmailForRegistrationCommand(
         var user = await userRepository.GetByEmailAsync(email);
         var userExists = user != null;
 
-        if (!globalSettings.EnableEmailVerification && userExists)
+        if (!globalSettings.EnableEmailVerification)
         {
-            // Add delay to prevent timing attacks
-            await Task.Delay(2000);
-            throw new BadRequestException($"Email {email} is already taken");
+
+            if (userExists)
+            {
+                // Add delay to prevent timing attacks
+                await Task.Delay(2000);
+                throw new BadRequestException($"Email {email} is already taken");
+            }
+
+            // if user doesn't exist, return a EmailVerificationTokenable in the response body.
+            var token = GenerateToken(email, name, receiveMarketingEmails);
+
+            return token;
         }
-
-        if (!globalSettings.EnableEmailVerification && !userExists)
-        {
-            // if email doesn't exist, return a EmailVerificationTokenable in the response body.
-            var emailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
-            var emailVerificationToken = tokenDataFactory.Protect(emailVerificationTokenable);
-
-            return emailVerificationToken;
-        }
-
-        // GlobalSettings.EnableEmailVerification is true
 
         if (!userExists)
         {
             // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
             // an email with a link to verify their email address
-
-            var emailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
-            var emailVerificationToken = tokenDataFactory.Protect(emailVerificationTokenable);
-
-            // TODO: send email
+            var token = GenerateToken(email, name, receiveMarketingEmails);
+            await mailService.SendRegistrationVerificationEmailAsync(email, token);
         }
 
         // User exists but we will return a 200 regardless of whether the email was sent or not; so return null
         return null;
+    }
+
+    private string GenerateToken(string email, string name, bool receiveMarketingEmails)
+    {
+        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
+        return tokenDataFactory.Protect(registrationEmailVerificationTokenable);
     }
 }
 
