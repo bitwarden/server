@@ -142,11 +142,11 @@ public static class StaticStore
             new SponsoredPlan
             {
                 PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-                SponsoredProductType = ProductType.Families,
-                SponsoringProductType = ProductType.Enterprise,
+                SponsoredProductType = ProductTierType.Families,
+                SponsoringProductType = ProductTierType.Enterprise,
                 StripePlanId = "2021-family-for-enterprise-annually",
                 UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPlan(org.PlanType).Product == ProductType.Enterprise,
+                    GetPlan(org.PlanType).Product == ProductTierType.Enterprise,
             }
         };
 

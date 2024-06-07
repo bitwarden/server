@@ -45,7 +45,7 @@ public class PlanResponseModel : ResponseModel
     }
 
     public PlanType Type { get; set; }
-    public ProductType Product { get; set; }
+    public ProductTierType Product { get; set; }
     public string Name { get; set; }
     public bool IsAnnual { get; set; }
     public string NameLocalizationKey { get; set; }

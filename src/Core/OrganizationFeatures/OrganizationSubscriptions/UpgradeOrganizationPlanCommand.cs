@@ -342,7 +342,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
+    private static string GetUpgradePath(ProductTierType oldProductType, ProductTierType newProductType)
     {
         var oldDescription = _upgradePath.TryGetValue(oldProductType, out var description)
             ? description
@@ -355,12 +355,12 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return $"{oldDescription} → {newDescription}";
     }
 
-    private static readonly Dictionary<ProductType, string> _upgradePath = new()
+    private static readonly Dictionary<ProductTierType, string> _upgradePath = new()
     {
-        [ProductType.Free] = "2-person org",
-        [ProductType.Families] = "Families",
-        [ProductType.TeamsStarter] = "Teams Starter",
-        [ProductType.Teams] = "Teams",
-        [ProductType.Enterprise] = "Enterprise"
+        [ProductTierType.Free] = "2-person org",
+        [ProductTierType.Families] = "Families",
+        [ProductTierType.TeamsStarter] = "Teams Starter",
+        [ProductTierType.Teams] = "Teams",
+        [ProductTierType.Enterprise] = "Enterprise"
     };
 }

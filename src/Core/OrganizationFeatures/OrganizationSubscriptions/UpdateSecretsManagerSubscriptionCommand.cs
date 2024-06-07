@@ -165,7 +165,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no access to Secrets Manager.");
         }
 
-        if (update.Plan.Product == ProductType.Free)
+        if (update.Plan.Product == ProductTierType.Free)
         {
             // No need to check the organization is set up with Stripe
             return;

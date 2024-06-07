@@ -7,7 +7,7 @@ public record Teams2019Plan : Models.StaticStore.Plan
     public Teams2019Plan(bool isAnnual)
     {
         Type = isAnnual ? PlanType.TeamsAnnually2019 : PlanType.TeamsMonthly2019;
-        Product = ProductType.Teams;
+        Product = ProductTierType.Teams;
         Name = isAnnual ? "Teams (Annually) 2019" : "Teams (Monthly) 2019";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameTeams";

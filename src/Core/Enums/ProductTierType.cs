@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Enums;
 
-public enum ProductType : byte
+public enum ProductTierType : byte
 {
     [Display(Name = "Free")]
     Free = 0,

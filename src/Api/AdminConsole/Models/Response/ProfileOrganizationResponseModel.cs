@@ -33,7 +33,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UsePasswordManager = organization.UsePasswordManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise;
+        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).Product == ProductTierType.Enterprise;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -147,7 +147,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
     public bool FamilySponsorshipAvailable { get; set; }
-    public ProductType PlanProductType { get; set; }
+    public ProductTierType PlanProductType { get; set; }
     public bool KeyConnectorEnabled { get; set; }
     public string KeyConnectorUrl { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
