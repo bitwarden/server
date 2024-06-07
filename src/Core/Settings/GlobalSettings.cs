@@ -149,7 +149,7 @@ public class GlobalSettings : IGlobalSettings
         public string CloudRegion { get; set; }
         public string Vault { get; set; }
         public string VaultWithHash => $"{Vault}/#";
-        public string VaultFinishSignUp => $"{VaultWithHash}/finish-signup";
+
         public string VaultWithHashAndSecretManagerProduct => $"{Vault}/#/sm";
 
         public string Api
