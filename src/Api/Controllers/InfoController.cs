@@ -33,7 +33,7 @@ public class InfoController : Controller
     }
 
     [HttpGet("~/opendoors")]
-    public IActionResult Hello()
+    public IActionResult Doors()
     {
         return Content("I'm sorry Dave, I'm afraid I can't do that.");
     }
