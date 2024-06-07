@@ -18,6 +18,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         return await Server.PostAsync("/accounts/register", JsonContent.Create(model));
     }
 
+    public async Task<HttpContext> PostRegisterSendEmailVerificationAsync(RegisterSendEmailVerificationRequestModel model)
+    {
+        return await Server.PostAsync("/accounts/register/send-email-verification", JsonContent.Create(model));
+    }
+
     public async Task<(string Token, string RefreshToken)> TokenFromPasswordAsync(string username,
         string password,
         string deviceIdentifier = DefaultDeviceIdentifier,
