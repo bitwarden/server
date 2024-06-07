@@ -136,7 +136,7 @@ public class AccountsControllerTests : IDisposable
     public async Task PostRegisterSendEmailVerification_WhenTokenReturnedFromCommand_Returns200WithToken(string email, string name, bool receiveMarketingEmails)
     {
         // Arrange
-        var model = new RegisterSendEmailVerificationRequestModel
+        var model = new RegisterSendVerificationEmailRequestModel
         {
             Email = email,
             Name = name,
@@ -148,7 +148,7 @@ public class AccountsControllerTests : IDisposable
         _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails).Returns(token);
 
         // Act
-        var result = await _sut.PostRegisterSendEmailVerification(model);
+        var result = await _sut.PostRegisterSendVerificationEmail(model);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -161,7 +161,7 @@ public class AccountsControllerTests : IDisposable
     public async Task PostRegisterSendEmailVerification_WhenNoTokenIsReturnedFromCommand_Returns204NoContent(string email, string name, bool receiveMarketingEmails)
     {
         // Arrange
-        var model = new RegisterSendEmailVerificationRequestModel
+        var model = new RegisterSendVerificationEmailRequestModel
         {
             Email = email,
             Name = name,
@@ -171,7 +171,7 @@ public class AccountsControllerTests : IDisposable
         _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails).ReturnsNull();
 
         // Act
-        var result = await _sut.PostRegisterSendEmailVerification(model);
+        var result = await _sut.PostRegisterSendVerificationEmail(model);
 
         // Assert
         var noContentResult = Assert.IsType<NoContentResult>(result);

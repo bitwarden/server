@@ -41,7 +41,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     public async Task PostRegisterSendEmailVerification_InvalidRequestModel_ThrowsBadRequestException(string email, string name, bool receiveMarketingEmails)
     {
 
-        var model = new RegisterSendEmailVerificationRequestModel
+        var model = new RegisterSendVerificationEmailRequestModel
         {
             Email = email,
             Name = name,
@@ -64,7 +64,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             await CreateUserAsync(email, name);
         }
 
-        var model = new RegisterSendEmailVerificationRequestModel
+        var model = new RegisterSendVerificationEmailRequestModel
         {
             Email = email,
             Name = name,

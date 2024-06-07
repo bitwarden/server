@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 
-public class RegisterSendEmailVerificationRequestModel
+public class RegisterSendVerificationEmailRequestModel
 {
     [StringLength(50)]
     public string Name { get; set; }

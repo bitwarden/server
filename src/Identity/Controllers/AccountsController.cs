@@ -74,8 +74,8 @@ public class AccountsController : Controller
     }
 
     [RequireFeature(FeatureFlagKeys.EmailVerification)]
-    [HttpPost("register/send-email-verification")]
-    public async Task<IActionResult> PostRegisterSendEmailVerification([FromBody] RegisterSendEmailVerificationRequestModel model)
+    [HttpPost("register/send-verification-email")]
+    public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
             model.ReceiveMarketingEmails);
