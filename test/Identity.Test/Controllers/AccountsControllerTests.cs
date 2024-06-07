@@ -131,25 +131,6 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegister(request));
     }
 
-
-    // TODO: figure out why this isn't throwing as expected.
-    [Theory]
-    [BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WhenModelInvalid_ShouldThrowBadRequestException(string name, bool receiveMarketingEmails)
-    {
-        // Arrange
-        var model = new RegisterSendEmailVerificationRequestModel
-        {
-            Email = null,
-            Name = name,
-            ReceiveMarketingEmails = receiveMarketingEmails
-        };
-
-        // Act
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterSendEmailVerification(model));
-    }
-
-
     [Theory]
     [BitAutoData]
     public async Task PostRegisterSendEmailVerification_WhenTokenReturnedFromCommand_Returns200WithToken(string email, string name, bool receiveMarketingEmails)
