@@ -104,13 +104,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
 
             if (model.WebAuthnKeys.Any())
             {
-                foreach (var webAuthnCredential in model.WebAuthnKeys)
-                {
-                    var cred = await _credentialRepository.GetByIdAsync(webAuthnCredential.Id, user.Id);
-                    cred.EncryptedPublicKey = webAuthnCredential.EncryptedPublicKey;
-                    cred.EncryptedUserKey = webAuthnCredential.EncryptedUserKey;
-                    await _credentialRepository.UpdateAsync(cred);
-                }
+                saveEncryptedDataActions.Add(_credentialRepository.UpdateKeysForRotationAsync(user.Id, model.WebAuthnKeys));
             }
 
             await _userRepository.UpdateUserKeyAndEncryptedDataAsync(user, saveEncryptedDataActions);

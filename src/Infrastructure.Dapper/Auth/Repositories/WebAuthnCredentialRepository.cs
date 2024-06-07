@@ -1,7 +1,10 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Auth.Helpers;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -55,4 +58,30 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
 
         return affectedRows > 0;
     }
+
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebauthnRotateKeyData> credentials)
+    {
+        return async (SqlConnection connection, SqlTransaction transaction) =>
+        {
+            const string sql = @"
+                            UPDATE
+                                [dbo].[WebAuthnCredential]
+                            SET
+                                [EncryptedPublicKey] = UW.EncryptedPublicKey,
+                                [EncryptedUserKey] = UW.EncryptedUserKey,
+                            FROM
+                                [dbo].[WebAuthnCredential] WC
+                            INNER JOIN
+                                @WebauthnCredentials UW ON UW.Id = WC.Id
+                            WHERE
+                                WC.[UserId] = @UserId";
+            var webauthnCredentialsTVP = credentials.ToTvp();
+            await connection.ExecuteAsync(
+                sql,
+                new { UserId = userId },
+                transaction: transaction,
+                commandType: CommandType.Text);
+        };
+    }
+
 }
