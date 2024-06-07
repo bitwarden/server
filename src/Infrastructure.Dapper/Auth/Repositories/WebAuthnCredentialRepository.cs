@@ -68,7 +68,7 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
                                 [dbo].[WebAuthnCredential]
                             SET
                                 [EncryptedPublicKey] = UW.EncryptedPublicKey,
-                                [EncryptedUserKey] = UW.EncryptedUserKey,
+                                [EncryptedUserKey] = UW.EncryptedUserKey
                             FROM
                                 [dbo].[WebAuthnCredential] WC
                             INNER JOIN
@@ -78,7 +78,7 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
             var webauthnCredentialsTVP = credentials.ToTvp();
             await connection.ExecuteAsync(
                 sql,
-                new { UserId = userId },
+                new { UserId = userId, WebauthnCredentials = webauthnCredentialsTVP },
                 transaction: transaction,
                 commandType: CommandType.Text);
         };
