@@ -32,9 +32,9 @@ public class InfoController : Controller
         });
     }
 
-    [HttpGet("~/hello")]
+    [HttpGet("~/opendoors")]
     public IActionResult Hello()
     {
-        return Content("Hello World!");
+        return Content("I'm sorry Dave, I'm afraid I can't do that.");
     }
 }
