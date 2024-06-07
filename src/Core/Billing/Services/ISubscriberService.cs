@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.BitStripe;
 using Stripe;
 
 namespace Bit.Core.Billing.Services;
@@ -45,6 +46,18 @@ public interface ISubscriberService
     Task<Customer> GetCustomerOrThrow(
         ISubscriber subscriber,
         CustomerGetOptions customerGetOptions = null);
+
+    /// <summary>
+    /// Retrieves a list of Stripe <see cref="Invoice"/> objects using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to retrieve the Stripe invoices for.</param>
+    /// <param name="invoiceListOptions">Optional parameters that can be passed to Stripe to expand, modify or filter the invoices. The <see cref="subscriber"/>'s
+    /// <see cref="ISubscriber.GatewayCustomerId"/> will be automatically attached to the provided options as the <see cref="InvoiceListOptions.Customer"/> parameter.</param>
+    /// <returns>A list of Stripe <see cref="Invoice"/> objects.</returns>
+    /// <remarks>This method opts for returning an empty list rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
+    Task<List<Invoice>> GetInvoices(
+        ISubscriber subscriber,
+        StripeInvoiceListOptions invoiceListOptions = null);
 
     /// <summary>
     /// Retrieves the account credit, a masked representation of the default payment method and the tax information for the

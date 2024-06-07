@@ -110,8 +110,8 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
 
     private bool HasProperMetaData(TwoFactorProvider provider)
     {
-        return provider?.MetaData != null && provider.MetaData.ContainsKey("IKey") &&
-            provider.MetaData.ContainsKey("SKey") && provider.MetaData.ContainsKey("Host");
+        return provider?.MetaData != null && provider.MetaData.ContainsKey("ClientId") &&
+            provider.MetaData.ContainsKey("ClientSecret") && provider.MetaData.ContainsKey("Host");
     }
 
     /// <summary>
@@ -122,14 +122,14 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     private async Task<Duo.Client> BuildDuoClientAsync(TwoFactorProvider provider)
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
-        // to redirect back to the correct client
+        // to redirect back to the initiating client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
         var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
             _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
 
         var client = new Duo.ClientBuilder(
-            (string)provider.MetaData["IKey"],
-            (string)provider.MetaData["SKey"],
+            (string)provider.MetaData["ClientId"],
+            (string)provider.MetaData["ClientSecret"],
             (string)provider.MetaData["Host"],
             redirectUri).Build();
 
