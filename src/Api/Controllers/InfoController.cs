@@ -31,4 +31,10 @@ public class InfoController : Controller
             Headers = headers,
         });
     }
+
+    [HttpGet("~/hello")]
+    public IActionResult Hello()
+    {
+        return Content("Hello World!");
+    }
 }
