@@ -4,7 +4,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Settings;
-using Bit.Infrastructure.Dapper.Auth.Helpers;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -64,21 +64,28 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
             const string sql = @"
-                            UPDATE
-                                [dbo].[WebAuthnCredential]
-                            SET
-                                [EncryptedPublicKey] = UW.EncryptedPublicKey,
-                                [EncryptedUserKey] = UW.EncryptedUserKey
-                            FROM
-                                [dbo].[WebAuthnCredential] WC
-                            INNER JOIN
-                                @WebauthnCredentials UW ON UW.Id = WC.Id
-                            WHERE
-                                WC.[UserId] = @UserId";
-            var webauthnCredentialsTVP = credentials.ToTvp();
+                UPDATE WC
+                SET
+                    WC.[EncryptedPublicKey] = UW.[encryptedPublicKey],
+                    WC.[EncryptedUserKey] = UW.[encryptedUserKey]
+                FROM
+                    [dbo].[WebAuthnCredential] WC
+                INNER JOIN
+                    OPENJSON(@JsonCredentials)
+                    WITH (
+                        id UNIQUEIDENTIFIER,
+                        encryptedPublicKey NVARCHAR(MAX),
+                        encryptedUserKey NVARCHAR(MAX)
+                    ) UW
+                    ON UW.id = WC.Id
+                WHERE
+                    WC.[UserId] = @UserId";
+
+            var jsonCredentials = CoreHelpers.ClassToJsonData(credentials);
+
             await connection.ExecuteAsync(
                 sql,
-                new { UserId = userId, WebauthnCredentials = webauthnCredentialsTVP },
+                new { UserId = userId, JsonCredentials = jsonCredentials },
                 transaction: transaction,
                 commandType: CommandType.Text);
         };
