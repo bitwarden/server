@@ -77,11 +77,6 @@ public class AccountsController : Controller
     [HttpPost("register/send-email-verification")]
     public async Task<IActionResult> PostRegisterSendEmailVerification([FromBody] RegisterSendEmailVerificationRequestModel model)
     {
-        if (!ModelState.IsValid)
-        {
-            throw new BadRequestException(ModelState);
-        }
-
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
             model.ReceiveMarketingEmails);
 
