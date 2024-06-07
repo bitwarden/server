@@ -130,6 +130,7 @@ public static class FeatureFlagKeys
     public const string BulkDeviceApproval = "bulk-device-approval";
     public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string BlockLegacyUsers = "block-legacy-users";
+    public const string UseBasicInlineMenuFieldQualification = 'use-basic-inline-menu-field-qualification'
 
     public static List<string> GetAllKeys()
     {
