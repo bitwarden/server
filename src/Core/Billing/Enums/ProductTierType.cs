@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Enums;
+namespace Bit.Core.Billing.Enums;
 
 public enum ProductTierType : byte
 {
@@ -15,4 +15,3 @@ public enum ProductTierType : byte
     [Display(Name = "Teams Starter")]
     TeamsStarter = 4,
 }
-

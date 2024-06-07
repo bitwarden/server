@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
