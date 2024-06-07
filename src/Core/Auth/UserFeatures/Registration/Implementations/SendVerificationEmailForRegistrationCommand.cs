@@ -7,21 +7,33 @@ using Bit.Core.Tokens;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
-public class SendVerificationEmailForRegistrationCommand(
-    IUserRepository userRepository,
-    GlobalSettings globalSettings,
-    IMailService mailService,
-    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory)
-    : ISendVerificationEmailForRegistrationCommand
+public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmailForRegistrationCommand
 {
+
+    private readonly IUserRepository _userRepository;
+    private readonly GlobalSettings _globalSettings;
+    private readonly IMailService _mailService;
+    private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _tokenDataFactory;
+
+    public SendVerificationEmailForRegistrationCommand(
+        IUserRepository userRepository,
+        GlobalSettings globalSettings,
+        IMailService mailService,
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory)
+    {
+        _userRepository = userRepository;
+        _globalSettings = globalSettings;
+        _mailService = mailService;
+        _tokenDataFactory = tokenDataFactory;
+    }
 
     public async Task<string> Run(string email, string name, bool receiveMarketingEmails)
     {
         // Check to see if the user already exists
-        var user = await userRepository.GetByEmailAsync(email);
+        var user = await _userRepository.GetByEmailAsync(email);
         var userExists = user != null;
 
-        if (!globalSettings.EnableEmailVerification)
+        if (!_globalSettings.EnableEmailVerification)
         {
 
             if (userExists)
@@ -42,7 +54,7 @@ public class SendVerificationEmailForRegistrationCommand(
             // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
             // an email with a link to verify their email address
             var token = GenerateToken(email, name, receiveMarketingEmails);
-            await mailService.SendRegistrationVerificationEmailAsync(email, token);
+            await _mailService.SendRegistrationVerificationEmailAsync(email, token);
         }
 
         // User exists but we will return a 200 regardless of whether the email was sent or not; so return null
@@ -52,7 +64,7 @@ public class SendVerificationEmailForRegistrationCommand(
     private string GenerateToken(string email, string name, bool receiveMarketingEmails)
     {
         var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
-        return tokenDataFactory.Protect(registrationEmailVerificationTokenable);
+        return _tokenDataFactory.Protect(registrationEmailVerificationTokenable);
     }
 }
 
