@@ -20,6 +20,12 @@ public class WebauthnKeyRotationValidator : IRotationValidator<IEnumerable<Webau
 
     public async Task<IEnumerable<WebauthnRotateKeyData>> ValidateAsync(User user, IEnumerable<WebauthnRotateKeyRequestModel> keysToRotate)
     {
+        // 2024-06: Remove after 3 releases, for backward compatibility
+        if (keysToRotate == null)
+        {
+            return new List<WebauthnRotateKeyData>();
+        }
+
         var result = new List<WebauthnRotateKeyData>();
         var existing = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existing == null || !existing.Any())
