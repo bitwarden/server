@@ -5,7 +5,7 @@ namespace Bit.Core.Models.StaticStore;
 public abstract record Plan
 {
     public PlanType Type { get; protected init; }
-    public ProductTierType Product { get; protected init; }
+    public ProductTierType ProductTier { get; protected init; }
     public string Name { get; protected init; }
     public bool IsAnnual { get; protected init; }
     public string NameLocalizationKey { get; protected init; }

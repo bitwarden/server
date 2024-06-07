@@ -7,7 +7,7 @@ public record FreePlan : Models.StaticStore.Plan
     public FreePlan()
     {
         Type = PlanType.Free;
-        Product = ProductTierType.Free;
+        ProductTier = ProductTierType.Free;
         Name = "Free";
         NameLocalizationKey = "planNameFree";
         DescriptionLocalizationKey = "planDescFree";

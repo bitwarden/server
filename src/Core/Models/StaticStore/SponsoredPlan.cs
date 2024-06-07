@@ -6,8 +6,8 @@ namespace Bit.Core.Models.StaticStore;
 public class SponsoredPlan
 {
     public PlanSponsorshipType PlanSponsorshipType { get; set; }
-    public ProductTierType SponsoredProductType { get; set; }
-    public ProductTierType SponsoringProductType { get; set; }
+    public ProductTierType SponsoredProductTierType { get; set; }
+    public ProductTierType SponsoringProductTierType { get; set; }
     public string StripePlanId { get; set; }
     public Func<OrganizationUserOrganizationDetails, bool> UsersCanSponsor { get; set; }
 }

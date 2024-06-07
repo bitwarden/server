@@ -7,7 +7,7 @@ public record Families2019Plan : Models.StaticStore.Plan
     public Families2019Plan()
     {
         Type = PlanType.FamiliesAnnually2019;
-        Product = ProductTierType.Families;
+        ProductTier = ProductTierType.Families;
         Name = "Families 2019";
         IsAnnual = true;
         NameLocalizationKey = "planNameFamilies";

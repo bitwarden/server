@@ -7,7 +7,7 @@ public record Enterprise2023Plan : Plan
     public Enterprise2023Plan(bool isAnnual)
     {
         Type = isAnnual ? PlanType.EnterpriseAnnually2023 : PlanType.EnterpriseMonthly2023;
-        Product = ProductTierType.Enterprise;
+        ProductTier = ProductTierType.Enterprise;
         Name = isAnnual ? "Enterprise (Annually)" : "Enterprise (Monthly)";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameEnterprise";

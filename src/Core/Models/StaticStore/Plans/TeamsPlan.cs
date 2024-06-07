@@ -7,7 +7,7 @@ public record TeamsPlan : Plan
     public TeamsPlan(bool isAnnual)
     {
         Type = isAnnual ? PlanType.TeamsAnnually : PlanType.TeamsMonthly;
-        Product = ProductTierType.Teams;
+        ProductTier = ProductTierType.Teams;
         Name = isAnnual ? "Teams (Annually)" : "Teams (Monthly)";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameTeams";

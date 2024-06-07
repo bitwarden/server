@@ -279,7 +279,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (success)
         {
-            var upgradePath = GetUpgradePath(existingPlan.Product, newPlan.Product);
+            var upgradePath = GetUpgradePath(existingPlan.ProductTier, newPlan.ProductTier);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
                 {
@@ -342,15 +342,15 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static string GetUpgradePath(ProductTierType oldProductType, ProductTierType newProductType)
+    private static string GetUpgradePath(ProductTierType oldProductTierType, ProductTierType newProductTierType)
     {
-        var oldDescription = _upgradePath.TryGetValue(oldProductType, out var description)
+        var oldDescription = _upgradePath.TryGetValue(oldProductTierType, out var description)
             ? description
-            : $"{oldProductType:G}";
+            : $"{oldProductTierType:G}";
 
-        var newDescription = _upgradePath.TryGetValue(newProductType, out description)
+        var newDescription = _upgradePath.TryGetValue(newProductTierType, out description)
             ? description
-            : $"{newProductType:G}";
+            : $"{newProductTierType:G}";
 
         return $"{oldDescription} → {newDescription}";
     }

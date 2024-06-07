@@ -7,7 +7,7 @@ public record TeamsStarterPlan : Plan
     public TeamsStarterPlan()
     {
         Type = PlanType.TeamsStarter;
-        Product = ProductTierType.TeamsStarter;
+        ProductTier = ProductTierType.TeamsStarter;
         Name = "Teams (Starter)";
         NameLocalizationKey = "planNameTeamsStarter";
         DescriptionLocalizationKey = "planDescTeams";

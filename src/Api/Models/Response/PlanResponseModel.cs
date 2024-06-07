@@ -15,7 +15,7 @@ public class PlanResponseModel : ResponseModel
         }
 
         Type = plan.Type;
-        Product = plan.Product;
+        ProductTier = plan.ProductTier;
         Name = plan.Name;
         IsAnnual = plan.IsAnnual;
         NameLocalizationKey = plan.NameLocalizationKey;
@@ -45,7 +45,7 @@ public class PlanResponseModel : ResponseModel
     }
 
     public PlanType Type { get; set; }
-    public ProductTierType Product { get; set; }
+    public ProductTierType ProductTier { get; set; }
     public string Name { get; set; }
     public bool IsAnnual { get; set; }
     public string NameLocalizationKey { get; set; }

@@ -7,7 +7,7 @@ public record Enterprise2020Plan : Models.StaticStore.Plan
     public Enterprise2020Plan(bool isAnnual)
     {
         Type = isAnnual ? PlanType.EnterpriseAnnually2020 : PlanType.EnterpriseMonthly2020;
-        Product = ProductTierType.Enterprise;
+        ProductTier = ProductTierType.Enterprise;
         Name = isAnnual ? "Enterprise (Annually) 2020" : "Enterprise (Monthly) 2020";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameEnterprise";
