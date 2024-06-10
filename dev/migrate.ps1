@@ -36,15 +36,9 @@ if ($all -or $mssql) {
   if ($selfhost) {
     $msSqlConnectionString = $(Get-UserSecrets).'dev:selfHostOverride:globalSettings:sqlServer:connectionString'
     $envName = "self-host"
-
-    Write-Output "Migrating your migrations to use MsSqlMigratorUtility (if needed)"
-    ./migrate_migration_record.ps1 -s
   } else {
     $msSqlConnectionString = $(Get-UserSecrets).'globalSettings:sqlServer:connectionString'
     $envName = "cloud"
-
-    Write-Output "Migrating your migrations to use MsSqlMigratorUtility (if needed)"
-    ./migrate_migration_record.ps1
   }
 
   Write-Host "Starting Microsoft SQL Server Migrations for $envName"
