@@ -1,9 +1,6 @@
 #!/usr/bin/env pwsh
 # Creates the vault_dev database, and runs all the migrations.
 
-# Due to azure-edge-sql not containing the mssql-tools on ARM, we manually use
-#  the mssql-tools container which runs under x86_64.
-
 param(
   [switch]$all,
   [switch]$postgres,
