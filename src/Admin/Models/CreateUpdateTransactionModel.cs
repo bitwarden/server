@@ -30,6 +30,8 @@ public class CreateUpdateTransactionModel : IValidatableObject
     public Guid? UserId { get; set; }
     [Display(Name = "Organization Id")]
     public Guid? OrganizationId { get; set; }
+    [Display(Name = "Provider Id")]
+    public Guid? ProviderId { get; set; }
     [Required]
     public decimal? Amount { get; set; }
     [Display(Name = "Refunded Amount")]
@@ -50,9 +52,10 @@ public class CreateUpdateTransactionModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if ((!UserId.HasValue && !OrganizationId.HasValue) || (UserId.HasValue && OrganizationId.HasValue))
+        if ((!UserId.HasValue && !OrganizationId.HasValue && !ProviderId.HasValue) ||
+            (UserId.HasValue && OrganizationId.HasValue && ProviderId.HasValue))
         {
-            yield return new ValidationResult("Must provide either User Id, or Organization Id.");
+            yield return new ValidationResult("Must provide either User Id, Organization Id or Provider Id.");
         }
     }
 
@@ -63,6 +66,7 @@ public class CreateUpdateTransactionModel : IValidatableObject
             Id = id.GetValueOrDefault(),
             UserId = UserId,
             OrganizationId = OrganizationId,
+            ProviderId = ProviderId,
             Amount = Amount.Value,
             RefundedAmount = RefundedAmount,
             Refunded = Refunded ? true : (bool?)null,

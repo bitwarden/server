@@ -120,12 +120,13 @@ public class ToolsController : Controller
     }
 
     [RequirePermission(Permission.Tools_CreateEditTransaction)]
-    public IActionResult CreateTransaction(Guid? organizationId = null, Guid? userId = null)
+    public IActionResult CreateTransaction(Guid? organizationId = null, Guid? userId = null, Guid? providerId = null)
     {
         return View("CreateUpdateTransaction", new CreateUpdateTransactionModel
         {
             OrganizationId = organizationId,
-            UserId = userId
+            UserId = userId,
+            ProviderId = providerId
         });
     }
 
@@ -144,9 +145,13 @@ public class ToolsController : Controller
         {
             return RedirectToAction("Edit", "Users", new { id = model.UserId });
         }
-        else
+        else if (model.OrganizationId.HasValue)
         {
             return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId });
+        }
+        else
+        {
+            return RedirectToAction("Edit", "Providers", new { id = model.ProviderId });
         }
     }
 
@@ -175,9 +180,13 @@ public class ToolsController : Controller
         {
             return RedirectToAction("Edit", "Users", new { id = model.UserId });
         }
-        else
+        else if (model.OrganizationId.HasValue)
         {
             return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId });
+        }
+        else
+        {
+            return RedirectToAction("Edit", "Providers", new { id = model.ProviderId });
         }
     }
 
