@@ -25,6 +25,23 @@ public class ProviderBillingController(
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : Controller
 {
+    [HttpGet("invoices")]
+    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
+    {
+        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var invoices = await subscriberService.GetInvoices(provider);
+
+        var response = InvoicesResponse.From(invoices);
+
+        return TypedResults.Ok(response);
+    }
+
     [HttpGet("payment-information")]
     public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
     {

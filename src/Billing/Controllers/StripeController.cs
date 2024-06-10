@@ -1216,7 +1216,9 @@ public class StripeController : Controller
     }
 
     private static bool IsSponsoredSubscription(Subscription subscription) =>
-        StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
+        StaticStore.SponsoredPlans
+            .Any(p => subscription.Items
+                .Any(i => i.Plan.Id == p.StripePlanId));
 
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.PaymentFailed"/> event type from Stripe.

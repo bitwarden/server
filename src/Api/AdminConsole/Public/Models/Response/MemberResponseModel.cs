@@ -16,9 +16,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     [JsonConstructor]
     public MemberResponseModel() { }
 
-    public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections,
-        bool flexibleCollectionsEnabled)
-        : base(user, flexibleCollectionsEnabled)
+    public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections) : base(user)
     {
         if (user == null)
         {
@@ -33,8 +31,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     }
 
     public MemberResponseModel(OrganizationUserUserDetails user, bool twoFactorEnabled,
-        IEnumerable<CollectionAccessSelection> collections, bool flexibleCollectionsEnabled)
-        : base(user, flexibleCollectionsEnabled)
+        IEnumerable<CollectionAccessSelection> collections) : base(user)
     {
         if (user == null)
         {
