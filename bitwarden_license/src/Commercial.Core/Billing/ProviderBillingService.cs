@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -30,7 +31,8 @@ public class ProviderBillingService(
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IProviderBillingService
+    ISubscriberService subscriberService,
+    IFeatureService featureService) : IProviderBillingService
 {
     public async Task AssignSeatsToClientOrganization(
         Provider provider,
@@ -226,22 +228,14 @@ public class ProviderBillingService(
             .Sum(providerOrganization => providerOrganization.Seats ?? 0);
     }
 
-    public async Task<ProviderSubscriptionDTO> GetSubscriptionDTO(Guid providerId)
+    public async Task<ConsolidatedBillingSubscriptionDTO> GetConsolidatedBillingSubscription(
+        Provider provider)
     {
-        var provider = await providerRepository.GetByIdAsync(providerId);
-
-        if (provider == null)
-        {
-            logger.LogError(
-                "Could not find provider ({ID}) when retrieving subscription data.",
-                providerId);
-
-            return null;
-        }
+        ArgumentNullException.ThrowIfNull(provider);
 
         if (provider.Type == ProviderType.Reseller)
         {
-            logger.LogError("Subscription data cannot be retrieved for reseller-type provider ({ID})", providerId);
+            logger.LogError("Consolidated billing subscription cannot be retrieved for reseller-type provider ({ID})", provider.Id);
 
             throw ContactSupport("Consolidated billing does not support reseller-type providers");
         }
@@ -256,16 +250,30 @@ public class ProviderBillingService(
             return null;
         }
 
-        var providerPlans = await providerPlanRepository.GetByProviderId(providerId);
+        DateTime? subscriptionSuspensionDate = null;
+        DateTime? subscriptionUnpaidPeriodEndDate = null;
+        if (featureService.IsEnabled(FeatureFlagKeys.AC1795_UpdatedSubscriptionStatusSection))
+        {
+            var (suspensionDate, unpaidPeriodEndDate) = await paymentService.GetSuspensionDateAsync(subscription);
+            if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
+            {
+                subscriptionSuspensionDate = suspensionDate;
+                subscriptionUnpaidPeriodEndDate = unpaidPeriodEndDate;
+            }
+        }
+
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
         var configuredProviderPlans = providerPlans
             .Where(providerPlan => providerPlan.IsConfigured())
             .Select(ConfiguredProviderPlanDTO.From)
             .ToList();
 
-        return new ProviderSubscriptionDTO(
+        return new ConsolidatedBillingSubscriptionDTO(
             configuredProviderPlans,
-            subscription);
+            subscription,
+            subscriptionSuspensionDate,
+            subscriptionUnpaidPeriodEndDate);
     }
 
     public async Task ScaleSeats(
@@ -452,39 +460,6 @@ public class ProviderBillingService(
         provider.Status = ProviderStatusType.Billable;
 
         await providerRepository.ReplaceAsync(provider);
-    }
-
-    public async Task<ProviderPaymentInfoDTO> GetPaymentInformationAsync(Guid providerId)
-    {
-        var provider = await providerRepository.GetByIdAsync(providerId);
-
-        if (provider == null)
-        {
-            logger.LogError(
-                "Could not find provider ({ID}) when retrieving payment information.",
-                providerId);
-
-            return null;
-        }
-
-        if (provider.Type == ProviderType.Reseller)
-        {
-            logger.LogError("payment information cannot be retrieved for reseller-type provider ({ID})", providerId);
-
-            throw ContactSupport("Consolidated billing does not support reseller-type providers");
-        }
-
-        var taxInformation = await subscriberService.GetTaxInformationAsync(provider);
-        var billingInformation = await subscriberService.GetPaymentMethodAsync(provider);
-
-        if (taxInformation == null && billingInformation == null)
-        {
-            return null;
-        }
-
-        return new ProviderPaymentInfoDTO(
-            billingInformation,
-            taxInformation);
     }
 
     private Func<int, int, Task> CurrySeatScalingUpdate(

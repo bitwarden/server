@@ -276,14 +276,14 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<byte?>("Gateway")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<string>("GatewayCustomerId")
                         .HasColumnType("longtext");
 
                     b.Property<string>("GatewaySubscriptionId")
                         .HasColumnType("longtext");
-
-                    b.Property<byte?>("GatewayType")
-                        .HasColumnType("tinyint unsigned");
 
                     b.Property<string>("Name")
                         .HasColumnType("longtext");
@@ -671,6 +671,48 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("WebAuthnCredential", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("AssignedSeats")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClientName")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("InvoiceId")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PlanName")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<int>("UsedSeats")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("Id", "InvoiceId")
+                        .IsUnique();
+
+                    b.ToTable("ProviderInvoiceItem", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>
@@ -2048,6 +2090,17 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>

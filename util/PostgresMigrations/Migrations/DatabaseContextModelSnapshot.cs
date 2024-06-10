@@ -282,14 +282,14 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
 
+                    b.Property<byte?>("Gateway")
+                        .HasColumnType("smallint");
+
                     b.Property<string>("GatewayCustomerId")
                         .HasColumnType("text");
 
                     b.Property<string>("GatewaySubscriptionId")
                         .HasColumnType("text");
-
-                    b.Property<byte?>("GatewayType")
-                        .HasColumnType("smallint");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");
@@ -685,6 +685,48 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("WebAuthnCredential", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AssignedSeats")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ClientName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvoiceId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlanName")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("UsedSeats")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("Id", "InvoiceId")
+                        .IsUnique();
+
+                    b.ToTable("ProviderInvoiceItem", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>
@@ -2064,6 +2106,17 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>

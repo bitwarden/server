@@ -20,4 +20,5 @@ public interface IAccessPolicyRepository
     Task UpdateServiceAccountGrantedPoliciesAsync(ServiceAccountGrantedPoliciesUpdates policyUpdates);
     Task<ProjectServiceAccountsAccessPolicies?> GetProjectServiceAccountsAccessPoliciesAsync(Guid projectId);
     Task UpdateProjectServiceAccountsAccessPoliciesAsync(ProjectServiceAccountsAccessPoliciesUpdates updates);
+    Task<SecretAccessPolicies?> GetSecretAccessPoliciesAsync(Guid secretId, Guid userId);
 }
