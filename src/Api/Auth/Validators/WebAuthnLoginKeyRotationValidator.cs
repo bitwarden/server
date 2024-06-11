@@ -3,7 +3,6 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 
 namespace Bit.Api.Auth.Validators;
 
