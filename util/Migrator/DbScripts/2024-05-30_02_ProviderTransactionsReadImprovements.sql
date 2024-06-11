@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[Transaction_ReadByUserId]
-    @UserId UNIQUEIDENTIFIER,
+CREATE OR ALTER PROCEDURE [dbo].[Transaction_ReadByProviderId]
+    @ProviderId UNIQUEIDENTIFIER,
     @Limit INT
 AS
 BEGIN
@@ -10,7 +10,7 @@ BEGIN
     FROM
         [dbo].[TransactionView]
     WHERE
-        [UserId] = @UserId
+        [ProviderId] = @ProviderId
     ORDER BY
         [CreationDate] DESC
 END
