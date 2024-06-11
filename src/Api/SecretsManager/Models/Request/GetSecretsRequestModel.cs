@@ -12,7 +12,7 @@ public class GetSecretsRequestModel : IValidatableObject
         bool isDistinct = Ids.Distinct().Count() == Ids.Count();
         if (!isDistinct)
         {
-            IEnumerable<Guid> duplicateGuids = Ids.GroupBy(x => x)
+           var duplicateGuids = Ids.GroupBy(x => x)
                                   .Where(g => g.Count() > 1)
                                   .SelectMany(g => g);
 
