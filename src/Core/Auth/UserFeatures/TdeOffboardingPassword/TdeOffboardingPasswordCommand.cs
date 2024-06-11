@@ -40,6 +40,16 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
 
     public async Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
+        if (string.IsNullOrWhiteSpace(newMasterPassword))
+        {
+            throw new BadRequestException("Master password is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            throw new BadRequestException("Key is required.");
+        }
+
         if (user.HasMasterPassword())
         {
             throw new BadRequestException("User already has a master password.");
