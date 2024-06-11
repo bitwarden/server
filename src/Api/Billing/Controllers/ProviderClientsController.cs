@@ -2,7 +2,7 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -14,16 +14,14 @@ namespace Bit.Api.Billing.Controllers;
 
 [Route("providers/{providerId:guid}/clients")]
 public class ProviderClientsController(
-    IAssignSeatsToClientOrganizationCommand assignSeatsToClientOrganizationCommand,
-    ICreateCustomerCommand createCustomerCommand,
     ICurrentContext currentContext,
     IFeatureService featureService,
     ILogger<ProviderClientsController> logger,
     IOrganizationRepository organizationRepository,
+    IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IScaleSeatsCommand scaleSeatsCommand,
     IUserService userService) : Controller
 {
     [HttpPost]
@@ -83,12 +81,12 @@ public class ProviderClientsController(
             return TypedResults.Problem();
         }
 
-        await scaleSeatsCommand.ScalePasswordManagerSeats(
+        await providerBillingService.ScaleSeats(
             provider,
             requestBody.PlanType,
             requestBody.Seats);
 
-        await createCustomerCommand.CreateCustomer(
+        await providerBillingService.CreateCustomerForClientOrganization(
             provider,
             clientOrganization);
 
@@ -133,10 +131,17 @@ public class ProviderClientsController(
             return TypedResults.Problem();
         }
 
-        await assignSeatsToClientOrganizationCommand.AssignSeatsToClientOrganization(
-            provider,
-            clientOrganization,
-            requestBody.AssignedSeats);
+        if (clientOrganization.Seats != requestBody.AssignedSeats)
+        {
+            await providerBillingService.AssignSeatsToClientOrganization(
+                provider,
+                clientOrganization,
+                requestBody.AssignedSeats);
+        }
+
+        clientOrganization.Name = requestBody.Name;
+
+        await organizationRepository.ReplaceAsync(clientOrganization);
 
         return TypedResults.Ok();
     }

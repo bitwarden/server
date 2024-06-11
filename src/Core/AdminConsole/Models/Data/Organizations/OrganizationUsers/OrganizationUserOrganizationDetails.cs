@@ -8,6 +8,7 @@ public class OrganizationUserOrganizationDetails
 {
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }
+    public Guid OrganizationUserId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public bool UsePolicies { get; set; }

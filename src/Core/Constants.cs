@@ -102,13 +102,10 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
-    public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
-    public const string PasswordlessLogin = "passwordless-login";
-    public const string TrustedDeviceEncryption = "trusted-device-encryption";
-    public const string Fido2VaultCredentials = "fido2-vault-credentials";
-    public const string VaultOnboarding = "vault-onboarding";
     public const string BrowserFilelessImport = "browser-fileless-import";
+    public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
+    public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
+
     /// <summary>
     /// Deprecated - never used, do not use. Will always default to false. Will be deleted as part of Flexible Collections cleanup
     /// </summary>
@@ -117,15 +114,6 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
-    /// <summary>
-    /// Enables flexible collections improvements for new organizations on creation
-    /// </summary>
-    public const string FlexibleCollectionsSignup = "flexible-collections-signup";
-    /// <summary>
-    /// Exposes a migration button in the web vault which allows users to migrate an existing organization to
-    /// flexible collections
-    /// </summary>
-    public const string FlexibleCollectionsMigration = "flexible-collections-migration";
     public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
@@ -136,6 +124,12 @@ public static class FeatureFlagKeys
     public const string EnableDeleteProvider = "AC-1218-delete-provider";
     public const string EmailVerification = "email-verification";
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
+    public const string ExtensionRefresh = "extension-refresh";
+    public const string RestrictProviderAccess = "restrict-provider-access";
+    public const string VaultBulkManagementAction = "vault-bulk-management-action";
+    public const string BulkDeviceApproval = "bulk-device-approval";
+    public const string MemberAccessReport = "ac-2059-member-access-report";
+    public const string BlockLegacyUsers = "block-legacy-users";
 
     public static List<string> GetAllKeys()
     {
@@ -150,11 +144,8 @@ public static class FeatureFlagKeys
         // place overriding values when needed locally (offline), or return null
         return new Dictionary<string, string>()
         {
-            { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" },
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"},
-            { FlexibleCollectionsSignup, "true" }
+            { UnassignedItemsBanner, "true"}
         };
     }
 }

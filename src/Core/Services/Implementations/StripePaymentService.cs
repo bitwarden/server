@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -226,7 +227,10 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
+    private async Task ChangeOrganizationSponsorship(
+        Organization org,
+        OrganizationSponsorship sponsorship,
+        bool applySponsorship)
     {
         var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
         var sponsoredPlan = sponsorship != null ?
@@ -234,7 +238,7 @@ public class StripePaymentService : IPaymentService
             null;
         var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
 
-        await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, DateTime.UtcNow, true);
+        await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, true);
 
         var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
         org.ExpirationDate = sub.CurrentPeriodEnd;
@@ -759,7 +763,7 @@ public class StripePaymentService : IPaymentService
     }
 
     private async Task<string> FinalizeSubscriptionChangeAsync(ISubscriber subscriber,
-        SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate, bool invoiceNow = false)
+        SubscriptionUpdate subscriptionUpdate, bool invoiceNow = false)
     {
         // remember, when in doubt, throw
         var subGetOptions = new SubscriptionGetOptions();
@@ -771,7 +775,6 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Subscription not found.");
         }
 
-        prorationDate ??= DateTime.UtcNow;
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
@@ -786,8 +789,7 @@ public class StripePaymentService : IPaymentService
             ? Constants.AlwaysInvoice
             : Constants.CreateProrations,
             DaysUntilDue = daysUntilDue ?? 1,
-            CollectionMethod = "send_invoice",
-            ProrationDate = prorationDate,
+            CollectionMethod = "send_invoice"
         };
         if (!invoiceNow && isAnnualPlan && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
         {
@@ -907,9 +909,8 @@ public class StripePaymentService : IPaymentService
         bool subscribedToSecretsManager,
         int? newlyPurchasedSecretsManagerSeats,
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
-        int newlyPurchasedAdditionalStorage,
-        DateTime? prorationDate = null)
-        => FinalizeSubscriptionChangeAsync(
+        int newlyPurchasedAdditionalStorage) =>
+        FinalizeSubscriptionChangeAsync(
             organization,
             new CompleteSubscriptionUpdate(
                 organization,
@@ -919,41 +920,47 @@ public class StripePaymentService : IPaymentService
                     PurchasedPasswordManagerSeats = newlyPurchasedPasswordManagerSeats,
                     SubscribedToSecretsManager = subscribedToSecretsManager,
                     PurchasedSecretsManagerSeats = newlyPurchasedSecretsManagerSeats,
-                    PurchasedAdditionalSecretsManagerServiceAccounts = newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+                    PurchasedAdditionalSecretsManagerServiceAccounts =
+                        newlyPurchasedAdditionalSecretsManagerServiceAccounts,
                     PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage
-                }),
-            prorationDate, true);
+                }), true);
 
-    public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
-    {
-        return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
-    }
+    public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
+        FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
     public Task<string> AdjustSeats(
         Provider provider,
         StaticStore.Plan plan,
         int currentlySubscribedSeats,
-        int newlySubscribedSeats,
-        DateTime? prorationDate = null)
+        int newlySubscribedSeats)
         => FinalizeSubscriptionChangeAsync(
             provider,
-            new ProviderSubscriptionUpdate(plan.Type, currentlySubscribedSeats, newlySubscribedSeats),
-            prorationDate);
+            new ProviderSubscriptionUpdate(
+                plan.Type,
+                currentlySubscribedSeats,
+                newlySubscribedSeats));
 
-    public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
-    {
-        return FinalizeSubscriptionChangeAsync(organization, new SmSeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
-    }
+    public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
+        FinalizeSubscriptionChangeAsync(
+            organization,
+            new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
 
-    public Task<string> AdjustServiceAccountsAsync(Organization organization, StaticStore.Plan plan, int additionalServiceAccounts, DateTime? prorationDate = null)
-    {
-        return FinalizeSubscriptionChangeAsync(organization, new ServiceAccountSubscriptionUpdate(organization, plan, additionalServiceAccounts), prorationDate);
-    }
+    public Task<string> AdjustServiceAccountsAsync(
+        Organization organization,
+        StaticStore.Plan plan,
+        int additionalServiceAccounts) =>
+        FinalizeSubscriptionChangeAsync(
+            organization,
+            new ServiceAccountSubscriptionUpdate(organization, plan, additionalServiceAccounts));
 
-    public Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
-        string storagePlanId, DateTime? prorationDate = null)
+    public Task<string> AdjustStorageAsync(
+        IStorableSubscriber storableSubscriber,
+        int additionalStorage,
+        string storagePlanId)
     {
-        return FinalizeSubscriptionChangeAsync(storableSubscriber, new StorageSubscriptionUpdate(storagePlanId, additionalStorage), prorationDate);
+        return FinalizeSubscriptionChangeAsync(
+            storableSubscriber,
+            new StorageSubscriptionUpdate(storagePlanId, additionalStorage));
     }
 
     public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
@@ -1554,33 +1561,19 @@ public class StripePaymentService : IPaymentService
         var billingInfo = new BillingInfo
         {
             Balance = GetBillingBalance(customer),
-            PaymentSource = await GetBillingPaymentSourceAsync(customer),
-            Invoices = await GetBillingInvoicesAsync(customer),
-            Transactions = await GetBillingTransactionsAsync(subscriber)
-        };
-
-        return billingInfo;
-    }
-
-    public async Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber)
-    {
-        var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
-        var billingInfo = new BillingInfo
-        {
-            Balance = GetBillingBalance(customer),
             PaymentSource = await GetBillingPaymentSourceAsync(customer)
         };
 
         return billingInfo;
     }
 
-    public async Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber)
+    public async Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber)
     {
         var customer = await GetCustomerAsync(subscriber.GatewayCustomerId);
-        var billingInfo = new BillingInfo
+        var billingInfo = new BillingHistoryInfo
         {
-            Transactions = await GetBillingTransactionsAsync(subscriber),
-            Invoices = await GetBillingInvoicesAsync(customer)
+            Transactions = await GetBillingTransactionsAsync(subscriber, 20),
+            Invoices = await GetBillingInvoicesAsync(customer, 20)
         };
 
         return billingInfo;
@@ -1771,13 +1764,15 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    public async Task<string> AddSecretsManagerToSubscription(Organization org, StaticStore.Plan plan, int additionalSmSeats,
-        int additionalServiceAccount, DateTime? prorationDate = null)
-    {
-        return await FinalizeSubscriptionChangeAsync(org,
-            new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount), prorationDate,
+    public async Task<string> AddSecretsManagerToSubscription(
+        Organization org,
+        StaticStore.Plan plan,
+        int additionalSmSeats,
+        int additionalServiceAccount) =>
+        await FinalizeSubscriptionChangeAsync(
+            org,
+            new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount),
             true);
-    }
 
     public async Task<bool> RisksSubscriptionFailure(Organization organization)
     {
@@ -1798,6 +1793,59 @@ public class StripePaymentService : IPaymentService
         var paymentSource = await GetBillingPaymentSourceAsync(customer);
 
         return paymentSource == null;
+    }
+
+    public async Task<bool> HasSecretsManagerStandalone(Organization organization)
+    {
+        if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+        {
+            return false;
+        }
+
+        var customer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId);
+
+        return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
+    }
+
+    public async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
+    {
+        if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
+        {
+            return (null, null);
+        }
+
+        var openInvoices = await _stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+        {
+            Query = $"subscription:'{subscription.Id}' status:'open'"
+        });
+
+        if (openInvoices.Count == 0)
+        {
+            return (null, null);
+        }
+
+        var currentDate = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        switch (subscription.CollectionMethod)
+        {
+            case "charge_automatically":
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                        .MinBy(invoice => invoice.Created);
+
+                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
+                }
+            case "send_invoice":
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.DueDate < currentDate)
+                        .MinBy(invoice => invoice.Created);
+
+                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
+                }
+            default: return (null, null);
+        }
     }
 
     private PaymentMethod GetLatestCardPaymentMethod(string customerId)
@@ -1875,44 +1923,66 @@ public class StripePaymentService : IPaymentService
         return customer;
     }
 
-    private async Task<IEnumerable<BillingInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber)
+    private async Task<IEnumerable<BillingHistoryInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber, int? limit = null)
     {
-        ICollection<Transaction> transactions = null;
-        if (subscriber is User)
+        var transactions = subscriber switch
         {
-            transactions = await _transactionRepository.GetManyByUserIdAsync(subscriber.Id);
-        }
-        else if (subscriber is Organization)
-        {
-            transactions = await _transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id);
-        }
+            User => await _transactionRepository.GetManyByUserIdAsync(subscriber.Id, limit),
+            Organization => await _transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id, limit),
+            _ => null
+        };
 
         return transactions?.OrderByDescending(i => i.CreationDate)
-            .Select(t => new BillingInfo.BillingTransaction(t));
-
+            .Select(t => new BillingHistoryInfo.BillingTransaction(t));
     }
 
-    private async Task<IEnumerable<BillingInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer)
+    private async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer,
+        int? limit = null)
     {
         if (customer == null)
         {
             return null;
         }
 
-        var options = new StripeInvoiceListOptions
-        {
-            Customer = customer.Id,
-            SelectAll = true
-        };
-
         try
         {
-            var invoices = await _stripeAdapter.InvoiceListAsync(options);
+            var paidInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+            {
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "paid"
+            });
+            var openInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+            {
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "open"
+            });
+            var uncollectibleInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+            {
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "uncollectible"
+            });
 
-            return invoices
-                .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
+            var paidInvoices = await paidInvoicesTask;
+            var openInvoices = await openInvoicesTask;
+            var uncollectibleInvoices = await uncollectibleInvoicesTask;
+
+            var invoices = paidInvoices
+                .Concat(openInvoices)
+                .Concat(uncollectibleInvoices);
+
+            var result = invoices
                 .OrderByDescending(invoice => invoice.Created)
-                .Select(invoice => new BillingInfo.BillingInvoice(invoice));
+                .Select(invoice => new BillingHistoryInfo.BillingInvoice(invoice));
+
+            return limit.HasValue
+                ? result.Take(limit.Value)
+                : result;
         }
         catch (StripeException exception)
         {
@@ -1941,46 +2011,5 @@ public class StripePaymentService : IPaymentService
         return subscriberName.Length <= 30
             ? subscriberName
             : subscriberName[..30];
-    }
-
-    private async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
-    {
-        if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
-        {
-            return (null, null);
-        }
-
-        var openInvoices = await _stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
-        {
-            Query = $"subscription:'{subscription.Id}' status:'open'"
-        });
-
-        if (openInvoices.Count == 0)
-        {
-            return (null, null);
-        }
-
-        var currentDate = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-
-        switch (subscription.CollectionMethod)
-        {
-            case "charge_automatically":
-                {
-                    var firstOverdueInvoice = openInvoices
-                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
-                        .MinBy(invoice => invoice.Created);
-
-                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
-                }
-            case "send_invoice":
-                {
-                    var firstOverdueInvoice = openInvoices
-                        .Where(invoice => invoice.DueDate < currentDate)
-                        .MinBy(invoice => invoice.Created);
-
-                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
-                }
-            default: return (null, null);
-        }
     }
 }
