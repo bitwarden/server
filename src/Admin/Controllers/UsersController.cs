@@ -95,7 +95,8 @@ public class UsersController : Controller
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
         var billingInfo = await _paymentService.GetBillingAsync(user);
-        return View(new UserEditModel(user, ciphers, billingInfo, _globalSettings));
+        var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
+        return View(new UserEditModel(user, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
     }
 
     [HttpPost]
