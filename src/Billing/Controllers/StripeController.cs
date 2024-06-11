@@ -3,8 +3,11 @@ using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -57,6 +60,9 @@ public class StripeController : Controller
     private readonly IStripeFacade _stripeFacade;
     private readonly IFeatureService _featureService;
     private readonly IProviderRepository _providerRepository;
+    private readonly IProviderInvoiceItemRepository _providerInvoiceItemRepository;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IProviderPlanRepository _providerPlanRepository;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -77,7 +83,10 @@ public class StripeController : Controller
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
         IFeatureService featureService,
-        IProviderRepository providerRepository)
+        IProviderRepository providerRepository,
+        IProviderInvoiceItemRepository providerInvoiceItemRepository,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IProviderPlanRepository providerPlanRepository)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -106,6 +115,9 @@ public class StripeController : Controller
         _stripeFacade = stripeFacade;
         _featureService = featureService;
         _providerRepository = providerRepository;
+        _providerInvoiceItemRepository = providerInvoiceItemRepository;
+        _providerOrganizationRepository = providerOrganizationRepository;
+        _providerPlanRepository = providerPlanRepository;
     }
 
     [HttpPost("webhook")]
@@ -201,6 +213,11 @@ public class StripeController : Controller
             case HandledStripeWebhook.CustomerUpdated:
                 {
                     await HandleCustomerUpdatedEventAsync(parsedEvent);
+                    return Ok();
+                }
+            case HandledStripeWebhook.InvoiceFinalized:
+                {
+                    await HandleInvoiceFinalizedEventAsync(parsedEvent);
                     return Ok();
                 }
             default:
@@ -397,12 +414,18 @@ public class StripeController : Controller
     private async Task HandleInvoiceCreatedEventAsync(Event parsedEvent)
     {
         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-        if (invoice.Paid || !ShouldAttemptToPayInvoice(invoice))
+
+        if (ShouldAttemptToPayInvoice(invoice))
         {
-            return;
+            await AttemptToPayInvoiceAsync(invoice);
         }
 
-        await AttemptToPayInvoiceAsync(invoice);
+        var provider = await GetProviderFromInvoiceAsync(invoice);
+
+        if (provider != null)
+        {
+            await RecordProviderInvoiceLineItemsAsync(provider.Id, invoice);
+        }
     }
 
     /// <summary>
@@ -751,6 +774,28 @@ public class StripeController : Controller
                     invoice.NextPaymentAttempt.Value,
                     invoiceLineItemDescriptions,
                     true);
+            }
+        }
+    }
+
+    public async Task HandleInvoiceFinalizedEventAsync(Event parsedEvent)
+    {
+        var invoice = await _stripeEventService.GetInvoice(parsedEvent);
+
+        var provider = await GetProviderFromInvoiceAsync(invoice);
+
+        if (provider != null)
+        {
+            var invoiceItems = await _providerInvoiceItemRepository.GetByInvoiceId(invoice.Id);
+
+            if (invoiceItems.Any())
+            {
+                await Task.WhenAll(invoiceItems.Select(invoiceItem =>
+                {
+                    invoiceItem.InvoiceNumber = invoice.Number;
+
+                    return _providerInvoiceItemRepository.ReplaceAsync(invoiceItem);
+                }));
             }
         }
     }
@@ -1292,5 +1337,106 @@ public class StripeController : Controller
 
         _logger.LogDebug("Stripe-Signature request header doesn't match configured Stripe webhook secret");
         return null;
+    }
+
+    private async Task<Provider> GetProviderFromInvoiceAsync(Invoice invoice)
+    {
+        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+
+        var metadata = subscription.Metadata ?? new Dictionary<string, string>();
+
+        var hasProviderId = metadata.TryGetValue("providerId", out var providerId);
+
+        return hasProviderId
+            ? await _providerRepository.GetByIdAsync(Guid.Parse(providerId))
+            : null;
+    }
+
+    private async Task RecordProviderInvoiceLineItemsAsync(
+        Guid providerId,
+        Invoice invoice)
+    {
+        var providerPlans = await _providerPlanRepository.GetByProviderId(providerId);
+
+        var enterpriseProviderPlan = providerPlans.SingleOrDefault(plan => plan.PlanType == PlanType.EnterpriseMonthly);
+
+        var teamsProviderPlan = providerPlans.SingleOrDefault(plan => plan.PlanType == PlanType.TeamsMonthly);
+
+        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+
+        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
+
+        var enterprisePrice = enterprisePlan.PasswordManager.SeatPrice * discountedPercentage;
+
+        var teamsPrice = teamsPlan.PasswordManager.SeatPrice * discountedPercentage;
+
+        var clients = (await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId))
+            .Where(providerOrganization => providerOrganization.Status == OrganizationStatusType.Managed);
+
+        var invoiceItems = clients.Select(client => new ProviderInvoiceItem
+        {
+            ProviderId = providerId,
+            InvoiceId = invoice.Id,
+            InvoiceNumber = invoice.Number,
+            ClientName = client.OrganizationName,
+            PlanName = client.Plan,
+            AssignedSeats = client.Seats ?? 0,
+            UsedSeats = client.UserCount,
+            Total = client.Plan == teamsPlan.Name
+                ? (client.Seats ?? 0) * teamsPrice
+                : (client.Seats ?? 0) * enterprisePrice
+        }).ToList();
+
+        if (enterpriseProviderPlan is { PurchasedSeats: null or 0 })
+        {
+            var enterpriseClientSeats = invoiceItems
+                .Where(item => item.PlanName == enterprisePlan.Name)
+                .Sum(item => item.AssignedSeats);
+
+            var unassignedEnterpriseSeats = enterpriseProviderPlan.SeatMinimum - enterpriseClientSeats ?? 0;
+
+            if (unassignedEnterpriseSeats > 0)
+            {
+                invoiceItems.Add(new ProviderInvoiceItem
+                {
+                    ProviderId = providerId,
+                    InvoiceId = invoice.Id,
+                    InvoiceNumber = invoice.Number,
+                    ClientName = "Unassigned seats",
+                    PlanName = enterprisePlan.Name,
+                    AssignedSeats = unassignedEnterpriseSeats,
+                    UsedSeats = 0,
+                    Total = unassignedEnterpriseSeats * enterprisePrice
+                });
+            }
+        }
+
+        if (teamsProviderPlan is { PurchasedSeats: null or 0 })
+        {
+            var teamsClientSeats = invoiceItems
+                .Where(item => item.PlanName == teamsPlan.Name)
+                .Sum(item => item.AssignedSeats);
+
+            var unassignedTeamsSeats = teamsProviderPlan.SeatMinimum - teamsClientSeats ?? 0;
+
+            if (unassignedTeamsSeats > 0)
+            {
+                invoiceItems.Add(new ProviderInvoiceItem
+                {
+                    ProviderId = providerId,
+                    InvoiceId = invoice.Id,
+                    InvoiceNumber = invoice.Number,
+                    ClientName = "Unassigned seats",
+                    PlanName = teamsPlan.Name,
+                    AssignedSeats = unassignedTeamsSeats,
+                    UsedSeats = 0,
+                    Total = unassignedTeamsSeats * teamsPrice
+                });
+            }
+        }
+
+        await Task.WhenAll(invoiceItems.Select(_providerInvoiceItemRepository.CreateAsync));
     }
 }

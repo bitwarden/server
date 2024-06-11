@@ -12,10 +12,6 @@ public class ProviderPlanEntityTypeConfiguration : IEntityTypeConfiguration<Prov
             .Property(t => t.Id)
             .ValueGeneratedNever();
 
-        builder
-            .HasIndex(providerPlan => new { providerPlan.Id, providerPlan.PlanType })
-            .IsUnique();
-
         builder.ToTable(nameof(ProviderPlan));
     }
 }

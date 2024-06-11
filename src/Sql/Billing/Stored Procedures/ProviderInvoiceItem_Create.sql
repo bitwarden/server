@@ -7,7 +7,8 @@ CREATE PROCEDURE [dbo].[ProviderInvoiceItem_Create]
     @PlanName NVARCHAR (50),
     @AssignedSeats INT,
     @UsedSeats INT,
-    @Total MONEY
+    @Total MONEY,
+    @Created DATETIME2 (7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -36,6 +37,6 @@ BEGIN
         @AssignedSeats,
         @UsedSeats,
         @Total,
-        GETUTCDATE()
+        @Created
     )
 END
