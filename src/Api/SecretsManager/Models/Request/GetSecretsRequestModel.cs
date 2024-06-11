@@ -9,7 +9,7 @@ public class GetSecretsRequestModel : IValidatableObject
     public IEnumerable<Guid> Ids { get; set; }
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        bool isDistinct = Ids.Distinct().Count() == Ids.Count();
+        var isDistinct = Ids.Distinct().Count() == Ids.Count();
         if (!isDistinct)
         {
            var duplicateGuids = Ids.GroupBy(x => x)
