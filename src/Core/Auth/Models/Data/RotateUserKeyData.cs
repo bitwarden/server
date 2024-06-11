@@ -15,5 +15,5 @@ public class RotateUserKeyData
     public IReadOnlyList<Send> Sends { get; set; }
     public IEnumerable<EmergencyAccess> EmergencyAccesses { get; set; }
     public IReadOnlyList<OrganizationUser> OrganizationUsers { get; set; }
-    public IEnumerable<WebauthnRotateKeyData> WebAuthnKeys { get; set; }
+    public IEnumerable<WebAuthnLoginRotateKeyData> WebAuthnKeys { get; set; }
 }

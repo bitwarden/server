@@ -30,8 +30,8 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
-using Bit.Api.Auth.Models.Request.Webauthn;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -166,8 +166,8 @@ public class Startup
                     IReadOnlyList<OrganizationUser>>
                 , OrganizationUserRotationValidator>();
         services
-            .AddScoped<IRotationValidator<IEnumerable<WebauthnRotateKeyRequestModel>, IEnumerable<WebauthnRotateKeyData>>,
-                WebauthnKeyRotationValidator>();
+            .AddScoped<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>,
+                WebAuthnLoginKeyRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);

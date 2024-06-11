@@ -2,9 +2,9 @@
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Auth.Models.Request.Webauthn;
+namespace Bit.Api.Auth.Models.Request.WebAuthn;
 
-public class WebauthnRotateKeyRequestModel
+public class WebAuthnLoginRotateKeyRequestModel
 {
     [Required]
     public Guid Id { get; set; }
@@ -19,9 +19,9 @@ public class WebauthnRotateKeyRequestModel
     [EncryptedStringLength(2000)]
     public string EncryptedPublicKey { get; set; }
 
-    public WebauthnRotateKeyData ToWebauthnRotateKeyData()
+    public WebAuthnLoginRotateKeyData ToWebAuthnRotateKeyData()
     {
-        return new WebauthnRotateKeyData
+        return new WebAuthnLoginRotateKeyData
         {
             Id = Id,
             EncryptedUserKey = EncryptedUserKey,

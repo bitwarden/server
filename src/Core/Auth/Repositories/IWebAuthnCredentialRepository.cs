@@ -10,5 +10,5 @@ public interface IWebAuthnCredentialRepository : IRepository<WebAuthnCredential,
     Task<WebAuthnCredential> GetByIdAsync(Guid id, Guid userId);
     Task<ICollection<WebAuthnCredential>> GetManyByUserIdAsync(Guid userId);
     Task<bool> UpdateAsync(WebAuthnCredential credential);
-    UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebauthnRotateKeyData> credentials);
+    UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials);
 }

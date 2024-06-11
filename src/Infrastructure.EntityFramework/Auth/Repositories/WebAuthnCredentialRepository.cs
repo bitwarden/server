@@ -59,7 +59,7 @@ public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAut
         }
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebauthnRotateKeyData> credentials)
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials)
     {
         return async (_, _) =>
         {

@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
@@ -12,7 +11,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -69,7 +67,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _resetPasswordValidator;
-    private readonly IRotationValidator<IEnumerable<WebauthnRotateKeyRequestModel>, IEnumerable<WebauthnRotateKeyData>>
+    private readonly IRotationValidator<IEnumerable<WebauthnLoginRotateKeyRequestModel>, IEnumerable<WebauthnLoginRotateKeyData>>
         _webauthnKeyRotationValidator;
 
 
@@ -101,7 +99,7 @@ public class AccountsControllerTests : IDisposable
         _sendValidator = Substitute.For<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>();
         _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
             IEnumerable<EmergencyAccess>>>();
-        _webauthnKeyRotationValidator = Substitute.For<IRotationValidator<IEnumerable<WebauthnRotateKeyRequestModel>, IEnumerable<WebauthnRotateKeyData>>>();
+        _webauthnKeyRotationValidator = Substitute.For<IRotationValidator<IEnumerable<WebauthnLoginRotateKeyRequestModel>, IEnumerable<WebauthnLoginRotateKeyData>>>();
         _resetPasswordValidator = Substitute
             .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
                 IReadOnlyList<OrganizationUser>>>();

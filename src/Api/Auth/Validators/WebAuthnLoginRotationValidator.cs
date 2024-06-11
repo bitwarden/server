@@ -1,4 +1,4 @@
-﻿using Bit.Api.Auth.Models.Request.Webauthn;
+﻿using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
@@ -7,26 +7,24 @@ using Bit.Core.Services;
 
 namespace Bit.Api.Auth.Validators;
 
-public class WebauthnKeyRotationValidator : IRotationValidator<IEnumerable<WebauthnRotateKeyRequestModel>, IEnumerable<WebauthnRotateKeyData>>
+public class WebAuthnLoginKeyRotationValidator : IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
 {
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
-    private readonly IUserService _userService;
 
-    public WebauthnKeyRotationValidator(IWebAuthnCredentialRepository webAuthnCredentialRepository, IUserService userService)
+    public WebAuthnLoginKeyRotationValidator(IWebAuthnCredentialRepository webAuthnCredentialRepository)
     {
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
-        _userService = userService;
     }
 
-    public async Task<IEnumerable<WebauthnRotateKeyData>> ValidateAsync(User user, IEnumerable<WebauthnRotateKeyRequestModel> keysToRotate)
+    public async Task<IEnumerable<WebAuthnLoginRotateKeyData>> ValidateAsync(User user, IEnumerable<WebAuthnLoginRotateKeyRequestModel> keysToRotate)
     {
         // 2024-06: Remove after 3 releases, for backward compatibility
         if (keysToRotate == null)
         {
-            return new List<WebauthnRotateKeyData>();
+            return new List<WebAuthnLoginRotateKeyData>();
         }
 
-        var result = new List<WebauthnRotateKeyData>();
+        var result = new List<WebAuthnLoginRotateKeyData>();
         var existing = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existing == null || !existing.Any())
         {
@@ -43,14 +41,14 @@ public class WebauthnKeyRotationValidator : IRotationValidator<IEnumerable<Webau
 
             if (keyToRotate.EncryptedUserKey == null)
             {
-                throw new BadRequestException("Webauthn prf keys must have user-key during rotation.");
+                throw new BadRequestException("WebAuthn prf keys must have user-key during rotation.");
             }
             if (keyToRotate.EncryptedPublicKey == null)
             {
-                throw new BadRequestException("Webauthn prf keys must have public-key during rotation.");
+                throw new BadRequestException("WebAuthn prf keys must have public-key during rotation.");
             }
 
-            result.Add(keyToRotate.ToWebauthnRotateKeyData());
+            result.Add(keyToRotate.ToWebAuthnRotateKeyData());
         }
 
         return result;
