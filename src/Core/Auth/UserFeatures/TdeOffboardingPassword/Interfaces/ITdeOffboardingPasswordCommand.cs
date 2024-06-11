@@ -4,13 +4,8 @@ using Microsoft.AspNetCore.Identity;
 namespace Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 
 /// <summary>
-/// <para>Manages the setting of the initial master password for a <see cref="User"/> in an organization.</para>
-/// <para>This class is primarily invoked in two scenarios:</para>
-/// <para>1) In organizations configured with Single Sign-On (SSO) and master password decryption:
-/// just in time (JIT) provisioned users logging in via SSO are required to set a master password.</para>
-/// <para>2) In organizations configured with SSO and trusted devices decryption:
-/// Users who are upgraded to have admin account recovery permissions must set a master password
-/// to ensure their ability to reset other users' accounts.</para>
+/// <para>Manages the setting of the master password for JIT provisioned TDE <see cref="User"/> in an organization, after the organization disabled TDE.</para>
+/// <para>This command is invoked, when the user first logs in after the organization has switched from TDE to master password based decryption.</para>
 /// </summary>
 public interface ITdeOffboardingPasswordCommand
 {
