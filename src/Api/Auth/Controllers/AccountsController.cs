@@ -841,7 +841,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var taxInfo = await _subscriberService.GetTaxInformationAsync(user);
+        var taxInfo = await _paymentService.GetTaxInfoAsync(user);
         return new TaxInfoResponseModel(taxInfo);
     }
 

@@ -26,13 +26,9 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
     public async Task<IEnumerable<Cipher>> ValidateAsync(User user, IEnumerable<CipherWithIdRequestModel> ciphers)
     {
         var result = new List<Cipher>();
-        if (ciphers == null || !ciphers.Any())
-        {
-            return result;
-        }
 
         var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
-        if (existingCiphers == null || !existingCiphers.Any())
+        if (existingCiphers == null || existingCiphers.Count == 0)
         {
             return result;
         }

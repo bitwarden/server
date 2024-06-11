@@ -20,7 +20,6 @@ public class GroupCreateUpdateRequestModel : GroupBaseModel
     public Group ToGroup(Group existingGroup)
     {
         existingGroup.Name = Name;
-        existingGroup.AccessAll = AccessAll.Value;
         existingGroup.ExternalId = ExternalId;
         return existingGroup;
     }

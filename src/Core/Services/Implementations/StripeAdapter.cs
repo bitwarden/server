@@ -16,6 +16,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.CardService _cardService;
     private readonly Stripe.BankAccountService _bankAccountService;
     private readonly Stripe.PriceService _priceService;
+    private readonly Stripe.SetupIntentService _setupIntentService;
     private readonly Stripe.TestHelpers.TestClockService _testClockService;
 
     public StripeAdapter()
@@ -31,6 +32,7 @@ public class StripeAdapter : IStripeAdapter
         _cardService = new Stripe.CardService();
         _bankAccountService = new Stripe.BankAccountService();
         _priceService = new Stripe.PriceService();
+        _setupIntentService = new SetupIntentService();
         _testClockService = new Stripe.TestHelpers.TestClockService();
     }
 
@@ -52,6 +54,13 @@ public class StripeAdapter : IStripeAdapter
     public Task<Stripe.Customer> CustomerDeleteAsync(string id)
     {
         return _customerService.DeleteAsync(id);
+    }
+
+    public async Task<List<PaymentMethod>> CustomerListPaymentMethods(string id,
+        CustomerListPaymentMethodsOptions options = null)
+    {
+        var paymentMethods = await _customerService.ListPaymentMethodsAsync(id, options);
+        return paymentMethods.Data;
     }
 
     public Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions options)
@@ -221,6 +230,25 @@ public class StripeAdapter : IStripeAdapter
     {
         return await _priceService.ListAsync(options);
     }
+
+    public Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options)
+        => _setupIntentService.CreateAsync(options);
+
+    public async Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options)
+    {
+        var setupIntents = await _setupIntentService.ListAsync(options);
+
+        return setupIntents.Data;
+    }
+
+    public Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null)
+        => _setupIntentService.CancelAsync(id, options);
+
+    public Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null)
+        => _setupIntentService.GetAsync(id, options);
+
+    public Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options)
+        => _setupIntentService.VerifyMicrodepositsAsync(id, options);
 
     public async Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync()
     {

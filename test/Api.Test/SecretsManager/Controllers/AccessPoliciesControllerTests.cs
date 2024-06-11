@@ -827,7 +827,6 @@ public class AccessPoliciesControllerTests
         SutProvider<AccessPoliciesController> sutProvider,
         Project data)
     {
-        // FIX ME
         SetupProjectAccessPoliciesTest(sutProvider, data, accessClientType);
 
         sutProvider.GetDependency<IAccessPolicyRepository>()
@@ -953,6 +952,61 @@ public class AccessPoliciesControllerTests
             .UpdateAsync(Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>());
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task GetSecretAccessPoliciesAsync_NoAccess_ThrowsNotFound(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Secret data)
+    {
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(data.Id).Returns(data);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetSecretAccessPoliciesAsync(data.Id));
+
+        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(0)
+            .GetSecretAccessPoliciesAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSecretAccessPoliciesAsync_HasAccessNoPolicies_ReturnsEmptyList(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Secret data)
+    {
+        SetupSecretAccessPoliciesTest(sutProvider, data);
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .GetSecretAccessPoliciesAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
+            .ReturnsNull();
+
+        var result = await sutProvider.Sut.GetSecretAccessPoliciesAsync(data.Id);
+
+        Assert.Empty(result.UserAccessPolicies);
+        Assert.Empty(result.GroupAccessPolicies);
+        Assert.Empty(result.ServiceAccountAccessPolicies);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSecretAccessPoliciesAsync_HasAccess_Success(
+        SutProvider<AccessPoliciesController> sutProvider,
+        SecretAccessPolicies policies,
+        Secret data)
+    {
+        SetupSecretAccessPoliciesTest(sutProvider, data);
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .GetSecretAccessPoliciesAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
+            .Returns(policies);
+
+        var result = await sutProvider.Sut.GetSecretAccessPoliciesAsync(data.Id);
+
+        Assert.NotEmpty(result.UserAccessPolicies);
+        Assert.NotEmpty(result.GroupAccessPolicies);
+        Assert.NotEmpty(result.ServiceAccountAccessPolicies);
+    }
+
     private static PeopleAccessPoliciesRequestModel SetRequestToCanReadWrite(PeopleAccessPoliciesRequestModel request)
     {
         foreach (var ap in request.UserAccessPolicyRequests)
@@ -1004,5 +1058,14 @@ public class AccessPoliciesControllerTests
         sutProvider.GetDependency<IAccessClientQuery>()
             .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
             .ReturnsForAnyArgs((accessClientType, Guid.NewGuid()));
+    }
+
+    private static void SetupSecretAccessPoliciesTest(SutProvider<AccessPoliciesController> sutProvider, Secret data)
+    {
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(data.Id).Returns(data);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
     }
 }
