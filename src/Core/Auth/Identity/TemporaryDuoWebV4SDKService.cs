@@ -55,7 +55,10 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     {
         if (!HasProperMetaData(provider))
         {
-            return null;
+            if (!HasProperMetaData_SDKV2(provider))
+            {
+                return null;
+            }
         }
 
 
@@ -82,7 +85,10 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     {
         if (!HasProperMetaData(provider))
         {
-            return false;
+            if (!HasProperMetaData_SDKV2(provider))
+            {
+                return false;
+            }
         }
 
         var duoClient = await BuildDuoClientAsync(provider);
@@ -112,6 +118,29 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     {
         return provider?.MetaData != null && provider.MetaData.ContainsKey("ClientId") &&
             provider.MetaData.ContainsKey("ClientSecret") && provider.MetaData.ContainsKey("Host");
+    }
+
+    /// <summary>
+    /// Checks if the metadata for SDK V2 is present.
+    /// Transitional method to support Duo during v4 database rename
+    /// </summary>
+    /// <param name="provider">The TwoFactorProvider object to check.</param>
+    /// <returns>True if the provider has the proper metadata; otherwise, false.</returns>
+    private bool HasProperMetaData_SDKV2(TwoFactorProvider provider)
+    {
+        if (provider?.MetaData != null &&
+            provider.MetaData.TryGetValue("IKey", out var iKey) &&
+            provider.MetaData.TryGetValue("SKey", out var sKey) &&
+            provider.MetaData.ContainsKey("Host"))
+        {
+            provider.MetaData.Add("ClientId", iKey);
+            provider.MetaData.Add("ClientSecret", sKey);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     /// <summary>
