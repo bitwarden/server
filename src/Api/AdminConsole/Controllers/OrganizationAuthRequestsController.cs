@@ -16,7 +16,6 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/auth-requests")]
 [Authorize("Application")]
-[RequireFeature(FeatureFlagKeys.TrustedDeviceEncryption)]
 public class OrganizationAuthRequestsController : Controller
 {
     private readonly IAuthRequestRepository _authRequestRepository;
@@ -76,7 +75,15 @@ public class OrganizationAuthRequestsController : Controller
         }
     }
 
-    private async Task ValidateAdminRequest(Guid orgId)
+    [RequireFeature(FeatureFlagKeys.BulkDeviceApproval)]
+    [HttpPost("")]
+    public async Task UpdateManyAuthRequests(Guid orgId, [FromBody] IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> model)
+    {
+        await ValidateAdminRequest(orgId);
+        await _updateOrganizationAuthRequestCommand.UpdateAsync(orgId, model.Select(x => x.ToOrganizationAuthRequestUpdate()));
+    }
+
+    public async Task ValidateAdminRequest(Guid orgId)
     {
         if (!await _currentContext.ManageResetPassword(orgId))
         {

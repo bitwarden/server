@@ -7,4 +7,5 @@ public interface IWebAuthnCredentialRepository : IRepository<WebAuthnCredential,
 {
     Task<WebAuthnCredential> GetByIdAsync(Guid id, Guid userId);
     Task<ICollection<WebAuthnCredential>> GetManyByUserIdAsync(Guid userId);
+    Task<bool> UpdateAsync(WebAuthnCredential credential);
 }

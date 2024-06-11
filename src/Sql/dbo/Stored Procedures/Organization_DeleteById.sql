@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
+WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -24,6 +25,12 @@ BEGIN
     END
 
     BEGIN TRANSACTION Organization_DeleteById
+
+    DELETE
+    FROM
+        [dbo].[AuthRequest]
+    WHERE
+        [OrganizationId] = @Id
 
     DELETE
     FROM

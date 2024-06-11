@@ -31,8 +31,8 @@ public record Enterprise2020Plan : Models.StaticStore.Plan
         UsersGetPremium = true;
         HasCustomPermissions = true;
 
-        UpgradeSortOrder = 3;
-        DisplaySortOrder = 3;
+        UpgradeSortOrder = 4;
+        DisplaySortOrder = 4;
         LegacyYear = 2023;
 
         PasswordManager = new Enterprise2020PasswordManagerFeatures(isAnnual);

@@ -11,9 +11,9 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -80,9 +80,9 @@ public class ClientStore : IClientStore
             return await CreateUserClientAsync(clientId);
         }
 
-        if (_staticClientStore.ApiClients.ContainsKey(clientId))
+        if (_staticClientStore.ApiClients.TryGetValue(clientId, out var client))
         {
-            return _staticClientStore.ApiClients[clientId];
+            return client;
         }
 
         return await CreateApiKeyClientAsync(clientId);
@@ -90,7 +90,12 @@ public class ClientStore : IClientStore
 
     private async Task<Client> CreateApiKeyClientAsync(string clientId)
     {
-        var apiKey = await _apiKeyRepository.GetDetailsByIdAsync(new Guid(clientId));
+        if (!Guid.TryParse(clientId, out var guid))
+        {
+            return null;
+        }
+
+        var apiKey = await _apiKeyRepository.GetDetailsByIdAsync(guid);
 
         if (apiKey == null || apiKey.ExpireAt <= DateTime.Now)
         {

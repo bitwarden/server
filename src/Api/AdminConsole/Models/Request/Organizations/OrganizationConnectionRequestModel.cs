@@ -31,7 +31,7 @@ public class OrganizationConnectionRequestModel<T> : OrganizationConnectionReque
 
         try
         {
-            ParsedConfig = model.Config.ToObject<T>(JsonHelpers.IgnoreCase);
+            ParsedConfig = model.Config.Deserialize<T>(JsonHelpers.IgnoreCase);
         }
         catch (JsonException)
         {

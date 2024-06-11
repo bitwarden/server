@@ -8,7 +8,7 @@ As an open solution, Bitwarden publishes the source code for various modules und
 
 # Bitwarden Software Licensing
 
-We have two tiers of licensing for our software. The core products are offered under one of the GPL open source licenses: GPL 3 and  A-GPL 3. A select number of features, primarily those designed for use by larger organizations rather than individuals and families, are licensed under a "Source Available" commercial license [here](https://github.com/bitwarden/server/blob/master/LICENSE_BITWARDEN.txt).
+We have two tiers of licensing for our software. The core products are offered under one of the GPL open source licenses: GPL 3 and  A-GPL 3. A select number of features, primarily those designed for use by larger organizations rather than individuals and families, are licensed under a "Source Available" commercial license [here](https://github.com/bitwarden/server/blob/main/LICENSE_BITWARDEN.txt).
 
 Our current software products have the following licenses:
 
@@ -49,7 +49,7 @@ As detailed above, the Bitwarden password management clients for individual use,
 
 ***If I redistribute or provide services related to Bitwarden open source software can I use the "Bitwarden" name?***
 
-Our licenses do not grant any rights in the trademarks, service marks, or logos of Bitwarden (except as may be necessary to comply with the notice requirements as applicable). The Bitwarden trademark is a trusted mark applied to products distributed by Bitwarden, Inc., owner of the Bitwarden trademarks and products. We have adopted and enforce strict rules governing use of our trademarks. Use of any Bitwarden trademarks must comply with Bitwarden [Trademark Guidelines](https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md).
+Our licenses do not grant any rights in the trademarks, service marks, or logos of Bitwarden (except as may be necessary to comply with the notice requirements as applicable). The Bitwarden trademark is a trusted mark applied to products distributed by Bitwarden, Inc., owner of the Bitwarden trademarks and products. We have adopted and enforce strict rules governing use of our trademarks. Use of any Bitwarden trademarks must comply with Bitwarden [Trademark Guidelines](https://github.com/bitwarden/server/blob/main/TRADEMARK_GUIDELINES.md).
 
 ***Bitwarden Trademark Usage***
 
@@ -61,10 +61,10 @@ You don't need permission to use our marks when truthfully referring to our prod
 
 ***How should I use the Bitwarden Trademarks when allowed?***
 
-Use the Bitwarden Trademarks exactly as [shown](https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md) and without modification. For example, do not abbreviate, hyphenate, or remove elements and separate them from surrounding text, images and other features. Always use the Bitwarden Trademarks as adjectives followed by a generic term, never as a noun or verb.
+Use the Bitwarden Trademarks exactly as [shown](https://github.com/bitwarden/server/blob/main/TRADEMARK_GUIDELINES.md) and without modification. For example, do not abbreviate, hyphenate, or remove elements and separate them from surrounding text, images and other features. Always use the Bitwarden Trademarks as adjectives followed by a generic term, never as a noun or verb.
 
 Use the Bitwarden Trademarks only to reference one of our products or services, but never in a way that implies sponsorship or affiliation by Bitwarden. For example, do not use any part of the Bitwarden Trademarks as the name of your business, product or service name, application, domain name, publication or other offering – this can be confusing to others.
 
 ***Where can I find more information?***
 
-For more information on how to use the Bitwarden Trademarks, including in connection with self-hosted options and open-source code, see our [Trademark Guidelines](https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md) or [contacts us](https://bitwarden.com/contact/).
+For more information on how to use the Bitwarden Trademarks, including in connection with self-hosted options and open-source code, see our [Trademark Guidelines](https://github.com/bitwarden/server/blob/main/TRADEMARK_GUIDELINES.md) or [contacts us](https://bitwarden.com/contact/).

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Models.Data;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Auth.Models;

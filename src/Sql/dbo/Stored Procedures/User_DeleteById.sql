@@ -24,6 +24,13 @@ BEGIN
 
     BEGIN TRANSACTION User_DeleteById
 
+    -- Delete WebAuthnCredentials
+    DELETE
+    FROM
+        [dbo].[WebAuthnCredential]
+    WHERE
+        [UserId] = @Id
+
     -- Delete folders
     DELETE
     FROM

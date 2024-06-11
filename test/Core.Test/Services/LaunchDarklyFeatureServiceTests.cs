@@ -4,6 +4,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using LaunchDarkly.Sdk.Server.Interfaces;
 using NSubstitute;
 using Xunit;
 
@@ -12,87 +13,78 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class LaunchDarklyFeatureServiceTests
 {
-    public static SutProvider<LaunchDarklyFeatureService> GetSutProvider(IGlobalSettings globalSettings)
+    private const string _fakeFeatureKey = "somekey";
+    private const string _fakeSdkKey = "somesdkkey";
+
+    private static SutProvider<LaunchDarklyFeatureService> GetSutProvider(IGlobalSettings globalSettings)
     {
+        globalSettings.ProjectName = "LaunchDarkly Tests";
+
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.UserId.Returns(Guid.NewGuid());
+
+        var client = Substitute.For<ILdClient>();
+
         var fixture = new Fixture();
         return new SutProvider<LaunchDarklyFeatureService>(fixture)
-            .SetDependency<IGlobalSettings>(globalSettings)
+            .SetDependency(globalSettings)
+            .SetDependency(currentContext)
+            .SetDependency(client)
             .Create();
     }
 
     [Theory, BitAutoData]
     public void DefaultFeatureValue_WhenSelfHost(string key)
     {
-        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings() { SelfHosted = true });
+        var sutProvider = GetSutProvider(new Settings.GlobalSettings { SelfHosted = true });
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.False(sutProvider.Sut.IsEnabled(key, currentContext));
+        Assert.False(sutProvider.Sut.IsEnabled(key));
     }
 
     [Fact]
     public void DefaultFeatureValue_NoSdkKey()
     {
-        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings());
+        var sutProvider = GetSutProvider(new Settings.GlobalSettings());
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.False(sutProvider.Sut.IsEnabled("somekey", currentContext));
+        Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey));
     }
 
     [Fact(Skip = "For local development")]
     public void FeatureValue_Boolean()
     {
-        var settings = new Core.Settings.GlobalSettings();
-        settings.LaunchDarkly.SdkKey = "somevalue";
+        var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
         var sutProvider = GetSutProvider(settings);
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.False(sutProvider.Sut.IsEnabled("somekey", currentContext));
+        Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey));
     }
 
     [Fact(Skip = "For local development")]
     public void FeatureValue_Int()
     {
-        var settings = new Core.Settings.GlobalSettings();
-        settings.LaunchDarkly.SdkKey = "somevalue";
+        var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
         var sutProvider = GetSutProvider(settings);
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.Equal(0, sutProvider.Sut.GetIntVariation("somekey", currentContext));
+        Assert.Equal(0, sutProvider.Sut.GetIntVariation(_fakeFeatureKey));
     }
 
     [Fact(Skip = "For local development")]
     public void FeatureValue_String()
     {
-        var settings = new Core.Settings.GlobalSettings();
-        settings.LaunchDarkly.SdkKey = "somevalue";
+        var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
 
         var sutProvider = GetSutProvider(settings);
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        Assert.Null(sutProvider.Sut.GetStringVariation("somekey", currentContext));
+        Assert.Null(sutProvider.Sut.GetStringVariation(_fakeFeatureKey));
     }
 
     [Fact(Skip = "For local development")]
     public void GetAll()
     {
-        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings());
+        var sutProvider = GetSutProvider(new Settings.GlobalSettings());
 
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(Guid.NewGuid());
-
-        var results = sutProvider.Sut.GetAll(currentContext);
+        var results = sutProvider.Sut.GetAll();
 
         Assert.NotNull(results);
         Assert.NotEmpty(results);

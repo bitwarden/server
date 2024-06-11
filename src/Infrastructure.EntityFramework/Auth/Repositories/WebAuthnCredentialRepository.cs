@@ -34,4 +34,26 @@ public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAut
             return Mapper.Map<List<Core.Auth.Entities.WebAuthnCredential>>(creds);
         }
     }
+
+    public async Task<bool> UpdateAsync(Core.Auth.Entities.WebAuthnCredential credential)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var cred = await dbContext.WebAuthnCredentials
+                                .FirstOrDefaultAsync(d => d.Id == credential.Id &&
+                                                          d.UserId == credential.UserId);
+            if (cred == null)
+            {
+                return false;
+            }
+
+            cred.EncryptedPrivateKey = credential.EncryptedPrivateKey;
+            cred.EncryptedPublicKey = credential.EncryptedPublicKey;
+            cred.EncryptedUserKey = credential.EncryptedUserKey;
+
+            await dbContext.SaveChangesAsync();
+            return true;
+        }
+    }
 }

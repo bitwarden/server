@@ -2,9 +2,10 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -82,7 +83,7 @@ public class PoliciesController : Controller
     /// </remarks>
     /// <param name="type">The type of policy to be updated.</param>
     /// <param name="model">The request model.</param>
-    [HttpPut("{id}")]
+    [HttpPut("{type}")]
     [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -92,7 +93,7 @@ public class PoliciesController : Controller
             _currentContext.OrganizationId.Value, type);
         if (policy == null)
         {
-            policy = model.ToPolicy(_currentContext.OrganizationId.Value);
+            policy = model.ToPolicy(_currentContext.OrganizationId.Value, type);
         }
         else
         {

@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -19,9 +19,18 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 public class AddSecretsManagerSubscriptionCommandTests
 {
     [Theory]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public async Task SignUpAsync_ReturnsSuccessAndClientSecret_WhenOrganizationAndPlanExist(PlanType planType,
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
@@ -100,28 +109,11 @@ public class AddSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_ThrowsException_WhenOrganizationEnrolledInSmBeta(
-        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
-        Organization organization)
-    {
-        organization.UseSecretsManager = true;
-        organization.SecretsManagerBeta = true;
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
-
-        Assert.Contains("Organization is enrolled in Secrets Manager Beta", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task SignUpAsync_ThrowsException_WhenOrganizationAlreadyHasSecretsManager(
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         Organization organization)
     {
         organization.UseSecretsManager = true;
-        organization.SecretsManagerBeta = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
@@ -138,7 +130,6 @@ public class AddSecretsManagerSubscriptionCommandTests
         Provider provider)
     {
         organization.UseSecretsManager = false;
-        organization.SecretsManagerBeta = false;
         provider.Type = ProviderType.Msp;
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
 

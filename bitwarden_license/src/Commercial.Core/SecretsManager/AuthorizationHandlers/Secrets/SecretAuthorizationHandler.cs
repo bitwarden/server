@@ -47,6 +47,9 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             case not null when requirement == SecretOperations.Delete:
                 await CanDeleteSecretAsync(context, requirement, resource);
                 break;
+            case not null when requirement == SecretOperations.ReadAccessPolicies:
+                await CanReadAccessPoliciesAsync(context, requirement, resource);
+                break;
             default:
                 throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement));
         }
@@ -151,6 +154,26 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             context.Succeed(requirement);
         }
     }
+
+    private async Task CanReadAccessPoliciesAsync(AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement, Secret resource)
+    {
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+
+        // Only users and admins can read access policies
+        if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
+        {
+            return;
+        }
+
+        var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
+
+        if (access.Write)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
 
     private async Task<bool> GetAccessToUpdateSecretAsync(Secret resource, Guid userId, AccessClientType accessClient)
     {

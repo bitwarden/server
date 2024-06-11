@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using AutoFixture;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;

@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -24,6 +23,12 @@ public class GroupsControllerTests
     [BitAutoData]
     public async Task Post_Success(Organization organization, GroupCreateUpdateRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
+        // Organization has migrated
+        organization.FlexibleCollections = true;
+
+        // Contains at least one can manage
+        groupRequestModel.Collections.First().Manage = true;
+
         sutProvider.GetDependency<ICurrentContext>().OrganizationId.Returns(organization.Id);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
@@ -33,12 +38,11 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll && g.ExternalId == groupRequestModel.ExternalId),
+                g.ExternalId == groupRequestModel.ExternalId),
             organization,
-            Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            Arg.Any<ICollection<CollectionAccessSelection>>());
 
         Assert.Equal(groupRequestModel.Name, responseValue.Name);
-        Assert.Equal(groupRequestModel.AccessAll, responseValue.AccessAll);
         Assert.Equal(groupRequestModel.ExternalId, responseValue.ExternalId);
     }
 
@@ -46,6 +50,12 @@ public class GroupsControllerTests
     [BitAutoData]
     public async Task Put_Success(Organization organization, Group group, GroupCreateUpdateRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
+        // Organization has migrated
+        organization.FlexibleCollections = true;
+
+        // Contains at least one can manage
+        groupRequestModel.Collections.First().Manage = true;
+
         group.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -58,12 +68,11 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll && g.ExternalId == groupRequestModel.ExternalId),
+                g.ExternalId == groupRequestModel.ExternalId),
             Arg.Is<Organization>(o => o.Id == organization.Id),
-            Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            Arg.Any<ICollection<CollectionAccessSelection>>());
 
         Assert.Equal(groupRequestModel.Name, responseValue.Name);
-        Assert.Equal(groupRequestModel.AccessAll, responseValue.AccessAll);
         Assert.Equal(groupRequestModel.ExternalId, responseValue.ExternalId);
     }
 }

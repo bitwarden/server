@@ -3,17 +3,30 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Auth.Identity;
 
 public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
 {
-    private readonly IServiceProvider _serviceProvider;
+    private const string CacheKeyFormat = "Email_TOTP_{0}_{1}";
 
-    public EmailTokenProvider(IServiceProvider serviceProvider)
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IDistributedCache _distributedCache;
+    private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
+
+    public EmailTokenProvider(
+        IServiceProvider serviceProvider,
+        [FromKeyedServices("persistent")]
+        IDistributedCache distributedCache)
     {
         _serviceProvider = serviceProvider;
+        _distributedCache = distributedCache;
+        _distributedCacheEntryOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(20)
+        };
     }
 
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
@@ -39,9 +52,22 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
         return Task.FromResult(RedactEmail((string)provider.MetaData["Email"]));
     }
 
-    public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
-        return _serviceProvider.GetRequiredService<IUserService>().VerifyTwoFactorEmailAsync(user, token);
+        var cacheKey = string.Format(CacheKeyFormat, user.Id, token);
+        var cachedValue = await _distributedCache.GetAsync(cacheKey);
+        if (cachedValue != null)
+        {
+            return false;
+        }
+
+        var valid = await _serviceProvider.GetRequiredService<IUserService>().VerifyTwoFactorEmailAsync(user, token);
+        if (valid)
+        {
+            await _distributedCache.SetAsync(cacheKey, [1], _distributedCacheEntryOptions);
+        }
+
+        return valid;
     }
 
     private bool HasProperMetaData(TwoFactorProvider provider)

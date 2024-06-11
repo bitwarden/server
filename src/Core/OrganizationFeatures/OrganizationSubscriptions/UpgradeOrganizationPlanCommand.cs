@@ -1,9 +1,10 @@
-﻿using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -94,11 +95,6 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         if (existingPlan.UpgradeSortOrder >= newPlan.UpgradeSortOrder)
         {
             throw new BadRequestException("You cannot upgrade to this plan.");
-        }
-
-        if (existingPlan.Type != PlanType.Free)
-        {
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
         }
 
         _organizationService.ValidatePasswordManagerPlan(newPlan, upgrade);
@@ -225,8 +221,16 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         }
         else
         {
-            // TODO: Update existing sub
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
+            paymentIntentClientSecret = await _paymentService.AdjustSubscription(
+                organization,
+                newPlan,
+                upgrade.AdditionalSeats,
+                upgrade.UseSecretsManager,
+                upgrade.AdditionalSmSeats,
+                upgrade.AdditionalServiceAccounts,
+                upgrade.AdditionalStorageGb);
+
+            success = string.IsNullOrEmpty(paymentIntentClientSecret);
         }
 
         organization.BusinessName = upgrade.BusinessName;
@@ -275,6 +279,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (success)
         {
+            var upgradePath = GetUpgradePath(existingPlan.Product, newPlan.Product);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
                 {
@@ -283,6 +288,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                     OldPlanName = existingPlan.Name,
                     OldPlanType = existingPlan.Type,
                     Seats = organization.Seats,
+                    SignupInitiationPath = "Upgrade in-product",
+                    PlanUpgradePath = upgradePath,
                     Storage = organization.MaxStorageGb,
                     // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
                 });
@@ -323,9 +330,9 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             if (currentServiceAccounts > newPlanServiceAccounts)
             {
                 throw new BadRequestException(
-                    $"Your organization currently has {currentServiceAccounts} service accounts. " +
-                    $"Your new plan only allows {newSecretsManagerPlan.SecretsManager.MaxServiceAccounts} service accounts. " +
-                    "Remove some service accounts or increase your subscription.");
+                    $"Your organization currently has {currentServiceAccounts} machine accounts. " +
+                    $"Your new plan only allows {newSecretsManagerPlan.SecretsManager.MaxServiceAccounts} machine accounts. " +
+                    "Remove some machine accounts or increase your subscription.");
             }
         }
     }
@@ -334,4 +341,26 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     {
         return await _organizationRepository.GetByIdAsync(id);
     }
+
+    private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
+    {
+        var oldDescription = _upgradePath.TryGetValue(oldProductType, out var description)
+            ? description
+            : $"{oldProductType:G}";
+
+        var newDescription = _upgradePath.TryGetValue(newProductType, out description)
+            ? description
+            : $"{newProductType:G}";
+
+        return $"{oldDescription} → {newDescription}";
+    }
+
+    private static readonly Dictionary<ProductType, string> _upgradePath = new()
+    {
+        [ProductType.Free] = "2-person org",
+        [ProductType.Families] = "Families",
+        [ProductType.TeamsStarter] = "Teams Starter",
+        [ProductType.Teams] = "Teams",
+        [ProductType.Enterprise] = "Enterprise"
+    };
 }

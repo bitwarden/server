@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -111,10 +112,12 @@ public class CollectionServiceTest
         [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
+        organization.FlexibleCollections = true;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
+            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, Arg.Any<bool>())
             .Returns(true);
+        organization.AllowAdminAccessToAllCollectionItems = false;
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, users));
         Assert.Contains("At least one member or group must have can manage permission.", ex.Message);
@@ -186,7 +189,7 @@ public class CollectionServiceTest
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(userId)
+            .GetManyByUserIdAsync(userId, Arg.Any<bool>())
             .Returns(new List<CollectionDetails> { collectionDetails });
         sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organizationId).Returns(true);
 
@@ -196,7 +199,7 @@ public class CollectionServiceTest
         Assert.Equal(collectionDetails, result.First());
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId, Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -216,7 +219,7 @@ public class CollectionServiceTest
         Assert.Equal(collection, result.First());
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -228,6 +231,6 @@ public class CollectionServiceTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId));
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, default);
     }
 }

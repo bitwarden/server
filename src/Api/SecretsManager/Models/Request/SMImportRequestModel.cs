@@ -36,12 +36,12 @@ public class SMImportRequestModel
 
         [Required]
         [EncryptedString]
-        [EncryptedStringLength(1000)]
+        [EncryptedStringLength(35000)]
         public string Value { get; set; }
 
         [Required]
         [EncryptedString]
-        [EncryptedStringLength(1000)]
+        [EncryptedStringLength(10000)]
         public string Note { get; set; }
 
         [Required]

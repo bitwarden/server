@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.StaticStore;
 
@@ -28,11 +28,6 @@ public class SecretsManagerSubscriptionUpdate
     /// The new autoscale limit for service accounts after the update
     /// </summary>
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
-
-    /// <summary>
-    /// The proration date for the subscription update (optional)
-    /// </summary>
-    public DateTime? ProrationDate { get; set; }
 
     /// <summary>
     /// Whether the subscription update is a result of autoscaling

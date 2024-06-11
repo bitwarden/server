@@ -102,12 +102,6 @@ public class OrganizationUserUpdateRequestModel
     }
 }
 
-public class OrganizationUserUpdateGroupsRequestModel
-{
-    [Required]
-    public IEnumerable<string> GroupIds { get; set; }
-}
-
 public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
     public string ResetPasswordKey { get; set; }
@@ -117,4 +111,10 @@ public class OrganizationUserBulkRequestModel
 {
     [Required]
     public IEnumerable<Guid> Ids { get; set; }
+}
+
+public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
+{
+    [Required]
+    public Guid OrganizationId { get; set; }
 }

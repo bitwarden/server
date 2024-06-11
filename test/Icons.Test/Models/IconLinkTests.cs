@@ -68,11 +68,11 @@ public class IconLinkTests
     }
 
     [Fact]
-    public void FetchAsync_Unvalidated_ReturnsNull()
+    public async Task FetchAsync_Unvalidated_ReturnsNull()
     {
-        var result = new IconLink(_element, _uri, _baseUrlPath).FetchAsync(_logger, _httpClientFactory, _uriService);
+        var result = await new IconLink(_element, _uri, _baseUrlPath).FetchAsync(_logger, _httpClientFactory, _uriService);
 
-        Assert.Null(result.Result);
+        Assert.Null(result);
     }
 
     private void SetAttributeValue(string attribute, string value)

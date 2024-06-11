@@ -6,10 +6,17 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Vault.Queries;
 public class CipherOrganizationDetailsReadByOrganizationIdQuery : IQuery<CipherOrganizationDetails>
 {
     private readonly Guid _organizationId;
+    private readonly bool _unassignedOnly;
 
-    public CipherOrganizationDetailsReadByOrganizationIdQuery(Guid organizationId)
+    /// <summary>
+    /// Query for retrieving ciphers organization details by organization id
+    /// </summary>
+    /// <param name="organizationId">The id of the organization to query</param>
+    /// <param name="unassignedOnly">Only include ciphers that are not assigned to any collection</param>
+    public CipherOrganizationDetailsReadByOrganizationIdQuery(Guid organizationId, bool unassignedOnly = false)
     {
         _organizationId = organizationId;
+        _unassignedOnly = unassignedOnly;
     }
     public virtual IQueryable<CipherOrganizationDetails> Run(DatabaseContext dbContext)
     {
@@ -33,6 +40,18 @@ public class CipherOrganizationDetailsReadByOrganizationIdQuery : IQuery<CipherO
                         DeletedDate = c.DeletedDate,
                         OrganizationUseTotp = o.UseTotp,
                     };
+
+        if (_unassignedOnly)
+        {
+            var collectionCipherIds = from cc in dbContext.CollectionCiphers
+                                      join c in dbContext.Collections
+                                          on cc.CollectionId equals c.Id
+                                      where c.OrganizationId == _organizationId
+                                      select cc.CipherId;
+
+            query = query.Where(c => !collectionCipherIds.Contains(c.Id));
+        }
+
         return query;
     }
 }

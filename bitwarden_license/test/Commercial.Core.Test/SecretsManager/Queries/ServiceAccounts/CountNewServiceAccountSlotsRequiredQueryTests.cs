@@ -1,5 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Queries.ServiceAccounts;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
@@ -28,7 +28,6 @@ public class CountNewServiceAccountSlotsRequiredQueryTests
     {
         organization.UseSecretsManager = true;
         organization.SmServiceAccounts = organizationSmServiceAccounts;
-        organization.SecretsManagerBeta = false;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
@@ -62,7 +61,6 @@ public class CountNewServiceAccountSlotsRequiredQueryTests
 
         organization.UseSecretsManager = true;
         organization.SmServiceAccounts = null;
-        organization.SecretsManagerBeta = false;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
@@ -75,27 +73,6 @@ public class CountNewServiceAccountSlotsRequiredQueryTests
         var result = await sutProvider.Sut.CountNewServiceAccountSlotsRequiredAsync(organization.Id, serviceAccountsToAdd);
 
         Assert.Equal(expectedRequiredServiceAccountsToScale, result);
-
-        await sutProvider.GetDependency<IServiceAccountRepository>().DidNotReceiveWithAnyArgs()
-            .GetServiceAccountCountByOrganizationIdAsync(default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CountNewServiceAccountSlotsRequiredAsync_WithSecretsManagerBeta_ReturnsZero(
-        int serviceAccountsToAdd,
-        Organization organization,
-        SutProvider<CountNewServiceAccountSlotsRequiredQuery> sutProvider)
-    {
-        organization.UseSecretsManager = true;
-        organization.SecretsManagerBeta = true;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        var result = await sutProvider.Sut.CountNewServiceAccountSlotsRequiredAsync(organization.Id, serviceAccountsToAdd);
-
-        Assert.Equal(0, result);
 
         await sutProvider.GetDependency<IServiceAccountRepository>().DidNotReceiveWithAnyArgs()
             .GetServiceAccountCountByOrganizationIdAsync(default);

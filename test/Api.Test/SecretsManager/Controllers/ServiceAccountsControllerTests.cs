@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -31,7 +31,7 @@ public class ServiceAccountsControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountsByOrganization_ReturnsEmptyList(
+    public async Task GetServiceAccountsByOrganization_ReturnsEmptyList(
         SutProvider<ServiceAccountsController> sutProvider, Guid id)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
@@ -47,7 +47,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountSecretsDetails resultServiceAccount)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
@@ -66,7 +66,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountsByOrganization_AccessDenied_Throws(
+    public async Task GetServiceAccountsByOrganization_AccessDenied_Throws(
         SutProvider<ServiceAccountsController> sutProvider, Guid orgId)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
@@ -77,7 +77,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccount_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task CreateServiceAccount_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountCreateRequestModel data, Guid organizationId)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -95,7 +95,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData(0)]
-    public async void CreateServiceAccount_WhenAutoscalingNotRequired_DoesNotCallUpdateSubscription(
+    public async Task CreateServiceAccount_WhenAutoscalingNotRequired_DoesNotCallUpdateSubscription(
         int newSlotsRequired, SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountCreateRequestModel data, Organization organization)
     {
@@ -113,7 +113,7 @@ public class ServiceAccountsControllerTests
     [Theory]
     [BitAutoData(1)]
     [BitAutoData(2)]
-    public async void CreateServiceAccount_WhenAutoscalingRequired_CallsUpdateSubscription(int newSlotsRequired,
+    public async Task CreateServiceAccount_WhenAutoscalingRequired_CallsUpdateSubscription(int newSlotsRequired,
         SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountCreateRequestModel data, Organization organization)
     {
@@ -135,7 +135,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountCreateRequestModel data, Guid organizationId, Organization mockOrg)
     {
         mockOrg.Id = organizationId;
@@ -155,7 +155,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateServiceAccount_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task UpdateServiceAccount_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountUpdateRequestModel data, ServiceAccount existingServiceAccount)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -174,7 +174,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task UpdateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountUpdateRequestModel data, ServiceAccount existingServiceAccount)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -191,7 +191,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateAccessToken_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task CreateAccessToken_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
         AccessTokenCreateRequestModel data, ServiceAccount serviceAccount, string mockClientSecret)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
@@ -212,7 +212,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider,
         AccessTokenCreateRequestModel data, ServiceAccount serviceAccount, string mockClientSecret)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
@@ -231,7 +231,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetAccessTokens_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task GetAccessTokens_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccount data, ICollection<ApiKey> resultApiKeys)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
@@ -254,7 +254,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetAccessTokens_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccount data,
+    public async Task GetAccessTokens_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccount data,
         ICollection<ApiKey> resultApiKeys)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
@@ -279,7 +279,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void RevokeAccessTokens_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task RevokeAccessTokens_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
         RevokeAccessTokensRequest data, ServiceAccount serviceAccount)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
@@ -295,7 +295,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void RevokeAccessTokens_Success(SutProvider<ServiceAccountsController> sutProvider,
+    public async Task RevokeAccessTokens_Success(SutProvider<ServiceAccountsController> sutProvider,
         RevokeAccessTokensRequest data, ServiceAccount serviceAccount)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
@@ -310,7 +310,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_NoServiceAccountsFound_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_NoServiceAccountsFound_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<ServiceAccount>());
@@ -320,7 +320,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_ServiceAccountsFoundMisMatch_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data, ServiceAccount mockSa)
+    public async Task BulkDelete_ServiceAccountsFoundMisMatch_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data, ServiceAccount mockSa)
     {
         data.Add(mockSa);
         var ids = data.Select(sa => sa.Id).ToList();
@@ -331,7 +331,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_OrganizationMistMatch_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_OrganizationMistMatch_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
@@ -341,7 +341,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_NoAccessToSecretsManager_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_NoAccessToSecretsManager_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -357,7 +357,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_ReturnsAccessDeniedForProjectsWithoutAccess_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_ReturnsAccessDeniedForProjectsWithoutAccess_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -386,7 +386,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDelete_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         var organizationId = data.First().OrganizationId;

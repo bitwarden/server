@@ -15,4 +15,5 @@ public class OrganizationUpgrade
     public int? AdditionalSmSeats { get; set; }
     public int? AdditionalServiceAccounts { get; set; }
     public bool UseSecretsManager { get; set; }
+    public bool IsFromSecretsManagerTrial { get; set; }
 }

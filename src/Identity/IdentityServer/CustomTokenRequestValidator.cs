@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -10,11 +11,11 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Duende.IdentityServer.Extensions;
+using Duende.IdentityServer.Validation;
+using HandlebarsDotNet;
 using IdentityModel;
-using IdentityServer4.Extensions;
-using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Distributed;
 
 #nullable enable
 
@@ -32,6 +33,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
+        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
@@ -44,18 +46,29 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
-        IDistributedCache distributedCache)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
-            organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+            organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
             userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository,
-            distributedCache)
+            userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
     }
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
+        if (context.Result.ValidatedRequest.GrantType == "refresh_token")
+        {
+            // Force legacy users to the web for migration
+            if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
+                context.Result.ValidatedRequest.ClientId != "web")
+            {
+                await FailAuthForLegacyUserAsync(null, context);
+                return;
+            }
+        }
+
         string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
             || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
@@ -68,6 +81,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
             }
+
 
             return;
         }

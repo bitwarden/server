@@ -1,7 +1,9 @@
 ﻿using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -11,6 +13,8 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using Collection = Bit.Core.Entities.Collection;
+using User = Bit.Core.Entities.User;
 
 namespace Bit.Api.Test.Controllers;
 
@@ -23,8 +27,11 @@ namespace Bit.Api.Test.Controllers;
 public class LegacyCollectionsControllerTests
 {
     [Theory, BitAutoData]
-    public async Task Post_Success(Guid orgId, SutProvider<CollectionsController> sutProvider)
+    public async Task Post_Manager_AssignsToCollection_Success(Guid orgId, OrganizationUser orgUser, SutProvider<CollectionsController> sutProvider)
     {
+        orgUser.Type = OrganizationUserType.Manager;
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
+
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationManager(orgId)
             .Returns(true);
@@ -32,6 +39,19 @@ public class LegacyCollectionsControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .EditAnyCollection(orgId)
             .Returns(false);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .EditAssignedCollections(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId = orgUser.UserId;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, orgUser.UserId.Value)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(Arg.Any<Guid>(), orgUser.UserId.Value, Arg.Any<bool>())
+            .Returns(new CollectionDetails());
 
         var collectionRequest = new CollectionRequestModel
         {
@@ -41,9 +61,53 @@ public class LegacyCollectionsControllerTests
 
         _ = await sutProvider.Sut.Post(orgId, collectionRequest);
 
+        var test = sutProvider.GetDependency<ICollectionService>().ReceivedCalls();
         await sutProvider.GetDependency<ICollectionService>()
             .Received(1)
-            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(), null);
+            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(users => users.Any(u => u.Id == orgUser.Id && !u.ReadOnly && !u.HidePasswords && !u.Manage)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_Owner_DoesNotAssignToCollection_Success(Guid orgId, OrganizationUser orgUser, SutProvider<CollectionsController> sutProvider)
+    {
+        orgUser.Type = OrganizationUserType.Owner;
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationManager(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .EditAnyCollection(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .EditAssignedCollections(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId = orgUser.UserId;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, orgUser.UserId.Value)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(Arg.Any<Guid>(), orgUser.UserId.Value, Arg.Any<bool>())
+            .Returns(new CollectionDetails());
+
+        var collectionRequest = new CollectionRequestModel
+        {
+            Name = "encrypted_string",
+            ExternalId = "my_external_id"
+        };
+
+        _ = await sutProvider.Sut.Post(orgId, collectionRequest);
+
+        var test = sutProvider.GetDependency<ICollectionService>().ReceivedCalls();
+        await sutProvider.GetDependency<ICollectionService>()
+            .Received(1)
+            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(users => !users.Any()));
     }
 
     [Theory, BitAutoData]
@@ -63,7 +127,7 @@ public class LegacyCollectionsControllerTests
             .Returns(userId);
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(collectionId, userId)
+            .GetByIdAsync(collectionId, userId, Arg.Any<bool>())
             .Returns(new CollectionDetails
             {
                 OrganizationId = orgId,
@@ -85,7 +149,7 @@ public class LegacyCollectionsControllerTests
             .Returns(userId);
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(collectionId, userId)
+            .GetByIdAsync(collectionId, userId, Arg.Any<bool>())
             .Returns(Task.FromResult<CollectionDetails>(null));
 
         _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Put(orgId, collectionId, collectionRequest));
@@ -98,7 +162,7 @@ public class LegacyCollectionsControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetManyWithDetails(organization.Id));
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdWithAccessAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdWithAccessAsync(default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdWithAccessAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -111,7 +175,7 @@ public class LegacyCollectionsControllerTests
         await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyByOrganizationIdWithAccessAsync(organization.Id);
-        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyByUserIdWithAccessAsync(user.Id, organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyByUserIdWithAccessAsync(user.Id, organization.Id, Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -124,7 +188,7 @@ public class LegacyCollectionsControllerTests
         await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdWithAccessAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyByUserIdWithAccessAsync(user.Id, organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyByUserIdWithAccessAsync(user.Id, organization.Id, Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -138,7 +202,7 @@ public class LegacyCollectionsControllerTests
         await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdWithAccessAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyByUserIdWithAccessAsync(user.Id, organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyByUserIdWithAccessAsync(user.Id, organization.Id, Arg.Any<bool>());
     }
 
 

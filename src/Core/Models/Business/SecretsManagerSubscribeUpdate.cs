@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
@@ -44,7 +44,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Plan = _plan.SecretsManager.StripeSeatPlanId,
+                Price = _plan.SecretsManager.StripeSeatPlanId,
                 Quantity = _additionalSeats
             });
         }
@@ -53,7 +53,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Plan = _plan.SecretsManager.StripeServiceAccountPlanId,
+                Price = _plan.SecretsManager.StripeServiceAccountPlanId,
                 Quantity = _additionalServiceAccounts
             });
         }
@@ -63,14 +63,14 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     {
         updatedItems.Add(new SubscriptionItemOptions
         {
-            Plan = _plan.SecretsManager.StripeSeatPlanId,
+            Price = _plan.SecretsManager.StripeSeatPlanId,
             Quantity = _previousSeats,
             Deleted = _previousSeats == 0 ? true : (bool?)null,
         });
 
         updatedItems.Add(new SubscriptionItemOptions
         {
-            Plan = _plan.SecretsManager.StripeServiceAccountPlanId,
+            Price = _plan.SecretsManager.StripeServiceAccountPlanId,
             Quantity = _previousServiceAccounts,
             Deleted = _previousServiceAccounts == 0 ? true : (bool?)null,
         });

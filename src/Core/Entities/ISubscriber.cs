@@ -14,7 +14,8 @@ public interface ISubscriber
     string BraintreeCustomerIdPrefix();
     string BraintreeIdField();
     string BraintreeCloudRegionField();
-    string GatewayIdField();
+    bool IsOrganization();
     bool IsUser();
     string SubscriberType();
+    bool IsExpired();
 }

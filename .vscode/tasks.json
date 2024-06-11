@@ -2,6 +2,65 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "buildIdentityApi",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "buildIdentityApiAdmin",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI",
+                "buildAdmin"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "buildFullServer",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+                "buildSso",
+                "buildIcons",
+                "buildBilling",
+                "buildNotifications",
+            ],
+        },
+        {
+            "label": "buildSelfHostBit",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+                "buildSso",
+                "buildNotifications",
+            ],
+        },
+        {
+            "label": "buildSelfHostOss",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+            ],
+        },
+        {
             "label": "buildIcons",
             "command": "dotnet",
             "type": "process",
@@ -32,6 +91,18 @@
             "args": [
                 "build",
                 "${workspaceFolder}/bitwarden_license/src/Sso/Sso.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildEvents",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Events/Events.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -152,6 +223,42 @@
                 "clear": false
             },
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Setup Secrets",
+            "type": "shell",
+            "command": "pwsh -WorkingDirectory ${workspaceFolder}/dev -Command '${workspaceFolder}/dev/setup_secrets.ps1 -clear:$${input:setupSecretsClear}'",
+            "problemMatcher": []
+        },
+        {
+            "label": "Install Dev Cert",
+            "type": "shell",
+            "command": "dotnet tool install -g dotnet-certificate-tool -g && certificate-tool add --file ${workspaceFolder}/dev/dev.pfx --password '${input:certPassword}'",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "setupSecretsClear",
+            "type": "pickString",
+            "default": "true",
+            "description": "Whether or not to clear existing secrets",
+            "options": [
+                {
+                    "label": "true",
+                    "value": "true"
+                },
+                {
+                    "label": "false",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "id": "certPassword",
+            "type": "promptString",
+            "description": "Password for your dev certificate.",
+            "password": true
         }
     ]
 }

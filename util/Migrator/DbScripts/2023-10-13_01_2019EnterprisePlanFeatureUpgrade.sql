@@ -5,7 +5,6 @@ BEGIN TRY
         [dbo].[Organization]
     SET
         [UseSso] = 1,
-        [UseKeyConnector] = 1,
         [UseScim] = 1,
         [UseResetPassword] = 1
     WHERE

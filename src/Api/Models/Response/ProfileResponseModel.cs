@@ -36,6 +36,7 @@ public class ProfileResponseModel : ResponseModel
         ForcePasswordReset = user.ForcePasswordReset;
         UsesKeyConnector = user.UsesKeyConnector;
         AvatarColor = user.AvatarColor;
+        CreationDate = user.CreationDate;
         Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
         Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
         ProviderOrganizations =
@@ -61,6 +62,7 @@ public class ProfileResponseModel : ResponseModel
     public bool ForcePasswordReset { get; set; }
     public bool UsesKeyConnector { get; set; }
     public string AvatarColor { get; set; }
+    public DateTime CreationDate { get; set; }
     public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
     public IEnumerable<ProfileProviderResponseModel> Providers { get; set; }
     public IEnumerable<ProfileProviderOrganizationResponseModel> ProviderOrganizations { get; set; }

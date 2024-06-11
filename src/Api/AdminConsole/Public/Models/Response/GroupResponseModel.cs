@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Api.Auth.Models.Public.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Data;
@@ -20,7 +19,6 @@ public class GroupResponseModel : GroupBaseModel, IResponseModel
 
         Id = group.Id;
         Name = group.Name;
-        AccessAll = group.AccessAll;
         ExternalId = group.ExternalId;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
     }

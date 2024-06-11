@@ -15,6 +15,7 @@ public interface IPushNotificationService
     Task PushSyncFolderDeleteAsync(Folder folder);
     Task PushSyncCiphersAsync(Guid userId);
     Task PushSyncVaultAsync(Guid userId);
+    Task PushSyncOrganizationsAsync(Guid userId);
     Task PushSyncOrgKeysAsync(Guid userId);
     Task PushSyncSettingsAsync(Guid userId);
     Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false);

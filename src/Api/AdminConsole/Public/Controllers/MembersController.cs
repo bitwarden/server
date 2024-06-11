@@ -5,7 +5,6 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +21,9 @@ public class MembersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
+    private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -30,14 +31,18 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserCommand updateOrganizationUserCommand,
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IApplicationCacheService applicationCacheService)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
+        _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _applicationCacheService = applicationCacheService;
     }
 
     /// <summary>
@@ -119,17 +124,11 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
-        var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-        var invite = new OrganizationUserInvite
-        {
-            Emails = new List<string> { model.Email },
-            Type = model.Type.Value,
-            AccessAll = model.AccessAll.Value,
-            Collections = associations
-        };
+        var invite = model.ToOrganizationUserInvite();
+
         var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
-            model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
-        var response = new MemberResponseModel(user, associations);
+            systemUser: null, invite, model.ExternalId);
+        var response = new MemberResponseModel(user, invite.Collections);
         return new JsonResult(response);
     }
 
@@ -154,8 +153,8 @@ public class MembersController : Controller
             return new NotFoundResult();
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
-        var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-        await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {

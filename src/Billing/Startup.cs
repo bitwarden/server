@@ -43,11 +43,11 @@ public class Startup
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 
-        // PayPal Client
-        services.AddSingleton<Utilities.PayPalIpnClient>();
-
         // BitPay Client
         services.AddSingleton<BitPayClient>();
+
+        // PayPal IPN Client
+        services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -75,10 +75,6 @@ public class Startup
 
         // Authentication
         services.AddAuthentication();
-
-        // Jobs service, uncomment when we have some jobs to run
-        // Jobs.JobsHostedService.AddJobsServices(services);
-        // services.AddHostedService<Jobs.JobsHostedService>();
 
         // Set up HttpClients
         services.AddHttpClient("FreshdeskApi");

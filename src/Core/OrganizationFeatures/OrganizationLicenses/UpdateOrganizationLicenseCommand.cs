@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using System.Text.Json;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;

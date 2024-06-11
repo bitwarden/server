@@ -74,17 +74,21 @@ public class CipherLoginModel
         public CipherLoginUriModel(CipherLoginData.CipherLoginUriData uri)
         {
             Uri = uri.Uri;
+            UriChecksum = uri.UriChecksum;
             Match = uri.Match;
         }
 
         [EncryptedString]
         [EncryptedStringLength(10000)]
         public string Uri { get; set; }
+        [EncryptedString]
+        [EncryptedStringLength(10000)]
+        public string UriChecksum { get; set; }
         public UriMatchType? Match { get; set; } = null;
 
         public CipherLoginData.CipherLoginUriData ToCipherLoginUriData()
         {
-            return new CipherLoginData.CipherLoginUriData { Uri = Uri, Match = Match, };
+            return new CipherLoginData.CipherLoginUriData { Uri = Uri, UriChecksum = UriChecksum, Match = Match, };
         }
     }
 }

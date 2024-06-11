@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -18,7 +17,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
 [SutProviderCustomize]
 public class UpdateGroupCommandTests
 {
-    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = false), BitAutoData]
     public async Task UpdateGroup_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Organization organization)
     {
         await sutProvider.Sut.UpdateGroupAsync(group, organization);
@@ -28,7 +27,7 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = false), BitAutoData]
     public async Task UpdateGroup_WithCollections_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Organization organization, List<CollectionAccessSelection> collections)
     {
         await sutProvider.Sut.UpdateGroupAsync(group, organization, collections);
@@ -38,7 +37,7 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = false), BitAutoData]
     public async Task UpdateGroup_WithEventSystemUser_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Organization organization, EventSystemUser eventSystemUser)
     {
         await sutProvider.Sut.UpdateGroupAsync(group, organization, eventSystemUser);
@@ -48,7 +47,7 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = false), BitAutoData]
     public async Task UpdateGroup_WithNullOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider, Group group, EventSystemUser eventSystemUser)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, null, eventSystemUser));
@@ -59,12 +58,27 @@ public class UpdateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = false, FlexibleCollections = false), BitAutoData]
     public async Task UpdateGroup_WithUseGroupsAsFalse_Throws(SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group, EventSystemUser eventSystemUser)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, organization, eventSystemUser));
 
         Assert.Contains("This organization cannot use groups", exception.Message);
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    public async Task UpdateGroup_WithFlexibleCollections_WithAccessAll_Throws(
+        SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group)
+    {
+        group.AccessAll = true;
+        organization.FlexibleCollections = true;
+
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, organization));
+        Assert.Contains("AccessAll property has been deprecated", exception.Message);
 
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);

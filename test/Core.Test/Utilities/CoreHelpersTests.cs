@@ -438,4 +438,15 @@ public class CoreHelpersTests
     {
         Assert.Null(CoreHelpers.GetEmailDomain(wrongEmail));
     }
+
+    [Theory]
+    [InlineData("hello world")]
+    [InlineData(" hello world ")]
+    [InlineData("hello\tworld")]
+    [InlineData("hello\r\nworld")]
+    [InlineData("hello\nworld")]
+    public void ReplaceWhiteSpace_Success(string email)
+    {
+        Assert.Equal("helloworld", CoreHelpers.ReplaceWhiteSpace(email, string.Empty));
+    }
 }

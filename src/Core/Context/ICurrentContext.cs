@@ -36,6 +36,7 @@ public interface ICurrentContext
 
 
     Task<bool> OrganizationUser(Guid orgId);
+    [Obsolete("Manager role is deprecated after Flexible Collections.")]
     Task<bool> OrganizationManager(Guid orgId);
     Task<bool> OrganizationAdmin(Guid orgId);
     Task<bool> OrganizationOwner(Guid orgId);
@@ -45,8 +46,11 @@ public interface ICurrentContext
     Task<bool> AccessReports(Guid orgId);
     Task<bool> EditAnyCollection(Guid orgId);
     Task<bool> ViewAllCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> EditAssignedCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> DeleteAssignedCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> ViewAssignedCollections(Guid orgId);
     Task<bool> ManageGroups(Guid orgId);
     Task<bool> ManagePolicies(Guid orgId);

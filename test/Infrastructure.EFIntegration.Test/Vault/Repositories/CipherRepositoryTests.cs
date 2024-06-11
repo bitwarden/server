@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Vault.Entities;
@@ -18,7 +19,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class CipherRepositoryTests
 {
     [Theory(Skip = "Run ad-hoc"), EfUserCipherCustomize, BitAutoData]
-    public async void RefreshDb(List<EfVaultRepo.CipherRepository> suts)
+    public async Task RefreshDb(List<EfVaultRepo.CipherRepository> suts)
     {
         foreach (var sut in suts)
         {
@@ -86,7 +87,7 @@ public class CipherRepositoryTests
     }
 
     [CiSkippedTheory, EfUserCipherCustomize, BitAutoData]
-    public async void CreateAsync_BumpsUserAccountRevisionDate(Cipher cipher, User user, List<EfVaultRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos)
+    public async Task CreateAsync_BumpsUserAccountRevisionDate(Cipher cipher, User user, List<EfVaultRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos)
     {
         var bumpedUsers = new List<User>();
         foreach (var sut in suts)
@@ -109,7 +110,7 @@ public class CipherRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
-    public async void CreateAsync_BumpsOrgUserAccountRevisionDates(Cipher cipher, List<User> users,
+    public async Task CreateAsync_BumpsOrgUserAccountRevisionDates(Cipher cipher, List<User> users,
         List<OrganizationUser> orgUsers, Collection collection, Organization org, List<EfVaultRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
         List<EfRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.CollectionRepository> efCollectionRepos)
     {

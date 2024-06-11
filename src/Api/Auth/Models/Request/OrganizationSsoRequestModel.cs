@@ -66,6 +66,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
     public string ExpectedReturnAcrValue { get; set; }
 
     // SAML2 SP
+    public bool? SpUniqueEntityId { get; set; }
     public Saml2NameIdFormat SpNameIdFormat { get; set; }
     public string SpOutboundSigningAlgorithm { get; set; }
     public Saml2SigningBehavior SpSigningBehavior { get; set; }
@@ -190,6 +191,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
             IdpAllowUnsolicitedAuthnResponse = IdpAllowUnsolicitedAuthnResponse.GetValueOrDefault(),
             IdpDisableOutboundLogoutRequests = IdpDisableOutboundLogoutRequests.GetValueOrDefault(),
             IdpWantAuthnRequestsSigned = IdpWantAuthnRequestsSigned.GetValueOrDefault(),
+            SpUniqueEntityId = SpUniqueEntityId.GetValueOrDefault(),
             SpNameIdFormat = SpNameIdFormat,
             SpOutboundSigningAlgorithm = SpOutboundSigningAlgorithm ?? SamlSigningAlgorithms.Sha256,
             SpSigningBehavior = SpSigningBehavior,

@@ -23,9 +23,11 @@ public interface IProviderService
     Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds);
     Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup,
         string clientOwnerEmail, User user);
-    Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId);
     Task LogProviderAccessToOrganizationAsync(Guid organizationId);
     Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail);
+    Task InitiateDeleteAsync(Provider provider, string providerAdminEmail);
+    Task DeleteAsync(Provider provider, string token);
+    Task DeleteAsync(Provider provider);
 }
 

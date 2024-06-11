@@ -2,8 +2,7 @@
 # Starts a matrix job to check for modified files, then sets output based on the results.
 # The input decides if the label job is ran, adding a label to the PR.
 ---
-
-name: Protect Files
+name: Protect files
 
 on:
   pull_request:
@@ -17,7 +16,7 @@ on:
 jobs:
   changed-files:
     name: Check for file changes
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       changes: ${{steps.check-changes.outputs.changes_detected}}
 
@@ -29,7 +28,7 @@ jobs:
             path: util/Migrator/DbScripts
             label: "DB-migrations-changed"
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           fetch-depth: 2

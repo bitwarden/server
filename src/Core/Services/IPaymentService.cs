@@ -1,4 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
@@ -11,23 +13,34 @@ public interface IPaymentService
     Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
         bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false, int additionalSmSeats = 0,
-        int additionalServiceAccount = 0);
+        int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
     Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan, OrganizationUpgrade upgrade);
     Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
         short additionalStorageGb, TaxInfo taxInfo);
-    Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
-    Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
-    Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
+    Task<string> AdjustSubscription(
+        Organization organization,
+        Plan updatedPlan,
+        int newlyPurchasedPasswordManagerSeats,
+        bool subscribedToSecretsManager,
+        int? newlyPurchasedSecretsManagerSeats,
+        int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
+        int newlyPurchasedAdditionalStorage);
+    Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats);
+    Task<string> AdjustSeats(
+        Provider provider,
+        Plan plan,
+        int currentlySubscribedSeats,
+        int newlySubscribedSeats);
+    Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats);
+    Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
 
-    Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts,
-        DateTime? prorationDate = null);
-    Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
-        bool skipInAppPurchaseCheck = false);
+    Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts);
+    Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
     Task ReinstateSubscriptionAsync(ISubscriber subscriber);
     Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-        string paymentToken, bool allowInAppPurchases = false, TaxInfo taxInfo = null);
+        string paymentToken, TaxInfo taxInfo = null);
     Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
     Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
     Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber);
@@ -39,5 +52,8 @@ public interface IPaymentService
     Task UpdateTaxRateAsync(TaxRate taxRate);
     Task ArchiveTaxRateAsync(TaxRate taxRate);
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
-        int additionalServiceAccount, DateTime? prorationDate = null);
+        int additionalServiceAccount);
+    Task<bool> RisksSubscriptionFailure(Organization organization);
+    Task<bool> HasSecretsManagerStandalone(Organization organization);
+    Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Stripe.Subscription subscription);
 }

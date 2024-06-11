@@ -67,6 +67,7 @@ public enum EventType : int
     Organization_EnabledKeyConnector = 1606,
     Organization_DisabledKeyConnector = 1607,
     Organization_SponsorshipsSynced = 1608,
+    Organization_CollectionManagement_Updated = 1609,
 
     Policy_Updated = 1700,
 

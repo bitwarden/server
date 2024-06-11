@@ -44,4 +44,15 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
             return results.ToList();
         }
     }
+
+    public async Task<bool> UpdateAsync(WebAuthnCredential credential)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var affectedRows = await connection.ExecuteAsync(
+            $"[{Schema}].[{Table}_Update]",
+            credential,
+            commandType: CommandType.StoredProcedure);
+
+        return affectedRows > 0;
+    }
 }

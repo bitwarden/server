@@ -1,5 +1,4 @@
-﻿using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -60,16 +59,7 @@ public static class LoggerFactoryExtensions
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 
-        if (CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
-            CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Key))
-        {
-            config.WriteTo.AzureCosmosDB(new Uri(globalSettings.DocumentDb.Uri),
-                globalSettings.DocumentDb.Key, timeToLive: TimeSpan.FromDays(7),
-                partitionKey: "_partitionKey")
-                .Enrich.FromLogContext()
-                .Enrich.WithProperty("Project", globalSettings.ProjectName);
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
+        if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
         {
             config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                 .Enrich.FromLogContext()
@@ -100,20 +90,17 @@ public static class LoggerFactoryExtensions
                 }
                 else if (syslogAddress.Scheme.Equals("tls"))
                 {
-                    // TLS v1.1, v1.2 and v1.3 are explicitly selected (leaving out TLS v1.0)
-                    const SslProtocols protocols = SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
-
                     if (CoreHelpers.SettingHasValue(globalSettings.Syslog.CertificateThumbprint))
                     {
                         config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
-                            secureProtocols: protocols,
+                            useTls: true,
                             certProvider: new CertificateStoreProvider(StoreName.My, StoreLocation.CurrentUser,
                                                                        globalSettings.Syslog.CertificateThumbprint));
                     }
                     else
                     {
                         config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
-                            secureProtocols: protocols,
+                            useTls: true,
                             certProvider: new CertificateFileProvider(globalSettings.Syslog.CertificatePath,
                                                                       globalSettings.Syslog?.CertificatePassword ?? string.Empty));
                     }
