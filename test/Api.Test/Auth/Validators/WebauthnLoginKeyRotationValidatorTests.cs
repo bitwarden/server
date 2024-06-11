@@ -4,7 +4,6 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -21,7 +20,6 @@ public class WebAuthnLoginKeyRotationValidatorTests
         SutProvider<WebAuthnLoginKeyRotationValidator> sutProvider, User user,
         IEnumerable<WebAuthnLoginRotateKeyRequestModel> webauthnRotateCredentialData)
     {
-        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
         var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebAuthnLoginRotateKeyRequestModel
         {
             Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
@@ -47,7 +45,6 @@ public class WebAuthnLoginKeyRotationValidatorTests
         SutProvider<WebAuthnLoginKeyRotationValidator> sutProvider, User user,
         IEnumerable<WebAuthnLoginRotateKeyRequestModel> webauthnRotateCredentialData)
     {
-        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
         var guid = Guid.NewGuid();
         var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebAuthnLoginRotateKeyRequestModel
         {
@@ -74,7 +71,6 @@ public class WebAuthnLoginKeyRotationValidatorTests
         SutProvider<WebAuthnLoginKeyRotationValidator> sutProvider, User user,
         IEnumerable<WebAuthnLoginRotateKeyRequestModel> webauthnRotateCredentialData)
     {
-        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
         var guid = Guid.NewGuid();
         var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebAuthnLoginRotateKeyRequestModel
         {
