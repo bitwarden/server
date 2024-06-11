@@ -92,6 +92,7 @@ public class TdeOffboardingPasswordTests
     public async Task TdeOffboardingPasswordCommand_RejectWithMasterPassword(SutProvider<TdeOffboardingPasswordCommand> sutProvider,
         User user, string masterPassword, string key, string hint)
     {
+        // the user already has a master password, so the off-boarding request should fail, since off-boarding only applies to passwordless TDE users
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateTdeOffboardingPasswordAsync(user, masterPassword, key, hint));
     }
 
