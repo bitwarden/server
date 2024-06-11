@@ -792,7 +792,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Theory]
     [InlineData(PermissionType.RunAsAdmin)]
     [InlineData(PermissionType.RunAsUserWithPermission)]
-    public async Task GetSecretsByIds_duplicateIds_fail(PermissionType permissionType)
+    public async Task GetSecretsByIds_DuplicateIds_BadRequest(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
