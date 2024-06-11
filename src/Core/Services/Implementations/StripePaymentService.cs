@@ -1937,7 +1937,7 @@ public class StripePaymentService : IPaymentService
     }
 
     private async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer,
-        long? limit = null)
+        int? limit = null)
     {
         if (customer == null)
         {
@@ -1976,9 +1976,13 @@ public class StripePaymentService : IPaymentService
                 .Concat(openInvoices)
                 .Concat(uncollectibleInvoices);
 
-            return invoices
+            var result = invoices
                 .OrderByDescending(invoice => invoice.Created)
                 .Select(invoice => new BillingHistoryInfo.BillingInvoice(invoice));
+
+            return limit.HasValue
+                ? result.Take(limit.Value)
+                : result;
         }
         catch (StripeException exception)
         {
