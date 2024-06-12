@@ -1,6 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-
 namespace Bit.Api.SecretsManager.Models.Request;
 
 public class GetSecretsRequestModel : IValidatableObject
@@ -14,10 +12,10 @@ public class GetSecretsRequestModel : IValidatableObject
         {
            var duplicateGuids = Ids.GroupBy(x => x)
                                   .Where(g => g.Count() > 1)
-                                  .SelectMany(g => g);
+                                  .Select(g => g.Key);
 
             yield return new ValidationResult(
-                $"The following GUIDs were duplicated {string.Join(", ", duplicateGuids.Distinct())} ",
+                $"The following GUIDs were duplicated {string.Join(", ", duplicateGuids)} ",
                 new[] { nameof(GetSecretsRequestModel) });
         }
     }

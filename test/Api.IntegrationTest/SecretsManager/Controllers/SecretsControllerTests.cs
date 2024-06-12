@@ -822,9 +822,11 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         }
 
         var request = new GetSecretsRequestModel { Ids = secretIds };
-
         var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
+        var content = await response.Content.ReadAsStringAsync();
+
         Assert.True(response.StatusCode == HttpStatusCode.BadRequest);
+        Assert.Contains("The following GUIDs were duplicated", content);
     }
 
     [Theory]
