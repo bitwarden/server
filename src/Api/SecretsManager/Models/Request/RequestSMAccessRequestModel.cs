@@ -8,5 +8,4 @@ public class RequestSMAccessRequestModel
     public string OrganizationId { get; set; }
     [Required]
     public string EmailContent { get; set; }
-
 }

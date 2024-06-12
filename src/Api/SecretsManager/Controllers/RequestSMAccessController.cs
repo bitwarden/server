@@ -1,6 +1,5 @@
 ﻿using Bit.Api.SecretsManager.Models.Request;
 using Bit.Commercial.Core.SecretsManager.Commands.PasswordManager;
-using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
