@@ -11,8 +11,8 @@ public class GetSecretsRequestModel : IValidatableObject
         if (!isDistinct)
         {
            var duplicateGuids = Ids.GroupBy(x => x)
-                                  .Where(g => g.Count() > 1)
-                                  .Select(g => g.Key);
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key);
 
             yield return new ValidationResult(
                 $"The following GUIDs were duplicated {string.Join(", ", duplicateGuids)} ",
