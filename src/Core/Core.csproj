@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <GenerateUserSecretsAttribute>false</GenerateUserSecretsAttribute>
@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="MailTemplates\Handlebars\SecretsManagerAccessRequest.html.hbs" />
+    <None Remove="MailTemplates\Handlebars\SecretsManagerAccessRequest.text.hbs" />
   </ItemGroup>
 
   <ItemGroup>

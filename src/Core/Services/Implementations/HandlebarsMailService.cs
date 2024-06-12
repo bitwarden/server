@@ -8,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
+using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using HandlebarsDotNet;
@@ -386,7 +387,6 @@ public class HandlebarsMailService : IMailService
             OrgName = CoreHelpers.SanitizeForEmail(organizationName, false),
             UserNameRequestingAccess = CoreHelpers.SanitizeForEmail(requestingUserName, false),
             EmailContent = CoreHelpers.SanitizeForEmail(emailContent),
-            TrySecretsManagerUrl = "https://bitwarden.com/contact-sales/"
         };
         await AddMessageContentAsync(message, "SecretsManagerAccessRequest", model);
         message.Category = "SecretsManagerAccessRequest";

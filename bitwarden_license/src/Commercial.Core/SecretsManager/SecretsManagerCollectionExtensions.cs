@@ -53,6 +53,7 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
         services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();
         services.AddScoped<ICreateProjectCommand, CreateProjectCommand>();
+        services.AddScoped<IRequestSMAccessCommand, RequestSMAccessCommand>();
         services.AddScoped<IUpdateProjectCommand, UpdateProjectCommand>();
         services.AddScoped<IDeleteProjectCommand, DeleteProjectCommand>();
         services.AddScoped<ICreateServiceAccountCommand, CreateServiceAccountCommand>();
