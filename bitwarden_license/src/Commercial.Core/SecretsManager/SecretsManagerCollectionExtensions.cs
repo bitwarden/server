@@ -4,6 +4,7 @@ using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
 using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
 using Bit.Commercial.Core.SecretsManager.Commands.AccessTokens;
+using Bit.Commercial.Core.SecretsManager.Commands.PasswordManager;
 using Bit.Commercial.Core.SecretsManager.Commands.Porting;
 using Bit.Commercial.Core.SecretsManager.Commands.Projects;
 using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
