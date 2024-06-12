@@ -12,7 +12,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OData.Query;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -89,7 +88,6 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    [EnableQuery]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
         var responses = await _groupsControllerService.GetGroups(User, orgId);
