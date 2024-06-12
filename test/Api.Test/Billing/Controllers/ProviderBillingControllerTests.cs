@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Bit.Api.Billing.Controllers;
+﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
@@ -121,7 +120,7 @@ public class ProviderBillingControllerTests
 
         Assert.IsType<FileContentHttpResult>(result);
 
-        var response = (FileContentHttpResult) result;
+        var response = (FileContentHttpResult)result;
 
         Assert.Equal("text/csv", response.ContentType);
         Assert.Equal(reportContent, response.FileContents);

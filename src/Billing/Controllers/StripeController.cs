@@ -207,10 +207,10 @@ public class StripeController : Controller
                     return Ok();
                 }
             case HandledStripeWebhook.InvoiceFinalized:
-            {
-                await HandleInvoiceFinalizedEventAsync(parsedEvent);
-                return Ok();
-            }
+                {
+                    await HandleInvoiceFinalizedEventAsync(parsedEvent);
+                    return Ok();
+                }
             default:
                 {
                     _logger.LogWarning("Unsupported event received. {EventType}", parsedEvent.Type);
