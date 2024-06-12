@@ -46,15 +46,14 @@ public class RequestSMAccessControllerTests
         // Act & Assert
         await sutProvider.Sut.RequestSMAccessFromAdmins(model);
     }
-   
+
     [Theory]
     [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenUserInvalid_ShouldThrowBadRequestException(
-        RequestSMAccessRequestModel model, SutProvider<RequestSMAccessController> sutProvider)
+    public async Task RequestSMAccessFromAdminst_WhenUserInvalid_ShouldThrowBadRequestException(RequestSMAccessRequestModel model, SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(Task.FromResult((User)null));
-       
+
         // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.RequestSMAccessFromAdmins(model));
     }
