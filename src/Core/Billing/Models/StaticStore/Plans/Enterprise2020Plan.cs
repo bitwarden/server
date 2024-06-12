@@ -1,15 +1,15 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record Enterprise2019Plan : Models.StaticStore.Plan
+public record Enterprise2020Plan : Plan
 {
-    public Enterprise2019Plan(bool isAnnual)
+    public Enterprise2020Plan(bool isAnnual)
     {
-        Type = isAnnual ? PlanType.EnterpriseAnnually2019 : PlanType.EnterpriseMonthly2019;
+        Type = isAnnual ? PlanType.EnterpriseAnnually2020 : PlanType.EnterpriseMonthly2020;
         ProductTier = ProductTierType.Enterprise;
-        Name = isAnnual ? "Enterprise (Annually) 2019" : "Enterprise (Monthly) 2019";
+        Name = isAnnual ? "Enterprise (Annually) 2020" : "Enterprise (Monthly) 2020";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameEnterprise";
         DescriptionLocalizationKey = "planDescEnterprise";
@@ -34,15 +34,15 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
 
         UpgradeSortOrder = 4;
         DisplaySortOrder = 4;
-        LegacyYear = 2020;
+        LegacyYear = 2023;
 
-        SecretsManager = new Enterprise2019SecretsManagerFeatures(isAnnual);
-        PasswordManager = new Enterprise2019PasswordManagerFeatures(isAnnual);
+        PasswordManager = new Enterprise2020PasswordManagerFeatures(isAnnual);
+        SecretsManager = new Enterprise2020SecretsManagerFeatures(isAnnual);
     }
 
-    private record Enterprise2019SecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record Enterprise2020SecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public Enterprise2019SecretsManagerFeatures(bool isAnnual)
+        public Enterprise2020SecretsManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BasePrice = 0;
@@ -71,9 +71,9 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
         }
     }
 
-    private record Enterprise2019PasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record Enterprise2020PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public Enterprise2019PasswordManagerFeatures(bool isAnnual)
+        public Enterprise2020PasswordManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BaseStorageGb = 1;
@@ -85,16 +85,16 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
 
             if (isAnnual)
             {
-                StripeStoragePlanId = "storage-gb-annually";
-                StripeSeatPlanId = "enterprise-org-seat-annually";
-                SeatPrice = 36;
                 AdditionalStoragePricePerGb = 4;
+                StripeStoragePlanId = "storage-gb-annually";
+                StripeSeatPlanId = "2020-enterprise-org-seat-annually";
+                SeatPrice = 60;
             }
             else
             {
-                StripeSeatPlanId = "enterprise-org-seat-monthly";
+                StripeSeatPlanId = "2020-enterprise-seat-monthly";
                 StripeStoragePlanId = "storage-gb-monthly";
-                SeatPrice = 4M;
+                SeatPrice = 6;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }

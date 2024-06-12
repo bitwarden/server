@@ -1,15 +1,15 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record EnterprisePlan : Plan
+public record Enterprise2019Plan : Plan
 {
-    public EnterprisePlan(bool isAnnual)
+    public Enterprise2019Plan(bool isAnnual)
     {
-        Type = isAnnual ? PlanType.EnterpriseAnnually : PlanType.EnterpriseMonthly;
+        Type = isAnnual ? PlanType.EnterpriseAnnually2019 : PlanType.EnterpriseMonthly2019;
         ProductTier = ProductTierType.Enterprise;
-        Name = isAnnual ? "Enterprise (Annually)" : "Enterprise (Monthly)";
+        Name = isAnnual ? "Enterprise (Annually) 2019" : "Enterprise (Monthly) 2019";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameEnterprise";
         DescriptionLocalizationKey = "planDescEnterprise";
@@ -34,18 +34,19 @@ public record EnterprisePlan : Plan
 
         UpgradeSortOrder = 4;
         DisplaySortOrder = 4;
+        LegacyYear = 2020;
 
-        PasswordManager = new EnterprisePasswordManagerFeatures(isAnnual);
-        SecretsManager = new EnterpriseSecretsManagerFeatures(isAnnual);
+        SecretsManager = new Enterprise2019SecretsManagerFeatures(isAnnual);
+        PasswordManager = new Enterprise2019PasswordManagerFeatures(isAnnual);
     }
 
-    private record EnterpriseSecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record Enterprise2019SecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public EnterpriseSecretsManagerFeatures(bool isAnnual)
+        public Enterprise2019SecretsManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 50;
+            BaseServiceAccount = 200;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -56,23 +57,23 @@ public record EnterprisePlan : Plan
             if (isAnnual)
             {
                 StripeSeatPlanId = "secrets-manager-enterprise-seat-annually";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-annually";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-annually";
                 SeatPrice = 144;
-                AdditionalPricePerServiceAccount = 12;
+                AdditionalPricePerServiceAccount = 6;
             }
             else
             {
                 StripeSeatPlanId = "secrets-manager-enterprise-seat-monthly";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
                 SeatPrice = 13;
-                AdditionalPricePerServiceAccount = 1;
+                AdditionalPricePerServiceAccount = 0.5M;
             }
         }
     }
 
-    private record EnterprisePasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record Enterprise2019PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public EnterprisePasswordManagerFeatures(bool isAnnual)
+        public Enterprise2019PasswordManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BaseStorageGb = 1;
@@ -84,16 +85,16 @@ public record EnterprisePlan : Plan
 
             if (isAnnual)
             {
-                AdditionalStoragePricePerGb = 4;
                 StripeStoragePlanId = "storage-gb-annually";
-                StripeSeatPlanId = "2023-enterprise-org-seat-annually";
-                SeatPrice = 72;
+                StripeSeatPlanId = "enterprise-org-seat-annually";
+                SeatPrice = 36;
+                AdditionalStoragePricePerGb = 4;
             }
             else
             {
-                StripeSeatPlanId = "2023-enterprise-seat-monthly";
+                StripeSeatPlanId = "enterprise-org-seat-monthly";
                 StripeStoragePlanId = "storage-gb-monthly";
-                SeatPrice = 7;
+                SeatPrice = 4M;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }

@@ -1,9 +1,9 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record Teams2020Plan : Models.StaticStore.Plan
+public record Teams2020Plan : Plan
 {
     public Teams2020Plan(bool isAnnual)
     {
