@@ -67,6 +67,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
     public DbSet<ProviderPlan> ProviderPlans { get; set; }
+    public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
