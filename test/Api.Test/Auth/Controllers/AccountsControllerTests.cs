@@ -557,6 +557,7 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(model));
     }
 
+
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
     // something greater in order to share common test steps with

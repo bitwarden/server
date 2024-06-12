@@ -12,8 +12,6 @@ using Xunit;
 namespace Bit.Commercial.Core.Test.SecretsManager.Commands.Projects;
 
 [SutProviderCustomize]
-[ProjectCustomize]
-[SecretCustomize]
 public class RequestSMAccessCommandTests
 {
     [Theory]
