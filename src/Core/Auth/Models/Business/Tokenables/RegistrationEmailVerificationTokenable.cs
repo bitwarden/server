@@ -11,9 +11,9 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
 {
     public static TimeSpan GetTokenLifetime() => TimeSpan.FromMinutes(15);
 
-    public const string ClearTextPrefix = "BwEmailVerificationToken_";
-    public const string DataProtectorPurpose = "EmailVerificationTokenDataProtector";
-    public const string TokenIdentifier = "EmailVerificationToken";
+    public const string ClearTextPrefix = "BwRegistrationEmailVerificationToken_";
+    public const string DataProtectorPurpose = "RegistrationEmailVerificationTokenDataProtector";
+    public const string TokenIdentifier = "RegistrationEmailVerificationToken";
 
     public string Identifier { get; set; } = TokenIdentifier;
 
