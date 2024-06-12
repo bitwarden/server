@@ -21,7 +21,7 @@ public class UpdateOrganizationUserCommandTests
 {
     [Theory, BitAutoData]
     public async Task UpdateUserAsync_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
-        ICollection<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
+        List<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         user.Id = default(Guid);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -34,7 +34,7 @@ public class UpdateOrganizationUserCommandTests
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
-        ICollection<CollectionAccessSelection> collections,
+        List<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
@@ -83,7 +83,7 @@ public class UpdateOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Manager)] OrganizationUser newUserData,
         [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        ICollection<CollectionAccessSelection> collections,
+        List<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
@@ -121,7 +121,7 @@ public class UpdateOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser newUserData,
         [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        ICollection<CollectionAccessSelection> collections,
+        List<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
