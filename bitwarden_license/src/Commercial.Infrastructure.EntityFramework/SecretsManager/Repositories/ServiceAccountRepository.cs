@@ -218,11 +218,10 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         join ap in dbContext.ServiceAccountSecretAccessPolicy
             on sa.Id equals ap.ServiceAccountId into grouping
         from ap in grouping.DefaultIfEmpty()
-        where ap.GrantedSecret.DeletedDate == null
+        where ap.GrantedSecret.DeletedDate == null &&
+              ap.GrantedSecretId != null
         select new ServiceAccountSecretsAccess(sa,
-            ap.GrantedSecretId.HasValue
-                ? new List<Guid> { ap.GrantedSecretId.Value }
-                : new List<Guid>());
+            new List<Guid> { ap.GrantedSecretId.Value });
 
     private static List<ServiceAccountSecretsAccess> FilterDirectSecretAccessResults(
         List<ServiceAccountSecretsAccess> projectSecretsAccessResults,
@@ -236,10 +235,9 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
                 return false;
             }
 
-            var serviceAccountProjectsSecretsAccessResults = projectSecretsAccessResults
+            return !projectSecretsAccessResults
                 .Where(x => x.ServiceAccount.Id == serviceAccountId)
-                .ToList();
-            return !serviceAccountProjectsSecretsAccessResults.Any(x => x.SecretIds.Contains(secretId));
+                .Any(x => x.SecretIds.Contains(secretId));
         }).ToList();
 
     private record ServiceAccountSecretsAccess(ServiceAccount ServiceAccount, IEnumerable<Guid> SecretIds);

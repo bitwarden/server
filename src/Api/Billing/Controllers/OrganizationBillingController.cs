@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Billing.Models.Responses;
-using Bit.Api.Models.Response;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -31,6 +30,21 @@ public class OrganizationBillingController(
         var response = OrganizationMetadataResponse.From(metadata);
 
         return TypedResults.Ok(response);
+    }
+
+    [HttpGet("history")]
+    public async Task<IResult> GetHistoryAsync([FromRoute] Guid organizationId)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var billingInfo = await paymentService.GetBillingHistoryAsync(organization);
+
+        return TypedResults.Ok(billingInfo);
     }
 
     [HttpGet]

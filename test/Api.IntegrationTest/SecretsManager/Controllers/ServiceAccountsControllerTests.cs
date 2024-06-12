@@ -115,10 +115,8 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         foreach (var item in expectedAccess)
         {
             var serviceAccountResult = result.Data.FirstOrDefault(x => x.Id == item.Key);
-            if (serviceAccountResult != null)
-            {
-                Assert.Equal(item.Value, serviceAccountResult.AccessToSecrets);
-            }
+            Assert.NotNull(serviceAccountResult);
+            Assert.Equal(item.Value, serviceAccountResult.AccessToSecrets);
         }
     }
 
@@ -155,15 +153,13 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             foreach (var item in expectedAccess)
             {
                 var serviceAccountResult = result.Data.FirstOrDefault(x => x.Id == item.Key);
-                if (serviceAccountResult != null)
-                {
-                    Assert.Equal(item.Value, serviceAccountResult.AccessToSecrets);
-                }
+                Assert.NotNull(serviceAccountResult);
+                Assert.Equal(item.Value, serviceAccountResult.AccessToSecrets);
             }
         }
         else
         {
-            Assert.DoesNotContain(result.Data, x => x.AccessToSecrets != 0);
+            Assert.Contains(result.Data, x => x.AccessToSecrets == 0);
         }
     }
 

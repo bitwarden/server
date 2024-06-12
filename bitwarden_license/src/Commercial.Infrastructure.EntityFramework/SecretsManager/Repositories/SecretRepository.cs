@@ -418,36 +418,36 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
-    private static IQueryable<SecretAccess> BuildSecretAccessQuery(IQueryable<Secret> secrets, Guid userId,
+    private static IQueryable<SecretAccess> BuildSecretAccessQuery(IQueryable<Secret> secrets, Guid accessClientId,
         AccessClientType accessType) =>
         accessType switch
         {
             AccessClientType.NoAccessCheck => secrets.Select(s => new SecretAccess(s.Id, true, true)),
             AccessClientType.User => secrets.Select(s => new SecretAccess(
                 s.Id,
-                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Read) ||
                 s.GroupAccessPolicies.Any(ap =>
-                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)) ||
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Read)) ||
                 s.Projects.Any(p =>
-                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Read) ||
                     p.GroupAccessPolicies.Any(ap =>
-                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
-                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Read))),
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Write) ||
                 s.GroupAccessPolicies.Any(ap =>
-                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)) ||
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Write)) ||
                 s.Projects.Any(p =>
-                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Write) ||
                     p.GroupAccessPolicies.Any(ap =>
-                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)))
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Write)))
             )),
             AccessClientType.ServiceAccount => secrets.Select(s => new SecretAccess(
                 s.Id,
-                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read) ||
+                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Read) ||
                 s.Projects.Any(p =>
-                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read)),
-                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write) ||
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Read)),
+                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Write) ||
                 s.Projects.Any(p =>
-                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write))
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Write))
             )),
             _ => secrets.Select(s => new SecretAccess(s.Id, false, false))
         };
