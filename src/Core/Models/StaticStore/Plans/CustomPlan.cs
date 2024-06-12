@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Models.StaticStore.Plans;
 

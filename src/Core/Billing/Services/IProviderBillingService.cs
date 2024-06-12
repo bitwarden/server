@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Services;
