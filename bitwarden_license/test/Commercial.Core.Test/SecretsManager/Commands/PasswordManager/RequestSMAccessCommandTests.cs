@@ -1,11 +1,7 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.PasswordManager;
-using Bit.Commercial.Core.SecretsManager.Commands.Projects;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Entities;
-using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
 using Bit.Test.Common.AutoFixture;
