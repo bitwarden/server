@@ -1,45 +1,24 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Models;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Business;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.Billing.Models.Responses;
 
-public class BillingResponseModel : ResponseModel
+public class BillingHistoryResponseModel : ResponseModel
 {
-    public BillingResponseModel(BillingInfo billing)
-        : base("billing")
+    public BillingHistoryResponseModel(BillingHistoryInfo billing)
+        : base("billingHistory")
     {
-        Balance = billing.Balance;
-        PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
         Transactions = billing.Transactions?.Select(t => new BillingTransaction(t));
         Invoices = billing.Invoices?.Select(i => new BillingInvoice(i));
     }
-
-    public decimal Balance { get; set; }
-    public BillingSource PaymentSource { get; set; }
     public IEnumerable<BillingInvoice> Invoices { get; set; }
     public IEnumerable<BillingTransaction> Transactions { get; set; }
 }
 
-public class BillingSource
-{
-    public BillingSource(BillingInfo.BillingSource source)
-    {
-        Type = source.Type;
-        CardBrand = source.CardBrand;
-        Description = source.Description;
-        NeedsVerification = source.NeedsVerification;
-    }
-
-    public PaymentMethodType Type { get; set; }
-    public string CardBrand { get; set; }
-    public string Description { get; set; }
-    public bool NeedsVerification { get; set; }
-}
-
 public class BillingInvoice
 {
-    public BillingInvoice(BillingInfo.BillingInvoice inv)
+    public BillingInvoice(BillingHistoryInfo.BillingInvoice inv)
     {
         Amount = inv.Amount;
         Date = inv.Date;
@@ -59,7 +38,7 @@ public class BillingInvoice
 
 public class BillingTransaction
 {
-    public BillingTransaction(BillingInfo.BillingTransaction transaction)
+    public BillingTransaction(BillingHistoryInfo.BillingTransaction transaction)
     {
         CreatedDate = transaction.CreatedDate;
         Amount = transaction.Amount;
