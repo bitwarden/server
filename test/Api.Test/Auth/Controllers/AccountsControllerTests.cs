@@ -557,44 +557,6 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(model));
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenSendingNoData_ShouldThrowBadRequestException(
-       User user)
-    {
-        // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.RequestSMAccessFromAdmins(null));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenSendingValidData_ShouldSucceed(
-    User user,
-    RequestSMAccessRequestModel model)
-    {
-        // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        model.OrganizationId = new Guid().ToString();
-
-        // Act & Assert
-        await _sut.RequestSMAccessFromAdmins(model);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenUserInvalid_ShouldThrowBadRequestException(
-        RequestSMAccessRequestModel model)
-    {
-        // Arrange
-        ConfigureUserServiceToReturnNullPrincipal();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.RequestSMAccessFromAdmins(model));
-    }
-
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
     // something greater in order to share common test steps with

@@ -20,7 +20,7 @@ public class CreateProjectCommandTests
     [BitAutoData]
     public async Task CreateAsync_CallsCreate(Project data,
         Guid userId,
-        SutProvider<RequestSMAccessCommand> sutProvider)
+        SutProvider<CreateProjectCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>())

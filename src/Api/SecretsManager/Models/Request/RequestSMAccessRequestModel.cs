@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Auth.Models.Request.Accounts;
+namespace Bit.Api.SecretsManager.Models.Request;
 
 public class RequestSMAccessRequestModel
 {
@@ -8,4 +8,5 @@ public class RequestSMAccessRequestModel
     public string OrganizationId { get; set; }
     [Required]
     public string EmailContent { get; set; }
+
 }
