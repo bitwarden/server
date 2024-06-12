@@ -8,10 +8,12 @@ CREATE PROCEDURE [dbo].[ProviderInvoiceItem_Update]
     @AssignedSeats INT,
     @UsedSeats INT,
     @Total MONEY,
-    @Created DATETIME2 (7)
+    @Created DATETIME2 (7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
+
+    SET @Created = COALESCE(@Created, GETUTCDATE())
 
     UPDATE
         [dbo].[ProviderInvoiceItem]

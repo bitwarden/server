@@ -41,10 +41,12 @@ CREATE PROCEDURE [dbo].[ProviderInvoiceItem_Create]
     @AssignedSeats INT,
     @UsedSeats INT,
     @Total MONEY,
-    @Created DATETIME2 (7)
+    @Created DATETIME2 (7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
+
+    SET @Created = COALESCE(@Created, GETUTCDATE())
 
     INSERT INTO [dbo].[ProviderInvoiceItem]
     (
@@ -81,6 +83,7 @@ IF OBJECT_ID('[dbo].[ProviderInvoiceItem_Update]') IS NOT NULL
         DROP PROCEDURE [dbo].[ProviderInvoiceItem_Update]
     END
 GO
+
 CREATE PROCEDURE [dbo].[ProviderInvoiceItem_Update]
     @Id UNIQUEIDENTIFIER,
     @ProviderId UNIQUEIDENTIFIER,
@@ -91,10 +94,12 @@ CREATE PROCEDURE [dbo].[ProviderInvoiceItem_Update]
     @AssignedSeats INT,
     @UsedSeats INT,
     @Total MONEY,
-    @Created DATETIME2 (7)
+    @Created DATETIME2 (7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
+
+    SET @Created = COALESCE(@Created, GETUTCDATE())
 
     UPDATE
         [dbo].[ProviderInvoiceItem]
