@@ -202,11 +202,8 @@ public class ProviderBillingService(
     }
 
     public async Task<byte[]> GenerateClientInvoiceReport(
-        Provider provider,
         string invoiceId)
     {
-        ArgumentNullException.ThrowIfNull(provider);
-
         if (string.IsNullOrEmpty(invoiceId))
         {
             throw new ArgumentNullException(nameof(invoiceId));

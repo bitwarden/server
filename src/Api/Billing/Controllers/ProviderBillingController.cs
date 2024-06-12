@@ -52,7 +52,7 @@ public class ProviderBillingController(
             return result;
         }
 
-        var reportContent = await providerBillingService.GenerateClientInvoiceReport(provider, invoiceId);
+        var reportContent = await providerBillingService.GenerateClientInvoiceReport(invoiceId);
 
         if (reportContent == null)
         {

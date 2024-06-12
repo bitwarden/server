@@ -44,7 +44,6 @@ public interface IProviderBillingService
         Organization organization);
 
     Task<byte[]> GenerateClientInvoiceReport(
-        Provider provider,
         string invoiceId);
 
     /// <summary>

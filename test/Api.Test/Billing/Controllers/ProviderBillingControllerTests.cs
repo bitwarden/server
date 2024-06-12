@@ -1,4 +1,5 @@
-﻿using Bit.Api.Billing.Controllers;
+﻿using System.Text;
+using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
@@ -26,7 +27,7 @@ namespace Bit.Api.Test.Billing.Controllers;
 [SutProviderCustomize]
 public class ProviderBillingControllerTests
 {
-    #region GetInvoices
+    #region GetInvoicesAsync
 
     [Theory, BitAutoData]
     public async Task GetInvoices_Ok(
@@ -97,6 +98,33 @@ public class ProviderBillingControllerTests
         Assert.Equal(1000, paidInvoice.Total);
         Assert.Equal("https://example.com/invoice/1", paidInvoice.Url);
         Assert.Equal("https://example.com/invoice/1/pdf", paidInvoice.PdfUrl);
+    }
+
+    #endregion
+
+    #region GenerateClientInvoiceReportAsync
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReportAsync_Ok(
+        Provider provider,
+        string invoiceId,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        var reportContent = "Report"u8.ToArray();
+
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+            .Returns(reportContent);
+
+        var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);
+
+        Assert.IsType<FileContentHttpResult>(result);
+
+        var response = (FileContentHttpResult) result;
+
+        Assert.Equal("text/csv", response.ContentType);
+        Assert.Equal(reportContent, response.FileContents);
     }
 
     #endregion
