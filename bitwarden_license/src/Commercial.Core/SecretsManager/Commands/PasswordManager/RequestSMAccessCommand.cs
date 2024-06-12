@@ -1,15 +1,9 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
-using Bit.Core.Identity;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
-using Bit.Core.SecretsManager.Entities;
-using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Commercial.Core.SecretsManager.Commands.Projects;
+namespace Bit.Commercial.Core.SecretsManager.Commands.PasswordManager;
 
 public class RequestSMAccessCommand : IRequestSMAccessCommand
 {
