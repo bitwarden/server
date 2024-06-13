@@ -576,7 +576,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
     private async Task UpdateSecretAccessPoliciesAsync(DatabaseContext dbContext,
         Secret entity,
-      SecretAccessPoliciesUpdates? accessPoliciesUpdates)
+        SecretAccessPoliciesUpdates? accessPoliciesUpdates)
     {
         if (accessPoliciesUpdates == null || !accessPoliciesUpdates.HasUpdates())
         {
@@ -584,8 +584,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
 
         if ((entity.UserAccessPolicies != null && entity.UserAccessPolicies.Count != 0) ||
-             (entity.GroupAccessPolicies != null && entity.GroupAccessPolicies.Count != 0) ||
-             (entity.ServiceAccountAccessPolicies != null && entity.ServiceAccountAccessPolicies.Count != 0))
+            (entity.GroupAccessPolicies != null && entity.GroupAccessPolicies.Count != 0) ||
+            (entity.ServiceAccountAccessPolicies != null && entity.ServiceAccountAccessPolicies.Count != 0))
         {
             await DeleteSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
         }
