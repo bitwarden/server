@@ -88,11 +88,11 @@ public class AccountsController : Controller
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
-        var refEvent = new ReferenceEvent(ReferenceEventType.SignupEmailSubmit, null, _currentContext);
-        await _referenceEventService.RaiseEventAsync(refEvent);
-
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
             model.ReceiveMarketingEmails);
+
+        var refEvent = new ReferenceEvent(ReferenceEventType.SignupEmailSubmit, null, _currentContext);
+        await _referenceEventService.RaiseEventAsync(refEvent);
 
         if (token != null)
         {
