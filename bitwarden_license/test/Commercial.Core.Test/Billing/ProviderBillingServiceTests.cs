@@ -719,7 +719,7 @@ public class ProviderBillingServiceTests
         await sutProvider.GetDependency<ISubscriberService>().Received(1).GetSubscription(
             provider,
             Arg.Is<SubscriptionGetOptions>(
-                options => options.Expand.Count == 1 && options.Expand.First() == "customer"));
+                options => options.Expand.Count == 2 && options.Expand.First() == "customer" && options.Expand.Last() == "test_clock"));
     }
 
     [Theory, BitAutoData]
@@ -732,7 +732,7 @@ public class ProviderBillingServiceTests
         var subscription = new Subscription();
 
         subscriberService.GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(
-            options => options.Expand.Count == 1 && options.Expand.First() == "customer")).Returns(subscription);
+            options => options.Expand.Count == 2 && options.Expand.First() == "customer" && options.Expand.Last() == "test_clock")).Returns(subscription);
 
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
