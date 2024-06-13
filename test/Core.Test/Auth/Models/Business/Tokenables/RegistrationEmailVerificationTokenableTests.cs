@@ -14,12 +14,21 @@ public class RegistrationEmailVerificationTokenableTests
     /// Tests the default constructor behavior when passed null/default values.
     /// </summary>
     [Fact]
-    public void Constructor_NullInputs_PropertiesSetToDefault()
+    public void Constructor_NullEmail_ThrowsArgumentNullException()
     {
-        var token = new RegistrationEmailVerificationTokenable(null, null, default);
+        Assert.Throws<ArgumentNullException>(() => new RegistrationEmailVerificationTokenable(null, null, default));
+    }
 
+    /// <summary>
+    /// Tests the default constructor behavior when passed required values but null values for optional props.
+    /// </summary>
+    [Theory, AutoData]
+    public void Constructor_NullOptionalProps_PropertiesSetToDefault(string email)
+    {
+        var token = new RegistrationEmailVerificationTokenable(email, null, default);
+
+        Assert.Equal(email, token.Email);
         Assert.Equal(default, token.Name);
-        Assert.Equal(default, token.Email);
         Assert.Equal(default, token.ReceiveMarketingEmails);
     }
 
@@ -63,16 +72,6 @@ public class RegistrationEmailVerificationTokenableTests
         Assert.True((customExpiration - token.ExpirationDate).Duration() < _timeTolerance);
     }
 
-    /// <summary>
-    /// Tests the validity of a token initialized with a null / default inputs
-    /// </summary>
-    [Fact]
-    public void Valid_NullInputs_ReturnsFalse()
-    {
-        var token = new RegistrationEmailVerificationTokenable(null, null, default);
-
-        Assert.False(token.Valid);
-    }
 
     /// <summary>
     /// Tests the validity of a token with a non-matching identifier.

@@ -29,8 +29,13 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
 
     public RegistrationEmailVerificationTokenable(string email, string name = default, bool receiveMarketingEmails = default) : this()
     {
-        Name = name;
+        if (string.IsNullOrEmpty(email))
+        {
+            throw new ArgumentNullException(nameof(email));
+        }
+
         Email = email;
+        Name = name;
         ReceiveMarketingEmails = receiveMarketingEmails;
     }
 
