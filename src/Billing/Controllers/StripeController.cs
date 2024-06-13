@@ -689,7 +689,10 @@ public class StripeController : Controller
                 {
                     // If the sponsorship is invalid, then the subscription was updated to use the regular families plan
                     // price. Given that this is the case, we need the new invoice amount
-                    invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
+                    subscription = await _stripeFacade.GetSubscription(subscription.Id,
+                        new SubscriptionGetOptions { Expand = ["latest_invoice"] });
+
+                    invoice = subscription.LatestInvoice;
                 }
             }
 
