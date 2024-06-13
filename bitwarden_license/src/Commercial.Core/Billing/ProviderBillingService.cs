@@ -242,7 +242,7 @@ public class ProviderBillingService(
 
         var subscription = await subscriberService.GetSubscription(provider, new SubscriptionGetOptions
         {
-            Expand = ["customer"]
+            Expand = ["customer", "test_clock"]
         });
 
         if (subscription == null)
