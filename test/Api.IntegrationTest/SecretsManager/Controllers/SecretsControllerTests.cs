@@ -249,11 +249,24 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Create_RunAsServiceAccount_WithAccessPolicies_NotFound()
+    {
+        var (organizationUser, secretRequest) =
+            await SetupSecretWithProjectCreateRequestAsync(PermissionType.RunAsServiceAccountWithPermission, true);
+
+        var response =
+            await _client.PostAsJsonAsync($"/organizations/{organizationUser.OrganizationId}/secrets", secretRequest);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     [Theory]
     [InlineData(PermissionType.RunAsAdmin, false)]
     [InlineData(PermissionType.RunAsAdmin, true)]
     [InlineData(PermissionType.RunAsUserWithPermission, false)]
     [InlineData(PermissionType.RunAsUserWithPermission, true)]
+    [InlineData(PermissionType.RunAsServiceAccountWithPermission, false)]
     public async Task Create_WithProject_Success(PermissionType permissionType, bool withAccessPolicies)
     {
         var (organizationUser, secretRequest) = await SetupSecretWithProjectCreateRequestAsync(permissionType, withAccessPolicies);
@@ -1003,20 +1016,45 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         var currentOrganizationUser = orgAdminUser;
 
-        if (permissionType == PermissionType.RunAsUserWithPermission)
+        switch (permissionType)
         {
-            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _loginHelper.LoginAsync(email);
-
-            var accessPolicies = new List<BaseAccessPolicy>
-            {
-                new UserProjectAccessPolicy
+            case PermissionType.RunAsUserWithPermission:
                 {
-                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true
+                    var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+                    await _loginHelper.LoginAsync(email);
+
+                    var accessPolicies = new List<BaseAccessPolicy>
+                {
+                    new UserProjectAccessPolicy
+                    {
+                        GrantedProjectId = project.Id,
+                        OrganizationUserId = orgUser.Id,
+                        Read = true,
+                        Write = true
+                    }
+                };
+                    currentOrganizationUser = orgUser;
+                    await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+                    break;
                 }
-            };
-            currentOrganizationUser = orgUser;
-            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+            case PermissionType.RunAsServiceAccountWithPermission:
+                {
+                    var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+                    await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+
+                    var accessPolicies = new List<BaseAccessPolicy>
+                {
+                    new ServiceAccountProjectAccessPolicy
+                    {
+                        GrantedProjectId = project.Id,
+                        ServiceAccountId = apiKeyDetails.ApiKey.ServiceAccountId,
+                        Read = true,
+                        Write = true
+                    }
+                };
+                    await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+                    break;
+                }
         }
 
         var secretRequest = new SecretCreateRequestModel
