@@ -108,6 +108,14 @@ public class AccountsController : Controller
         return NoContent();
     }
 
+    [RequireFeature(FeatureFlagKeys.EmailVerification)]
+    [HttpPost("register/finish")]
+    public async Task<IActionResult> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
+    {
+
+        return NoContent();
+    }
+
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("prelogin")]
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
