@@ -2,8 +2,6 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
-using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
