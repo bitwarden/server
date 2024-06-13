@@ -21,7 +21,7 @@ public class RequestSMAccessCommand : IRequestSMAccessCommand
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public async Task<bool> SendRequestAccessToSM(Guid organizationId, User user, string emailContent)
+    public async Task SendRequestAccessToSM(Guid organizationId, User user, string emailContent)
     {
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
         var emailList = orgUsers.Where(o => o.Type <= OrganizationUserType.Admin || o.GetPermissions()?.ManageSso == true)
@@ -30,6 +30,5 @@ public class RequestSMAccessCommand : IRequestSMAccessCommand
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
 
         await _mailService.SendRequestSMAccessToAdminEmailAsync(emailList, organization.Name, user.Name, emailContent);
-        return true;
     }
 }
