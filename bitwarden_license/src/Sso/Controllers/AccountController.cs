@@ -483,7 +483,8 @@ public class AccountController : Controller
             if (orgUser.Status == OrganizationUserStatusType.Invited)
             {
                 // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.DisplayName()));
+                // This allows us to enroll them in MP reset if required
+                throw new Exception(_i18nService.T("AcceptInviteBeforeUsingSSO", organization.DisplayName()));
             }
 
             // Accepted or Confirmed - create SSO link and return;
