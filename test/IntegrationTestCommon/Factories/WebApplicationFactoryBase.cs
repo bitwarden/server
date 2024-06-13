@@ -1,5 +1,4 @@
 ﻿using AspNetCoreRateLimit;
-using Bit.Core;
 using Bit.Core.Auth.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -73,12 +72,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 .AddJsonFile("appsettings.Development.json");
 
             c.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
-
-
-            var featureFlagDict = new Dictionary<string, object>
-            {
-                { FeatureFlagKeys.EmailVerification, true },
-            };
 
             c.AddInMemoryCollection(new Dictionary<string, string>
             {
