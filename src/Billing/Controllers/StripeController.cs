@@ -684,7 +684,13 @@ public class StripeController : Controller
         {
             if (IsSponsoredSubscription(updatedSubscription))
             {
-                await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
+                var sponsorshipIsValid = await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
+                if (!sponsorshipIsValid)
+                {
+                    // If the sponsorship is invalid, then the subscription was updated to use the regular families plan
+                    // price. Given that this is the case, we need the new invoice amount
+                    invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
+                }
             }
 
             var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
