@@ -46,8 +46,8 @@ public class AccountsController : Controller
         ICaptchaValidationService captchaValidationService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
-            ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
-            IReferenceEventService referenceEventService
+        ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
+        IReferenceEventService referenceEventService
         )
     {
         _currentContext = currentContext;
