@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Business.Tokenables;
+﻿#nullable enable
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -27,8 +28,13 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         _tokenDataFactory = tokenDataFactory;
     }
 
-    public async Task<string> Run(string email, string name, bool receiveMarketingEmails)
+    public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails)
     {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new ArgumentNullException(nameof(email));
+        }
+
         // Check to see if the user already exists
         var user = await _userRepository.GetByEmailAsync(email);
         var userExists = user != null;
@@ -39,7 +45,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             if (userExists)
             {
                 // Add delay to prevent timing attacks
-                await Task.Delay(2000);
+                await Task.Delay(130);
                 throw new BadRequestException($"Email {email} is already taken");
             }
 
@@ -57,11 +63,13 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             await _mailService.SendRegistrationVerificationEmailAsync(email, token);
         }
 
+        // Add delay to prevent timing attacks
+        await Task.Delay(130);
         // User exists but we will return a 200 regardless of whether the email was sent or not; so return null
         return null;
     }
 
-    private string GenerateToken(string email, string name, bool receiveMarketingEmails)
+    private string GenerateToken(string email, string? name, bool receiveMarketingEmails)
     {
         var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
         return _tokenDataFactory.Protect(registrationEmailVerificationTokenable);

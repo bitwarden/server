@@ -118,6 +118,21 @@ public class SendVerificationEmailForRegistrationCommandTests
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Run(email, name, receiveMarketingEmails));
+    }
 
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenNullEmail_ThrowsArgumentNullException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+   string name, bool receiveMarketingEmails)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.Run(null, name, receiveMarketingEmails));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenEmptyEmail_ThrowsArgumentNullException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+   string name, bool receiveMarketingEmails)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.Run("", name, receiveMarketingEmails));
     }
 }
