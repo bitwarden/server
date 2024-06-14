@@ -246,7 +246,6 @@ public class CollectionsController : Controller
     [HttpPost("delete")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
-        // New flexible collections logic
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
         var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Delete);
         if (!result.Succeeded)
