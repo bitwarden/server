@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using Bit.Commercial.Core.Billing;
+using Bit.Commercial.Core.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -20,6 +22,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using CsvHelper;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -635,6 +638,68 @@ public class ProviderBillingServiceTests
 
     #endregion
 
+    #region GenerateClientInvoiceReport
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_NullInvoiceId_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GenerateClientInvoiceReport(null));
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_NoInvoiceItems_ReturnsNull(
+        string invoiceId,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns([]);
+
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+
+        Assert.Null(reportContent);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_Succeeds(
+        string invoiceId,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        var invoiceItems = new List<ProviderInvoiceItem>
+        {
+            new ()
+            {
+                ClientName = "Client 1",
+                AssignedSeats = 50,
+                UsedSeats = 30,
+                PlanName = "Teams (Monthly)",
+                Total = 500
+            }
+        };
+
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns(invoiceItems);
+
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+
+        using var memoryStream = new MemoryStream(reportContent);
+
+        using var streamReader = new StreamReader(memoryStream);
+
+        using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
+
+        var records = csvReader.GetRecords<ProviderClientInvoiceReportRow>().ToList();
+
+        Assert.Single(records);
+
+        var record = records.First();
+
+        Assert.Equal("Client 1", record.Client);
+        Assert.Equal(50, record.Assigned);
+        Assert.Equal(30, record.Used);
+        Assert.Equal(20, record.Remaining);
+        Assert.Equal("Teams (Monthly)", record.Plan);
+        Assert.Equal("$500.00", record.Total);
+    }
+
+    #endregion
+
     #region GetAssignedSeatTotalForPlanOrThrow
 
     [Theory, BitAutoData]
@@ -719,7 +784,7 @@ public class ProviderBillingServiceTests
         await sutProvider.GetDependency<ISubscriberService>().Received(1).GetSubscription(
             provider,
             Arg.Is<SubscriptionGetOptions>(
-                options => options.Expand.Count == 1 && options.Expand.First() == "customer"));
+                options => options.Expand.Count == 2 && options.Expand.First() == "customer" && options.Expand.Last() == "test_clock"));
     }
 
     [Theory, BitAutoData]
@@ -732,7 +797,7 @@ public class ProviderBillingServiceTests
         var subscription = new Subscription();
 
         subscriberService.GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(
-            options => options.Expand.Count == 1 && options.Expand.First() == "customer")).Returns(subscription);
+            options => options.Expand.Count == 2 && options.Expand.First() == "customer" && options.Expand.Last() == "test_clock")).Returns(subscription);
 
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 

@@ -1,4 +1,6 @@
-﻿using Bit.Core;
+﻿using System.Globalization;
+using Bit.Commercial.Core.Billing.Models;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -16,6 +18,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using CsvHelper;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Utilities;
@@ -23,16 +26,17 @@ using static Bit.Core.Billing.Utilities;
 namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
+    IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService,
-    IFeatureService featureService) : IProviderBillingService
+    ISubscriberService subscriberService) : IProviderBillingService
 {
     public async Task AssignSeatsToClientOrganization(
         Provider provider,
@@ -197,6 +201,38 @@ public class ProviderBillingService(
         await organizationRepository.ReplaceAsync(organization);
     }
 
+    public async Task<byte[]> GenerateClientInvoiceReport(
+        string invoiceId)
+    {
+        if (string.IsNullOrEmpty(invoiceId))
+        {
+            throw new ArgumentNullException(nameof(invoiceId));
+        }
+
+        var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
+
+        if (invoiceItems.Count == 0)
+        {
+            return null;
+        }
+
+        var csvRows = invoiceItems.Select(ProviderClientInvoiceReportRow.From);
+
+        using var memoryStream = new MemoryStream();
+
+        await using var streamWriter = new StreamWriter(memoryStream);
+
+        await using var csvWriter = new CsvWriter(streamWriter, CultureInfo.CurrentCulture);
+
+        await csvWriter.WriteRecordsAsync(csvRows);
+
+        await streamWriter.FlushAsync();
+
+        memoryStream.Seek(0, SeekOrigin.Begin);
+
+        return memoryStream.ToArray();
+    }
+
     public async Task<int> GetAssignedSeatTotalForPlanOrThrow(
         Guid providerId,
         PlanType planType)
@@ -242,7 +278,7 @@ public class ProviderBillingService(
 
         var subscription = await subscriberService.GetSubscription(provider, new SubscriptionGetOptions
         {
-            Expand = ["customer"]
+            Expand = ["customer", "test_clock"]
         });
 
         if (subscription == null)
