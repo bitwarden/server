@@ -397,7 +397,7 @@ public class CiphersController : Controller
         var org = _currentContext.GetOrganization(organizationId);
 
         // If not using V1, owners, admins, and users with EditAnyCollection permissions, and providers can always edit all ciphers
-        if (UseFlexibleCollectionsV1())
+        if (!UseFlexibleCollectionsV1())
         {
             return org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
             { Permissions.EditAnyCollection: true } ||
