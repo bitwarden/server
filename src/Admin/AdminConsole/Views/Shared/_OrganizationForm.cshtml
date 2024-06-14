@@ -73,7 +73,7 @@
                                 (Model.Provider == null ||
                                 p is >= PlanType.TeamsMonthly2019 and <= PlanType.EnterpriseAnnually2019 or
                                     >= PlanType.TeamsMonthly2020 and <= PlanType.EnterpriseAnnually) &&
-                                p != PlanType.TeamsStarter
+                                (Model.PlanType == PlanType.TeamsStarter || p is not PlanType.TeamsStarter)
                             )
                             .Select(e => new SelectListItem
                             {
