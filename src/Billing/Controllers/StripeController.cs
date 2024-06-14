@@ -57,6 +57,7 @@ public class StripeController : Controller
     private readonly IStripeFacade _stripeFacade;
     private readonly IFeatureService _featureService;
     private readonly IProviderRepository _providerRepository;
+    private readonly IProviderEventService _providerEventService;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -77,7 +78,8 @@ public class StripeController : Controller
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
         IFeatureService featureService,
-        IProviderRepository providerRepository)
+        IProviderRepository providerRepository,
+        IProviderEventService providerEventService)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -106,6 +108,7 @@ public class StripeController : Controller
         _stripeFacade = stripeFacade;
         _featureService = featureService;
         _providerRepository = providerRepository;
+        _providerEventService = providerEventService;
     }
 
     [HttpPost("webhook")]
@@ -201,6 +204,11 @@ public class StripeController : Controller
             case HandledStripeWebhook.CustomerUpdated:
                 {
                     await HandleCustomerUpdatedEventAsync(parsedEvent);
+                    return Ok();
+                }
+            case HandledStripeWebhook.InvoiceFinalized:
+                {
+                    await HandleInvoiceFinalizedEventAsync(parsedEvent);
                     return Ok();
                 }
             default:
@@ -397,12 +405,18 @@ public class StripeController : Controller
     private async Task HandleInvoiceCreatedEventAsync(Event parsedEvent)
     {
         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-        if (invoice.Paid || !ShouldAttemptToPayInvoice(invoice))
+
+        if (ShouldAttemptToPayInvoice(invoice))
         {
-            return;
+            await AttemptToPayInvoiceAsync(invoice);
         }
 
-        await AttemptToPayInvoiceAsync(invoice);
+        await _providerEventService.TryRecordInvoiceLineItems(parsedEvent);
+    }
+
+    private async Task HandleInvoiceFinalizedEventAsync(Event parsedEvent)
+    {
+        await _providerEventService.TryRecordInvoiceLineItems(parsedEvent);
     }
 
     /// <summary>

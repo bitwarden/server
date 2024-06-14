@@ -26,7 +26,7 @@ namespace Bit.Api.Test.Billing.Controllers;
 [SutProviderCustomize]
 public class ProviderBillingControllerTests
 {
-    #region GetInvoices
+    #region GetInvoicesAsync
 
     [Theory, BitAutoData]
     public async Task GetInvoices_Ok(
@@ -39,6 +39,7 @@ public class ProviderBillingControllerTests
         {
             new ()
             {
+                Id = "3",
                 Created = new DateTime(2024, 7, 1),
                 Status = "draft",
                 Total = 100000,
@@ -47,8 +48,9 @@ public class ProviderBillingControllerTests
             },
             new ()
             {
+                Id = "2",
                 Created = new DateTime(2024, 6, 1),
-                Number = "2",
+                Number = "B",
                 Status = "open",
                 Total = 100000,
                 HostedInvoiceUrl = "https://example.com/invoice/2",
@@ -56,8 +58,9 @@ public class ProviderBillingControllerTests
             },
             new ()
             {
+                Id = "1",
                 Created = new DateTime(2024, 5, 1),
-                Number = "1",
+                Number = "A",
                 Status = "paid",
                 Total = 100000,
                 HostedInvoiceUrl = "https://example.com/invoice/1",
@@ -78,19 +81,49 @@ public class ProviderBillingControllerTests
         var openInvoice = response.Invoices.FirstOrDefault(i => i.Status == "open");
 
         Assert.NotNull(openInvoice);
+        Assert.Equal("2", openInvoice.Id);
         Assert.Equal(new DateTime(2024, 6, 1), openInvoice.Date);
-        Assert.Equal("2", openInvoice.Number);
+        Assert.Equal("B", openInvoice.Number);
         Assert.Equal(1000, openInvoice.Total);
         Assert.Equal("https://example.com/invoice/2", openInvoice.Url);
         Assert.Equal("https://example.com/invoice/2/pdf", openInvoice.PdfUrl);
 
         var paidInvoice = response.Invoices.FirstOrDefault(i => i.Status == "paid");
+
         Assert.NotNull(paidInvoice);
+        Assert.Equal("1", paidInvoice.Id);
         Assert.Equal(new DateTime(2024, 5, 1), paidInvoice.Date);
-        Assert.Equal("1", paidInvoice.Number);
+        Assert.Equal("A", paidInvoice.Number);
         Assert.Equal(1000, paidInvoice.Total);
         Assert.Equal("https://example.com/invoice/1", paidInvoice.Url);
         Assert.Equal("https://example.com/invoice/1/pdf", paidInvoice.PdfUrl);
+    }
+
+    #endregion
+
+    #region GenerateClientInvoiceReportAsync
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReportAsync_Ok(
+        Provider provider,
+        string invoiceId,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableInputs(provider, sutProvider);
+
+        var reportContent = "Report"u8.ToArray();
+
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+            .Returns(reportContent);
+
+        var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);
+
+        Assert.IsType<FileContentHttpResult>(result);
+
+        var response = (FileContentHttpResult)result;
+
+        Assert.Equal("text/csv", response.ContentType);
+        Assert.Equal(reportContent, response.FileContents);
     }
 
     #endregion
