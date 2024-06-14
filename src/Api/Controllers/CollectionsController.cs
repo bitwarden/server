@@ -4,7 +4,6 @@ using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -26,8 +25,6 @@ public class CollectionsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -36,20 +33,15 @@ public class CollectionsController : Controller
         IUserService userService,
         IAuthorizationService authorizationService,
         ICurrentContext currentContext,
-        IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand,
-        IOrganizationUserRepository organizationUserRepository,
-        IApplicationCacheService applicationCacheService)
+        IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
     {
         _collectionRepository = collectionRepository;
-        _organizationUserRepository = organizationUserRepository;
         _collectionService = collectionService;
         _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
         _authorizationService = authorizationService;
         _currentContext = currentContext;
         _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
-        _organizationUserRepository = organizationUserRepository;
-        _applicationCacheService = applicationCacheService;
     }
 
     [HttpGet("{id}")]
@@ -216,13 +208,6 @@ public class CollectionsController : Controller
     [HttpPost("bulk-access")]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
-        // Authorization logic assumes flexible collections is enabled
-        // Remove after all organizations have been migrated
-        if (!await FlexibleCollectionsIsEnabledAsync(orgId))
-        {
-            throw new NotFoundException("Feature disabled.");
-        }
-
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
         if (collections.Count(c => c.OrganizationId == orgId) != model.CollectionIds.Count())
         {
@@ -261,8 +246,6 @@ public class CollectionsController : Controller
     [HttpPost("delete")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
-        if (await FlexibleCollectionsIsEnabledAsync(orgId))
-        {
             // New flexible collections logic
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
             var result = await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Delete);
@@ -272,25 +255,6 @@ public class CollectionsController : Controller
             }
 
             await _deleteCollectionCommand.DeleteManyAsync(collections);
-            return;
-        }
-
-        // Old pre-flexible collections logic follows
-        if (!await _currentContext.DeleteAssignedCollections(orgId) && !await DeleteAnyCollection(orgId))
-        {
-            throw new NotFoundException();
-        }
-
-        var userCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
-        var filteredCollections = userCollections
-            .Where(c => model.Ids.Contains(c.Id) && c.OrganizationId == orgId);
-
-        if (!filteredCollections.Any())
-        {
-            throw new BadRequestException("No collections found.");
-        }
-
-        await _deleteCollectionCommand.DeleteManyAsync(filteredCollections);
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]
@@ -421,11 +385,5 @@ public class CollectionsController : Controller
     private async Task<bool> ViewAtLeastOneCollectionAsync(Guid orgId)
     {
         return await _currentContext.ViewAllCollections(orgId) || await _currentContext.ViewAssignedCollections(orgId);
-    }
-
-    private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
-    {
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        return organizationAbility?.FlexibleCollections ?? false;
     }
 }
