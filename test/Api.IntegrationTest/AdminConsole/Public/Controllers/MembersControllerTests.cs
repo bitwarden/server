@@ -6,6 +6,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;

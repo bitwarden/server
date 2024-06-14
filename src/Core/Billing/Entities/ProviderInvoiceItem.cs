@@ -14,7 +14,7 @@ public class ProviderInvoiceItem : ITableObject<Guid>
     public int AssignedSeats { get; set; }
     public int UsedSeats { get; set; }
     public decimal Total { get; set; }
-    public DateTime Created { get; set; }
+    public DateTime Created { get; set; } = DateTime.UtcNow;
 
     public void SetNewId()
     {

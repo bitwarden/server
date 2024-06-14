@@ -73,6 +73,10 @@
     <EmbeddedResource Include="Resources\IPN\unsupported-transaction-type.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
+    <None Remove="Resources\Events\invoice.finalized.json" />
+    <EmbeddedResource Include="Resources\Events\invoice.finalized.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
