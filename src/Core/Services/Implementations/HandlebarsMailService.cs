@@ -386,7 +386,7 @@ public class HandlebarsMailService : IMailService
         {
             OrgName = CoreHelpers.SanitizeForEmail(organizationName, false),
             UserNameRequestingAccess = CoreHelpers.SanitizeForEmail(requestingUserName, false),
-            EmailContent = CoreHelpers.SanitizeForEmail(emailContent),
+            EmailContent = CoreHelpers.SanitizeForEmail(emailContent, false),
         };
         await AddMessageContentAsync(message, "SecretsManagerAccessRequest", model);
         message.Category = "SecretsManagerAccessRequest";

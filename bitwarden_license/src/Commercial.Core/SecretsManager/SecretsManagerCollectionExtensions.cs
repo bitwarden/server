@@ -4,7 +4,7 @@ using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
 using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
 using Bit.Commercial.Core.SecretsManager.Commands.AccessTokens;
-using Bit.Commercial.Core.SecretsManager.Commands.PasswordManager;
+using Bit.Commercial.Core.SecretsManager.Commands.Requests;
 using Bit.Commercial.Core.SecretsManager.Commands.Porting;
 using Bit.Commercial.Core.SecretsManager.Commands.Projects;
 using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
@@ -29,6 +29,7 @@ using Bit.Core.SecretsManager.Queries.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Bit.Core.SecretsManager.Commands.Requests.Interfaces;
 
 namespace Bit.Commercial.Core.SecretsManager;
 

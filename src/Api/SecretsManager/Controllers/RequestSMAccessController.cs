@@ -1,23 +1,30 @@
 ﻿using Bit.Api.SecretsManager.Models.Request;
-using Bit.Commercial.Core.SecretsManager.Commands.PasswordManager;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Commands.Requests.Interfaces;
 using Bit.Core.Services;
+using Bit.Infrastructure.Dapper.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
-[Authorize("secrets")]
 [Route("request-access")]
+[Authorize("Web")]
 public class RequestSMAccessController : Controller
 {
     private readonly IRequestSMAccessCommand _requestSMAccessCommand;
     private readonly IUserService _userService;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public RequestSMAccessController(
-        IRequestSMAccessCommand requestSMAccessCommand, IUserService userService)
+        IRequestSMAccessCommand requestSMAccessCommand, IUserService userService, IOrganizationRepository organizationRepository, IOrganizationUserRepository organizationUserRepository)
     {
         _requestSMAccessCommand = requestSMAccessCommand;
         _userService = userService;
+        _organizationRepository = organizationRepository;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     [HttpPost("request-sm-access")]
@@ -29,6 +36,13 @@ public class RequestSMAccessController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        await _requestSMAccessCommand.SendRequestAccessToSM(Guid.Parse(model.OrganizationId), user, model.EmailContent);
+        var organization = await _organizationRepository.GetByIdAsync(model.OrganizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
+        await _requestSMAccessCommand.SendRequestAccessToSM(organization, orgUsers, user, model.EmailContent);
     }
 }
