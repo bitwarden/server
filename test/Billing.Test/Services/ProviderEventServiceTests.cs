@@ -4,6 +4,7 @@ using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
