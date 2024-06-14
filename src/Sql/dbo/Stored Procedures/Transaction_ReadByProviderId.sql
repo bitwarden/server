@@ -1,13 +1,16 @@
 CREATE PROCEDURE [dbo].[Transaction_ReadByProviderId]
-    @ProviderId UNIQUEIDENTIFIER
+    @ProviderId UNIQUEIDENTIFIER,
+    @Limit INT
 AS
 BEGIN
     SET NOCOUNT ON
 
     SELECT
-        *
+        TOP (@Limit) *
     FROM
         [dbo].[TransactionView]
     WHERE
         [ProviderId] = @ProviderId
+    ORDER BY
+        [CreationDate] DESC
 END
