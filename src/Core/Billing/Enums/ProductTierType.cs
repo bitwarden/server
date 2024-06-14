@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Enums;
+namespace Bit.Core.Billing.Enums;
 
-public enum ProductType : byte
+public enum ProductTierType : byte
 {
     [Display(Name = "Free")]
     Free = 0,
@@ -15,4 +15,3 @@ public enum ProductType : byte
     [Display(Name = "Teams Starter")]
     TeamsStarter = 4,
 }
-

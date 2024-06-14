@@ -5,6 +5,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;

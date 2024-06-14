@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
