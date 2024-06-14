@@ -1016,45 +1016,38 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         var currentOrganizationUser = orgAdminUser;
 
-        switch (permissionType)
+        if (permissionType == PermissionType.RunAsUserWithPermission)
         {
-            case PermissionType.RunAsUserWithPermission:
-                {
-                    var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-                    await _loginHelper.LoginAsync(email);
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await _loginHelper.LoginAsync(email);
 
-                    var accessPolicies = new List<BaseAccessPolicy>
+            var accessPolicies = new List<BaseAccessPolicy>
+            {
+                new UserProjectAccessPolicy
                 {
-                    new UserProjectAccessPolicy
-                    {
-                        GrantedProjectId = project.Id,
-                        OrganizationUserId = orgUser.Id,
-                        Read = true,
-                        Write = true
-                    }
-                };
-                    currentOrganizationUser = orgUser;
-                    await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-                    break;
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true
                 }
-            case PermissionType.RunAsServiceAccountWithPermission:
-                {
-                    var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
-                    await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+            };
+            currentOrganizationUser = orgUser;
+            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+        }
 
-                    var accessPolicies = new List<BaseAccessPolicy>
+        if (permissionType == PermissionType.RunAsServiceAccountWithPermission)
+        {
+            var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+            await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+
+            var accessPolicies = new List<BaseAccessPolicy>
+            {
+                new ServiceAccountProjectAccessPolicy
                 {
-                    new ServiceAccountProjectAccessPolicy
-                    {
-                        GrantedProjectId = project.Id,
-                        ServiceAccountId = apiKeyDetails.ApiKey.ServiceAccountId,
-                        Read = true,
-                        Write = true
-                    }
-                };
-                    await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-                    break;
+                    GrantedProjectId = project.Id,
+                    ServiceAccountId = apiKeyDetails.ApiKey.ServiceAccountId,
+                    Read = true,
+                    Write = true
                 }
+            };
+            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
 
         var secretRequest = new SecretCreateRequestModel
