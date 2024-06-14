@@ -1,6 +1,6 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Queries.Projects;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;

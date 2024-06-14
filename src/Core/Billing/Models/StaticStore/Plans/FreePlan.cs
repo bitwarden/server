@@ -1,13 +1,14 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record FreePlan : Models.StaticStore.Plan
+public record FreePlan : Plan
 {
     public FreePlan()
     {
         Type = PlanType.Free;
-        Product = ProductType.Free;
+        ProductTier = ProductTierType.Free;
         Name = "Free";
         NameLocalizationKey = "planNameFree";
         DescriptionLocalizationKey = "planDescFree";

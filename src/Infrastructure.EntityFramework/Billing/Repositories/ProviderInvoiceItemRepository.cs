@@ -16,7 +16,7 @@ public class ProviderInvoiceItemRepository(
         mapper,
         context => context.ProviderInvoiceItems), IProviderInvoiceItemRepository
 {
-    public async Task<ProviderInvoiceItem> GetByInvoiceId(string invoiceId)
+    public async Task<ICollection<ProviderInvoiceItem>> GetByInvoiceId(string invoiceId)
     {
         using var serviceScope = ServiceScopeFactory.CreateScope();
 
@@ -27,7 +27,7 @@ public class ProviderInvoiceItemRepository(
             where providerInvoiceItem.InvoiceId == invoiceId
             select providerInvoiceItem;
 
-        return await query.FirstOrDefaultAsync();
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<ProviderInvoiceItem>> GetByProviderId(Guid providerId)

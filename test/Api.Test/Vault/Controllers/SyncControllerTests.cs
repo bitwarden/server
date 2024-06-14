@@ -306,8 +306,8 @@ public class SyncControllerTests
 
             if (matchedProviderUserOrgDetails != null)
             {
-                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).Product;
-                Assert.Equal(providerOrgProductType, profProviderOrg.PlanProductType);
+                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).ProductTier;
+                Assert.Equal(providerOrgProductType, profProviderOrg.ProductTierType);
             }
         }
     }

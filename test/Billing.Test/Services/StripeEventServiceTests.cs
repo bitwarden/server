@@ -13,7 +13,7 @@ namespace Bit.Billing.Test.Services;
 public class StripeEventServiceTests
 {
     private readonly IStripeFacade _stripeFacade;
-    private readonly IStripeEventService _stripeEventService;
+    private readonly StripeEventService _stripeEventService;
 
     public StripeEventServiceTests()
     {
