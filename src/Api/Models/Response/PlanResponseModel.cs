@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.StaticStore;
 
