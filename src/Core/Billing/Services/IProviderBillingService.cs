@@ -43,6 +43,9 @@ public interface IProviderBillingService
         Provider provider,
         Organization organization);
 
+    Task<byte[]> GenerateClientInvoiceReport(
+        string invoiceId);
+
     /// <summary>
     /// Retrieves the number of seats an MSP has assigned to its client organizations with a specified <paramref name="planType"/>.
     /// </summary>

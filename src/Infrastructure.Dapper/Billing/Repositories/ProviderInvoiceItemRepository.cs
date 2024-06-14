@@ -14,7 +14,7 @@ public class ProviderInvoiceItemRepository(
         globalSettings.SqlServer.ConnectionString,
         globalSettings.SqlServer.ReadOnlyConnectionString), IProviderInvoiceItemRepository
 {
-    public async Task<ProviderInvoiceItem> GetByInvoiceId(string invoiceId)
+    public async Task<ICollection<ProviderInvoiceItem>> GetByInvoiceId(string invoiceId)
     {
         var sqlConnection = new SqlConnection(ConnectionString);
 
@@ -23,7 +23,7 @@ public class ProviderInvoiceItemRepository(
             new { InvoiceId = invoiceId },
             commandType: CommandType.StoredProcedure);
 
-        return results.FirstOrDefault();
+        return results.ToArray();
     }
 
     public async Task<ICollection<ProviderInvoiceItem>> GetByProviderId(Guid providerId)
