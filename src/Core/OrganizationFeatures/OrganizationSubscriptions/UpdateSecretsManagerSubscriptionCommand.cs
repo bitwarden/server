@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -165,7 +166,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no access to Secrets Manager.");
         }
 
-        if (update.Plan.Product == ProductType.Free)
+        if (update.Plan.ProductTier == ProductTierType.Free)
         {
             // No need to check the organization is set up with Stripe
             return;

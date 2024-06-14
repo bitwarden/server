@@ -1,13 +1,14 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record Families2019Plan : Models.StaticStore.Plan
+public record Families2019Plan : Plan
 {
     public Families2019Plan()
     {
         Type = PlanType.FamiliesAnnually2019;
-        Product = ProductType.Families;
+        ProductTier = ProductTierType.Families;
         Name = "Families 2019";
         IsAnnual = true;
         NameLocalizationKey = "planNameFamilies";

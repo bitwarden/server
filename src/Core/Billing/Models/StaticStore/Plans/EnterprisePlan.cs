@@ -1,14 +1,15 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record Enterprise2020Plan : Models.StaticStore.Plan
+public record EnterprisePlan : Plan
 {
-    public Enterprise2020Plan(bool isAnnual)
+    public EnterprisePlan(bool isAnnual)
     {
-        Type = isAnnual ? PlanType.EnterpriseAnnually2020 : PlanType.EnterpriseMonthly2020;
-        Product = ProductType.Enterprise;
-        Name = isAnnual ? "Enterprise (Annually) 2020" : "Enterprise (Monthly) 2020";
+        Type = isAnnual ? PlanType.EnterpriseAnnually : PlanType.EnterpriseMonthly;
+        ProductTier = ProductTierType.Enterprise;
+        Name = isAnnual ? "Enterprise (Annually)" : "Enterprise (Monthly)";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameEnterprise";
         DescriptionLocalizationKey = "planDescEnterprise";
@@ -33,19 +34,18 @@ public record Enterprise2020Plan : Models.StaticStore.Plan
 
         UpgradeSortOrder = 4;
         DisplaySortOrder = 4;
-        LegacyYear = 2023;
 
-        PasswordManager = new Enterprise2020PasswordManagerFeatures(isAnnual);
-        SecretsManager = new Enterprise2020SecretsManagerFeatures(isAnnual);
+        PasswordManager = new EnterprisePasswordManagerFeatures(isAnnual);
+        SecretsManager = new EnterpriseSecretsManagerFeatures(isAnnual);
     }
 
-    private record Enterprise2020SecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record EnterpriseSecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public Enterprise2020SecretsManagerFeatures(bool isAnnual)
+        public EnterpriseSecretsManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 200;
+            BaseServiceAccount = 50;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -56,23 +56,23 @@ public record Enterprise2020Plan : Models.StaticStore.Plan
             if (isAnnual)
             {
                 StripeSeatPlanId = "secrets-manager-enterprise-seat-annually";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-annually";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-annually";
                 SeatPrice = 144;
-                AdditionalPricePerServiceAccount = 6;
+                AdditionalPricePerServiceAccount = 12;
             }
             else
             {
                 StripeSeatPlanId = "secrets-manager-enterprise-seat-monthly";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
                 SeatPrice = 13;
-                AdditionalPricePerServiceAccount = 0.5M;
+                AdditionalPricePerServiceAccount = 1;
             }
         }
     }
 
-    private record Enterprise2020PasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record EnterprisePasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public Enterprise2020PasswordManagerFeatures(bool isAnnual)
+        public EnterprisePasswordManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BaseStorageGb = 1;
@@ -86,14 +86,14 @@ public record Enterprise2020Plan : Models.StaticStore.Plan
             {
                 AdditionalStoragePricePerGb = 4;
                 StripeStoragePlanId = "storage-gb-annually";
-                StripeSeatPlanId = "2020-enterprise-org-seat-annually";
-                SeatPrice = 60;
+                StripeSeatPlanId = "2023-enterprise-org-seat-annually";
+                SeatPrice = 72;
             }
             else
             {
-                StripeSeatPlanId = "2020-enterprise-seat-monthly";
+                StripeSeatPlanId = "2023-enterprise-seat-monthly";
                 StripeStoragePlanId = "storage-gb-monthly";
-                SeatPrice = 6;
+                SeatPrice = 7;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }
