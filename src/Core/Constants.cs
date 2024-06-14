@@ -132,6 +132,8 @@ public static class FeatureFlagKeys
     public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string BlockLegacyUsers = "block-legacy-users";
 
+    public const string DeviceTrustLogging = "device-trust-logging";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
