@@ -2,15 +2,15 @@
 using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using Bit.Core.Repositories;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Exceptions;
 
 namespace Bit.Api.Test.SecretsManager.Controllers;
 
@@ -21,7 +21,7 @@ public class RequestSMAccessControllerTests
     [Theory]
     [BitAutoData]
     public async Task RequestSMAccessFromAdminst_WhenSendingNoModel_ShouldThrowNotFoundException(
-    User user, Organization org, SutProvider<RequestSMAccessController> sutProvider)
+    User user, SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
@@ -50,7 +50,7 @@ public class RequestSMAccessControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenUserInvalid_ShouldThrowBadRequestException(RequestSMAccessRequestModel model, Organization organization, SutProvider<RequestSMAccessController> sutProvider)
+    public async Task RequestSMAccessFromAdminst_WhenUserInvalid_ShouldThrowBadRequestException(RequestSMAccessRequestModel model, SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(Task.FromResult((User)null));

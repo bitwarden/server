@@ -3,7 +3,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Requests.Interfaces;
 using Bit.Core.Services;
-using Bit.Infrastructure.Dapper.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
