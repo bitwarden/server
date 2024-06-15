@@ -42,6 +42,28 @@ public class ProviderBillingController(
         return TypedResults.Ok(response);
     }
 
+    [HttpGet("invoices/{invoiceId}")]
+    public async Task<IResult> GenerateClientInvoiceReportAsync([FromRoute] Guid providerId, string invoiceId)
+    {
+        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var reportContent = await providerBillingService.GenerateClientInvoiceReport(invoiceId);
+
+        if (reportContent == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        return TypedResults.File(
+            reportContent,
+            "text/csv");
+    }
+
     [HttpGet("payment-information")]
     public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
     {

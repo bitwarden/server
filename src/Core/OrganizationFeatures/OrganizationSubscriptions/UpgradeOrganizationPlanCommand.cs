@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -279,7 +280,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (success)
         {
-            var upgradePath = GetUpgradePath(existingPlan.Product, newPlan.Product);
+            var upgradePath = GetUpgradePath(existingPlan.ProductTier, newPlan.ProductTier);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
                 {
@@ -342,25 +343,25 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
+    private static string GetUpgradePath(ProductTierType oldProductTierType, ProductTierType newProductTierType)
     {
-        var oldDescription = _upgradePath.TryGetValue(oldProductType, out var description)
+        var oldDescription = _upgradePath.TryGetValue(oldProductTierType, out var description)
             ? description
-            : $"{oldProductType:G}";
+            : $"{oldProductTierType:G}";
 
-        var newDescription = _upgradePath.TryGetValue(newProductType, out description)
+        var newDescription = _upgradePath.TryGetValue(newProductTierType, out description)
             ? description
-            : $"{newProductType:G}";
+            : $"{newProductTierType:G}";
 
         return $"{oldDescription} → {newDescription}";
     }
 
-    private static readonly Dictionary<ProductType, string> _upgradePath = new()
+    private static readonly Dictionary<ProductTierType, string> _upgradePath = new()
     {
-        [ProductType.Free] = "2-person org",
-        [ProductType.Families] = "Families",
-        [ProductType.TeamsStarter] = "Teams Starter",
-        [ProductType.Teams] = "Teams",
-        [ProductType.Enterprise] = "Enterprise"
+        [ProductTierType.Free] = "2-person org",
+        [ProductTierType.Families] = "Families",
+        [ProductTierType.TeamsStarter] = "Teams Starter",
+        [ProductTierType.Teams] = "Teams",
+        [ProductTierType.Enterprise] = "Enterprise"
     };
 }
