@@ -3,6 +3,7 @@ using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -22,8 +23,8 @@ public class OrganizationEditModel : OrganizationViewModel
     {
         Provider = provider;
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
-        PlanType = Core.Enums.PlanType.TeamsMonthly;
-        Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+        PlanType = Core.Billing.Enums.PlanType.TeamsMonthly;
+        Plan = Core.Billing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
         LicenseKey = RandomLicenseKey;
     }
 
