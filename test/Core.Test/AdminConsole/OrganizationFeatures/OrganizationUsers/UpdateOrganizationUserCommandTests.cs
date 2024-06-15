@@ -46,6 +46,19 @@ public class UpdateOrganizationUserCommandTests
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
+        // Deprecated with Flexible Collections
+        oldUserData.AccessAll = false;
+        newUserData.AccessAll = false;
+
+        // Arrange list of collections to make sure Manage is mutually exclusive
+        for (var i = 0; i < collections.Count; i++)
+        {
+            var cas = collections[i];
+            cas.Manage = i != collections.Count - 1;
+            cas.HidePasswords = i == collections.Count - 1;
+            cas.ReadOnly = i == collections.Count - 1;
+        }
+
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
