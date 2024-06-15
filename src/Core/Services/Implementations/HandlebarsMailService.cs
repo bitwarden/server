@@ -59,6 +59,7 @@ public class HandlebarsMailService : IMailService
         var model = new RegisterVerifyEmail
         {
             Token = WebUtility.UrlEncode(token),
+            Email = email,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
