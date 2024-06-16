@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
-using Bit.Core.Enums;
+using Bit.Core.Billing.Enums;
 
 namespace Bit.Api.Billing.Models.Requests;
 

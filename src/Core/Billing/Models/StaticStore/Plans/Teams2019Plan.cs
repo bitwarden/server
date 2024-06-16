@@ -1,14 +1,15 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record Teams2023Plan : Plan
+public record Teams2019Plan : Plan
 {
-    public Teams2023Plan(bool isAnnual)
+    public Teams2019Plan(bool isAnnual)
     {
-        Type = isAnnual ? PlanType.TeamsAnnually2023 : PlanType.TeamsMonthly2023;
-        Product = ProductType.Teams;
-        Name = isAnnual ? "Teams (Annually)" : "Teams (Monthly)";
+        Type = isAnnual ? PlanType.TeamsAnnually2019 : PlanType.TeamsMonthly2019;
+        ProductTier = ProductTierType.Teams;
+        Name = isAnnual ? "Teams (Annually) 2019" : "Teams (Monthly) 2019";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameTeams";
         DescriptionLocalizationKey = "planDescTeams";
@@ -26,16 +27,15 @@ public record Teams2023Plan : Plan
 
         UpgradeSortOrder = 3;
         DisplaySortOrder = 3;
+        LegacyYear = 2020;
 
-        LegacyYear = 2024;
-
-        PasswordManager = new Teams2023PasswordManagerFeatures(isAnnual);
-        SecretsManager = new Teams2023SecretsManagerFeatures(isAnnual);
+        SecretsManager = new Teams2019SecretsManagerFeatures(isAnnual);
+        PasswordManager = new Teams2019PasswordManagerFeatures(isAnnual);
     }
 
-    private record Teams2023SecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record Teams2019SecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public Teams2023SecretsManagerFeatures(bool isAnnual)
+        public Teams2019SecretsManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BasePrice = 0;
@@ -64,13 +64,12 @@ public record Teams2023Plan : Plan
         }
     }
 
-    private record Teams2023PasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record Teams2019PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public Teams2023PasswordManagerFeatures(bool isAnnual)
+        public Teams2019PasswordManagerFeatures(bool isAnnual)
         {
-            BaseSeats = 0;
+            BaseSeats = 5;
             BaseStorageGb = 1;
-            BasePrice = 0;
 
             HasAdditionalStorageOption = true;
             HasAdditionalSeatsOption = true;
@@ -79,16 +78,20 @@ public record Teams2023Plan : Plan
 
             if (isAnnual)
             {
+                StripePlanId = "teams-org-annually";
                 StripeStoragePlanId = "storage-gb-annually";
-                StripeSeatPlanId = "2023-teams-org-seat-annually";
-                SeatPrice = 48;
+                StripeSeatPlanId = "teams-org-seat-annually";
+                SeatPrice = 24;
+                BasePrice = 60;
                 AdditionalStoragePricePerGb = 4;
             }
             else
             {
-                StripeSeatPlanId = "2023-teams-org-seat-monthly";
+                StripePlanId = "teams-org-monthly";
+                StripeSeatPlanId = "teams-org-seat-monthly";
                 StripeStoragePlanId = "storage-gb-monthly";
-                SeatPrice = 5;
+                BasePrice = 8;
+                SeatPrice = 2.5M;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }
