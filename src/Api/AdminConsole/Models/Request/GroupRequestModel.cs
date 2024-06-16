@@ -9,7 +9,6 @@ public class GroupRequestModel
     [Required]
     [StringLength(100)]
     public string Name { get; set; }
-    [Required]
     public bool? AccessAll { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
     public IEnumerable<Guid> Users { get; set; }
@@ -25,7 +24,7 @@ public class GroupRequestModel
     public Group ToGroup(Group existingGroup)
     {
         existingGroup.Name = Name;
-        existingGroup.AccessAll = AccessAll.Value;
+        existingGroup.AccessAll = AccessAll ?? false;
         return existingGroup;
     }
 }
