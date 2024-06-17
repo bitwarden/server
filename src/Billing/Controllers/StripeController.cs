@@ -708,6 +708,7 @@ public class StripeController : Controller
                         new SubscriptionGetOptions { Expand = ["latest_invoice"] });
 
                     invoice = subscription.LatestInvoice;
+                    invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
                 }
             }
 
