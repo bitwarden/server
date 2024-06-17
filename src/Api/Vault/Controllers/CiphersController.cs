@@ -41,7 +41,6 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -1249,7 +1248,7 @@ public class CiphersController : Controller
 
     private void ValidateClientVersionForItemLevelEncryptionSupport(Cipher cipher)
     {
-        if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
+        if (cipher.Key != null)
         {
             throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
         }
