@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Services;
@@ -42,6 +42,9 @@ public interface IProviderBillingService
     Task CreateCustomerForClientOrganization(
         Provider provider,
         Organization organization);
+
+    Task<byte[]> GenerateClientInvoiceReport(
+        string invoiceId);
 
     /// <summary>
     /// Retrieves the number of seats an MSP has assigned to its client organizations with a specified <paramref name="planType"/>.

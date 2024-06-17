@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
-using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -11,11 +11,16 @@ public class UserEditModel : UserViewModel
 {
     public UserEditModel() { }
 
-    public UserEditModel(User user, IEnumerable<Cipher> ciphers, BillingInfo billingInfo,
+    public UserEditModel(
+        User user,
+        IEnumerable<Cipher> ciphers,
+        BillingInfo billingInfo,
+        BillingHistoryInfo billingHistoryInfo,
         GlobalSettings globalSettings)
         : base(user, ciphers)
     {
         BillingInfo = billingInfo;
+        BillingHistoryInfo = billingHistoryInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
         Name = user.Name;
@@ -31,6 +36,7 @@ public class UserEditModel : UserViewModel
     }
 
     public BillingInfo BillingInfo { get; set; }
+    public BillingHistoryInfo BillingHistoryInfo { get; set; }
     public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
     public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
     public string BraintreeMerchantId { get; set; }
