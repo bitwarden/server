@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -336,6 +337,10 @@ public class OrganizationLicense : ILicense
             {
                 valid = organization.UseCustomPermissions == UseCustomPermissions;
             }
+
+            /*Version 12 added ExpirationWithoutDatePeriod, but that property is informational only and is not saved
+            to the Organization object. It's validated as part of the hash but does not need to be validated here.
+            */
 
             if (valid && Version >= 13)
             {

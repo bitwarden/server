@@ -81,6 +81,7 @@ public class Startup
 
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
+        services.AddScoped<IProviderEventService, ProviderEventService>();
     }
 
     public void Configure(
