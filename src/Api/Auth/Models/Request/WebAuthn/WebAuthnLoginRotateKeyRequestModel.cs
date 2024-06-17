@@ -1,16 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Utilities;
-using Fido2NetLib;
 
 namespace Bit.Api.Auth.Models.Request.WebAuthn;
 
-public class WebAuthnLoginCredentialUpdateRequestModel
+public class WebAuthnLoginRotateKeyRequestModel
 {
     [Required]
-    public AuthenticatorAssertionRawResponse DeviceResponse { get; set; }
-
-    [Required]
-    public string Token { get; set; }
+    public Guid Id { get; set; }
 
     [Required]
     [EncryptedString]
@@ -22,8 +19,14 @@ public class WebAuthnLoginCredentialUpdateRequestModel
     [EncryptedStringLength(2000)]
     public string EncryptedPublicKey { get; set; }
 
-    [Required]
-    [EncryptedString]
-    [EncryptedStringLength(2000)]
-    public string EncryptedPrivateKey { get; set; }
+    public WebAuthnLoginRotateKeyData ToWebAuthnRotateKeyData()
+    {
+        return new WebAuthnLoginRotateKeyData
+        {
+            Id = Id,
+            EncryptedUserKey = EncryptedUserKey,
+            EncryptedPublicKey = EncryptedPublicKey
+        };
+    }
+
 }
