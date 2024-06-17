@@ -1,8 +1,9 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record CustomPlan : Models.StaticStore.Plan
+public record CustomPlan : Plan
 {
     public CustomPlan()
     {

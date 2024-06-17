@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Stripe;
 
 namespace Bit.Core.Models.Business;

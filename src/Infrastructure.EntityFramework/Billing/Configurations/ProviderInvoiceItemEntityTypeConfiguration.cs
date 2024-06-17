@@ -12,10 +12,6 @@ public class ProviderInvoiceItemEntityTypeConfiguration : IEntityTypeConfigurati
             .Property(t => t.Id)
             .ValueGeneratedNever();
 
-        builder
-            .HasIndex(providerInvoiceItem => new { providerInvoiceItem.Id, providerInvoiceItem.InvoiceId })
-            .IsUnique();
-
         builder.ToTable(nameof(ProviderInvoiceItem));
     }
 }
