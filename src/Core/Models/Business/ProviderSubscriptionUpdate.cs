@@ -1,5 +1,5 @@
-﻿using Bit.Core.Billing.Extensions;
-using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Stripe;
 
 using static Bit.Core.Billing.Utilities;
