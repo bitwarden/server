@@ -1,7 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;

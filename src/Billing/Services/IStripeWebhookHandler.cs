@@ -60,3 +60,8 @@ public interface IPaymentMethodAttachedHandler : IStripeWebhookHandler;
 /// Defines the contract for handling Stripe customer updated events.
 /// </summary>
 public interface ICustomerUpdatedHandler : IStripeWebhookHandler;
+
+/// <summary>
+/// Defines the contract for handling Stripe Invoice Finalized events.
+/// </summary>
+public interface IInvoiceFinalizedHandler : IStripeWebhookHandler;

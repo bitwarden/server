@@ -162,6 +162,17 @@ public abstract class BaseRequestValidator<T> where T : class
             twoFactorToken = null;
         }
 
+
+        // Force legacy users to the web for migration
+        if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
+        {
+            if (UserService.IsLegacyUser(user) && request.ClientId != "web")
+            {
+                await FailAuthForLegacyUserAsync(user, context);
+                return;
+            }
+        }
+
         // Returns true if can finish validation process
         if (await IsValidAuthTypeAsync(user, request.GrantType))
         {
@@ -182,6 +193,13 @@ public abstract class BaseRequestValidator<T> where T : class
                     { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
                 });
         }
+    }
+
+    protected async Task FailAuthForLegacyUserAsync(User user, T context)
+    {
+        await BuildErrorResultAsync(
+            $"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}",
+            false, context, user);
     }
 
     protected abstract Task<bool> ValidateContextAsync(T context, CustomValidatorRequestContext validatorContext);
@@ -465,7 +483,7 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Email:
             case TwoFactorProviderType.YubiKey:
-                if (!(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
+                if (!await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return null;
                 }
@@ -477,15 +495,9 @@ public abstract class BaseRequestValidator<T> where T : class
                     var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = token
+                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
                     };
 
-                    // DUO SDK v4 Update: Duo-Redirect
-                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                    {
-                        // Generate AuthUrl from DUO SDK v4 token provider
-                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
-                    }
                     return duoResponse;
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)
@@ -513,14 +525,9 @@ public abstract class BaseRequestValidator<T> where T : class
                     var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
+                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
                     };
-                    // DUO SDK v4 Update: DUO-Redirect
-                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                    {
-                        // Generate AuthUrl from DUO SDK v4 token provider
-                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
-                    }
+
                     return duoResponse;
                 }
                 return null;

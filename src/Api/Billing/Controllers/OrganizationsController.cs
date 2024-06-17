@@ -45,7 +45,7 @@ public class OrganizationsController(
     ISubscriberService subscriberService)
     : Controller
 {
-    [HttpGet("{id}/billing-status")]
+    [HttpGet("{id:guid}/billing-status")]
     public async Task<OrganizationBillingStatusResponseModel> GetBillingStatus(Guid id)
     {
         if (!await currentContext.EditPaymentMethods(id))
@@ -304,7 +304,7 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        var taxInfo = await subscriberService.GetTaxInformationAsync(organization);
+        var taxInfo = await paymentService.GetTaxInfoAsync(organization);
         return new TaxInfoResponseModel(taxInfo);
     }
 

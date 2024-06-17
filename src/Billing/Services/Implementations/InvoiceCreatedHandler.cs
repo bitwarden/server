@@ -6,13 +6,16 @@ public class InvoiceCreatedHandler : IInvoiceCreatedHandler
 {
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
+    private readonly IProviderEventService _providerEventService;
 
     public InvoiceCreatedHandler(
         IStripeEventService stripeEventService,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService,
+        IProviderEventService providerEventService)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
+        _providerEventService = providerEventService;
     }
 
     /// <summary>
@@ -22,11 +25,11 @@ public class InvoiceCreatedHandler : IInvoiceCreatedHandler
     public async Task HandleAsync(Event parsedEvent)
     {
         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-        if (invoice.Paid || !_stripeEventUtilityService.ShouldAttemptToPayInvoice(invoice))
+        if (_stripeEventUtilityService.ShouldAttemptToPayInvoice(invoice))
         {
-            return;
+            await _stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
         }
 
-        await _stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
+        await _providerEventService.TryRecordInvoiceLineItems(parsedEvent);
     }
 }

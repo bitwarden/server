@@ -77,6 +77,9 @@ public class StripeEventProcessor : IStripeEventProcessor
             case HandledStripeWebhook.CustomerUpdated:
                 await _customerUpdatedHandler.HandleAsync(parsedEvent);
                 break;
+            case HandledStripeWebhook.InvoiceFinalized:
+                await _customerUpdatedHandler.HandleAsync(parsedEvent);
+                break;
             default:
                 _logger.LogWarning("Unsupported event received. {EventType}", parsedEvent.Type);
                 break;

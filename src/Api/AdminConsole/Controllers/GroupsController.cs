@@ -92,19 +92,9 @@ public class GroupsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
-        if (await FlexibleCollectionsIsEnabledAsync(orgId))
-        {
-            // New flexible collections logic
-            return await Get_vNext(orgId);
-        }
-
-        // Old pre-flexible collections logic follows
-        var canAccess = await _currentContext.ManageGroups(orgId) ||
-                        await _currentContext.ViewAssignedCollections(orgId) ||
-                        await _currentContext.ViewAllCollections(orgId) ||
-                        await _currentContext.ManageUsers(orgId);
-
-        if (!canAccess)
+        var authorized =
+            (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
+        if (!authorized)
         {
             throw new NotFoundException();
         }
@@ -137,9 +127,7 @@ public class GroupsController : Controller
         }
 
         // Flexible Collections - check the user has permission to grant access to the collections for the new group
-        if (await FlexibleCollectionsIsEnabledAsync(orgId) &&
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) &&
-            model.Collections?.Any() == true)
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) && model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
@@ -162,7 +150,7 @@ public class GroupsController : Controller
     [HttpPost("{id}")]
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
-        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
         {
             // Use new Flexible Collections v1 logic
             return await Put_vNext(orgId, id, model);
@@ -283,25 +271,5 @@ public class GroupsController : Controller
         }
 
         await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
-    }
-
-    private async Task<ListResponseModel<GroupDetailsResponseModel>> Get_vNext(Guid orgId)
-    {
-        var authorized =
-            (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
-        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
-        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
-        return new ListResponseModel<GroupDetailsResponseModel>(responses);
-    }
-
-    private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
-    {
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        return organizationAbility?.FlexibleCollections ?? false;
     }
 }

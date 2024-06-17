@@ -6,6 +6,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -135,7 +136,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             Email = email,
             Type = OrganizationUserType.Custom,
             ExternalId = "myCustomUser",
-            AccessAll = false,
             Collections = [],
             Groups = []
         };
@@ -150,7 +150,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(email, result.Email);
         Assert.Equal(OrganizationUserType.Custom, result.Type);
         Assert.Equal("myCustomUser", result.ExternalId);
-        Assert.False(result.AccessAll);
         Assert.Empty(result.Collections);
 
         // Assert against the database values
@@ -160,7 +159,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(email, orgUser.Email);
         Assert.Equal(OrganizationUserType.Custom, orgUser.Type);
         Assert.Equal("myCustomUser", orgUser.ExternalId);
-        Assert.False(orgUser.AccessAll);
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
         Assert.Equal(_organization.Id, orgUser.OrganizationId);
     }
@@ -180,7 +178,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
                 EditAnyCollection = true,
                 AccessEventLogs = true
             },
-            AccessAll = false,
             ExternalId = "example",
             Collections = []
         };
@@ -198,7 +195,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         AssertHelper.AssertPropertyEqual(
             new PermissionsModel { DeleteAnyCollection = true, EditAnyCollection = true, AccessEventLogs = true },
             result.Permissions);
-        Assert.False(result.AccessAll);
         Assert.Empty(result.Collections);
 
         // Assert against the database values
@@ -207,7 +203,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
         Assert.Equal("example", updatedOrgUser.ExternalId);
-        Assert.False(updatedOrgUser.AccessAll);
         Assert.Equal(OrganizationUserStatusType.Confirmed, updatedOrgUser.Status);
         Assert.Equal(_organization.Id, updatedOrgUser.OrganizationId);
     }
@@ -225,7 +220,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var request = new MemberUpdateRequestModel
         {
             Type = OrganizationUserType.Custom,
-            AccessAll = false,
             ExternalId = "example",
             Collections = []
         };

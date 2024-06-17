@@ -13,6 +13,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -282,7 +283,7 @@ public class OrganizationService : IOrganizationService
         await ReplaceAndUpdateCacheAsync(organization);
     }
 
-    public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null)
+    public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -290,10 +291,10 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        return await AdjustSeatsAsync(organization, seatAdjustment, prorationDate);
+        return await AdjustSeatsAsync(organization, seatAdjustment);
     }
 
-    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null, IEnumerable<string> ownerEmails = null)
+    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, IEnumerable<string> ownerEmails = null)
     {
         if (organization.Seats == null)
         {
@@ -349,7 +350,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
+        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
             {
@@ -1161,7 +1162,6 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        var prorationDate = DateTime.UtcNow;
         try
         {
             await _organizationUserRepository.CreateManyAsync(orgUsers);
@@ -1180,11 +1180,10 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
 
-            await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
+            await AutoAddSeatsAsync(organization, newSeatsRequired);
 
             if (additionalSmSeatsRequired > 0)
             {
-                smSubscriptionUpdate.ProrationDate = prorationDate;
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
 
@@ -1206,7 +1205,7 @@ public class OrganizationService : IOrganizationService
             // Revert autoscaling
             if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
             {
-                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value, prorationDate);
+                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value);
             }
 
             // Revert SmSeat autoscaling
@@ -1215,8 +1214,7 @@ public class OrganizationService : IOrganizationService
             {
                 var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
                 {
-                    SmSeats = initialSmSeatCount.Value,
-                    ProrationDate = prorationDate
+                    SmSeats = initialSmSeatCount.Value
                 };
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
             }
@@ -1457,7 +1455,7 @@ public class OrganizationService : IOrganizationService
         return (true, failureReason);
     }
 
-    public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
+    public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd)
     {
         if (seatsToAdd < 1 || !organization.Seats.HasValue)
         {
@@ -1485,7 +1483,7 @@ public class OrganizationService : IOrganizationService
         }
         var initialSeatCount = organization.Seats.Value;
 
-        await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
+        await AdjustSeatsAsync(organization, seatsToAdd, ownerEmails);
 
         if (!organization.OwnersNotifiedOfAutoscaling.HasValue)
         {
@@ -2057,9 +2055,9 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
-        if ((plan.Product == ProductType.TeamsStarter &&
+        if ((plan.ProductTier == ProductTierType.TeamsStarter &&
             upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
-            (plan.Product != ProductType.TeamsStarter &&
+            (plan.ProductTier != ProductTierType.TeamsStarter &&
              upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
@@ -2364,7 +2362,7 @@ public class OrganizationService : IOrganizationService
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         if (availableSeats < 1)
         {
-            await AutoAddSeatsAsync(organization, 1, DateTime.UtcNow);
+            await AutoAddSeatsAsync(organization, 1);
         }
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
@@ -2391,7 +2389,7 @@ public class OrganizationService : IOrganizationService
         var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
-        await AutoAddSeatsAsync(organization, newSeatsRequired, DateTime.UtcNow);
+        await AutoAddSeatsAsync(organization, newSeatsRequired);
 
         var deletingUserIsOwner = false;
         if (restoringUserId.HasValue)

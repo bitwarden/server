@@ -64,6 +64,7 @@ public class Startup
         services.AddScoped<IPaymentFailedHandler, PaymentFailedHandler>();
         services.AddScoped<IPaymentMethodAttachedHandler, PaymentMethodAttachedHandler>();
         services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
+        services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
         services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity
@@ -95,6 +96,7 @@ public class Startup
 
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
+        services.AddScoped<IProviderEventService, ProviderEventService>();
     }
 
     public void Configure(

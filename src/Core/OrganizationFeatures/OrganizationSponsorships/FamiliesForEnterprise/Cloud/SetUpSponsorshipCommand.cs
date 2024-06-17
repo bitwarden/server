@@ -49,10 +49,10 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         }
 
         // Check org to sponsor's product type
-        var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)?.SponsoredProductType;
+        var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)?.SponsoredProductTierType;
         if (requiredSponsoredProductType == null ||
             sponsoredOrganization == null ||
-            StaticStore.GetPlan(sponsoredOrganization.PlanType).Product != requiredSponsoredProductType.Value)
+            StaticStore.GetPlan(sponsoredOrganization.PlanType).ProductTier != requiredSponsoredProductType.Value)
         {
             throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
         }
