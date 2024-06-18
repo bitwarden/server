@@ -289,7 +289,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
 
-    public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword,
+    public async Task<IdentityResult> RegisterUserAsync(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
         var orgInviteTokenValid = false;
@@ -333,7 +333,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
-        var result = await base.CreateAsync(user, masterPassword);
+        var result = await base.CreateAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
             if (!string.IsNullOrEmpty(user.ReferenceData))
