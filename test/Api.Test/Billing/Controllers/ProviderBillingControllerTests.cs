@@ -56,6 +56,7 @@ public class ProviderBillingControllerTests
                 Number = "B",
                 Status = "open",
                 Total = 100000,
+                DueDate = new DateTime(2024, 7, 1),
                 HostedInvoiceUrl = "https://example.com/invoice/2",
                 InvoicePdf = "https://example.com/invoice/2/pdf"
             },
@@ -66,6 +67,7 @@ public class ProviderBillingControllerTests
                 Number = "A",
                 Status = "paid",
                 Total = 100000,
+                DueDate = new DateTime(2024, 6, 1),
                 HostedInvoiceUrl = "https://example.com/invoice/1",
                 InvoicePdf = "https://example.com/invoice/1/pdf"
             }
@@ -88,6 +90,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(new DateTime(2024, 6, 1), openInvoice.Date);
         Assert.Equal("B", openInvoice.Number);
         Assert.Equal(1000, openInvoice.Total);
+        Assert.Equal(new DateTime(2024, 7, 1), openInvoice.DueDate);
         Assert.Equal("https://example.com/invoice/2", openInvoice.Url);
         Assert.Equal("https://example.com/invoice/2/pdf", openInvoice.PdfUrl);
 
@@ -98,6 +101,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(new DateTime(2024, 5, 1), paidInvoice.Date);
         Assert.Equal("A", paidInvoice.Number);
         Assert.Equal(1000, paidInvoice.Total);
+        Assert.Equal(new DateTime(2024, 6, 1), paidInvoice.DueDate);
         Assert.Equal("https://example.com/invoice/1", paidInvoice.Url);
         Assert.Equal("https://example.com/invoice/1/pdf", paidInvoice.PdfUrl);
     }
