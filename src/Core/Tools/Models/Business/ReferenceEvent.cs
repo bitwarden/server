@@ -25,7 +25,7 @@ public class ReferenceEvent
     /// <param name="type">Monitored event type.</param>
     /// <param name="source">Entity that created the event.</param>
     /// <param name="currentContext">The conditions in which the event occurred.</param>
-    public ReferenceEvent(ReferenceEventType type, IReferenceable? source, ICurrentContext? currentContext)
+    public ReferenceEvent(ReferenceEventType type, IReferenceable source, ICurrentContext currentContext)
     {
         Type = type;
         if (source != null)
