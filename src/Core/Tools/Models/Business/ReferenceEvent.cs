@@ -242,7 +242,7 @@ public class ReferenceEvent
     /// This value should only be populated when the <see cref="ReferenceEventType"/> is <see cref="ReferenceEventType.Signup"/>. Otherwise,
     /// the value should be <see langword="null" />.
     /// </value>
-    public string SignupInitiationPath { get; set; }
+    public string? SignupInitiationPath { get; set; }
 
     /// <summary>
     /// The upgrade applied to an account. The current plan is listed first,
@@ -253,5 +253,5 @@ public class ReferenceEvent
     /// <see langword="null"/> when the event was not originated by an application,
     /// or when a downgrade occurred.
     /// </value>
-    public string PlanUpgradePath { get; set; }
+    public string? PlanUpgradePath { get; set; }
 }
