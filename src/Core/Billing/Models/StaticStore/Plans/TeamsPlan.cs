@@ -1,14 +1,15 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record Teams2020Plan : Models.StaticStore.Plan
+public record TeamsPlan : Plan
 {
-    public Teams2020Plan(bool isAnnual)
+    public TeamsPlan(bool isAnnual)
     {
-        Type = isAnnual ? PlanType.TeamsAnnually2020 : PlanType.TeamsMonthly2020;
-        Product = ProductType.Teams;
-        Name = isAnnual ? "Teams (Annually) 2020" : "Teams (Monthly) 2020";
+        Type = isAnnual ? PlanType.TeamsAnnually : PlanType.TeamsMonthly;
+        ProductTier = ProductTierType.Teams;
+        Name = isAnnual ? "Teams (Annually)" : "Teams (Monthly)";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameTeams";
         DescriptionLocalizationKey = "planDescTeams";
@@ -26,19 +27,18 @@ public record Teams2020Plan : Models.StaticStore.Plan
 
         UpgradeSortOrder = 3;
         DisplaySortOrder = 3;
-        LegacyYear = 2023;
 
-        PasswordManager = new Teams2020PasswordManagerFeatures(isAnnual);
-        SecretsManager = new Teams2020SecretsManagerFeatures(isAnnual);
+        PasswordManager = new TeamsPasswordManagerFeatures(isAnnual);
+        SecretsManager = new TeamsSecretsManagerFeatures(isAnnual);
     }
 
-    private record Teams2020SecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record TeamsSecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public Teams2020SecretsManagerFeatures(bool isAnnual)
+        public TeamsSecretsManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 50;
+            BaseServiceAccount = 20;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -49,23 +49,23 @@ public record Teams2020Plan : Models.StaticStore.Plan
             if (isAnnual)
             {
                 StripeSeatPlanId = "secrets-manager-teams-seat-annually";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-annually";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-annually";
                 SeatPrice = 72;
-                AdditionalPricePerServiceAccount = 6;
+                AdditionalPricePerServiceAccount = 12;
             }
             else
             {
                 StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
-                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
                 SeatPrice = 7;
-                AdditionalPricePerServiceAccount = 0.5M;
+                AdditionalPricePerServiceAccount = 1;
             }
         }
     }
 
-    private record Teams2020PasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record TeamsPasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public Teams2020PasswordManagerFeatures(bool isAnnual)
+        public TeamsPasswordManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BaseStorageGb = 1;
@@ -79,15 +79,15 @@ public record Teams2020Plan : Models.StaticStore.Plan
             if (isAnnual)
             {
                 StripeStoragePlanId = "storage-gb-annually";
-                StripeSeatPlanId = "2020-teams-org-seat-annually";
-                SeatPrice = 36;
+                StripeSeatPlanId = "2023-teams-org-seat-annually";
+                SeatPrice = 48;
                 AdditionalStoragePricePerGb = 4;
             }
             else
             {
-                StripeSeatPlanId = "2020-teams-org-seat-monthly";
+                StripeSeatPlanId = "2023-teams-org-seat-monthly";
                 StripeStoragePlanId = "storage-gb-monthly";
-                SeatPrice = 4;
+                SeatPrice = 5;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }

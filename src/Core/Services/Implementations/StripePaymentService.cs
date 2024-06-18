@@ -233,7 +233,7 @@ public class StripePaymentService : IPaymentService
         bool applySponsorship)
     {
         var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
-        var sponsoredPlan = sponsorship != null ?
+        var sponsoredPlan = sponsorship?.PlanSponsorshipType != null ?
             Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
             null;
         var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
@@ -242,8 +242,11 @@ public class StripePaymentService : IPaymentService
 
         var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
         org.ExpirationDate = sub.CurrentPeriodEnd;
-        sponsorship.ValidUntil = sub.CurrentPeriodEnd;
 
+        if (sponsorship is not null)
+        {
+            sponsorship.ValidUntil = sub.CurrentPeriodEnd;
+        }
     }
 
     public Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship) =>
