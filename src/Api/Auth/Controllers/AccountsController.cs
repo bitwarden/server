@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
@@ -81,6 +82,8 @@ public class AccountsController : Controller
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _organizationUserValidator;
+    private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
+        _webauthnKeyValidator;
 
 
     public AccountsController(
@@ -109,7 +112,8 @@ public class AccountsController : Controller
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
-            organizationUserValidator
+            organizationUserValidator,
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
         )
     {
         _cipherRepository = cipherRepository;
@@ -136,6 +140,7 @@ public class AccountsController : Controller
         _sendValidator = sendValidator;
         _emergencyAccessValidator = emergencyAccessValidator;
         _organizationUserValidator = organizationUserValidator;
+        _webauthnKeyValidator = webAuthnKeyValidator;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -442,7 +447,8 @@ public class AccountsController : Controller
             Folders = await _folderValidator.ValidateAsync(user, model.Folders),
             Sends = await _sendValidator.ValidateAsync(user, model.Sends),
             EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys)
+            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys),
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.WebAuthnKeys)
         };
 
         var result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
