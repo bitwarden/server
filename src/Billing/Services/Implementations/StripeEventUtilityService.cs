@@ -127,7 +127,9 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     }
 
     public bool IsSponsoredSubscription(Subscription subscription) =>
-        StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
+        StaticStore.SponsoredPlans
+            .Any(p => subscription.Items
+                .Any(i => i.Plan.Id == p.StripePlanId));
 
     /// <summary>
     /// Converts a Stripe Charge object to a Bitwarden Transaction object.
