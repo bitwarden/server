@@ -91,7 +91,13 @@ public class AccountsController : Controller
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
             model.ReceiveMarketingEmails);
 
-        var refEvent = new ReferenceEvent(ReferenceEventType.SignupEmailSubmit, null, _currentContext);
+        var refEvent = new ReferenceEvent
+        {
+            Type = ReferenceEventType.SignupEmailSubmit,
+            ClientId = _currentContext.ClientId,
+            ClientVersion = _currentContext.ClientVersion,
+            Source = ReferenceEventSource.RegistrationStart
+        };
         await _referenceEventService.RaiseEventAsync(refEvent);
 
         if (token != null)
