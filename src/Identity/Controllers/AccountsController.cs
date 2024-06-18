@@ -113,6 +113,7 @@ public class AccountsController : Controller
     public async Task<IActionResult> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
 
+        // TODO: return captcha bypass token
         return NoContent();
     }
 
