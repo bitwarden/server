@@ -14,6 +14,7 @@ public enum EventType : int
     User_UpdatedTempPassword = 1008,
     User_MigratedKeyToKeyConnector = 1009,
     User_RequestedDeviceApproval = 1010,
+    User_TdeOffboardingPasswordSet = 1011,
 
     Cipher_Created = 1100,
     Cipher_Updated = 1101,

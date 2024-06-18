@@ -178,6 +178,11 @@ public class IdentityServerSsoTests
             {
                 Assert.Equal("HasManageResetPasswordPermission", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            },
+            p =>
+            {
+                Assert.Equal("IsTdeOffboarding", p.Name);
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
             });
     }
 
@@ -219,6 +224,7 @@ public class IdentityServerSsoTests
         //     "HasAdminApproval": true,
         //     "HasLoginApprovingDevice": true,
         //     "HasManageResetPasswordPermission": false
+        //     "IsTdeOffboarding": false
         //   }
         // }
 
@@ -241,6 +247,11 @@ public class IdentityServerSsoTests
             p =>
             {
                 Assert.Equal("HasManageResetPasswordPermission", p.Name);
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            },
+            p =>
+            {
+                Assert.Equal("IsTdeOffboarding", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
             });
     }
