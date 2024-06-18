@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
@@ -11,11 +12,11 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Billing.Commands;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -56,8 +57,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -69,6 +69,8 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _resetPasswordValidator;
+    private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
+        _webauthnKeyRotationValidator;
 
 
     public AccountsControllerTests()
@@ -89,8 +91,7 @@ public class AccountsControllerTests : IDisposable
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
-        _cancelSubscriptionCommand = Substitute.For<ICancelSubscriptionCommand>();
-        _subscriberQueries = Substitute.For<ISubscriberQueries>();
+        _subscriberService = Substitute.For<ISubscriberService>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _cipherValidator =
@@ -100,6 +101,7 @@ public class AccountsControllerTests : IDisposable
         _sendValidator = Substitute.For<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>();
         _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
             IEnumerable<EmergencyAccess>>>();
+        _webauthnKeyRotationValidator = Substitute.For<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>>();
         _resetPasswordValidator = Substitute
             .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
                 IReadOnlyList<OrganizationUser>>>();
@@ -121,15 +123,15 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommand,
             _rotateUserKeyCommand,
             _featureService,
-            _cancelSubscriptionCommand,
-            _subscriberQueries,
+            _subscriberService,
             _referenceEventService,
             _currentContext,
             _cipherValidator,
             _folderValidator,
             _sendValidator,
             _emergencyAccessValidator,
-            _resetPasswordValidator
+            _resetPasswordValidator,
+            _webauthnKeyRotationValidator
         );
     }
 

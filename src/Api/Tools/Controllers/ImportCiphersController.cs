@@ -24,7 +24,6 @@ public class ImportCiphersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IOrganizationRepository _organizationRepository;
 
     public ImportCiphersController(
         ICipherService cipherService,
@@ -43,7 +42,6 @@ public class ImportCiphersController : Controller
         _globalSettings = globalSettings;
         _collectionRepository = collectionRepository;
         _authorizationService = authorizationService;
-        _organizationRepository = organizationRepository;
     }
 
     [HttpPost("import")]
@@ -96,13 +94,6 @@ public class ImportCiphersController : Controller
         if (await _currentContext.AccessImportExport(orgId))
         {
             return true;
-        }
-
-        //If flexible collections is disabled the user cannot continue with the import
-        var orgFlexibleCollections = await _organizationRepository.GetByIdAsync(orgId);
-        if (!orgFlexibleCollections?.FlexibleCollections ?? false)
-        {
-            return false;
         }
 
         //Users allowed to import if they CanCreate Collections

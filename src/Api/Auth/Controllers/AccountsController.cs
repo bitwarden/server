@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
@@ -21,9 +22,8 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -67,8 +67,7 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly ICancelSubscriptionCommand _cancelSubscriptionCommand;
-    private readonly ISubscriberQueries _subscriberQueries;
+    private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -83,6 +82,8 @@ public class AccountsController : Controller
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _organizationUserValidator;
+    private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
+        _webauthnKeyValidator;
 
 
     public AccountsController(
@@ -102,8 +103,7 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
-        ICancelSubscriptionCommand cancelSubscriptionCommand,
-        ISubscriberQueries subscriberQueries,
+        ISubscriberService subscriberService,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
@@ -112,7 +112,8 @@ public class AccountsController : Controller
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
-            organizationUserValidator
+            organizationUserValidator,
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
         )
     {
         _cipherRepository = cipherRepository;
@@ -131,8 +132,7 @@ public class AccountsController : Controller
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
-        _cancelSubscriptionCommand = cancelSubscriptionCommand;
-        _subscriberQueries = subscriberQueries;
+        _subscriberService = subscriberService;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _cipherValidator = cipherValidator;
@@ -140,6 +140,7 @@ public class AccountsController : Controller
         _sendValidator = sendValidator;
         _emergencyAccessValidator = emergencyAccessValidator;
         _organizationUserValidator = organizationUserValidator;
+        _webauthnKeyValidator = webAuthnKeyValidator;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -446,7 +447,8 @@ public class AccountsController : Controller
             Folders = await _folderValidator.ValidateAsync(user, model.Folders),
             Sends = await _sendValidator.ValidateAsync(user, model.Sends),
             EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys)
+            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys),
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.WebAuthnKeys)
         };
 
         var result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
@@ -798,9 +800,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var subscription = await _subscriberQueries.GetSubscriptionOrThrow(user);
-
-        await _cancelSubscriptionCommand.CancelSubscription(subscription,
+        await _subscriberService.CancelSubscription(user,
             new OffboardingSurveyResponse
             {
                 UserId = user.Id,

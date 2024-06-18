@@ -13,7 +13,7 @@ BEGIN
         ExternalId,
         MIN([ReadOnly]) AS [ReadOnly],
         MIN([HidePasswords]) AS [HidePasswords],
-        MIN([Manage]) AS [Manage]
+        MAX([Manage]) AS [Manage]
     FROM
         [dbo].[UserCollectionDetails](@UserId)
     WHERE
