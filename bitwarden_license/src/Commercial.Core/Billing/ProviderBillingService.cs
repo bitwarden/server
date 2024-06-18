@@ -13,6 +13,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
@@ -27,6 +28,7 @@ using static Bit.Core.Billing.Utilities;
 namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
+    ICurrentContext currentContext,
     IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
@@ -374,6 +376,13 @@ public class ProviderBillingService(
         else if (currentlyAssignedSeatTotal <= seatMinimum &&
                  newlyAssignedSeatTotal > seatMinimum)
         {
+            if (!currentContext.ProviderProviderAdmin(provider.Id))
+            {
+                logger.LogError("Service user for provider ({ProviderID}) cannot scale a provider's seat count over the seat minimum", provider.Id);
+
+                throw ContactSupport();
+            }
+
             await update(
                 seatMinimum,
                 newlyAssignedSeatTotal);
