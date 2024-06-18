@@ -64,6 +64,12 @@ public class NoopServiceAccountRepository : IServiceAccountRepository
         return Task.FromResult(0);
     }
 
+    public Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId, Guid userId,
+        AccessClientType accessType)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdWithSecretsDetailsAsync(
         Guid organizationId, Guid userId, AccessClientType accessType)
     {

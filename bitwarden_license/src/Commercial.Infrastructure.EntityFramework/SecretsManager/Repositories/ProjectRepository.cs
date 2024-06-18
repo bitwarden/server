@@ -169,6 +169,24 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         return await accessQuery.ToDictionaryAsync(pa => pa.Id, pa => (pa.Read, pa.Write));
     }
 
+    public async Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId, Guid userId,
+        AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
+            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToProject(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        return await query.CountAsync();
+    }
+
     private record ProjectAccess(Guid Id, bool Read, bool Write);
 
     private static IQueryable<ProjectAccess> BuildProjectAccessQuery(IQueryable<Project> projectQuery, Guid userId,

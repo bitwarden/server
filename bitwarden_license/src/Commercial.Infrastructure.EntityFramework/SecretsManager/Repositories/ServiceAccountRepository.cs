@@ -125,6 +125,23 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         }
     }
 
+    public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId, Guid userId,
+        AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.ServiceAccount.Where(sa => sa.OrganizationId == organizationId);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasReadAccessToServiceAccount(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        return await query.CountAsync();
+    }
+
     public async Task<bool> ServiceAccountsAreInOrganizationAsync(List<Guid> serviceAccountIds, Guid organizationId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
