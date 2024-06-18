@@ -290,21 +290,21 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     }
 
     public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword,
-        string token, Guid? orgUserId)
+        string orgInviteToken, Guid? orgUserId)
     {
-        var tokenValid = false;
-        if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
+        var orgInviteTokenValid = false;
+        if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(orgInviteToken) && orgUserId.HasValue)
         {
             // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-            var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-                _orgUserInviteTokenDataFactory, token, orgUserId.Value, user.Email);
+            var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+                _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId.Value, user.Email);
 
-            tokenValid = newTokenValid ||
-                          CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
-                              user.Email, orgUserId.Value, _globalSettings);
+            orgInviteTokenValid = newOrgInviteTokenValid ||
+                                  CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, orgInviteToken,
+                                      user.Email, orgUserId.Value, _globalSettings);
         }
 
-        if (_globalSettings.DisableUserRegistration && !tokenValid)
+        if (_globalSettings.DisableUserRegistration && !orgInviteTokenValid)
         {
             throw new BadRequestException("Open registration has been disabled by the system administrator.");
         }
