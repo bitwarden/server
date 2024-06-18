@@ -1,13 +1,14 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
 public record Enterprise2023Plan : Plan
 {
     public Enterprise2023Plan(bool isAnnual)
     {
         Type = isAnnual ? PlanType.EnterpriseAnnually2023 : PlanType.EnterpriseMonthly2023;
-        Product = ProductType.Enterprise;
+        ProductTier = ProductTierType.Enterprise;
         Name = isAnnual ? "Enterprise (Annually)" : "Enterprise (Monthly)";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameEnterprise";

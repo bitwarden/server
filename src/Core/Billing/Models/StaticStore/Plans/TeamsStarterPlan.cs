@@ -1,13 +1,14 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Models.StaticStore.Plans;
+namespace Bit.Core.Billing.Models.StaticStore.Plans;
 
-public record TeamsStarterPlan2023 : Plan
+public record TeamsStarterPlan : Plan
 {
-    public TeamsStarterPlan2023()
+    public TeamsStarterPlan()
     {
-        Type = PlanType.TeamsStarter2023;
-        Product = ProductType.TeamsStarter;
+        Type = PlanType.TeamsStarter;
+        ProductTier = ProductTierType.TeamsStarter;
         Name = "Teams (Starter)";
         NameLocalizationKey = "planNameTeamsStarter";
         DescriptionLocalizationKey = "planDescTeams";
@@ -26,18 +27,19 @@ public record TeamsStarterPlan2023 : Plan
         UpgradeSortOrder = 2;
         DisplaySortOrder = 2;
 
-        PasswordManager = new TeamsStarter2023PasswordManagerFeatures();
-        SecretsManager = new TeamsStarter2023SecretsManagerFeatures();
+        PasswordManager = new TeamsStarterPasswordManagerFeatures();
+        SecretsManager = new TeamsStarterSecretsManagerFeatures();
+
         LegacyYear = 2024;
     }
 
-    private record TeamsStarter2023SecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record TeamsStarterSecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public TeamsStarter2023SecretsManagerFeatures()
+        public TeamsStarterSecretsManagerFeatures()
         {
             BaseSeats = 0;
             BasePrice = 0;
-            BaseServiceAccount = 50;
+            BaseServiceAccount = 20;
 
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
@@ -46,15 +48,15 @@ public record TeamsStarterPlan2023 : Plan
             AllowServiceAccountsAutoscale = true;
 
             StripeSeatPlanId = "secrets-manager-teams-seat-monthly";
-            StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
+            StripeServiceAccountPlanId = "secrets-manager-service-account-2024-monthly";
             SeatPrice = 7;
-            AdditionalPricePerServiceAccount = 0.5M;
+            AdditionalPricePerServiceAccount = 1;
         }
     }
 
-    private record TeamsStarter2023PasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record TeamsStarterPasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public TeamsStarter2023PasswordManagerFeatures()
+        public TeamsStarterPasswordManagerFeatures()
         {
             BaseSeats = 10;
             BaseStorageGb = 1;

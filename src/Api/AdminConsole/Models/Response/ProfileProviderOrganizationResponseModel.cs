@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
@@ -25,7 +26,7 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UseResetPassword = organization.UseResetPassword;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise;
+        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).ProductTier == ProductTierType.Enterprise;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -42,7 +43,7 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UserId = organization.UserId;
         ProviderId = organization.ProviderId;
         ProviderName = organization.ProviderName;
-        PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
+        ProductTierType = StaticStore.GetPlan(organization.PlanType).ProductTier;
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         FlexibleCollections = organization.FlexibleCollections;
