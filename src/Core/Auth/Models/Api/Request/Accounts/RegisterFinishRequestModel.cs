@@ -1,16 +1,17 @@
 ﻿#nullable enable
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 using System.ComponentModel.DataAnnotations;
 
-//  : IValidatableObject
-public class RegisterFinishRequestModel
+
+public class RegisterFinishRequestModel : IValidatableObject
 {
     [Required, StrictEmailAddress, StringLength(256)]
-    public string email { get; set; }
-    public string emailVerificationToken { get; set; }
+    public string Email { get; set; }
+    public string EmailVerificationToken { get; set; }
 
     [Required]
     [StringLength(1000)]
@@ -24,7 +25,6 @@ public class RegisterFinishRequestModel
 
     public KeysRequestModel UserAsymmetricKeys { get; set; }
 
-    // Leaving these not optional is fine
     public KdfType Kdf { get; set; }
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
@@ -34,14 +34,27 @@ public class RegisterFinishRequestModel
     public string? orgInviteToken { get; set; }
 
 
-    // TODO: implement a ToUser method but don't worry about Kdf.getValueOrDefault
-    // public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    // {
-    //     // if (Kdf.HasValue && KdfIterations.HasValue)
-    //     // {
-    //     //     return KdfSettingsValidator.Validate(Kdf.Value, KdfIterations.Value, KdfMemory, KdfParallelism);
-    //     // }
-    //     //
-    //     // return Enumerable.Empty<ValidationResult>();
-    // }
+    public User ToUser()
+    {
+        var user = new User
+        {
+            Email = Email,
+            MasterPasswordHint = MasterPasswordHint,
+            Kdf = Kdf,
+            KdfIterations = KdfIterations,
+            KdfMemory = KdfMemory,
+            KdfParallelism = KdfParallelism,
+            Key = UserSymmetricKey,
+        };
+
+        UserAsymmetricKeys.ToUser(user);
+
+        return user;
+    }
+
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        return KdfSettingsValidator.Validate(Kdf, KdfIterations, KdfMemory, KdfParallelism);
+    }
 }
