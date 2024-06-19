@@ -1,4 +1,5 @@
-﻿using Bit.Api.SecretsManager.Models.Request;
+﻿using System.Linq;
+using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Requests.Interfaces;
@@ -39,6 +40,12 @@ public class RequestSMAccessController : Controller
         if (organization == null)
         {
             throw new NotFoundException();
+        }
+
+        var organizationUserUserDetails = _organizationUserRepository.GetDetailsByUserAsync(user.Id, model.OrganizationId);
+        if (organizationUserUserDetails.Id < 0)
+        {
+            throw new UnauthorizedAccessException();
         }
 
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);

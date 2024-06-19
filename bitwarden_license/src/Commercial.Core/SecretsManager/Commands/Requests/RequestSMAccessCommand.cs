@@ -19,7 +19,7 @@ public class RequestSMAccessCommand : IRequestSMAccessCommand
 
     public async Task SendRequestAccessToSM(Organization organization, ICollection<OrganizationUserUserDetails> orgUsers, User user, string emailContent)
     {
-        var emailList = orgUsers.Where(o => o.Type <= OrganizationUserType.Admin || o.GetPermissions()?.ManageSso == true)
+        var emailList = orgUsers.Where(o => o.Type <= OrganizationUserType.Admin)
             .Select(a => a.Email).Distinct().ToList();
 
         await _mailService.SendRequestSMAccessToAdminEmailAsync(emailList, organization.Name, user.Name, emailContent);

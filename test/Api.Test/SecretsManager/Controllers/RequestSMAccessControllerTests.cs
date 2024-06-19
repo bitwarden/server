@@ -33,7 +33,7 @@ public class RequestSMAccessControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenSendingValidData_ShouldSucceed(
+    public async Task RequestSMAccessFromAdmins_WhenSendingValidData_ShouldSucceed(
     User user,
     RequestSMAccessRequestModel model,
     Core.AdminConsole.Entities.Organization org,
@@ -50,7 +50,7 @@ public class RequestSMAccessControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenUserInvalid_ShouldThrowBadRequestException(RequestSMAccessRequestModel model, SutProvider<RequestSMAccessController> sutProvider)
+    public async Task RequestSMAccessFromAdmins_WhenUserInvalid_ShouldThrowBadRequestException(RequestSMAccessRequestModel model, SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(Task.FromResult((User)null));
@@ -61,7 +61,7 @@ public class RequestSMAccessControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenOrgInvalid_ShouldThrowNotFoundException(RequestSMAccessRequestModel model, User user, SutProvider<RequestSMAccessController> sutProvider)
+    public async Task RequestSMAccessFromAdmins_WhenOrgInvalid_ShouldThrowNotFoundException(RequestSMAccessRequestModel model, User user, SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).ReturnsForAnyArgs(Task.FromResult((Organization)null));
