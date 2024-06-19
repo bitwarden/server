@@ -305,7 +305,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Collection_CreateWithGroupsAndUsers_V2]",
+                $"[{Schema}].[Collection_CreateWithGroupsAndUsers]",
                 objWithGroupsAndUsers,
                 commandType: CommandType.StoredProcedure);
         }
@@ -321,7 +321,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Collection_UpdateWithGroupsAndUsers_V2]",
+                $"[{Schema}].[Collection_UpdateWithGroupsAndUsers]",
                 objWithGroupsAndUsers,
                 commandType: CommandType.StoredProcedure);
         }
@@ -378,7 +378,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[CollectionUser_UpdateUsers_V2]",
+                $"[{Schema}].[CollectionUser_UpdateUsers]",
                 new { CollectionId = id, Users = users.ToArrayTVP() },
                 commandType: CommandType.StoredProcedure);
         }
