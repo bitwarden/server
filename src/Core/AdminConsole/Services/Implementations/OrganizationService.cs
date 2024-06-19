@@ -1045,6 +1045,11 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
         }
+
+        if (organization.FlexibleCollections && invites.Any(i => i.invite.AccessAll))
+        {
+            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
+        }
         // End Flexible Collections
 
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
@@ -1116,6 +1121,7 @@ public class OrganizationService : IOrganizationService
                         Key = null,
                         Type = invite.Type.Value,
                         Status = OrganizationUserStatusType.Invited,
+                        AccessAll = invite.AccessAll,
                         AccessSecretsManager = invite.AccessSecretsManager,
                         ExternalId = externalId,
                         CreationDate = DateTime.UtcNow,
@@ -1801,6 +1807,7 @@ public class OrganizationService : IOrganizationService
                     {
                         Emails = new List<string> { user.Email },
                         Type = OrganizationUserType.User,
+                        AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
                         AccessSecretsManager = hasStandaloneSecretsManager
                     };
