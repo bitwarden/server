@@ -75,6 +75,7 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
+GO
 
 -- Collection_UpdateWithGroupsAndUsers
 CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
@@ -188,6 +189,7 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END
+GO
 
 -- CollectionUser_UpdateUsers
 CREATE OR ALTER PROCEDURE [dbo].[CollectionUser_UpdateUsers]
@@ -273,6 +275,7 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @CollectionId, @OrgId
 END
+GO
 
 -- Group_CreateWithCollections
 CREATE OR ALTER PROCEDURE [dbo].[Group_CreateWithCollections]
@@ -319,6 +322,7 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
+GO
 
 -- Group_UpdateWithCollections
 CREATE OR ALTER PROCEDURE [dbo].[Group_UpdateWithCollections]
@@ -384,6 +388,7 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
+GO
 
 
 -- OrganizationUser_CreateWithCollections
@@ -436,6 +441,7 @@ BEGIN
     WHERE
         [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
 END
+GO
 
 -- OrganizationUser_UpdateWithCollections
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
@@ -524,3 +530,4 @@ BEGIN
                 [Id] = CU.[CollectionId]
         )
 END
+GO
