@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
