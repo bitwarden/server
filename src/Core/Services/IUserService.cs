@@ -17,6 +17,7 @@ public interface IUserService
     Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal);
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
+    Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task<IdentityResult> RegisterUserAsync(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
     Task<IdentityResult> RegisterUserAsync(User user);
     Task SendMasterPasswordHintAsync(string email);
@@ -76,6 +77,9 @@ public interface IUserService
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret);
+
+
+    void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 
     /// <summary>
     /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.

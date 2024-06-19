@@ -289,6 +289,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
 
+    public async Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash)
+    {
+        return await CreateAsync(user, masterPasswordHash);
+    }
+
     // TODO: move registerUser to RegisterUserCommand
     public async Task<IdentityResult> RegisterUserAsync(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
