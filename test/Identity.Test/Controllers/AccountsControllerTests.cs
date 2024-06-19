@@ -10,7 +10,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -33,7 +32,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
-    private readonly IUserService _userService;
+    private readonly IRegisterUserCommand _registerUserCommand;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
@@ -45,7 +44,7 @@ public class AccountsControllerTests : IDisposable
         _currentContext = Substitute.For<ICurrentContext>();
         _logger = Substitute.For<ILogger<AccountsController>>();
         _userRepository = Substitute.For<IUserRepository>();
-        _userService = Substitute.For<IUserService>();
+        _registerUserCommand = Substitute.For<IRegisterUserCommand>();
         _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _assertionOptionsDataProtector = Substitute.For<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>();
         _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
@@ -55,7 +54,7 @@ public class AccountsControllerTests : IDisposable
             _currentContext,
             _logger,
             _userRepository,
-            _userService,
+            _registerUserCommand,
             _captchaValidationService,
             _assertionOptionsDataProtector,
             _getWebAuthnLoginCredentialAssertionOptionsCommand,
@@ -102,7 +101,7 @@ public class AccountsControllerTests : IDisposable
         var passwordHash = "abcdef";
         var token = "123456";
         var userGuid = new Guid();
-        _userService.RegisterUserAsync(Arg.Any<User>(), passwordHash, token, userGuid)
+        _registerUserCommand.RegisterUserViaOrganizationInvite(Arg.Any<User>(), passwordHash, token, userGuid)
                     .Returns(Task.FromResult(IdentityResult.Success));
         var request = new RegisterRequestModel
         {
@@ -116,7 +115,7 @@ public class AccountsControllerTests : IDisposable
 
         await _sut.PostRegister(request);
 
-        await _userService.Received(1).RegisterUserAsync(Arg.Any<User>(), passwordHash, token, userGuid);
+        await _registerUserCommand.Received(1).RegisterUserViaOrganizationInvite(Arg.Any<User>(), passwordHash, token, userGuid);
     }
 
     [Fact]
@@ -125,7 +124,7 @@ public class AccountsControllerTests : IDisposable
         var passwordHash = "abcdef";
         var token = "123456";
         var userGuid = new Guid();
-        _userService.RegisterUserAsync(Arg.Any<User>(), passwordHash, token, userGuid)
+        _registerUserCommand.RegisterUserViaOrganizationInvite(Arg.Any<User>(), passwordHash, token, userGuid)
                     .Returns(Task.FromResult(IdentityResult.Failed()));
         var request = new RegisterRequestModel
         {

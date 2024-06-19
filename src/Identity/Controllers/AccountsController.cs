@@ -12,7 +12,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -30,7 +29,7 @@ public class AccountsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
-    private readonly IUserService _userService;
+    private readonly IRegisterUserCommand _registerUserCommand;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
@@ -42,7 +41,7 @@ public class AccountsController : Controller
         ICurrentContext currentContext,
         ILogger<AccountsController> logger,
         IUserRepository userRepository,
-        IUserService userService,
+        IRegisterUserCommand registerUserCommand,
         ICaptchaValidationService captchaValidationService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
@@ -53,7 +52,7 @@ public class AccountsController : Controller
         _currentContext = currentContext;
         _logger = logger;
         _userRepository = userRepository;
-        _userService = userService;
+        _registerUserCommand = registerUserCommand;
         _captchaValidationService = captchaValidationService;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
@@ -67,7 +66,7 @@ public class AccountsController : Controller
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
         var user = model.ToUser();
-        var result = await _userService.RegisterUserAsync(user, model.MasterPasswordHash,
+        var result = await _registerUserCommand.RegisterUserViaOrganizationInvite(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         if (result.Succeeded)
         {

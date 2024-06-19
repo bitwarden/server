@@ -20,7 +20,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
-public class RegisterUserCommand
+public class RegisterUserCommand : IRegisterUserCommand
 {
 
     private readonly IGlobalSettings _globalSettings;
@@ -66,7 +66,7 @@ public class RegisterUserCommand
 
     }
 
-    public async Task<IdentityResult> RegisterUserViaOrganizationInviteAsync(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaOrganizationInvite(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
         var orgInviteTokenValid = false;
