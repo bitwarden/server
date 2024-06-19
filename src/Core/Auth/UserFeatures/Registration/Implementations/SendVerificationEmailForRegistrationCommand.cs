@@ -8,6 +8,11 @@ using Bit.Core.Tokens;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
+/// <summary>
+/// If email verification is enabled, this command will send a verification email to the user which will
+///  contain a link to complete the registration process.
+/// If email verification is disabled, this command will return a token that can be used to complete the registration process directly.
+/// </summary>
 public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmailForRegistrationCommand
 {
 
@@ -45,6 +50,8 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             if (userExists)
             {
                 // Add delay to prevent timing attacks
+                // Note: sub 140 ms feels responsive to users so we are using 130 ms as it should be long enough
+                // to prevent timing attacks but not too long to be noticeable to the user.
                 await Task.Delay(130);
                 throw new BadRequestException($"Email {email} is already taken");
             }
