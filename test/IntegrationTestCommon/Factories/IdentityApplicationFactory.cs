@@ -4,6 +4,7 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Identity;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Http;
 

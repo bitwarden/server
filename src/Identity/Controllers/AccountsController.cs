@@ -17,6 +17,8 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Identity.Models.Request.Accounts;
+using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -60,7 +62,6 @@ public class AccountsController : Controller
         _referenceEventService = referenceEventService;
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("register")]
     [CaptchaProtected]
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
@@ -148,5 +149,4 @@ public class AccountsController : Controller
             Token = token
         };
     }
-
 }
