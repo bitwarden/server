@@ -35,6 +35,6 @@ public class InfoController : Controller
     [HttpGet("~/hello")]
     public IActionResult Hello()
     {
-        return Content("Hello!");
+        return Content("Hello.");
     }
 }
