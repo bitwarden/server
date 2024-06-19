@@ -1,5 +1,4 @@
 ﻿using Bit.Core;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -11,6 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Identity.Controllers;
+using Bit.Identity.Models.Request.Accounts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

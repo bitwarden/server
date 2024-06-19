@@ -1,6 +1,5 @@
 ﻿using Bit.Core;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
@@ -12,6 +11,8 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.Identity.Models.Request.Accounts;
+using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -44,7 +45,6 @@ public class AccountsController : Controller
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("register")]
     [CaptchaProtected]
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
@@ -67,7 +67,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("prelogin")]
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
     {
