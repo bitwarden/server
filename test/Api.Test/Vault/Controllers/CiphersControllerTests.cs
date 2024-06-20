@@ -150,8 +150,7 @@ public class CiphersControllerTests
     [BitAutoData(OrganizationUserType.Custom, false, false)]
     public async Task CanEditCiphersAsAdminAsync_FlexibleCollections_Success(
         OrganizationUserType userType, bool allowAdminsAccessToAllItems, bool shouldSucceed,
-        CurrentContextOrganization organization, Guid userId, Cipher cipher, SutProvider<CiphersController> sutProvider
-    )
+        CurrentContextOrganization organization, Guid userId, Cipher cipher, SutProvider<CiphersController> sutProvider)
     {
         cipher.OrganizationId = organization.Id;
         organization.Type = userType;
@@ -169,51 +168,9 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
-            FlexibleCollections = true,
             AllowAdminAccessToAllCollectionItems = allowAdminsAccessToAllItems
         });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
-
-        if (shouldSucceed)
-        {
-            await sutProvider.Sut.DeleteAdmin(cipher.Id.ToString());
-            await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
-                .DeleteAsync(default, default);
-        }
-        else
-        {
-            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipher.Id.ToString()));
-            await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
-                .DeleteAsync(default, default);
-        }
-    }
-
-    /// <summary>
-    /// To be removed after FlexibleCollections is fully released
-    /// </summary>
-    [Theory]
-    [BitAutoData(true, true)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(false, false)]
-    public async Task CanEditCiphersAsAdminAsync_NonFlexibleCollections(
-        bool v1Enabled, bool shouldSucceed, CurrentContextOrganization organization, Guid userId, Cipher cipher, SutProvider<CiphersController> sutProvider
-    )
-    {
-        cipher.OrganizationId = organization.Id;
-        sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organization.Id).Returns(shouldSucceed);
-
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
-        {
-            Id = organization.Id,
-            FlexibleCollections = false,
-            AllowAdminAccessToAllCollectionItems = false
-        });
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(v1Enabled);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
 
         if (shouldSucceed)
         {
@@ -251,7 +208,6 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
-            FlexibleCollections = fcV1Enabled, // Assume FlexibleCollections is enabled if v1 is enabled
             AllowAdminAccessToAllCollectionItems = false
         });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(fcV1Enabled);
