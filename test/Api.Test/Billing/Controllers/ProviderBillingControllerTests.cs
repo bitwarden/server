@@ -348,7 +348,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(50, providerTeamsPlan.SeatMinimum);
         Assert.Equal(10, providerTeamsPlan.PurchasedSeats);
         Assert.Equal(30, providerTeamsPlan.AssignedSeats);
-        Assert.Equal(60 * teamsPlan.PasswordManager.SeatPrice, providerTeamsPlan.Cost);
+        Assert.Equal(60 * teamsPlan.PasswordManager.ProviderPortalSeatPrice, providerTeamsPlan.Cost);
         Assert.Equal("Monthly", providerTeamsPlan.Cadence);
 
         var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
@@ -357,7 +357,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(100, providerEnterprisePlan.SeatMinimum);
         Assert.Equal(0, providerEnterprisePlan.PurchasedSeats);
         Assert.Equal(90, providerEnterprisePlan.AssignedSeats);
-        Assert.Equal(100 * enterprisePlan.PasswordManager.SeatPrice, providerEnterprisePlan.Cost);
+        Assert.Equal(100 * enterprisePlan.PasswordManager.ProviderPortalSeatPrice, providerEnterprisePlan.Cost);
         Assert.Equal("Monthly", providerEnterprisePlan.Cadence);
     }
     #endregion
