@@ -11,5 +11,5 @@ public class ProjectCountsResponseModel() : ResponseModel(_objectName)
 
     public int People { get; set; }
 
-    public int MachineAccounts { get; set; }
+    public int ServiceAccounts { get; set; }
 }

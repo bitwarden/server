@@ -1,39 +1,37 @@
 ﻿using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [Authorize("secrets")]
-[Route("organizations/{organizationId}")]
 public class CountsController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IUserService _userService;
+    private readonly IAccessClientQuery _accessClientQuery;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public CountsController(
         ICurrentContext currentContext,
-        IUserService userService,
+        IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
         IServiceAccountRepository serviceAccountRepository)
     {
         _currentContext = currentContext;
-        _userService = userService;
+        _accessClientQuery = accessClientQuery;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    [HttpGet("counts")]
+    [HttpGet("organizations/{organizationId}/sm-counts")]
     public async Task<OrganizationCountsResponseModel> GetByOrganizationAsync([FromRoute] Guid organizationId)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
@@ -41,9 +39,7 @@ public class CountsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessType = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
 
         var projectsCountTask = _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId,
             userId, accessType);
@@ -51,14 +47,38 @@ public class CountsController : Controller
         var secretsCountTask = _secretRepository.GetSecretsCountByOrganizationIdAsync(organizationId,
             userId, accessType);
 
-        var machineAccountsCountsTask = _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(
+        var serviceAccountsCountsTask = _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(
             organizationId, userId, accessType);
+
+        var counts = await Task.WhenAll(projectsCountTask, secretsCountTask, serviceAccountsCountsTask);
 
         return new OrganizationCountsResponseModel
         {
-            Projects = await projectsCountTask,
-            Secrets = await secretsCountTask,
-            MachineAccounts = await machineAccountsCountsTask
+            Projects = counts[0],
+            Secrets = counts[1],
+            ServiceAccounts = counts[2]
+        };
+    }
+
+
+    [HttpGet("organizations/{organizationId}/projects/{projectId}/sm-counts")]
+    public async Task<ProjectCountsResponseModel> GetByOrganizationAndProjectAsync([FromRoute] Guid organizationId,
+        [FromRoute] Guid projectId)
+    {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
+
+        var projectsCounts = await _projectRepository.GetProjectCountsByIdAsync(projectId, userId, accessType);
+
+        return new ProjectCountsResponseModel
+        {
+            Secrets = projectsCounts.Secrets,
+            People = projectsCounts.People,
+            ServiceAccounts = projectsCounts.ServiceAccounts
         };
     }
 }

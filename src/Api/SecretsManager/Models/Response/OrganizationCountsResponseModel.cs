@@ -11,5 +11,5 @@ public class OrganizationCountsResponseModel() : ResponseModel(_objectName)
 
     public int Secrets { get; set; }
 
-    public int MachineAccounts { get; set; }
+    public int ServiceAccounts { get; set; }
 }
