@@ -32,6 +32,8 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
+using Api.AdminConsole.Services;
+
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -92,6 +94,9 @@ public class Startup
 
         // BitPay
         services.AddSingleton<BitPayClient>();
+
+        // Groups
+        services.AddScoped<IGroupsControllerService, GroupsControllerService>();
 
         if (!globalSettings.SelfHosted)
         {
