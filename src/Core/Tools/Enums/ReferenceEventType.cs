@@ -4,6 +4,8 @@ namespace Bit.Core.Tools.Enums;
 
 public enum ReferenceEventType
 {
+    [EnumMember(Value = "signup-email-submit")]
+    SignupEmailSubmit,
     [EnumMember(Value = "signup")]
     Signup,
     [EnumMember(Value = "upgrade-plan")]
