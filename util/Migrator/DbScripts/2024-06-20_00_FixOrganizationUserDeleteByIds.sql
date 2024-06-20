@@ -1,10 +1,4 @@
-IF OBJECT_ID('[dbo].[OrganizationUser_DeleteByIds]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
     @Ids [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -64,7 +58,7 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION GoupUser_DeleteMany_GroupUsers
+        COMMIT TRANSACTION GroupUser_DeleteMany_GroupUsers
     END
 
     SET @BatchSize = 100;
