@@ -7,29 +7,23 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Entities;
-using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
@@ -42,17 +36,11 @@ public class AccountsControllerTests : IDisposable
 
     private readonly AccountsController _sut;
     private readonly GlobalSettings _globalSettings;
-    private readonly ICipherRepository _cipherRepository;
-    private readonly IFolderRepository _folderRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
-    private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
-    private readonly ISendRepository _sendRepository;
-    private readonly ISendService _sendService;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
@@ -76,17 +64,11 @@ public class AccountsControllerTests : IDisposable
     public AccountsControllerTests()
     {
         _userService = Substitute.For<IUserService>();
-        _userRepository = Substitute.For<IUserRepository>();
-        _cipherRepository = Substitute.For<ICipherRepository>();
-        _folderRepository = Substitute.For<IFolderRepository>();
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
         _paymentService = Substitute.For<IPaymentService>();
         _globalSettings = new GlobalSettings();
-        _sendRepository = Substitute.For<ISendRepository>();
-        _sendService = Substitute.For<ISendService>();
-        _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _policyService = Substitute.For<IPolicyService>();
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
@@ -108,17 +90,11 @@ public class AccountsControllerTests : IDisposable
 
         _sut = new AccountsController(
             _globalSettings,
-            _cipherRepository,
-            _folderRepository,
             _organizationService,
             _organizationUserRepository,
             _providerUserRepository,
             _paymentService,
-            _userRepository,
             _userService,
-            _sendRepository,
-            _sendService,
-            _captchaValidationService,
             _policyService,
             _setInitialMasterPasswordCommand,
             _rotateUserKeyCommand,
@@ -138,77 +114,6 @@ public class AccountsControllerTests : IDisposable
     public void Dispose()
     {
         _sut?.Dispose();
-    }
-
-    [Fact]
-    public async Task PostPrelogin_WhenUserExists_ShouldReturnUserKdfInfo()
-    {
-        var userKdfInfo = new UserKdfInformation
-        {
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default
-        };
-        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult(userKdfInfo));
-
-        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
-
-        Assert.Equal(userKdfInfo.Kdf, response.Kdf);
-        Assert.Equal(userKdfInfo.KdfIterations, response.KdfIterations);
-    }
-
-    [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
-    {
-        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult((UserKdfInformation)null));
-
-        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
-
-        Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
-    }
-
-    [Fact]
-    public async Task PostRegister_ShouldRegisterUser()
-    {
-        var passwordHash = "abcdef";
-        var token = "123456";
-        var userGuid = new Guid();
-        _userService.RegisterUserAsync(Arg.Any<User>(), passwordHash, token, userGuid)
-                    .Returns(Task.FromResult(IdentityResult.Success));
-        var request = new RegisterRequestModel
-        {
-            Name = "Example User",
-            Email = "user@example.com",
-            MasterPasswordHash = passwordHash,
-            MasterPasswordHint = "example",
-            Token = token,
-            OrganizationUserId = userGuid
-        };
-
-        await _sut.PostRegister(request);
-
-        await _userService.Received(1).RegisterUserAsync(Arg.Any<User>(), passwordHash, token, userGuid);
-    }
-
-    [Fact]
-    public async Task PostRegister_WhenUserServiceFails_ShouldThrowBadRequestException()
-    {
-        var passwordHash = "abcdef";
-        var token = "123456";
-        var userGuid = new Guid();
-        _userService.RegisterUserAsync(Arg.Any<User>(), passwordHash, token, userGuid)
-                    .Returns(Task.FromResult(IdentityResult.Failed()));
-        var request = new RegisterRequestModel
-        {
-            Name = "Example User",
-            Email = "user@example.com",
-            MasterPasswordHash = passwordHash,
-            MasterPasswordHint = "example",
-            Token = token,
-            OrganizationUserId = userGuid
-        };
-
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegister(request));
     }
 
     [Fact]

@@ -18,6 +18,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendRegistrationVerificationEmailAsync(string email, string hint)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendChangeEmailEmailAsync(string newEmailAddress, string token)
     {
         return Task.FromResult(0);
