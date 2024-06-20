@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 
 namespace Bit.Core.SecretsManager.Repositories;
 
@@ -13,8 +14,8 @@ public interface ISecretRepository
     Task<IEnumerable<Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids);
     Task<IEnumerable<Secret>> GetManyByIds(IEnumerable<Guid> ids);
     Task<Secret> GetByIdAsync(Guid id);
-    Task<Secret> CreateAsync(Secret secret);
-    Task<Secret> UpdateAsync(Secret secret);
+    Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null);
+    Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null);
     Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task HardDeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task RestoreManyByIdAsync(IEnumerable<Guid> ids);
