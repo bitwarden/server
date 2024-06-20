@@ -11,6 +11,7 @@ public record ConsolidatedBillingSubscriptionResponse(
     DateTime? UnpaidPeriodEndDate,
     int? GracePeriod,
     DateTime? SuspensionDate,
+    DateTime? CancelAt,
     IEnumerable<ProviderPlanResponse> Plans)
 {
     private const string _annualCadence = "Annual";
@@ -44,6 +45,7 @@ public record ConsolidatedBillingSubscriptionResponse(
             unpaidPeriodEndDate,
             gracePeriod,
             suspensionDate,
+            subscription.CancelAt,
             providerPlansDTO);
     }
 }
