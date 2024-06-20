@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 
@@ -19,6 +20,15 @@ public class NoopMailService : IMailService
     }
 
     public Task SendRegistrationVerificationEmailAsync(string email, string hint)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendTrialInitiationSignupEmailAsync(
+        string email,
+        string token,
+        ProductTierType productTier,
+        IEnumerable<ProductType> products)
     {
         return Task.FromResult(0);
     }
