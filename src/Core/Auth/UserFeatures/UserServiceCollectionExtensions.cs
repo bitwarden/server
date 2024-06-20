@@ -1,5 +1,7 @@
 ﻿
 
+using Bit.Core.Auth.UserFeatures.Registration;
+using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
@@ -18,6 +20,7 @@ public static class UserServiceCollectionExtensions
     {
         services.AddScoped<IUserService, UserService>();
         services.AddUserPasswordCommands();
+        services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
     }
 
@@ -29,6 +32,11 @@ public static class UserServiceCollectionExtensions
     private static void AddUserPasswordCommands(this IServiceCollection services)
     {
         services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
+    }
+
+    private static void AddUserRegistrationCommands(this IServiceCollection services)
+    {
+        services.AddScoped<ISendVerificationEmailForRegistrationCommand, SendVerificationEmailForRegistrationCommand>();
     }
 
     private static void AddWebAuthnLoginCommands(this IServiceCollection services)
