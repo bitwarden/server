@@ -441,7 +441,7 @@ public class ProviderBillingService(
 
         subscriptionItemOptionsList.Add(new SubscriptionItemOptions
         {
-            Price = teamsPlan.PasswordManager.StripeSeatPlanId,
+            Price = teamsPlan.PasswordManager.StripeProviderPortalSeatPlanId,
             Quantity = teamsProviderPlan.SeatMinimum
         });
 
@@ -459,7 +459,7 @@ public class ProviderBillingService(
 
         subscriptionItemOptionsList.Add(new SubscriptionItemOptions
         {
-            Price = enterprisePlan.PasswordManager.StripeSeatPlanId,
+            Price = enterprisePlan.PasswordManager.StripeProviderPortalSeatPlanId,
             Quantity = enterpriseProviderPlan.SeatMinimum
         });
 
