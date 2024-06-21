@@ -1,7 +1,9 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.SecretsManager.Enums.AccessPolicies;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -136,8 +138,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return await secrets.ToListAsync();
     }
 
-    public override async Task<Core.SecretsManager.Entities.Secret> CreateAsync(
-        Core.SecretsManager.Entities.Secret secret)
+    public async Task<Core.SecretsManager.Entities.Secret> CreateAsync(
+        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -158,13 +160,14 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
 
         await dbContext.AddAsync(entity);
+        await UpdateSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
-        secret.Id = entity.Id;
         return secret;
     }
 
-    public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret)
+    public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret,
+        SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -173,35 +176,29 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         var entity = await dbContext.Secret
             .Include(s => s.Projects)
+            .Include(s => s.UserAccessPolicies)
+            .Include(s => s.GroupAccessPolicies)
+            .Include(s => s.ServiceAccountAccessPolicies)
             .FirstAsync(s => s.Id == secret.Id);
 
-        var projectsToRemove = entity.Projects.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)).ToList();
-        var projectsToAdd = mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)).ToList();
+        dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
-        foreach (var p in projectsToRemove)
+        if (secret.Projects != null)
         {
-            entity.Projects.Remove(p);
+            entity = await UpdateProjectMappingAsync(dbContext, entity, mappedEntity);
         }
 
-        foreach (var project in projectsToAdd)
+        if (accessPoliciesUpdates != null)
         {
-            var p = dbContext.AttachToOrGet<Project>(x => x.Id == project.Id, () => project);
-            entity.Projects.Add(p);
-        }
-
-        var projectIds = projectsToRemove.Select(p => p.Id).Concat(projectsToAdd.Select(p => p.Id)).ToList();
-        if (projectIds.Count > 0)
-        {
-            await UpdateServiceAccountRevisionsByProjectIdsAsync(dbContext, projectIds);
+            await UpdateSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
         }
 
         await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
-        dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
-
-        return secret;
+        return Mapper.Map<Core.SecretsManager.Entities.Secret>(entity);
     }
+
 
     public async Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
@@ -289,35 +286,13 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
     public async Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
         var secret = dbContext.Secret
             .Where(s => s.Id == id);
 
-        var query = accessType switch
-        {
-            AccessClientType.NoAccessCheck => secret.Select(_ => new { Read = true, Write = true }),
-            AccessClientType.User => secret.Select(s => new
-            {
-                Read = s.Projects.Any(p =>
-                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
-                    p.GroupAccessPolicies.Any(ap =>
-                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
-                Write = s.Projects.Any(p =>
-                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                    p.GroupAccessPolicies.Any(ap =>
-                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
-            }),
-            AccessClientType.ServiceAccount => secret.Select(s => new
-            {
-                Read = s.Projects.Any(p =>
-                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read)),
-                Write = s.Projects.Any(p =>
-                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)),
-            }),
-            _ => secret.Select(_ => new { Read = false, Write = false }),
-        };
+        var query = BuildSecretAccessQuery(secret, userId, accessType);
 
         var policy = await query.FirstOrDefaultAsync();
 
@@ -379,19 +354,27 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     private Expression<Func<Secret, SecretPermissionDetails>> SecretToPermissionsUser(Guid userId, bool read) =>
         s => new SecretPermissionDetails
         {
-            Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
+            Secret = Mapper.Map<Core.SecretsManager.Entities.Secret>(s),
             Read = read,
-            Write = s.Projects.Any(p =>
-                p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                p.GroupAccessPolicies.Any(ap =>
-                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
+            Write =
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                s.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)) ||
+                s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)))
         };
 
     private static Expression<Func<Secret, bool>> ServiceAccountHasReadAccessToSecret(Guid serviceAccountId) => s =>
+        s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == serviceAccountId && ap.Read) ||
         s.Projects.Any(p =>
             p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read));
 
     private static Expression<Func<Secret, bool>> UserHasReadAccessToSecret(Guid userId) => s =>
+        s.UserAccessPolicies.Any(ap => ap.OrganizationUser.UserId == userId && ap.Read) ||
+        s.GroupAccessPolicies.Any(ap =>
+            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.UserId == userId && ap.Read)) ||
         s.Projects.Any(p =>
             p.UserAccessPolicies.Any(ap => ap.OrganizationUser.UserId == userId && ap.Read) ||
             p.GroupAccessPolicies.Any(ap =>
@@ -452,4 +435,197 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.RevisionDate, utcNow));
         }
     }
+
+    private static IQueryable<SecretAccess> BuildSecretAccessQuery(IQueryable<Secret> secrets, Guid accessClientId,
+        AccessClientType accessType) =>
+        accessType switch
+        {
+            AccessClientType.NoAccessCheck => secrets.Select(s => new SecretAccess(s.Id, true, true)),
+            AccessClientType.User => secrets.Select(s => new SecretAccess(
+                s.Id,
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Read) ||
+                s.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Read)) ||
+                s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Read) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Read))),
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Write) ||
+                s.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Write)) ||
+                s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Write) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Write)))
+            )),
+            AccessClientType.ServiceAccount => secrets.Select(s => new SecretAccess(
+                s.Id,
+                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Read) ||
+                s.Projects.Any(p =>
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Read)),
+                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Write) ||
+                s.Projects.Any(p =>
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Write))
+            )),
+            _ => secrets.Select(s => new SecretAccess(s.Id, false, false))
+        };
+
+    private static async Task<Secret> UpdateProjectMappingAsync(DatabaseContext dbContext, Secret currentEntity, Secret updatedEntity)
+    {
+        var projectsToRemove = currentEntity.Projects.Where(p => updatedEntity.Projects.All(mp => mp.Id != p.Id)).ToList();
+        var projectsToAdd = updatedEntity.Projects.Where(p => currentEntity.Projects.All(ep => ep.Id != p.Id)).ToList();
+
+        foreach (var p in projectsToRemove)
+        {
+            currentEntity.Projects.Remove(p);
+        }
+
+        foreach (var project in projectsToAdd)
+        {
+            var p = dbContext.AttachToOrGet<Project>(x => x.Id == project.Id, () => project);
+            currentEntity.Projects.Add(p);
+        }
+
+        var projectIds = projectsToRemove.Select(p => p.Id).Concat(projectsToAdd.Select(p => p.Id)).ToList();
+        if (projectIds.Count > 0)
+        {
+            await UpdateServiceAccountRevisionsByProjectIdsAsync(dbContext, projectIds);
+        }
+
+        return currentEntity;
+    }
+
+    private static async Task DeleteSecretAccessPoliciesAsync(DatabaseContext dbContext, Secret entity,
+        SecretAccessPoliciesUpdates accessPoliciesUpdates)
+    {
+        var userAccessPoliciesIdsToDelete = entity.UserAccessPolicies.Where(uap => accessPoliciesUpdates
+                .UserAccessPolicyUpdates
+                .Any(apu => apu.Operation == AccessPolicyOperation.Delete &&
+                            apu.AccessPolicy.OrganizationUserId == uap.OrganizationUserId))
+            .Select(uap => uap.Id)
+            .ToList();
+
+        var groupAccessPoliciesIdsToDelete = entity.GroupAccessPolicies.Where(gap => accessPoliciesUpdates
+                .GroupAccessPolicyUpdates
+                .Any(apu => apu.Operation == AccessPolicyOperation.Delete && apu.AccessPolicy.GroupId == gap.GroupId))
+            .Select(gap => gap.Id)
+            .ToList();
+
+        var serviceAccountAccessPoliciesIdsToDelete = entity.ServiceAccountAccessPolicies.Where(gap =>
+                accessPoliciesUpdates.ServiceAccountAccessPolicyUpdates
+                    .Any(apu => apu.Operation == AccessPolicyOperation.Delete &&
+                                apu.AccessPolicy.ServiceAccountId == gap.ServiceAccountId))
+            .Select(sap => sap.Id)
+            .ToList();
+
+        var accessPoliciesIdsToDelete = userAccessPoliciesIdsToDelete
+            .Concat(groupAccessPoliciesIdsToDelete)
+            .Concat(serviceAccountAccessPoliciesIdsToDelete)
+            .ToList();
+
+        await dbContext.AccessPolicies
+            .Where(ap => accessPoliciesIdsToDelete.Contains(ap.Id))
+            .ExecuteDeleteAsync();
+    }
+
+    private static async Task UpsertSecretAccessPolicyAsync(DatabaseContext dbContext, BaseAccessPolicy updatedEntity,
+        AccessPolicyOperation accessPolicyOperation, AccessPolicy? currentEntity, DateTime currentDate)
+    {
+        switch (accessPolicyOperation)
+        {
+            case AccessPolicyOperation.Create when currentEntity == null:
+                updatedEntity.SetNewId();
+                await dbContext.AddAsync(updatedEntity);
+                break;
+
+            case AccessPolicyOperation.Update when currentEntity != null:
+                dbContext.AccessPolicies.Attach(currentEntity);
+                currentEntity.Read = updatedEntity.Read;
+                currentEntity.Write = updatedEntity.Write;
+                currentEntity.RevisionDate = currentDate;
+                break;
+            default:
+                throw new InvalidOperationException("Policy updates failed due to unexpected state.");
+        }
+    }
+
+    private async Task UpsertSecretAccessPoliciesAsync(DatabaseContext dbContext,
+        Secret entity,
+        SecretAccessPoliciesUpdates policyUpdates)
+    {
+        var currentDate = DateTime.UtcNow;
+
+        foreach (var policyUpdate in policyUpdates.UserAccessPolicyUpdates.Where(apu =>
+                     apu.Operation != AccessPolicyOperation.Delete))
+        {
+            var currentEntity = entity.UserAccessPolicies?.FirstOrDefault(e =>
+                e.OrganizationUserId == policyUpdate.AccessPolicy.OrganizationUserId!.Value);
+
+            await UpsertSecretAccessPolicyAsync(dbContext, MapToEntity(policyUpdate.AccessPolicy),
+                policyUpdate.Operation,
+                currentEntity,
+                currentDate);
+        }
+
+        foreach (var policyUpdate in policyUpdates.GroupAccessPolicyUpdates.Where(apu =>
+                     apu.Operation != AccessPolicyOperation.Delete))
+        {
+            var currentEntity = entity.GroupAccessPolicies?.FirstOrDefault(e =>
+                e.GroupId == policyUpdate.AccessPolicy.GroupId!.Value);
+
+            await UpsertSecretAccessPolicyAsync(dbContext, MapToEntity(policyUpdate.AccessPolicy),
+                policyUpdate.Operation,
+                currentEntity,
+                currentDate);
+        }
+
+        foreach (var policyUpdate in policyUpdates.ServiceAccountAccessPolicyUpdates.Where(apu =>
+                     apu.Operation != AccessPolicyOperation.Delete))
+        {
+            var currentEntity = entity.ServiceAccountAccessPolicies?.FirstOrDefault(e =>
+                e.ServiceAccountId == policyUpdate.AccessPolicy.ServiceAccountId!.Value);
+
+            await UpsertSecretAccessPolicyAsync(dbContext, MapToEntity(policyUpdate.AccessPolicy),
+                policyUpdate.Operation,
+                currentEntity,
+                currentDate);
+        }
+    }
+
+    private async Task UpdateSecretAccessPoliciesAsync(DatabaseContext dbContext,
+        Secret entity,
+        SecretAccessPoliciesUpdates? accessPoliciesUpdates)
+    {
+        if (accessPoliciesUpdates == null || !accessPoliciesUpdates.HasUpdates())
+        {
+            return;
+        }
+
+        if ((entity.UserAccessPolicies != null && entity.UserAccessPolicies.Count != 0) ||
+            (entity.GroupAccessPolicies != null && entity.GroupAccessPolicies.Count != 0) ||
+            (entity.ServiceAccountAccessPolicies != null && entity.ServiceAccountAccessPolicies.Count != 0))
+        {
+            await DeleteSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
+        }
+
+        await UpsertSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
+
+        await UpdateServiceAccountRevisionsAsync(dbContext,
+            accessPoliciesUpdates.ServiceAccountAccessPolicyUpdates
+                .Select(sap => sap.AccessPolicy.ServiceAccountId!.Value).ToList());
+    }
+
+    private BaseAccessPolicy MapToEntity(Core.SecretsManager.Entities.BaseAccessPolicy baseAccessPolicy) =>
+        baseAccessPolicy switch
+        {
+            Core.SecretsManager.Entities.UserSecretAccessPolicy accessPolicy => Mapper.Map<UserSecretAccessPolicy>(
+                accessPolicy),
+            Core.SecretsManager.Entities.GroupSecretAccessPolicy accessPolicy => Mapper.Map<GroupSecretAccessPolicy>(
+                accessPolicy),
+            Core.SecretsManager.Entities.ServiceAccountSecretAccessPolicy accessPolicy => Mapper
+                .Map<ServiceAccountSecretAccessPolicy>(accessPolicy),
+            _ => throw new ArgumentException("Unsupported access policy type")
+        };
+
+    private record SecretAccess(Guid Id, bool Read, bool Write);
 }

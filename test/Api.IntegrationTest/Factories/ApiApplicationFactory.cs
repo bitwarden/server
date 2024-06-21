@@ -1,4 +1,4 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;

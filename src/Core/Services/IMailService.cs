@@ -10,6 +10,7 @@ public interface IMailService
 {
     Task SendWelcomeEmailAsync(User user);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
+    Task SendRegistrationVerificationEmailAsync(string email, string token);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);

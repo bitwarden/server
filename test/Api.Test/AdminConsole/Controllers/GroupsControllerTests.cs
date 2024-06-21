@@ -39,14 +39,12 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             organization,
             Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -85,15 +83,13 @@ public class GroupsControllerTests
         // Assert that it saved the data
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             organization,
             Arg.Is<ICollection<CollectionAccessSelection>>(access =>
                 access.All(c => requestModelCollectionIds.Contains(c.Id))),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -151,8 +147,7 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             // Should overwrite any existing collections
             Arg.Is<ICollection<CollectionAccessSelection>>(access =>
@@ -160,7 +155,6 @@ public class GroupsControllerTests
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -248,14 +242,12 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -295,14 +287,12 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -378,8 +368,7 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.Select(c => c.Id).SequenceEqual(currentCollectionAccess.Select(c => c.Id)) &&
@@ -389,7 +378,6 @@ public class GroupsControllerTests
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]

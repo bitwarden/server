@@ -4,6 +4,7 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Identity;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Http;
 
@@ -16,6 +17,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     public async Task<HttpContext> RegisterAsync(RegisterRequestModel model)
     {
         return await Server.PostAsync("/accounts/register", JsonContent.Create(model));
+    }
+
+    public async Task<HttpContext> PostRegisterSendEmailVerificationAsync(RegisterSendVerificationEmailRequestModel model)
+    {
+        return await Server.PostAsync("/accounts/register/send-verification-email", JsonContent.Create(model));
     }
 
     public async Task<(string Token, string RefreshToken)> TokenFromPasswordAsync(string username,
