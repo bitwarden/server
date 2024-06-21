@@ -4,6 +4,7 @@ using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
@@ -62,17 +63,21 @@ public class OrganizationAuthRequestsController : Controller
     }
 
     [HttpPost("deny")]
-    public async Task BulkDenyRequests(Guid orgId, [FromBody] BulkDenyAdminAuthRequestRequestModel model)
+    public async Task<IEnumerable<Guid>> BulkDenyRequests(Guid orgId, [FromBody] BulkDenyAdminAuthRequestRequestModel model)
     {
         await ValidateAdminRequest(orgId);
 
         var authRequests = await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(orgId, model.Ids);
 
+        var deniedRequests = new List<OrganizationAdminAuthRequest>();
         foreach (var authRequest in authRequests)
         {
             await _authRequestService.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId,
                 new AuthRequestUpdateRequestModel { RequestApproved = false, });
+            deniedRequests.Add(authRequest);
         }
+
+        return deniedRequests.Select(r => r.Id);
     }
 
     [RequireFeature(FeatureFlagKeys.BulkDeviceApproval)]
