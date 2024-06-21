@@ -67,7 +67,7 @@ public class AccountsController : Controller
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
         var user = model.ToUser();
-        var result = await _registerUserCommand.RegisterUser(user, model.MasterPasswordHash,
+        var result = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         if (result.Succeeded)
         {

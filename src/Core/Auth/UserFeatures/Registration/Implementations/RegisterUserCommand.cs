@@ -66,48 +66,25 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     }
 
-    public async Task<IdentityResult> RegisterUser(User user, string masterPasswordHash,
+
+    public async Task<IdentityResult> RegisterUser(User user)
+    {
+        var result = await _userService.CreateUserAsync(user);
+        if (result == IdentityResult.Success)
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
+        }
+
+        return result;
+    }
+
+
+    public async Task<IdentityResult> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
-        var orgInviteTokenValid = false;
-        if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(orgInviteToken) && orgUserId.HasValue)
-        {
-            // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-            var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-                _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId.Value, user.Email);
-
-            orgInviteTokenValid = newOrgInviteTokenValid ||
-                                  CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, orgInviteToken,
-                                      user.Email, orgUserId.Value, _globalSettings);
-        }
-
-        if (_globalSettings.DisableUserRegistration && !orgInviteTokenValid)
-        {
-            throw new BadRequestException("Open registration has been disabled by the system administrator.");
-        }
-
-        if (orgUserId.HasValue)
-        {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
-            if (orgUser != null)
-            {
-                var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
-                    PolicyType.TwoFactorAuthentication);
-                if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
-                {
-                    user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-                    {
-
-                        [TwoFactorProviderType.Email] = new TwoFactorProvider
-                        {
-                            MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                            Enabled = true
-                        }
-                    });
-                    _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
-                }
-            }
-        }
+        await ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
+        await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
@@ -137,6 +114,98 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
 
         return result;
+    }
+
+    // Original logic.
+    private Task ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
+    {
+        var orgInviteTokenValid = false;
+        if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(orgInviteToken) && orgUserId.HasValue)
+        {
+            // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+            var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+                _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId.Value, user.Email);
+
+            orgInviteTokenValid = newOrgInviteTokenValid ||
+                                  CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, orgInviteToken,
+                                      user.Email, orgUserId.Value, _globalSettings);
+        }
+
+        if (_globalSettings.DisableUserRegistration && !orgInviteTokenValid)
+        {
+            throw new BadRequestException("Open registration has been disabled by the system administrator.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    // Refactored logic
+    // private Task ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
+    // {
+    //     // Only validate the orgInviteToken if open registration is disabled
+    //     if (!_globalSettings.DisableUserRegistration)
+    //     {
+    //         return Task.CompletedTask;
+    //     }
+    //
+    //     // Open user registration is disabled
+    //
+    //     if (string.IsNullOrWhiteSpace(orgInviteToken) || !orgUserId.HasValue)
+    //     {
+    //         throw new BadRequestException("Open registration has been disabled by the system administrator.");
+    //     }
+    //
+    //     if (!IsOrgInviteTokenValid(orgInviteToken, orgUserId.Value, user.Email))
+    //     {
+    //         throw new BadRequestException("Open registration has been disabled by the system administrator.");
+    //     }
+    //
+    //     return Task.CompletedTask;
+    // }
+    //
+    // private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail)
+    // {
+    //     // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+    //     var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+    //         _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId, userEmail);
+    //
+    //     return newOrgInviteTokenValid || CoreHelpers.UserInviteTokenIsValid(
+    //         _organizationServiceDataProtector, orgInviteToken, userEmail, orgUserId, _globalSettings);
+    // }
+
+
+
+    /// <summary>
+    /// Handles initializing the user to have Email 2FA enabled if they are subject to an enabled 2FA organizational policy.
+    /// </summary>
+    /// <param name="orgUserId">The optional org user id</param>
+    /// <param name="user">The newly created user object which could be modified</param>
+    private async Task SetUserEmail2FaIfOrgPolicyEnabledAsync(Guid? orgUserId, User user)
+    {
+        if (!orgUserId.HasValue)
+        {
+            return;
+        }
+
+        var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
+        if (orgUser != null)
+        {
+            var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
+                PolicyType.TwoFactorAuthentication);
+            if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+            {
+                user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                {
+
+                    [TwoFactorProviderType.Email] = new TwoFactorProvider
+                    {
+                        MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                        Enabled = true
+                    }
+                });
+                _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+            }
+        }
     }
 
 

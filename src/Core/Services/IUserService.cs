@@ -17,8 +17,9 @@ public interface IUserService
     Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal);
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
+    Task<IdentityResult> CreateUserAsync(User user);
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
-    Task<IdentityResult> RegisterUserAsync(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
+    // TODO: don't forgot about moving RegisterUserAsync to the new command.
     Task<IdentityResult> RegisterUserAsync(User user);
     Task SendMasterPasswordHintAsync(string email);
     Task SendTwoFactorEmailAsync(User user);

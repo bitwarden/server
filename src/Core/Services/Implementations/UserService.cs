@@ -289,6 +289,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
 
+    public async Task<IdentityResult> CreateUserAsync(User user)
+    {
+        return await CreateAsync(user);
+    }
+
     public async Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash)
     {
         return await CreateAsync(user, masterPasswordHash);
@@ -310,6 +315,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                                       user.Email, orgUserId.Value, _globalSettings);
         }
 
+        // if(open user registration is disabled and the orgInviteToken is not valid)
         if (_globalSettings.DisableUserRegistration && !orgInviteTokenValid)
         {
             throw new BadRequestException("Open registration has been disabled by the system administrator.");

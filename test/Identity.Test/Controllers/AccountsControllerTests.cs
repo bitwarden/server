@@ -102,7 +102,7 @@ public class AccountsControllerTests : IDisposable
         var passwordHash = "abcdef";
         var token = "123456";
         var userGuid = new Guid();
-        _registerUserCommand.RegisterUser(Arg.Any<User>(), passwordHash, token, userGuid)
+        _registerUserCommand.RegisterUserWithOptionalOrgInvite(Arg.Any<User>(), passwordHash, token, userGuid)
                     .Returns(Task.FromResult(IdentityResult.Success));
         var request = new RegisterRequestModel
         {
@@ -116,7 +116,7 @@ public class AccountsControllerTests : IDisposable
 
         await _sut.PostRegister(request);
 
-        await _registerUserCommand.Received(1).RegisterUser(Arg.Any<User>(), passwordHash, token, userGuid);
+        await _registerUserCommand.Received(1).RegisterUserWithOptionalOrgInvite(Arg.Any<User>(), passwordHash, token, userGuid);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class AccountsControllerTests : IDisposable
         var passwordHash = "abcdef";
         var token = "123456";
         var userGuid = new Guid();
-        _registerUserCommand.RegisterUser(Arg.Any<User>(), passwordHash, token, userGuid)
+        _registerUserCommand.RegisterUserWithOptionalOrgInvite(Arg.Any<User>(), passwordHash, token, userGuid)
                     .Returns(Task.FromResult(IdentityResult.Failed()));
         var request = new RegisterRequestModel
         {

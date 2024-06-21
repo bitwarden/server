@@ -29,7 +29,7 @@ public class RegisterUserCommandTests
     // Simple happy path test
     [Theory]
     [BitAutoData]
-    public async Task RegisterUser_NoOrgInviteOrOrgUserIdOrReferenceData_Succeeds(
+    public async Task RegisterUserWithOptionalOrgInvite_NoOrgInviteOrOrgUserIdOrReferenceData_Succeeds(
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash)
     {
         // Arrange
@@ -40,7 +40,7 @@ public class RegisterUserCommandTests
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUser(user, masterPasswordHash, null, null);
+        var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, null, null);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -57,7 +57,7 @@ public class RegisterUserCommandTests
     // Complex happy path test
     [Theory]
     [BitAutoData]
-    public async Task RegisterUser_ComplexHappyPath_Succeeds(
+    public async Task RegisterUserWithOptionalOrgInvite_ComplexHappyPath_Succeeds(
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
     {
         // Arrange
@@ -97,7 +97,7 @@ public class RegisterUserCommandTests
         user.ReferenceData = $"{{\"initiationPath\":\"{initiationPath}\"}}";
 
         // Act
-        var result = await sutProvider.Sut.RegisterUser(user, masterPasswordHash, orgInviteToken, orgUserId);
+        var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId);
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -148,29 +148,106 @@ public class RegisterUserCommandTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task RegisterUser_InvalidOrgInviteWithDisabledOpenRegistrationTrue_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken)
+    [BitAutoData("invalidOrgInviteToken")]
+    [BitAutoData("nullOrgInviteToken")]
+    [BitAutoData("nullOrgUserId")]
+    public async Task RegisterUserWithOptionalOrgInvite_MissingOrInvalidOrgInviteDataWithDisabledOpenRegistration_ThrowsBadRequestException(string scenario,
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(true);
 
-        orgUser.Email = null; // make org user not match user and thus make tokenable invalid
-        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+        switch (scenario)
+        {
+            case "invalidOrgInviteToken":
+                orgUser.Email = null; // make org user not match user and thus make tokenable invalid
+                var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
-        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
-             .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
-             .Returns(callInfo =>
-             {
-                 callInfo[1] = orgInviteTokenable;
-                 return true;
-             });
+                sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+                    .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+                    .Returns(callInfo =>
+                    {
+                        callInfo[1] = orgInviteTokenable;
+                        return true;
+                    });
+                break;
+            case "nullOrgInviteToken":
+                orgInviteToken = null;
+                break;
+            case "nullOrgUserId":
+                orgUserId = default;
+                break;
+        }
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUser(user, masterPasswordHash, orgInviteToken, null));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId));
         Assert.Equal("Open registration has been disabled by the system administrator.", exception.Message);
     }
+
+
+    // TODO: figure out why would we allow a user to register with an invalid org invite data?
+    [Theory]
+    [BitAutoData("invalidOrgInviteToken")]
+    [BitAutoData("nullOrgInviteToken")]
+    [BitAutoData("nullOrgUserId")]
+    public async Task RegisterUserWithOptionalOrgInvite_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_Succeeds(string scenario,
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration.Returns(false);
+
+        switch (scenario)
+        {
+            case "invalidOrgInviteToken":
+                orgUser.Email = null; // make org user not match user and thus make tokenable invalid
+                var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+                sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+                    .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+                    .Returns(callInfo =>
+                    {
+                        callInfo[1] = orgInviteTokenable;
+                        return true;
+                    });
+                break;
+            case "nullOrgInviteToken":
+                orgInviteToken = null;
+                break;
+            case "nullOrgUserId":
+                orgUserId = default;
+                break;
+        }
+
+        user.ReferenceData = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId);
+
+        // Assert
+
+        // assert that we didn't try to validate the orgInviteToken
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .DidNotReceive()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>());
+
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user, masterPasswordHash);
+
+        await sutProvider.GetDependency<IReferenceEventService>()
+            .Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+    }
+
+
 
 
 }
