@@ -4,7 +4,7 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class ProjectCountsResponseModel() : ResponseModel(_objectName)
 {
-    private const string _objectName = "project_counts";
+    private const string _objectName = "projectCounts";
 
 
     public int Secrets { get; set; }

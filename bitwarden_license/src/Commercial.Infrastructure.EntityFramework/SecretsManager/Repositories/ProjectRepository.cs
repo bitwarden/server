@@ -208,8 +208,8 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
             ServiceAccounts = project.ServiceAccountAccessPolicies.Count
         });
 
-        var project = await projectCountsQuery.FirstOrDefaultAsync();
-        return project ?? new ProjectCounts { Secrets = 0, People = 0, ServiceAccounts = 0 };
+        var projectCounts = await projectCountsQuery.FirstOrDefaultAsync();
+        return projectCounts ?? new ProjectCounts { Secrets = 0, People = 0, ServiceAccounts = 0 };
     }
 
     private record ProjectAccess(Guid Id, bool Read, bool Write);
