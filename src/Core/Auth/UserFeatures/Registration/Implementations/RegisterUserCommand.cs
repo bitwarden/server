@@ -83,7 +83,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     public async Task<IdentityResult> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
-        await ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
+        ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
         await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
@@ -116,62 +116,42 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
-    // Original logic.
-    private Task ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
+
+    private void ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
     {
-        var orgInviteTokenValid = false;
-        if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(orgInviteToken) && orgUserId.HasValue)
-        {
-            // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-            var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-                _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId.Value, user.Email);
-
-            orgInviteTokenValid = newOrgInviteTokenValid ||
-                                  CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, orgInviteToken,
-                                      user.Email, orgUserId.Value, _globalSettings);
-        }
-
-        if (_globalSettings.DisableUserRegistration && !orgInviteTokenValid)
+        // If open registration is disabled and there isn't an org invite token, then throw an exception
+        if (_globalSettings.DisableUserRegistration && string.IsNullOrWhiteSpace(orgInviteToken) && !orgUserId.HasValue)
         {
             throw new BadRequestException("Open registration has been disabled by the system administrator.");
         }
 
-        return Task.CompletedTask;
+        // if user has an org invite token but not org user id, then throw an exception as we can't validate the token
+        // The web client should always send both orgInviteToken and orgUserId together.
+        if (!string.IsNullOrWhiteSpace(orgInviteToken) && !orgUserId.HasValue)
+        {
+            throw new BadRequestException("Organization invite token cannot be validated without an organization user id.");
+        }
+
+        // TODO: determine if we should throw if we have an org user id but no org invite token. It's technically possible
+        // but doesn't seem to be a supported flow right now.
+
+        // if we have an org invite token but it is invalid, then throw an exception
+        if (!string.IsNullOrWhiteSpace(orgInviteToken) && orgUserId.HasValue && !IsOrgInviteTokenValid(orgInviteToken, orgUserId.Value, user.Email))
+        {
+            throw new BadRequestException("Organization invite token is invalid.");
+        }
+
     }
 
-    // Refactored logic
-    // private Task ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
-    // {
-    //     // Only validate the orgInviteToken if open registration is disabled
-    //     if (!_globalSettings.DisableUserRegistration)
-    //     {
-    //         return Task.CompletedTask;
-    //     }
-    //
-    //     // Open user registration is disabled
-    //
-    //     if (string.IsNullOrWhiteSpace(orgInviteToken) || !orgUserId.HasValue)
-    //     {
-    //         throw new BadRequestException("Open registration has been disabled by the system administrator.");
-    //     }
-    //
-    //     if (!IsOrgInviteTokenValid(orgInviteToken, orgUserId.Value, user.Email))
-    //     {
-    //         throw new BadRequestException("Open registration has been disabled by the system administrator.");
-    //     }
-    //
-    //     return Task.CompletedTask;
-    // }
-    //
-    // private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail)
-    // {
-    //     // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-    //     var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-    //         _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId, userEmail);
-    //
-    //     return newOrgInviteTokenValid || CoreHelpers.UserInviteTokenIsValid(
-    //         _organizationServiceDataProtector, orgInviteToken, userEmail, orgUserId, _globalSettings);
-    // }
+    private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail)
+    {
+        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+        var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+            _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId, userEmail);
+
+        return newOrgInviteTokenValid || CoreHelpers.UserInviteTokenIsValid(
+            _organizationServiceDataProtector, orgInviteToken, userEmail, orgUserId, _globalSettings);
+    }
 
 
 
