@@ -142,6 +142,31 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return await query.CountAsync();
     }
 
+    public async Task<ServiceAccountCounts> GetServiceAccountCountsByIdAsync(Guid serviceAccountId, Guid userId,
+        AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.ServiceAccount.Where(sa => sa.Id == serviceAccountId);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasReadAccessToServiceAccount(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        var serviceAccountCountsQuery = query.Select(serviceAccount => new ServiceAccountCounts
+        {
+            Projects = serviceAccount.ProjectAccessPolicies.Count,
+            People = serviceAccount.UserAccessPolicies.Count + serviceAccount.GroupAccessPolicies.Count,
+            AccessTokens = serviceAccount.ApiKeys.Count()
+        });
+
+        var serviceAccountCounts = await serviceAccountCountsQuery.FirstOrDefaultAsync();
+        return serviceAccountCounts ?? new ServiceAccountCounts { Projects = 0, People = 0, AccessTokens = 0 };
+    }
+
     public async Task<bool> ServiceAccountsAreInOrganizationAsync(List<Guid> serviceAccountIds, Guid organizationId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();

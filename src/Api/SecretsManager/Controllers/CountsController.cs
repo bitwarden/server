@@ -81,4 +81,27 @@ public class CountsController : Controller
             ServiceAccounts = projectsCounts.ServiceAccounts
         };
     }
+
+    [HttpGet("organizations/{organizationId}/service-accounts/{serviceAccountId}/sm-counts")]
+    public async Task<ServiceAccountCountsResponseModel> GetByOrganizationAndServiceAccountAsync(
+        [FromRoute] Guid organizationId,
+        [FromRoute] Guid serviceAccountId)
+    {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
+
+        var serviceAccountCounts =
+            await _serviceAccountRepository.GetServiceAccountCountsByIdAsync(serviceAccountId, userId, accessType);
+
+        return new ServiceAccountCountsResponseModel
+        {
+            Projects = serviceAccountCounts.Projects,
+            People = serviceAccountCounts.People,
+            AccessTokens = serviceAccountCounts.AccessTokens
+        };
+    }
 }
