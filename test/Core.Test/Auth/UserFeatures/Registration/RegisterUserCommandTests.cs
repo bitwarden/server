@@ -56,8 +56,10 @@ public class RegisterUserCommandTests
 
     // Complex happy path test
     [Theory]
-    [BitAutoData]
-    public async Task RegisterUserWithOptionalOrgInvite_ComplexHappyPath_Succeeds(
+    [BitAutoData(false, null)]
+    [BitAutoData(true, "sampleInitiationPath")]
+    [BitAutoData(true, "Secrets Manager trial")]
+    public async Task RegisterUserWithOptionalOrgInvite_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
     {
         // Arrange
@@ -93,8 +95,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
 
-        var initiationPath = "trialInitiation";
-        user.ReferenceData = $"{{\"initiationPath\":\"{initiationPath}\"}}";
+        user.ReferenceData = addUserReferenceData ? $"{{\"initiationPath\":\"{initiationPath}\"}}" : null;
 
         // Act
         var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId);
@@ -131,17 +132,32 @@ public class RegisterUserCommandTests
             .Received(1)
             .CreateUserAsync(user, masterPasswordHash);
 
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendWelcomeEmailAsync(user);
+        if (addUserReferenceData)
+        {
+            if (initiationPath.Contains("Secrets Manager trial"))
+            {
+                await sutProvider.GetDependency<IMailService>()
+                    .Received(1)
+                    .SendTrialInitiationEmailAsync(user.Email);
+            }
+            else
+            {
+                await sutProvider.GetDependency<IMailService>()
+                    .Received(1)
+                    .SendWelcomeEmailAsync(user);
+            }
 
-        await sutProvider.GetDependency<IReferenceEventService>()
-               .Received(1)
-               .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.SignupInitiationPath == initiationPath));
+            await sutProvider.GetDependency<IReferenceEventService>()
+                .Received(1)
+                .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.SignupInitiationPath == initiationPath));
 
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+        }
+        else
+        {
+            await sutProvider.GetDependency<IReferenceEventService>()
+                .Received(1)
+                .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.SignupInitiationPath == default));
+        }
 
         Assert.True(result.Succeeded);
 
