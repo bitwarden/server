@@ -116,31 +116,53 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
-
     private void ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
     {
-        // If open registration is disabled and there isn't an org invite token, then throw an exception
-        if (_globalSettings.DisableUserRegistration && string.IsNullOrWhiteSpace(orgInviteToken) && !orgUserId.HasValue)
+        const string disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
+
+        var orgInviteTokenProvided = !string.IsNullOrWhiteSpace(orgInviteToken);
+
+        if (orgInviteTokenProvided && orgUserId.HasValue)
         {
-            throw new BadRequestException("Open registration has been disabled by the system administrator.");
+            // We have token data so validate it
+            if (IsOrgInviteTokenValid(orgInviteToken, orgUserId.Value, user.Email))
+            {
+                return;
+            }
+
+            // Token data is invalid
+
+            if (_globalSettings.DisableUserRegistration)
+            {
+                throw new BadRequestException(disabledUserRegistrationExceptionMsg);
+            }
+
+            throw new BadRequestException("Organization invite token is invalid.");
         }
 
-        // if user has an org invite token but not org user id, then throw an exception as we can't validate the token
-        // The web client should always send both orgInviteToken and orgUserId together.
-        if (!string.IsNullOrWhiteSpace(orgInviteToken) && !orgUserId.HasValue)
+        // no token data or missing token data
+
+        // Throw if open registration is disabled and there isn't an org invite token or an org user id
+        // as you can't register without them.
+        if (_globalSettings.DisableUserRegistration)
+        {
+            throw new BadRequestException(disabledUserRegistrationExceptionMsg);
+        }
+
+        // Open registration is allowed
+        // if we have an org invite token but no org user id, then throw an exception as we can't validate the token
+        if (orgInviteTokenProvided && !orgUserId.HasValue)
         {
             throw new BadRequestException("Organization invite token cannot be validated without an organization user id.");
         }
 
-        // TODO: determine if we should throw if we have an org user id but no org invite token. It's technically possible
-        // but doesn't seem to be a supported flow right now.
-
-        // if we have an org invite token but it is invalid, then throw an exception
-        if (!string.IsNullOrWhiteSpace(orgInviteToken) && orgUserId.HasValue && !IsOrgInviteTokenValid(orgInviteToken, orgUserId.Value, user.Email))
+        // if we have an org user id but no org invite token, then throw an exception as that isn't a supported flow
+        if (orgUserId.HasValue && string.IsNullOrWhiteSpace(orgInviteToken))
         {
-            throw new BadRequestException("Organization invite token is invalid.");
+            throw new BadRequestException("Organization user id cannot be provided without an organization invite token.");
         }
 
+        // If both orgInviteToken && orgUserId are missing, then proceed with open registration
     }
 
     private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail)
@@ -156,7 +178,7 @@ public class RegisterUserCommand : IRegisterUserCommand
 
 
     /// <summary>
-    /// Handles initializing the user to have Email 2FA enabled if they are subject to an enabled 2FA organizational policy.
+    /// Handles initializing the user with Email 2FA enabled if they are subject to an enabled 2FA organizational policy.
     /// </summary>
     /// <param name="orgUserId">The optional org user id</param>
     /// <param name="user">The newly created user object which could be modified</param>

@@ -185,19 +185,18 @@ public class RegisterUserCommandTests
         Assert.Equal("Open registration has been disabled by the system administrator.", exception.Message);
     }
 
-
-    // TODO: figure out why would we allow a user to register with an invalid org invite data?
     [Theory]
     [BitAutoData("invalidOrgInviteToken")]
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
-    public async Task RegisterUserWithOptionalOrgInvite_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_Succeeds(string scenario,
+    public async Task RegisterUserWithOptionalOrgInvite_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_ThrowsBadRequestException(string scenario,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(false);
 
+        string expectedErrorMessage = null;
         switch (scenario)
         {
             case "invalidOrgInviteToken":
@@ -211,12 +210,16 @@ public class RegisterUserCommandTests
                         callInfo[1] = orgInviteTokenable;
                         return true;
                     });
+
+                expectedErrorMessage = "Organization invite token is invalid.";
                 break;
             case "nullOrgInviteToken":
                 orgInviteToken = null;
+                expectedErrorMessage = "Organization user id cannot be provided without an organization invite token.";
                 break;
             case "nullOrgUserId":
                 orgUserId = default;
+                expectedErrorMessage = "Organization invite token cannot be validated without an organization user id.";
                 break;
         }
 
@@ -227,24 +230,9 @@ public class RegisterUserCommandTests
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId);
-
-        // Assert
-
-        // assert that we didn't try to validate the orgInviteToken
-        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
-            .DidNotReceive()
-            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>());
-
-        Assert.True(result.Succeeded);
-
-        await sutProvider.GetDependency<IUserService>()
-            .Received(1)
-            .CreateUserAsync(user, masterPasswordHash);
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId));
+        Assert.Equal(expectedErrorMessage, exception.Message);
     }
 
 
