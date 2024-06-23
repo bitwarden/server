@@ -25,7 +25,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using File = System.IO.File;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -297,93 +296,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public async Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash)
     {
         return await CreateAsync(user, masterPasswordHash);
-    }
-
-    // TODO: move registerUser to RegisterUserCommand
-    public async Task<IdentityResult> RegisterUserAsync(User user, string masterPasswordHash,
-        string orgInviteToken, Guid? orgUserId)
-    {
-        var orgInviteTokenValid = false;
-        if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(orgInviteToken) && orgUserId.HasValue)
-        {
-            // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-            var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-                _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId.Value, user.Email);
-
-            orgInviteTokenValid = newOrgInviteTokenValid ||
-                                  CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, orgInviteToken,
-                                      user.Email, orgUserId.Value, _globalSettings);
-        }
-
-        // if(open user registration is disabled and the orgInviteToken is not valid)
-        if (_globalSettings.DisableUserRegistration && !orgInviteTokenValid)
-        {
-            throw new BadRequestException("Open registration has been disabled by the system administrator.");
-        }
-
-        if (orgUserId.HasValue)
-        {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
-            if (orgUser != null)
-            {
-                var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
-                    PolicyType.TwoFactorAuthentication);
-                if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
-                {
-                    user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-                    {
-
-                        [TwoFactorProviderType.Email] = new TwoFactorProvider
-                        {
-                            MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                            Enabled = true
-                        }
-                    });
-                    SetTwoFactorProvider(user, TwoFactorProviderType.Email);
-                }
-            }
-        }
-
-        user.ApiKey = CoreHelpers.SecureRandomString(30);
-        var result = await base.CreateAsync(user, masterPasswordHash);
-        if (result == IdentityResult.Success)
-        {
-            if (!string.IsNullOrEmpty(user.ReferenceData))
-            {
-                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
-                if (referenceData.TryGetValue("initiationPath", out var value))
-                {
-                    var initiationPath = value.ToString();
-                    await SendAppropriateWelcomeEmailAsync(user, initiationPath);
-                    if (!string.IsNullOrEmpty(initiationPath))
-                    {
-                        await _referenceEventService.RaiseEventAsync(
-                            new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
-                            {
-                                SignupInitiationPath = initiationPath
-                            });
-
-                        return result;
-                    }
-                }
-            }
-
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
-        }
-
-        return result;
-    }
-
-    public async Task<IdentityResult> RegisterUserAsync(User user)
-    {
-        var result = await base.CreateAsync(user);
-        if (result == IdentityResult.Success)
-        {
-            await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
-        }
-
-        return result;
     }
 
     public async Task SendMasterPasswordHintAsync(string email)

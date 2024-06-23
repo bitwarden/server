@@ -19,8 +19,6 @@ public interface IUserService
     Task SaveUserAsync(User user, bool push = false);
     Task<IdentityResult> CreateUserAsync(User user);
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
-    // TODO: don't forgot about moving RegisterUserAsync to the new command.
-    Task<IdentityResult> RegisterUserAsync(User user);
     Task SendMasterPasswordHintAsync(string email);
     Task SendTwoFactorEmailAsync(User user);
     Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
