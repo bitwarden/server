@@ -26,6 +26,66 @@ namespace Bit.Core.Test.Auth.UserFeatures.Registration;
 [SutProviderCustomize]
 public class RegisterUserCommandTests
 {
+
+    // RegisterUser tests
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUser_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUser(user);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendWelcomeEmailAsync(user);
+
+        await sutProvider.GetDependency<IReferenceEventService>()
+            .Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUser_WhenCreateUserFails_ReturnsIdentityResultFailed(SutProvider<RegisterUserCommand> sutProvider, User user)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user)
+            .Returns(IdentityResult.Failed());
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUser(user);
+
+        // Assert
+        Assert.False(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendWelcomeEmailAsync(Arg.Any<User>());
+
+        await sutProvider.GetDependency<IReferenceEventService>()
+            .DidNotReceive()
+            .RaiseEventAsync(Arg.Any<ReferenceEvent>());
+    }
+
+    // RegisterUserWithOptionalOrgInvite tests
+
     // Simple happy path test
     [Theory]
     [BitAutoData]
