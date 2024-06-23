@@ -14,9 +14,10 @@ public interface IRegisterUserCommand
     public Task<IdentityResult> RegisterUser(User user);
 
     /// <summary>
-    /// Creates a new user with a given master password hash.
-    /// Optionally accepts an org invite token and org user id to associate the user with an organization upon
-    /// registration and login. Both are required if either is provided.
+    /// Creates a new user with a given master password hash, sends a welcome email (differs based on initiation path),
+    /// and raises the signup reference event. Optionally accepts an org invite token and org user id to associate
+    /// the user with an organization upon registration and login. Both are required if either is provided or validation will fail.
+    /// If the organization has a 2FA required policy enabled, email verification will be enabled for the user.
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
     /// <param name="masterPasswordHash">The hashed master password the user entered</param>
