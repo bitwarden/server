@@ -26,7 +26,7 @@ public record ConsolidatedBillingSubscriptionResponse(
             .Select(providerPlan =>
             {
                 var plan = StaticStore.GetPlan(providerPlan.PlanType);
-                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.SeatPrice;
+                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
                 return new ProviderPlanResponse(
                     plan.Name,
@@ -36,7 +36,9 @@ public record ConsolidatedBillingSubscriptionResponse(
                     cost,
                     cadence);
             });
+
         var gracePeriod = subscription.CollectionMethod == "charge_automatically" ? 14 : 30;
+
         return new ConsolidatedBillingSubscriptionResponse(
             subscription.Status,
             subscription.CurrentPeriodEnd,
