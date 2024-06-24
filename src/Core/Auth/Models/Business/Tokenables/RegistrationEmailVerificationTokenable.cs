@@ -52,9 +52,30 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
                ReceiveMarketingEmails == receiveMarketingEmails;
     }
 
+    public bool TokenEmailIsValid(string email)
+    {
+        if (Email == default || email == default)
+        {
+            return false;
+        }
+
+        return Email.Equals(email, StringComparison.InvariantCultureIgnoreCase);
+    }
+
+
     // Validates deserialized
     protected override bool TokenIsValid() =>
         Identifier == TokenIdentifier
         && !string.IsNullOrWhiteSpace(Email);
+
+
+    public static bool ValidateRegistrationEmailVerificationTokenable(
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> dataProtectorTokenFactory,
+        string token, string userEmail)
+    {
+        return dataProtectorTokenFactory.TryUnprotect(token, out var decryptedToken)
+               && decryptedToken.Valid
+               && decryptedToken.TokenIsValid(userEmail);
+    }
 
 }

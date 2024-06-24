@@ -118,8 +118,6 @@ public class RegistrationEmailVerificationTokenableTests
     }
 
 
-    // TokenIsValid_IncorrectEmail_ReturnsFalse
-
     /// <summary>
     /// Tests the token validity when an incorrect email is provided
     /// </summary>
@@ -162,6 +160,28 @@ public class RegistrationEmailVerificationTokenableTests
         var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.True(token.TokenIsValid(email, name, receiveMarketingEmails));
+    }
+
+    /// <summary>
+    /// Tests the token validity when just email is provided
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenEmailIsValid_ValidInputs_ReturnsTrue(string email, string name, bool receiveMarketingEmails)
+    {
+        var tokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
+
+        Assert.True(tokenable.TokenEmailIsValid(email));
+    }
+
+    /// <summary>
+    /// Tests the token validity when invalid email is provided
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenEmailIsValid_InvalidInputs_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
+    {
+        var tokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
+
+        Assert.False(tokenable.TokenEmailIsValid("nonMatchingEmail@bitwarden.com"));
     }
 
     /// <summary>
