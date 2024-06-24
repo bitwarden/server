@@ -48,7 +48,7 @@ public class CertBuilder
                                  $"-keyout /bitwarden/ssl/self/{_context.Install.Domain}/private.key " +
                                  $"-out /bitwarden/ssl/self/{_context.Install.Domain}/certificate.crt " +
                                  $"-reqexts SAN -extensions SAN " +
-                                 $"-config <(cat /usr/lib/ssl/openssl.cnf <(printf '[SAN]\nsubjectAltName=DNS:{_context.Install.Domain}\nbasicConstraints=CA:true')) " +
+                                 $"-config <(cat /usr/lib/ssl/openssl.cnf <(printf '[SAN]\nsubjectAltName=DNS:{_context.Install.Domain}')) " +
                                  $"-subj \"/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN={_context.Install.Domain}\"");
                 }
             }
