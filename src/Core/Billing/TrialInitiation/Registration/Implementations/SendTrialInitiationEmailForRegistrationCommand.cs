@@ -51,6 +51,9 @@ public class SendTrialInitiationEmailForRegistrationCommand(
         return null;
     }
 
+    /// <summary>
+    /// Perform constant time operations to prevent timing attacks
+    /// </summary>
     private static async Task PerformConstantTimeOperationsAsync()
     {
         await Task.Delay(130);
