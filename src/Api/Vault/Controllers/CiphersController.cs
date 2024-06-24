@@ -380,7 +380,7 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can access all ciphers in V1 (to change later)
+        // Provider users can access all ciphers.
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
             return true;
