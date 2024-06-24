@@ -21,11 +21,20 @@ public interface IRegisterUserCommand
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
     /// <param name="masterPasswordHash">The hashed master password the user entered</param>
-    /// <param name="orgInviteToken">The org invite token sent to them via email</param>
+    /// <param name="orgInviteToken">The org invite token sent to the user via email</param>
     /// <param name="orgUserId">The associated org user guid that was created at the time of invite</param>
     /// <returns><see cref="IdentityResult"/></returns>
     public Task<IdentityResult> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
 
-    // public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash, string emailVerificationToken);
+    /// <summary>
+    /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
+    /// If a valid email verification token is provided, the user will be created with their email verified.
+    /// An error will be thrown if the token is invalid or expired.
+    /// </summary>
+    /// <param name="user">The <see cref="User"/> to create</param>
+    /// <param name="masterPasswordHash">The hashed master password the user entered</param>
+    /// <param name="emailVerificationToken">The email verification token sent to the user via email</param>
+    /// <returns></returns>
+    public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash, string emailVerificationToken);
 
 }

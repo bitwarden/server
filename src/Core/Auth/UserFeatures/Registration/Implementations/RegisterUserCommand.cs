@@ -87,6 +87,13 @@ public class RegisterUserCommand : IRegisterUserCommand
         await SetUserEmail2FaIfOrgPolicyEnabledAsync(orgUserId, user);
 
         user.ApiKey = CoreHelpers.SecureRandomString(30);
+
+        // TODO: add tests for this.
+        if (!string.IsNullOrEmpty(orgInviteToken) && orgUserId.HasValue)
+        {
+            user.EmailVerified = true;
+        }
+
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
@@ -176,7 +183,6 @@ public class RegisterUserCommand : IRegisterUserCommand
     }
 
 
-
     /// <summary>
     /// Handles initializing the user with Email 2FA enabled if they are subject to an enabled 2FA organizational policy.
     /// </summary>
@@ -223,5 +229,53 @@ public class RegisterUserCommand : IRegisterUserCommand
         {
             await _mailService.SendWelcomeEmailAsync(user);
         }
+    }
+
+    public async Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash,
+        string emailVerificationToken)
+    {
+        // Is there any possibility of duplicate users being created here?
+
+        var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
+
+        user.EmailVerified = true;
+        user.Name = tokenable.Name;
+
+    // TODO: if we have to update the new complete registration endpoint to accept user.referenceData,
+    // then we will have to parse the JSON and add the ReceiveMarketingEmails key to the JSON without overwriting
+    // the existing JSON
+
+    // TODO: revert this if marketing chooses not to save this to the reference data.
+    // This is not the intended use of reference data.
+    // user.ReferenceData = new JsonObject { ["ReceiveMarketingEmails"] = tokenable.ReceiveMarketingEmails, }
+    //     .ToJsonString();
+
+    // Consider using HttpClient with resiliency for hubspot as a way of mitigating potential failures
+    https://learn.microsoft.com/en-us/dotnet/core/resilience/http-resilience?tabs=dotnet-cli#add-standard-resilience-handler
+
+        // TODO: double check if marketing is aware of referenceData not being handled via complete registration endpoint.
+
+        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        if (result == IdentityResult.Success)
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
+            {
+                ReceiveMarketingEmails = tokenable.ReceiveMarketingEmails
+            });
+        }
+
+        return result;
+    }
+
+    private RegistrationEmailVerificationTokenable ValidateRegistrationEmailVerificationTokenable(string emailVerificationToken, string userEmail)
+    {
+        _registrationEmailVerificationTokenDataFactory.TryUnprotect(emailVerificationToken, out var tokenable);
+        if (tokenable == null || !tokenable.Valid || !tokenable.TokenIsValid(userEmail))
+        {
+            throw new BadRequestException("Invalid email verification token.");
+        }
+
+        return tokenable;
     }
 }
