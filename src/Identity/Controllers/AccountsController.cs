@@ -20,6 +20,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
@@ -110,13 +111,43 @@ public class AccountsController : Controller
 
     [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("register/finish")]
-    public async Task<IActionResult> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
+    public async Task<RegisterResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
-
         var user = model.ToUser();
 
-        // TODO: return captcha bypass token
-        return NoContent();
+        // Users will either have an org invite token or an email verification token - not both.
+
+        IdentityResult result = null;
+        if (!string.IsNullOrEmpty(model.orgInviteToken) && model.OrganizationUserId.HasValue)
+        {
+            result = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
+                model.orgInviteToken, model.OrganizationUserId);
+        }
+
+        if (result == null)
+        {
+            result = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
+        }
+
+        if (result.Succeeded)
+        {
+
+            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
+
+            // TODO: eval the differences here.
+            return new RegisterResponseModel(captchaBypassToken);
+
+        }
+
+        // Is this even something that can happen?
+        // foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
+        // {
+        //     ModelState.AddModelError(string.Empty, error.Description);
+        // }
+
+        // TODO: add feature flag for delays.
+        await Task.Delay(2000);
+        throw new BadRequestException(ModelState);
     }
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
