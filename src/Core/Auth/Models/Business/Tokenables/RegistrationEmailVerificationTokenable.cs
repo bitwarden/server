@@ -39,20 +39,7 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
         ReceiveMarketingEmails = receiveMarketingEmails;
     }
 
-    public bool TokenIsValid(string email, string name = default, bool receiveMarketingEmails = default)
-    {
-        if (Email == default || email == default)
-        {
-            return false;
-        }
-
-        // Note: string.Equals handles nulls without throwing an exception
-        return string.Equals(Name, name, StringComparison.InvariantCultureIgnoreCase) &&
-               Email.Equals(email, StringComparison.InvariantCultureIgnoreCase) &&
-               ReceiveMarketingEmails == receiveMarketingEmails;
-    }
-
-    public bool TokenEmailIsValid(string email)
+    public bool TokenIsValid(string email)
     {
         if (Email == default || email == default)
         {
@@ -62,20 +49,10 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
         return Email.Equals(email, StringComparison.InvariantCultureIgnoreCase);
     }
 
-
     // Validates deserialized
     protected override bool TokenIsValid() =>
         Identifier == TokenIdentifier
         && !string.IsNullOrWhiteSpace(Email);
 
-
-    public static bool ValidateRegistrationEmailVerificationTokenable(
-        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> dataProtectorTokenFactory,
-        string token, string userEmail)
-    {
-        return dataProtectorTokenFactory.TryUnprotect(token, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(userEmail);
-    }
 
 }
