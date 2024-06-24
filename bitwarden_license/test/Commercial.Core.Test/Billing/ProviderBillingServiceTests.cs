@@ -14,6 +14,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -186,6 +187,71 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AssignSeatsToClientOrganization_BelowToAbove_NotProviderAdmin_ContactSupport(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.Seats = 10;
+
+        organization.PlanType = PlanType.TeamsMonthly;
+
+        // Scale up 10 seats
+        const int seats = 20;
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                PlanType = PlanType.TeamsMonthly,
+                ProviderId = provider.Id,
+                PurchasedSeats = 0,
+                // 100 minimum
+                SeatMinimum = 100,
+                AllocatedSeats = 95
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                PlanType = PlanType.EnterpriseMonthly,
+                ProviderId = provider.Id,
+                PurchasedSeats = 0,
+                SeatMinimum = 500,
+                AllocatedSeats = 0
+            }
+        };
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
+
+        // 95 seats currently assigned with a seat minimum of 100
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 60
+            },
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 35
+            }
+        ]);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(false);
+
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
+    }
+
+    [Theory, BitAutoData]
     public async Task AssignSeatsToClientOrganization_BelowToAbove_Succeeds(
         Provider provider,
         Organization organization,
@@ -245,6 +311,8 @@ public class ProviderBillingServiceTests
                 Seats = 35
             }
         ]);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -1015,9 +1083,9 @@ public class ProviderBillingServiceTests
                 sub.Customer == "customer_id" &&
                 sub.DaysUntilDue == 30 &&
                 sub.Items.Count == 2 &&
-                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeSeatPlanId &&
+                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeProviderPortalSeatPlanId &&
                 sub.Items.ElementAt(0).Quantity == 100 &&
-                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeSeatPlanId &&
+                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeProviderPortalSeatPlanId &&
                 sub.Items.ElementAt(1).Quantity == 100 &&
                 sub.Metadata["providerId"] == provider.Id.ToString() &&
                 sub.OffSession == true &&

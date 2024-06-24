@@ -63,8 +63,10 @@ public abstract record Plan
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
+        public string StripeProviderPortalSeatPlanId { get; init; }
         public decimal BasePrice { get; init; }
         public decimal SeatPrice { get; init; }
+        public decimal ProviderPortalSeatPrice { get; init; }
         public bool AllowSeatAutoscale { get; init; }
         public bool HasAdditionalSeatsOption { get; init; }
         public int? MaxAdditionalSeats { get; init; }

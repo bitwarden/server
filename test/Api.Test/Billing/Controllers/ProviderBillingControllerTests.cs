@@ -21,6 +21,8 @@ using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
 
+using static Bit.Api.Test.Billing.Utilities;
+
 namespace Bit.Api.Test.Billing.Controllers;
 
 [ControllerCustomize(typeof(ProviderBillingController))]
@@ -34,7 +36,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         var invoices = new List<Invoice>
         {
@@ -54,6 +56,7 @@ public class ProviderBillingControllerTests
                 Number = "B",
                 Status = "open",
                 Total = 100000,
+                DueDate = new DateTime(2024, 7, 1),
                 HostedInvoiceUrl = "https://example.com/invoice/2",
                 InvoicePdf = "https://example.com/invoice/2/pdf"
             },
@@ -64,6 +67,7 @@ public class ProviderBillingControllerTests
                 Number = "A",
                 Status = "paid",
                 Total = 100000,
+                DueDate = new DateTime(2024, 6, 1),
                 HostedInvoiceUrl = "https://example.com/invoice/1",
                 InvoicePdf = "https://example.com/invoice/1/pdf"
             }
@@ -86,8 +90,8 @@ public class ProviderBillingControllerTests
         Assert.Equal(new DateTime(2024, 6, 1), openInvoice.Date);
         Assert.Equal("B", openInvoice.Number);
         Assert.Equal(1000, openInvoice.Total);
+        Assert.Equal(new DateTime(2024, 7, 1), openInvoice.DueDate);
         Assert.Equal("https://example.com/invoice/2", openInvoice.Url);
-        Assert.Equal("https://example.com/invoice/2/pdf", openInvoice.PdfUrl);
 
         var paidInvoice = response.Invoices.FirstOrDefault(i => i.Status == "paid");
 
@@ -96,8 +100,8 @@ public class ProviderBillingControllerTests
         Assert.Equal(new DateTime(2024, 5, 1), paidInvoice.Date);
         Assert.Equal("A", paidInvoice.Number);
         Assert.Equal(1000, paidInvoice.Total);
+        Assert.Equal(new DateTime(2024, 6, 1), paidInvoice.DueDate);
         Assert.Equal("https://example.com/invoice/1", paidInvoice.Url);
-        Assert.Equal("https://example.com/invoice/1/pdf", paidInvoice.PdfUrl);
     }
 
     #endregion
@@ -110,7 +114,7 @@ public class ProviderBillingControllerTests
         string invoiceId,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         var reportContent = "Report"u8.ToArray();
 
@@ -129,18 +133,85 @@ public class ProviderBillingControllerTests
 
     #endregion
 
-    #region GetPaymentInformationAsync
+    #region GetPaymentInformationAsync & TryGetBillableProviderForAdminOperation
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformationAsync_FFDisabled_NotFound(
+        Guid providerId,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.GetPaymentInformationAsync(providerId);
+
+        Assert.IsType<NotFound>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformationAsync_NullProvider_NotFound(
+        Guid providerId,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
+            .Returns(true);
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).ReturnsNull();
+
+        var result = await sutProvider.Sut.GetPaymentInformationAsync(providerId);
+
+        Assert.IsType<NotFound>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformationAsync_NotProviderUser_Unauthorized(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
+            .Returns(true);
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.GetPaymentInformationAsync(provider.Id);
+
+        Assert.IsType<UnauthorizedHttpResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPaymentInformationAsync_ProviderNotBillable_Unauthorized(
+        Provider provider,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
+            .Returns(true);
+
+        provider.Type = ProviderType.Reseller;
+        provider.Status = ProviderStatusType.Created;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id)
+            .Returns(true);
+
+        var result = await sutProvider.Sut.GetPaymentInformationAsync(provider.Id);
+
+        Assert.IsType<UnauthorizedHttpResult>(result);
+    }
 
     [Theory, BitAutoData]
     public async Task GetPaymentInformation_PaymentInformationNull_NotFound(
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ISubscriberService>().GetPaymentInformation(provider).ReturnsNull();
 
-        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
+        var result = await sutProvider.Sut.GetPaymentInformationAsync(provider.Id);
 
         Assert.IsType<NotFound>(result);
     }
@@ -150,7 +221,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         var maskedPaymentMethod = new MaskedPaymentMethodDTO(PaymentMethodType.Card, "VISA *1234", false);
 
@@ -182,11 +253,11 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ISubscriberService>().GetPaymentMethod(provider).ReturnsNull();
 
-        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
+        var result = await sutProvider.Sut.GetPaymentMethodAsync(provider.Id);
 
         Assert.IsType<NotFound>(result);
     }
@@ -196,7 +267,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ISubscriberService>().GetPaymentMethod(provider).Returns(new MaskedPaymentMethodDTO(
             PaymentMethodType.Card, "Description", false));
@@ -214,7 +285,8 @@ public class ProviderBillingControllerTests
 
     #endregion
 
-    #region GetSubscriptionAsync
+    #region GetSubscriptionAsync & TryGetBillableProviderForServiceUserOperation
+
     [Theory, BitAutoData]
     public async Task GetSubscriptionAsync_FFDisabled_NotFound(
         Guid providerId,
@@ -244,7 +316,7 @@ public class ProviderBillingControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionAsync_NotProviderAdmin_Unauthorized(
+    public async Task GetSubscriptionAsync_NotProviderUser_Unauthorized(
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
@@ -253,7 +325,7 @@ public class ProviderBillingControllerTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
 
-        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id)
+        sutProvider.GetDependency<ICurrentContext>().ProviderUser(provider.Id)
             .Returns(false);
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
@@ -274,8 +346,8 @@ public class ProviderBillingControllerTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
 
-        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id)
-            .Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUser(provider.Id)
+            .Returns(true);
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
 
@@ -287,7 +359,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableServiceUserInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderBillingService>().GetConsolidatedBillingSubscription(provider).ReturnsNull();
 
@@ -301,7 +373,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableServiceUserInputs(provider, sutProvider);
 
         var configuredProviderPlans = new List<ConfiguredProviderPlanDTO>
         {
@@ -348,7 +420,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(50, providerTeamsPlan.SeatMinimum);
         Assert.Equal(10, providerTeamsPlan.PurchasedSeats);
         Assert.Equal(30, providerTeamsPlan.AssignedSeats);
-        Assert.Equal(60 * teamsPlan.PasswordManager.SeatPrice, providerTeamsPlan.Cost);
+        Assert.Equal(60 * teamsPlan.PasswordManager.ProviderPortalSeatPrice, providerTeamsPlan.Cost);
         Assert.Equal("Monthly", providerTeamsPlan.Cadence);
 
         var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
@@ -357,7 +429,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(100, providerEnterprisePlan.SeatMinimum);
         Assert.Equal(0, providerEnterprisePlan.PurchasedSeats);
         Assert.Equal(90, providerEnterprisePlan.AssignedSeats);
-        Assert.Equal(100 * enterprisePlan.PasswordManager.SeatPrice, providerEnterprisePlan.Cost);
+        Assert.Equal(100 * enterprisePlan.PasswordManager.ProviderPortalSeatPrice, providerEnterprisePlan.Cost);
         Assert.Equal("Monthly", providerEnterprisePlan.Cadence);
     }
     #endregion
@@ -369,11 +441,11 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ISubscriberService>().GetTaxInformation(provider).ReturnsNull();
 
-        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
+        var result = await sutProvider.Sut.GetTaxInformationAsync(provider.Id);
 
         Assert.IsType<NotFound>(result);
     }
@@ -383,7 +455,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ISubscriberService>().GetTaxInformation(provider).Returns(new TaxInformationDTO(
             "US",
@@ -419,7 +491,7 @@ public class ProviderBillingControllerTests
         TokenizedPaymentMethodRequestBody requestBody,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         await sutProvider.Sut.UpdatePaymentMethodAsync(provider.Id, requestBody);
 
@@ -442,7 +514,7 @@ public class ProviderBillingControllerTests
         TaxInformationRequestBody requestBody,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
 
@@ -468,7 +540,7 @@ public class ProviderBillingControllerTests
         VerifyBankAccountRequestBody requestBody,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableInputs(provider, sutProvider);
+        ConfigureStableAdminInputs(provider, sutProvider);
 
         var result = await sutProvider.Sut.VerifyBankAccountAsync(provider.Id, requestBody);
 
@@ -480,20 +552,4 @@ public class ProviderBillingControllerTests
     }
 
     #endregion
-
-    private static void ConfigureStableInputs(
-        Provider provider,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
-        provider.Type = ProviderType.Msp;
-        provider.Status = ProviderStatusType.Billable;
-
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
-        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id)
-            .Returns(true);
-    }
 }
