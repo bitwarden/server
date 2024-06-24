@@ -61,16 +61,21 @@ public class CountsController : Controller
     }
 
 
-    [HttpGet("organizations/{organizationId}/projects/{projectId}/sm-counts")]
-    public async Task<ProjectCountsResponseModel> GetByOrganizationAndProjectAsync([FromRoute] Guid organizationId,
-        [FromRoute] Guid projectId)
+    [HttpGet("projects/{projectId}/sm-counts")]
+    public async Task<ProjectCountsResponseModel> GetByProjectAsync([FromRoute] Guid projectId)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        var project = await _projectRepository.GetByIdAsync(projectId);
+        if (project == null)
         {
             throw new NotFoundException();
         }
 
-        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
+        if (!_currentContext.AccessSecretsManager(project.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, project.OrganizationId);
 
         var projectsCounts = await _projectRepository.GetProjectCountsByIdAsync(projectId, userId, accessType);
 
@@ -82,17 +87,21 @@ public class CountsController : Controller
         };
     }
 
-    [HttpGet("organizations/{organizationId}/service-accounts/{serviceAccountId}/sm-counts")]
-    public async Task<ServiceAccountCountsResponseModel> GetByOrganizationAndServiceAccountAsync(
-        [FromRoute] Guid organizationId,
-        [FromRoute] Guid serviceAccountId)
+    [HttpGet("service-accounts/{serviceAccountId}/sm-counts")]
+    public async Task<ServiceAccountCountsResponseModel> GetByServiceAccountAsync([FromRoute] Guid serviceAccountId)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
+        if (serviceAccount == null)
         {
             throw new NotFoundException();
         }
 
-        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
+        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, serviceAccount.OrganizationId);
 
         var serviceAccountCounts =
             await _serviceAccountRepository.GetServiceAccountCountsByIdAsync(serviceAccountId, userId, accessType);

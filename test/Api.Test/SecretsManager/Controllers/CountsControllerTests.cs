@@ -4,9 +4,11 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -16,6 +18,7 @@ namespace Bit.Api.Test.SecretsManager.Controllers;
 
 [ControllerCustomize(typeof(CountsController))]
 [SutProviderCustomize]
+[ProjectCustomize]
 [JsonDocumentCustomize]
 public class CountsControllerTests
 {
@@ -32,7 +35,6 @@ public class CountsControllerTests
     [Theory]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     [BitAutoData(AccessClientType.User)]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     public async Task GetByOrganizationAsync_HasAccess_Success(AccessClientType accessClientType,
         SutProvider<CountsController> sutProvider, Guid organizationId, Guid userId,
         OrganizationCountsResponseModel expectedCountsResponseModel)
@@ -63,30 +65,39 @@ public class CountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetByOrganizationAndProjectAsync_NoAccess_Throws(SutProvider<CountsController> sutProvider,
-        Guid organizationId, Guid projectId)
+    public async Task GetByProjectAsync_ProjectNotFound_Throws(SutProvider<CountsController> sutProvider,
+        Guid projectId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(false);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(projectId).Returns(default(Project));
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetByOrganizationAndProjectAsync(organizationId, projectId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetByProjectAsync(projectId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetByProjectAsync_NoAccess_Throws(SutProvider<CountsController> sutProvider, Project project)
+    {
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetByProjectAsync(project.Id));
     }
 
     [Theory]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     [BitAutoData(AccessClientType.User)]
-    [BitAutoData(AccessClientType.ServiceAccount)]
-    public async Task GetByOrganizationAndProjectAsync_HasAccess_Success(AccessClientType accessClientType,
-        SutProvider<CountsController> sutProvider, Guid organizationId, Guid userId, Guid projectId,
+    public async Task GetByProjectAsync_HasAccess_Success(AccessClientType accessClientType,
+        SutProvider<CountsController> sutProvider, Guid userId, Project project,
         ProjectCountsResponseModel expectedProjectCountsResponseModel)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
-
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId).Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>()
-            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), organizationId).Returns((accessClientType, userId));
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), project.OrganizationId)
+            .Returns((accessClientType, userId));
 
         sutProvider.GetDependency<IProjectRepository>()
-            .GetProjectCountsByIdAsync(projectId, userId, accessClientType)
+            .GetProjectCountsByIdAsync(project.Id, userId, accessClientType)
             .Returns(new ProjectCounts
             {
                 Secrets = expectedProjectCountsResponseModel.Secrets,
@@ -94,7 +105,7 @@ public class CountsControllerTests
                 ServiceAccounts = expectedProjectCountsResponseModel.ServiceAccounts
             });
 
-        var response = await sutProvider.Sut.GetByOrganizationAndProjectAsync(organizationId, projectId);
+        var response = await sutProvider.Sut.GetByProjectAsync(project.Id);
 
         Assert.Equal(expectedProjectCountsResponseModel.Secrets, response.Secrets);
         Assert.Equal(expectedProjectCountsResponseModel.People, response.People);
@@ -103,30 +114,43 @@ public class CountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetByOrganizationAndServiceAccountAsync_NoAccess_Throws(SutProvider<CountsController> sutProvider,
-        Guid organizationId, Guid serviceAccountId)
+    public async Task GetByServiceAccountAsync_ServiceAccountNotFound_Throws(SutProvider<CountsController> sutProvider,
+        Guid serviceAccountId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(false);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccountId)
+            .Returns(default(ServiceAccount));
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetByOrganizationAndServiceAccountAsync(organizationId, serviceAccountId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetByServiceAccountAsync(serviceAccountId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetByServiceAccountAsync_NoAccess_Throws(SutProvider<CountsController> sutProvider,
+        ServiceAccount serviceAccount)
+    {
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id)
+            .Returns(serviceAccount);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetByServiceAccountAsync(serviceAccount.Id));
     }
 
     [Theory]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     [BitAutoData(AccessClientType.User)]
-    [BitAutoData(AccessClientType.ServiceAccount)]
-    public async Task GetByOrganizationAndServiceAccountAsync_HasAccess_Success(AccessClientType accessClientType,
-        SutProvider<CountsController> sutProvider, Guid organizationId, Guid userId, Guid serviceAccountId,
+    public async Task GetByServiceAccountAsync_HasAccess_Success(AccessClientType accessClientType,
+        SutProvider<CountsController> sutProvider, Guid userId, ServiceAccount serviceAccount,
         ServiceAccountCountsResponseModel expectedServiceAccountCountsResponseModel)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
-
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id)
+            .Returns(serviceAccount);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId).Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>()
-            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), organizationId).Returns((accessClientType, userId));
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), serviceAccount.OrganizationId)
+            .Returns((accessClientType, userId));
 
         sutProvider.GetDependency<IServiceAccountRepository>()
-            .GetServiceAccountCountsByIdAsync(serviceAccountId, userId, accessClientType)
+            .GetServiceAccountCountsByIdAsync(serviceAccount.Id, userId, accessClientType)
             .Returns(new ServiceAccountCounts
             {
                 Projects = expectedServiceAccountCountsResponseModel.Projects,
@@ -134,7 +158,7 @@ public class CountsControllerTests
                 AccessTokens = expectedServiceAccountCountsResponseModel.AccessTokens
             });
 
-        var response = await sutProvider.Sut.GetByOrganizationAndServiceAccountAsync(organizationId, serviceAccountId);
+        var response = await sutProvider.Sut.GetByServiceAccountAsync(serviceAccount.Id);
 
         Assert.Equal(expectedServiceAccountCountsResponseModel.Projects, response.Projects);
         Assert.Equal(expectedServiceAccountCountsResponseModel.People, response.People);
