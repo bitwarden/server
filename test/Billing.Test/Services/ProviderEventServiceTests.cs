@@ -231,7 +231,7 @@ public class ProviderEventServiceTests
                 options.PlanName == "Teams (Monthly)" &&
                 options.AssignedSeats == 50 &&
                 options.UsedSeats == 30 &&
-                options.Total == options.AssignedSeats * teamsPlan.PasswordManager.SeatPrice * 0.65M));
+                options.Total == options.AssignedSeats * teamsPlan.PasswordManager.ProviderPortalSeatPrice * 0.65M));
 
         await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
             options =>
@@ -242,7 +242,7 @@ public class ProviderEventServiceTests
                 options.PlanName == "Enterprise (Monthly)" &&
                 options.AssignedSeats == 50 &&
                 options.UsedSeats == 30 &&
-                options.Total == options.AssignedSeats * enterprisePlan.PasswordManager.SeatPrice * 0.65M));
+                options.Total == options.AssignedSeats * enterprisePlan.PasswordManager.ProviderPortalSeatPrice * 0.65M));
 
         await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
             options =>
@@ -253,7 +253,7 @@ public class ProviderEventServiceTests
                 options.PlanName == "Teams (Monthly)" &&
                 options.AssignedSeats == 50 &&
                 options.UsedSeats == 0 &&
-                options.Total == options.AssignedSeats * teamsPlan.PasswordManager.SeatPrice * 0.65M));
+                options.Total == options.AssignedSeats * teamsPlan.PasswordManager.ProviderPortalSeatPrice * 0.65M));
 
         await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
             options =>
@@ -264,7 +264,7 @@ public class ProviderEventServiceTests
                 options.PlanName == "Enterprise (Monthly)" &&
                 options.AssignedSeats == 50 &&
                 options.UsedSeats == 0 &&
-                options.Total == options.AssignedSeats * enterprisePlan.PasswordManager.SeatPrice * 0.65M));
+                options.Total == options.AssignedSeats * enterprisePlan.PasswordManager.ProviderPortalSeatPrice * 0.65M));
     }
 
     [Fact]
