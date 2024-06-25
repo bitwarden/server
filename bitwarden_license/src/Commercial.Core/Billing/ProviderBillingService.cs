@@ -81,7 +81,7 @@ public class ProviderBillingService(
         if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
             string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
         {
-            logger.LogError("Cannot create Stripe customer for provider ({ID}) - Both the provider's country and postal code are required", provider.Id);
+            logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
 
             throw ContactSupport();
         }
@@ -99,7 +99,6 @@ public class ProviderBillingService(
                 City = taxInfo.BillingAddressCity,
                 State = taxInfo.BillingAddressState
             },
-            Coupon = "msp-discount-35",
             Description = provider.DisplayBusinessName(),
             Email = provider.BillingEmail,
             InvoiceSettings = new CustomerInvoiceSettingsOptions
@@ -416,20 +415,13 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        if (!string.IsNullOrEmpty(provider.GatewaySubscriptionId))
-        {
-            logger.LogWarning("Cannot start Provider subscription - Provider ({ID}) already has a {FieldName}", provider.Id, nameof(provider.GatewaySubscriptionId));
-
-            throw ContactSupport();
-        }
-
         var customer = await subscriberService.GetCustomerOrThrow(provider);
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
         if (providerPlans == null || providerPlans.Count == 0)
         {
-            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured plans", provider.Id);
+            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured plans", provider.Id);
 
             throw ContactSupport();
         }
@@ -439,9 +431,9 @@ public class ProviderBillingService(
         var teamsProviderPlan =
             providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
 
-        if (teamsProviderPlan == null)
+        if (teamsProviderPlan == null || !teamsProviderPlan.IsConfigured())
         {
-            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured Teams Monthly plan", provider.Id);
+            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Teams plan", provider.Id);
 
             throw ContactSupport();
         }
@@ -457,9 +449,9 @@ public class ProviderBillingService(
         var enterpriseProviderPlan =
             providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
 
-        if (enterpriseProviderPlan == null)
+        if (enterpriseProviderPlan == null || !enterpriseProviderPlan.IsConfigured())
         {
-            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured Enterprise Monthly plan", provider.Id);
+            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Enterprise plan", provider.Id);
 
             throw ContactSupport();
         }
@@ -498,7 +490,7 @@ public class ProviderBillingService(
         {
             await providerRepository.ReplaceAsync(provider);
 
-            logger.LogError("Started incomplete Provider ({ProviderID}) subscription ({SubscriptionID})", provider.Id, subscription.Id);
+            logger.LogError("Started incomplete provider ({ProviderID}) subscription ({SubscriptionID})", provider.Id, subscription.Id);
 
             throw ContactSupport();
         }
