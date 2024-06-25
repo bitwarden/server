@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -46,7 +47,7 @@ public class RequestSMAccessControllerTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(model.OrganizationId).Returns(org);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(orgUsers);
-
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(model.OrganizationId).Returns(true);
         // Act & Assert
         await sutProvider.Sut.RequestSMAccessFromAdmins(model);
 
