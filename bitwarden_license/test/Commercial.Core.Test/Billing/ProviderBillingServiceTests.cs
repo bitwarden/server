@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using Bit.Commercial.Core.Billing;
+using Bit.Commercial.Core.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -8,9 +10,11 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -20,6 +24,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using CsvHelper;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -182,6 +187,71 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AssignSeatsToClientOrganization_BelowToAbove_NotProviderAdmin_ContactSupport(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.Seats = 10;
+
+        organization.PlanType = PlanType.TeamsMonthly;
+
+        // Scale up 10 seats
+        const int seats = 20;
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                PlanType = PlanType.TeamsMonthly,
+                ProviderId = provider.Id,
+                PurchasedSeats = 0,
+                // 100 minimum
+                SeatMinimum = 100,
+                AllocatedSeats = 95
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                PlanType = PlanType.EnterpriseMonthly,
+                ProviderId = provider.Id,
+                PurchasedSeats = 0,
+                SeatMinimum = 500,
+                AllocatedSeats = 0
+            }
+        };
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
+
+        // 95 seats currently assigned with a seat minimum of 100
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 60
+            },
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 35
+            }
+        ]);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(false);
+
+        await ThrowsContactSupportAsync(() =>
+            sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
+    }
+
+    [Theory, BitAutoData]
     public async Task AssignSeatsToClientOrganization_BelowToAbove_Succeeds(
         Provider provider,
         Organization organization,
@@ -241,6 +311,8 @@ public class ProviderBillingServiceTests
                 Seats = 35
             }
         ]);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -635,6 +707,68 @@ public class ProviderBillingServiceTests
 
     #endregion
 
+    #region GenerateClientInvoiceReport
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_NullInvoiceId_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GenerateClientInvoiceReport(null));
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_NoInvoiceItems_ReturnsNull(
+        string invoiceId,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns([]);
+
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+
+        Assert.Null(reportContent);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_Succeeds(
+        string invoiceId,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        var invoiceItems = new List<ProviderInvoiceItem>
+        {
+            new ()
+            {
+                ClientName = "Client 1",
+                AssignedSeats = 50,
+                UsedSeats = 30,
+                PlanName = "Teams (Monthly)",
+                Total = 500
+            }
+        };
+
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns(invoiceItems);
+
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+
+        using var memoryStream = new MemoryStream(reportContent);
+
+        using var streamReader = new StreamReader(memoryStream);
+
+        using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
+
+        var records = csvReader.GetRecords<ProviderClientInvoiceReportRow>().ToList();
+
+        Assert.Single(records);
+
+        var record = records.First();
+
+        Assert.Equal("Client 1", record.Client);
+        Assert.Equal(50, record.Assigned);
+        Assert.Equal(30, record.Used);
+        Assert.Equal(20, record.Remaining);
+        Assert.Equal("Teams (Monthly)", record.Plan);
+        Assert.Equal("$500.00", record.Total);
+    }
+
+    #endregion
+
     #region GetAssignedSeatTotalForPlanOrThrow
 
     [Theory, BitAutoData]
@@ -719,7 +853,7 @@ public class ProviderBillingServiceTests
         await sutProvider.GetDependency<ISubscriberService>().Received(1).GetSubscription(
             provider,
             Arg.Is<SubscriptionGetOptions>(
-                options => options.Expand.Count == 1 && options.Expand.First() == "customer"));
+                options => options.Expand.Count == 2 && options.Expand.First() == "customer" && options.Expand.Last() == "test_clock"));
     }
 
     [Theory, BitAutoData]
@@ -732,7 +866,7 @@ public class ProviderBillingServiceTests
         var subscription = new Subscription();
 
         subscriberService.GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(
-            options => options.Expand.Count == 1 && options.Expand.First() == "customer")).Returns(subscription);
+            options => options.Expand.Count == 2 && options.Expand.First() == "customer" && options.Expand.Last() == "test_clock")).Returns(subscription);
 
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -949,9 +1083,9 @@ public class ProviderBillingServiceTests
                 sub.Customer == "customer_id" &&
                 sub.DaysUntilDue == 30 &&
                 sub.Items.Count == 2 &&
-                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeSeatPlanId &&
+                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeProviderPortalSeatPlanId &&
                 sub.Items.ElementAt(0).Quantity == 100 &&
-                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeSeatPlanId &&
+                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeProviderPortalSeatPlanId &&
                 sub.Items.ElementAt(1).Quantity == 100 &&
                 sub.Metadata["providerId"] == provider.Id.ToString() &&
                 sub.OffSession == true &&
