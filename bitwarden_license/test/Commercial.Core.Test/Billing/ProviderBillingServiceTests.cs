@@ -27,7 +27,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using CsvHelper;
 using NSubstitute;
 using Stripe;
-using Stripe.TestHelpers;
 using Xunit;
 using static Bit.Core.Test.Billing.Utilities;
 

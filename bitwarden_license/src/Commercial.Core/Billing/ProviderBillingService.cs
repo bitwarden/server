@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using Bit.Commercial.Core.Billing.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
