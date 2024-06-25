@@ -147,7 +147,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"}
+            { UnassignedItemsBanner, "true"},
+            { FlexibleCollectionsV1, "true" }
         };
     }
 }
