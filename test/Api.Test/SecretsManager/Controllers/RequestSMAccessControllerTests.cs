@@ -1,17 +1,13 @@
 ﻿#nullable enable
-using System.Collections;
 using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
-using Bit.Commercial.Core.SecretsManager.Commands.Requests;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Requests.Interfaces;
 using Bit.Core.Services;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
