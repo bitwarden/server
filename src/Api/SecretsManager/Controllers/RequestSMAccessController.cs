@@ -1,5 +1,5 @@
-﻿using System.Linq;
-using Bit.Api.SecretsManager.Models.Request;
+﻿using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Requests.Interfaces;
@@ -17,14 +17,16 @@ public class RequestSMAccessController : Controller
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly ICurrentContext _currentContext;
 
     public RequestSMAccessController(
-        IRequestSMAccessCommand requestSMAccessCommand, IUserService userService, IOrganizationRepository organizationRepository, IOrganizationUserRepository organizationUserRepository)
+        IRequestSMAccessCommand requestSMAccessCommand, IUserService userService, IOrganizationRepository organizationRepository, IOrganizationUserRepository organizationUserRepository, ICurrentContext currentContext)
     {
         _requestSMAccessCommand = requestSMAccessCommand;
         _userService = userService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
+        _currentContext = currentContext;
     }
 
     [HttpPost("request-sm-access")]
@@ -36,16 +38,15 @@ public class RequestSMAccessController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(model.OrganizationId);
-        if (organization == null)
+        if (!await _currentContext.OrganizationUser(model.OrganizationId))
         {
             throw new NotFoundException();
         }
 
-        var organizationUserUserDetails = _organizationUserRepository.GetDetailsByUserAsync(user.Id, model.OrganizationId);
-        if (organizationUserUserDetails.Id < 0)
+        var organization = await _organizationRepository.GetByIdAsync(model.OrganizationId);
+        if (organization == null)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);

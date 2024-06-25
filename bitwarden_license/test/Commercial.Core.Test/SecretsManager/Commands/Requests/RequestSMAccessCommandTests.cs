@@ -6,6 +6,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
@@ -38,7 +39,7 @@ public class RequestSMAccessCommandTests
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendRequestSMAccessToAdminEmailAsync(adminEmailList, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .SendRequestSMAccessToAdminEmailAsync(Arg.Is(AssertHelper.AssertPropertyEqual(adminEmailList)), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -87,6 +88,6 @@ public class RequestSMAccessCommandTests
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendRequestSMAccessToAdminEmailAsync(adminEmailList, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .SendRequestSMAccessToAdminEmailAsync(Arg.Is(AssertHelper.AssertPropertyEqual(adminEmailList)), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 }

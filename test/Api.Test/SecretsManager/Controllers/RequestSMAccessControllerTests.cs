@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.Collections;
 using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
@@ -14,6 +15,7 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.SecretsManager.Controllers;
@@ -28,8 +30,8 @@ public class RequestSMAccessControllerTests
     User user, SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).ReturnsForAnyArgs((Core.AdminConsole.Entities.Organization)null);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).ReturnsNullForAnyArgs();
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RequestSMAccessFromAdmins(new RequestSMAccessRequestModel()));
@@ -45,13 +47,12 @@ public class RequestSMAccessControllerTests
     SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(model.OrganizationId).Returns(Task.FromResult(org));
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(model.OrganizationId).Returns(org);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(orgUsers);
 
         // Act & Assert
         await sutProvider.Sut.RequestSMAccessFromAdmins(model);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(Task.FromResult(orgUsers));
 
         //Also check that the command was called
         await sutProvider.GetDependency<IRequestSMAccessCommand>()
@@ -64,7 +65,7 @@ public class RequestSMAccessControllerTests
     public async Task RequestSMAccessFromAdmins_WhenUserInvalid_ShouldThrowBadRequestException(RequestSMAccessRequestModel model, SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(Task.FromResult((User)null));
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNullForAnyArgs();
 
         // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.RequestSMAccessFromAdmins(model));
@@ -75,8 +76,8 @@ public class RequestSMAccessControllerTests
     public async Task RequestSMAccessFromAdmins_WhenOrgInvalid_ShouldThrowNotFoundException(RequestSMAccessRequestModel model, User user, SutProvider<RequestSMAccessController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).ReturnsForAnyArgs(Task.FromResult((Core.AdminConsole.Entities.Organization)null));
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(Task.FromResult(user));
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).ReturnsNullForAnyArgs();
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RequestSMAccessFromAdmins(model));
