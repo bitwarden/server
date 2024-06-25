@@ -29,7 +29,6 @@ namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -272,13 +271,6 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        if (provider.Type == ProviderType.Reseller)
-        {
-            logger.LogError("Consolidated billing subscription cannot be retrieved for reseller-type provider ({ID})", provider.Id);
-
-            throw ContactSupport("Consolidated billing does not support reseller-type providers");
-        }
-
         var subscription = await subscriberService.GetSubscription(provider, new SubscriptionGetOptions
         {
             Expand = ["customer", "test_clock"]
@@ -289,18 +281,6 @@ public class ProviderBillingService(
             return null;
         }
 
-        DateTime? subscriptionSuspensionDate = null;
-        DateTime? subscriptionUnpaidPeriodEndDate = null;
-        if (featureService.IsEnabled(FeatureFlagKeys.AC1795_UpdatedSubscriptionStatusSection))
-        {
-            var (suspensionDate, unpaidPeriodEndDate) = await paymentService.GetSuspensionDateAsync(subscription);
-            if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
-            {
-                subscriptionSuspensionDate = suspensionDate;
-                subscriptionUnpaidPeriodEndDate = unpaidPeriodEndDate;
-            }
-        }
-
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
         var configuredProviderPlans = providerPlans
@@ -308,11 +288,15 @@ public class ProviderBillingService(
             .Select(ConfiguredProviderPlanDTO.From)
             .ToList();
 
+        var taxInformation = await subscriberService.GetTaxInformation(provider);
+
+        var suspension = await GetSuspensionAsync(stripeAdapter, subscription);
+
         return new ConsolidatedBillingSubscriptionDTO(
             configuredProviderPlans,
             subscription,
-            subscriptionSuspensionDate,
-            subscriptionUnpaidPeriodEndDate);
+            taxInformation,
+            suspension);
     }
 
     public async Task ScaleSeats(
