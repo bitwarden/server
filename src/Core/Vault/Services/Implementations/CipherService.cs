@@ -485,7 +485,7 @@ public class CipherService : ICipherService
             }
         }
 
-        await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId, UseFlexibleCollections);
+        await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId);
         // push
         await _pushService.PushSyncCiphersAsync(movingUserId);
     }

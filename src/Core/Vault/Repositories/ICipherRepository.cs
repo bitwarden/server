@@ -26,7 +26,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
     Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
-    Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, bool useFlexibleCollections);
+    Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId);
     Task DeleteByUserIdAsync(Guid userId);
     Task DeleteByOrganizationIdAsync(Guid organizationId);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);

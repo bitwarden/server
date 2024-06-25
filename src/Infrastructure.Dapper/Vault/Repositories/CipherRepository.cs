@@ -278,16 +278,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, bool useFlexibleCollections)
+    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Move_V2]"
-            : $"[{Schema}].[Cipher_Move]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_Move]",
                 new { Ids = ids.ToGuidIdArrayTVP(), FolderId = folderId, UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
