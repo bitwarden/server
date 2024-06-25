@@ -200,9 +200,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete, useFlexibleCollections);
+        await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete, false);
     }
 
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)

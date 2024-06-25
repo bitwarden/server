@@ -245,16 +245,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Delete_V2]"
-            : $"[{Schema}].[Cipher_Delete]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_Delete]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
