@@ -24,16 +24,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[CipherDetails_ReadByIdUserId_V2]"
-            : $"[{Schema}].[CipherDetails_ReadByIdUserId]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CipherDetails>(
-                sprocName,
+                $"[{Schema}].[CipherDetails_ReadByIdUserId]",
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 

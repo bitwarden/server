@@ -303,12 +303,12 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var userCipherDetails = new UserCipherDetailsQuery(userId, useFlexibleCollections);
+            var userCipherDetails = new UserCipherDetailsQuery(userId, false);
             var data = await userCipherDetails.Run(dbContext).FirstOrDefaultAsync(c => c.Id == id);
             return data;
         }
