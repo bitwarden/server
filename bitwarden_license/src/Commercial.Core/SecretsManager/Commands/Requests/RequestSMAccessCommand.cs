@@ -22,7 +22,8 @@ public class RequestSMAccessCommand : IRequestSMAccessCommand
         var emailList = orgUsers.Where(o => o.Type <= OrganizationUserType.Admin)
             .Select(a => a.Email).Distinct().ToList();
 
-        if(!emailList.Any()) {
+        if (!emailList.Any())
+        {
             throw new UnauthorizedAccessException();
         }
 
