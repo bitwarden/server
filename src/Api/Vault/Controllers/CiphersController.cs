@@ -245,13 +245,13 @@ public class CiphersController : Controller
     [HttpGet("organization-details")]
     public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphers(Guid organizationId)
     {
-        // Flexible Collections Logic
-        if (await UseFlexibleCollectionsV1Async(organizationId))
+        // Flexible Collections V1 Logic
+        if (UseFlexibleCollectionsV1())
         {
             return await GetAllOrganizationCiphersAsync(organizationId);
         }
 
-        // Pre-Flexible Collections Logic
+        // Pre-Flexible Collections V1 Logic
         var userId = _userService.GetProperUserId(User).Value;
 
         (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
@@ -271,7 +271,7 @@ public class CiphersController : Controller
     [HttpGet("organization-details/assigned")]
     public async Task<ListResponseModel<CipherDetailsResponseModel>> GetAssignedOrganizationCiphers(Guid organizationId)
     {
-        if (!await UseFlexibleCollectionsV1Async(organizationId))
+        if (!UseFlexibleCollectionsV1())
         {
             throw new FeatureUnavailableException();
         }
@@ -329,7 +329,7 @@ public class CiphersController : Controller
     private async Task<bool> CanEditCipherAsAdminAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
     {
         // Pre-Flexible collections V1 only needs to check EditAnyCollection
-        if (!await UseFlexibleCollectionsV1Async(organizationId))
+        if (!UseFlexibleCollectionsV1())
         {
             return await _currentContext.EditAnyCollection(organizationId);
         }
@@ -380,10 +380,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
+        // Provider users can access all ciphers.
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
+            return true;
         }
 
         return false;
@@ -397,7 +397,7 @@ public class CiphersController : Controller
         var org = _currentContext.GetOrganization(organizationId);
 
         // If not using V1, owners, admins, and users with EditAnyCollection permissions, and providers can always edit all ciphers
-        if (!await UseFlexibleCollectionsV1Async(organizationId))
+        if (!UseFlexibleCollectionsV1())
         {
             return org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
             { Permissions.EditAnyCollection: true } ||
@@ -669,7 +669,7 @@ public class CiphersController : Controller
 
         // In V1, we still need to check if the user can edit the collections they're submitting
         // This should only happen for unassigned ciphers (otherwise restricted admins would use the normal collections endpoint)
-        if (await UseFlexibleCollectionsV1Async(cipher.OrganizationId.Value) && !await CanEditItemsInCollections(cipher.OrganizationId.Value, collectionIds))
+        if (UseFlexibleCollectionsV1() && !await CanEditItemsInCollections(cipher.OrganizationId.Value, collectionIds))
         {
             throw new NotFoundException();
         }
@@ -680,14 +680,6 @@ public class CiphersController : Controller
     [HttpPost("bulk-collections")]
     public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(model.OrganizationId);
-
-        // Only available for organizations with flexible collections
-        if (orgAbility is null or { FlexibleCollections: false })
-        {
-            throw new NotFoundException();
-        }
-
         if (!await CanEditCiphersAsync(model.OrganizationId, model.CipherIds) ||
             !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))
         {
@@ -1272,14 +1264,8 @@ public class CiphersController : Controller
         return await _cipherRepository.GetByIdAsync(cipherId, userId, UseFlexibleCollections);
     }
 
-    private async Task<bool> UseFlexibleCollectionsV1Async(Guid organizationId)
+    private bool UseFlexibleCollectionsV1()
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
-        {
-            return false;
-        }
-
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        return organizationAbility?.FlexibleCollections ?? false;
+        return _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
     }
 }

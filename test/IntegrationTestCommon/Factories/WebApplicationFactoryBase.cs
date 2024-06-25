@@ -72,6 +72,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 .AddJsonFile("appsettings.Development.json");
 
             c.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
+
             c.AddInMemoryCollection(new Dictionary<string, string>
             {
                 // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
@@ -90,7 +91,14 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { "globalSettings:storage:connectionString", null},
 
                 // This will force it to use an ephemeral key for IdentityServer
-                { "globalSettings:developmentDirectory", null }
+                { "globalSettings:developmentDirectory", null },
+
+
+                // Email Verification
+                { "globalSettings:enableEmailVerification", "true" },
+                {"globalSettings:launchDarkly:flagValues:email-verification", "true" }
+
+
             });
         });
 

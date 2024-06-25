@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.StaticStore;
 
@@ -15,7 +15,7 @@ public class PlanResponseModel : ResponseModel
         }
 
         Type = plan.Type;
-        Product = plan.Product;
+        ProductTier = plan.ProductTier;
         Name = plan.Name;
         IsAnnual = plan.IsAnnual;
         NameLocalizationKey = plan.NameLocalizationKey;
@@ -45,7 +45,7 @@ public class PlanResponseModel : ResponseModel
     }
 
     public PlanType Type { get; set; }
-    public ProductType Product { get; set; }
+    public ProductTierType ProductTier { get; set; }
     public string Name { get; set; }
     public bool IsAnnual { get; set; }
     public string NameLocalizationKey { get; set; }
@@ -121,8 +121,10 @@ public class PlanResponseModel : ResponseModel
         {
             StripePlanId = plan.StripePlanId;
             StripeSeatPlanId = plan.StripeSeatPlanId;
+            StripeProviderPortalSeatPlanId = plan.StripeProviderPortalSeatPlanId;
             BasePrice = plan.BasePrice;
             SeatPrice = plan.SeatPrice;
+            ProviderPortalSeatPrice = plan.ProviderPortalSeatPrice;
             AllowSeatAutoscale = plan.AllowSeatAutoscale;
             HasAdditionalSeatsOption = plan.HasAdditionalSeatsOption;
             MaxAdditionalSeats = plan.MaxAdditionalSeats;
@@ -141,8 +143,10 @@ public class PlanResponseModel : ResponseModel
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
+        public string StripeProviderPortalSeatPlanId { get; init; }
         public decimal BasePrice { get; init; }
         public decimal SeatPrice { get; init; }
+        public decimal ProviderPortalSeatPrice { get; init; }
         public bool AllowSeatAutoscale { get; init; }
         public bool HasAdditionalSeatsOption { get; init; }
         public int? MaxAdditionalSeats { get; init; }

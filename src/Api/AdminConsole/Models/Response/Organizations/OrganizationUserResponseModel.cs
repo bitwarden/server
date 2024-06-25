@@ -23,7 +23,6 @@ public class OrganizationUserResponseModel : ResponseModel
         UserId = organizationUser.UserId;
         Type = organizationUser.Type;
         Status = organizationUser.Status;
-        AccessAll = organizationUser.AccessAll;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
@@ -42,7 +41,6 @@ public class OrganizationUserResponseModel : ResponseModel
         UserId = organizationUser.UserId;
         Type = organizationUser.Type;
         Status = organizationUser.Status;
-        AccessAll = organizationUser.AccessAll;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
@@ -55,7 +53,6 @@ public class OrganizationUserResponseModel : ResponseModel
     public Guid? UserId { get; set; }
     public OrganizationUserType Type { get; set; }
     public OrganizationUserStatusType Status { get; set; }
-    public bool AccessAll { get; set; }
     public string ExternalId { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
