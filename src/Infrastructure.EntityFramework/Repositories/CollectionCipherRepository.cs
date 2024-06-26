@@ -51,19 +51,19 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var data = await new CollectionCipherReadByUserIdQuery(userId, false)
+            var data = await new CollectionCipherReadByUserIdQuery(userId)
                 .Run(dbContext)
                 .ToArrayAsync();
             return data;
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId, useFlexibleCollections)
+            var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId)
                 .Run(dbContext)
                 .ToArrayAsync();
             return data;

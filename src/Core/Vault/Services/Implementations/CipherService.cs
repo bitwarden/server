@@ -585,7 +585,7 @@ public class CipherService : ICipherService
                     originalCipher.SetAttachments(originalAttachments);
                 }
 
-                var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(sharingUserId, originalCipher.Id, UseFlexibleCollections);
+                var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(sharingUserId, originalCipher.Id);
                 var currentCollectionIdsForCipher = currentCollectionsForCipher.Select(c => c.CollectionId).ToList();
                 currentCollectionIdsForCipher.RemoveAll(id => collectionIds.Contains(id));
 

@@ -117,7 +117,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id);
         return new CipherDetailsResponseModel(cipher, _globalSettings, collectionCiphers);
     }
 
@@ -202,7 +202,7 @@ public class CiphersController : Controller
         ValidateClientVersionForItemLevelEncryptionSupport(cipher);
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
-        var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections)).Select(c => c.CollectionId).ToList();
+        var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
             (Guid?)null : new Guid(model.OrganizationId);
         if (cipher.OrganizationId != modelOrgId)
@@ -233,7 +233,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections)).Select(c => c.CollectionId).ToList();
+        var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         // object cannot be a descendant of CipherDetails, so let's clone it.
         var cipherClone = model.ToCipher(cipher).Clone();
         await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, collectionIds, true, false);
@@ -618,7 +618,7 @@ public class CiphersController : Controller
             model.CollectionIds.Select(c => new Guid(c)), userId, false);
 
         var updatedCipher = await GetByIdAsync(id, userId);
-        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id);
 
         return new CipherDetailsResponseModel(updatedCipher, _globalSettings, collectionCiphers);
     }
@@ -639,7 +639,7 @@ public class CiphersController : Controller
             model.CollectionIds.Select(c => new Guid(c)), userId, false);
 
         var updatedCipher = await GetByIdAsync(id, userId);
-        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id, UseFlexibleCollections);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id);
         // If a user removes the last Can Manage access of a cipher, the "updatedCipher" will return null
         // We will be returning an "Unavailable" property so the client knows the user can no longer access this
         var response = new OptionalCipherDetailsResponseModel()

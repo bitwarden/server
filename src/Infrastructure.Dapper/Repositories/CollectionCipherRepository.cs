@@ -43,16 +43,12 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
     {
-        var sprocName = useFlexibleCollections
-            ? "[dbo].[CollectionCipher_ReadByUserIdCipherId_V2]"
-            : "[dbo].[CollectionCipher_ReadByUserIdCipherId]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionCipher>(
-                sprocName,
+                "[dbo].[CollectionCipher_ReadByUserIdCipherId]",
                 new { UserId = userId, CipherId = cipherId },
                 commandType: CommandType.StoredProcedure);
 
