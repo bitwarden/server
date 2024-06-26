@@ -70,7 +70,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
-    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
+    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -82,39 +82,35 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 .FirstAsync();
 
             List<Guid> availableCollections;
-            if (useFlexibleCollections)
-            {
-                var availableCollectionsQuery = new CollectionsReadByOrganizationIdUserIdQuery(organizationId, userId);
-                availableCollections = await availableCollectionsQuery
-                    .Run(dbContext)
-                    .Select(c => c.Id).ToListAsync();
-            }
-            else
-            {
-                availableCollections = await (from c in dbContext.Collections
-                                              join o in dbContext.Organizations on c.OrganizationId equals o.Id
-                                              join ou in dbContext.OrganizationUsers
-                                                 on new { OrganizationId = o.Id, UserId = (Guid?)userId } equals
-                                                 new { ou.OrganizationId, ou.UserId }
-                                              join cu in dbContext.CollectionUsers
-                                                 on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
-                                                 new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
-                                              from cu in cu_g.DefaultIfEmpty()
-                                              join gu in dbContext.GroupUsers
-                                                 on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                                                 new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
-                                              from gu in gu_g.DefaultIfEmpty()
-                                              join g in dbContext.Groups on gu.GroupId equals g.Id into g_g
-                                              from g in g_g.DefaultIfEmpty()
-                                              join cg in dbContext.CollectionGroups
-                                                 on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
-                                                 new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
-                                              from cg in cg_g.DefaultIfEmpty()
-                                              where o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed
-                                                 && (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
-                                              select c.Id).ToListAsync();
 
-            }
+            // TODO AC-1375: use the query below to remove AccessAll from this method
+            // var availableCollectionsQuery = new CollectionsReadByOrganizationIdUserIdQuery(organizationId, userId);
+            // availableCollections = await availableCollectionsQuery
+            //     .Run(dbContext)
+            //     .Select(c => c.Id).ToListAsync();
+
+            availableCollections = await (from c in dbContext.Collections
+                                          join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                          join ou in dbContext.OrganizationUsers
+                                             on new { OrganizationId = o.Id, UserId = (Guid?)userId } equals
+                                             new { ou.OrganizationId, ou.UserId }
+                                          join cu in dbContext.CollectionUsers
+                                             on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
+                                             new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
+                                          from cu in cu_g.DefaultIfEmpty()
+                                          join gu in dbContext.GroupUsers
+                                             on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
+                                             new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
+                                          from gu in gu_g.DefaultIfEmpty()
+                                          join g in dbContext.Groups on gu.GroupId equals g.Id into g_g
+                                          from g in g_g.DefaultIfEmpty()
+                                          join cg in dbContext.CollectionGroups
+                                             on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
+                                             new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
+                                          from cg in cg_g.DefaultIfEmpty()
+                                          where o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed
+                                             && (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
+                                          select c.Id).ToListAsync();
 
             var collectionCiphers = await (from cc in dbContext.CollectionCiphers
                                            where cc.CipherId == cipherId

@@ -56,16 +56,12 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         }
     }
 
-    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
+    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
     {
-        var sprocName = useFlexibleCollections
-            ? "[dbo].[CollectionCipher_UpdateCollections_V2]"
-            : "[dbo].[CollectionCipher_UpdateCollections]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                "[dbo].[CollectionCipher_UpdateCollections]",
                 new { CipherId = cipherId, UserId = userId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
         }

@@ -589,7 +589,7 @@ public class CipherService : ICipherService
                 var currentCollectionIdsForCipher = currentCollectionsForCipher.Select(c => c.CollectionId).ToList();
                 currentCollectionIdsForCipher.RemoveAll(id => collectionIds.Contains(id));
 
-                await _collectionCipherRepository.UpdateCollectionsAsync(originalCipher.Id, sharingUserId, currentCollectionIdsForCipher, UseFlexibleCollections);
+                await _collectionCipherRepository.UpdateCollectionsAsync(originalCipher.Id, sharingUserId, currentCollectionIdsForCipher);
                 await _cipherRepository.ReplaceAsync(originalCipher);
             }
 
@@ -675,7 +675,7 @@ public class CipherService : ICipherService
             {
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
-            await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds, UseFlexibleCollections);
+            await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
         }
 
         await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_UpdatedCollections);
