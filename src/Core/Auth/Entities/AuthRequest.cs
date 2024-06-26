@@ -3,9 +3,10 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Auth.Entities;
 
-#nullable enable
 
 public class AuthRequest : ITableObject<Guid>
 {
