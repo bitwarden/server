@@ -8,10 +8,12 @@ using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -20,7 +22,6 @@ using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
@@ -38,7 +39,7 @@ public class AccountsController : Controller
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IReferenceEventService _referenceEventService;
-
+    private readonly IFeatureService _featureService;
 
     public AccountsController(
         ICurrentContext currentContext,
@@ -49,7 +50,8 @@ public class AccountsController : Controller
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
-        IReferenceEventService referenceEventService
+        IReferenceEventService referenceEventService,
+        IFeatureService featureService
         )
     {
         _currentContext = currentContext;
@@ -61,6 +63,7 @@ public class AccountsController : Controller
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
         _referenceEventService = referenceEventService;
+        _featureService = featureService;
     }
 
     [HttpPost("register")]
@@ -68,21 +71,9 @@ public class AccountsController : Controller
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
         var user = model.ToUser();
-        var result = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
-            model.Token, model.OrganizationUserId);
-        if (result.Succeeded)
-        {
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-            return new RegisterResponseModel(captchaBypassToken);
-        }
-
-        foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
+        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
+        var registerResponseModel = await RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash, model.Token, model.OrganizationUserId, delaysEnabled);
+        return registerResponseModel;
     }
 
     [RequireFeature(FeatureFlagKeys.EmailVerification)]
@@ -117,36 +108,51 @@ public class AccountsController : Controller
 
         // Users will either have an org invite token or an email verification token - not both.
 
-        IdentityResult result = null;
-        if (!string.IsNullOrEmpty(model.orgInviteToken) && model.OrganizationUserId.HasValue)
+        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
+
+        if (!string.IsNullOrEmpty(model.OrgInviteToken) && model.OrganizationUserId.HasValue)
         {
-            result = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
-                model.orgInviteToken, model.OrganizationUserId);
+            var result = await RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash, model.OrgInviteToken, model.OrganizationUserId, delaysEnabled);
+            return result;
         }
 
-        if (result == null)
-        {
-            result = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
-        }
+        var identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
 
-        if (result.Succeeded)
+        if (identityResult.Succeeded)
         {
 
             var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
 
-            // TODO: eval the differences here.
             return new RegisterResponseModel(captchaBypassToken);
 
         }
 
-        // Is this even something that can happen?
-        // foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
-        // {
-        //     ModelState.AddModelError(string.Empty, error.Description);
-        // }
+        if (delaysEnabled)
+        {
+            await Task.Delay(Random.Shared.Next(100, 130));
+        }
+        throw new BadRequestException("An unexpected error occurred. Unable to register user. Please try again.");
+    }
 
-        // TODO: add feature flag for delays.
-        await Task.Delay(2000);
+    private async Task<RegisterResponseModel> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId, bool delaysEnabled = true)
+    {
+        var result = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash,
+            orgInviteToken, orgUserId);
+        if (result.Succeeded)
+        {
+            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
+            return new RegisterResponseModel(captchaBypassToken);
+        }
+
+        foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        if (delaysEnabled)
+        {
+            await Task.Delay(Random.Shared.Next(100, 130));
+        }
         throw new BadRequestException(ModelState);
     }
 
