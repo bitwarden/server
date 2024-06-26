@@ -22,6 +22,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
@@ -71,9 +72,10 @@ public class AccountsController : Controller
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
         var user = model.ToUser();
-        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
-        var registerResponseModel = await RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash, model.Token, model.OrganizationUserId, delaysEnabled);
-        return registerResponseModel;
+        var identityResult = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
+            model.Token, model.OrganizationUserId);
+        // delaysEnabled false is only for the new registration with email verification process
+        return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
     }
 
     [RequireFeature(FeatureFlagKeys.EmailVerification)]
@@ -108,36 +110,24 @@ public class AccountsController : Controller
 
         // Users will either have an org invite token or an email verification token - not both.
 
+        IdentityResult identityResult = null;
         var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
 
         if (!string.IsNullOrEmpty(model.OrgInviteToken) && model.OrganizationUserId.HasValue)
         {
-            var result = await RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash, model.OrgInviteToken, model.OrganizationUserId, delaysEnabled);
-            return result;
+            identityResult = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
+                model.OrgInviteToken, model.OrganizationUserId);
+
+            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
         }
 
-        var identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
+        identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
 
-        if (identityResult.Succeeded)
-        {
-
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-
-            return new RegisterResponseModel(captchaBypassToken);
-
-        }
-
-        if (delaysEnabled)
-        {
-            await Task.Delay(Random.Shared.Next(100, 130));
-        }
-        throw new BadRequestException("An unexpected error occurred. Unable to register user. Please try again.");
+        return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
     }
 
-    private async Task<RegisterResponseModel> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId, bool delaysEnabled = true)
+    private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)
     {
-        var result = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash,
-            orgInviteToken, orgUserId);
         if (result.Succeeded)
         {
             var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
