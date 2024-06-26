@@ -131,7 +131,7 @@ public class CiphersController : Controller
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
         if (hasOrgs)
         {
-            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId, UseFlexibleCollections);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 

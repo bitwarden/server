@@ -46,12 +46,12 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var data = await new CollectionCipherReadByUserIdQuery(userId, useFlexibleCollections)
+            var data = await new CollectionCipherReadByUserIdQuery(userId, false)
                 .Run(dbContext)
                 .ToArrayAsync();
             return data;
