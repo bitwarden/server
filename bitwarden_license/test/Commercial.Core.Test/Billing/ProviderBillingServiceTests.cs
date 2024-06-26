@@ -729,11 +729,14 @@ public class ProviderBillingServiceTests
         string invoiceId,
         SutProvider<ProviderBillingService> sutProvider)
     {
+        var clientId = Guid.NewGuid();
+
         var invoiceItems = new List<ProviderInvoiceItem>
         {
             new ()
             {
                 ClientName = "Client 1",
+                ClientId = clientId,
                 AssignedSeats = 50,
                 UsedSeats = 30,
                 PlanName = "Teams (Monthly)",
@@ -758,6 +761,7 @@ public class ProviderBillingServiceTests
         var record = records.First();
 
         Assert.Equal("Client 1", record.Client);
+        Assert.Equal(clientId.ToString(), record.Id);
         Assert.Equal(50, record.Assigned);
         Assert.Equal(30, record.Used);
         Assert.Equal(20, record.Remaining);
