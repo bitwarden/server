@@ -22,7 +22,7 @@ public class RequestSMAccessControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async Task RequestSMAccessFromAdminst_WhenSendingNoModel_ShouldThrowNotFoundException(
+    public async Task RequestSMAccessFromAdmins_WhenSendingNoModel_ShouldThrowNotFoundException(
     User user, SutProvider<RequestSMAccessController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);

@@ -25,15 +25,17 @@ public class RequestSMAccessCommandTests
           string emailContent,
           SutProvider<RequestSMAccessCommand> sutProvider)
     {
-        foreach (OrganizationUserUserDetails userDetails in orgUsers)
+        foreach (var userDetails in orgUsers)
         {
             userDetails.Type = OrganizationUserType.Admin;
         }
 
+        orgUsers.First().Type = OrganizationUserType.Owner;
+
         await sutProvider.Sut.SendRequestAccessToSM(organization, orgUsers, user, emailContent);
 
         var adminEmailList = orgUsers
-            .Where(o => o.Type == OrganizationUserType.Admin) // Filter by Admin type
+            .Where(o => o.Type <= OrganizationUserType.Admin)
             .Select(a => a.Email)
             .Distinct()
             .ToList();
