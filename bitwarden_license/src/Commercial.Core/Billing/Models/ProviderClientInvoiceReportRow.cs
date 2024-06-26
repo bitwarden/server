@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.Billing.Entities;
+using CsvHelper.Configuration.Attributes;
 
 namespace Bit.Commercial.Core.Billing.Models;
 
@@ -10,6 +11,7 @@ public class ProviderClientInvoiceReportRow
     public int Used { get; set; }
     public int Remaining { get; set; }
     public string Plan { get; set; }
+    [Name("Estimated total")]
     public string Total { get; set; }
 
     public static ProviderClientInvoiceReportRow From(ProviderInvoiceItem providerInvoiceItem)

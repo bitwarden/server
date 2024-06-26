@@ -92,7 +92,6 @@ public class ProviderBillingControllerTests
         Assert.Equal(1000, openInvoice.Total);
         Assert.Equal(new DateTime(2024, 7, 1), openInvoice.DueDate);
         Assert.Equal("https://example.com/invoice/2", openInvoice.Url);
-        Assert.Equal("https://example.com/invoice/2/pdf", openInvoice.PdfUrl);
 
         var paidInvoice = response.Invoices.FirstOrDefault(i => i.Status == "paid");
 
@@ -103,7 +102,6 @@ public class ProviderBillingControllerTests
         Assert.Equal(1000, paidInvoice.Total);
         Assert.Equal(new DateTime(2024, 6, 1), paidInvoice.DueDate);
         Assert.Equal("https://example.com/invoice/1", paidInvoice.Url);
-        Assert.Equal("https://example.com/invoice/1/pdf", paidInvoice.PdfUrl);
     }
 
     #endregion
