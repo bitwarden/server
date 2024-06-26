@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -39,6 +40,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IReferenceEventService _referenceEventService;
+    private readonly IFeatureService _featureService;
 
     public AccountsControllerTests()
     {
@@ -51,6 +53,7 @@ public class AccountsControllerTests : IDisposable
         _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
         _sendVerificationEmailForRegistrationCommand = Substitute.For<ISendVerificationEmailForRegistrationCommand>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
+        _featureService = Substitute.For<IFeatureService>();
         _sut = new AccountsController(
             _currentContext,
             _logger,
@@ -60,7 +63,8 @@ public class AccountsControllerTests : IDisposable
             _assertionOptionsDataProtector,
             _getWebAuthnLoginCredentialAssertionOptionsCommand,
             _sendVerificationEmailForRegistrationCommand,
-            _referenceEventService
+            _referenceEventService,
+            _featureService
         );
     }
 
@@ -189,4 +193,6 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(204, noContentResult.StatusCode);
         await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.SignupEmailSubmit));
     }
+
+    // TODO: add PostRegisterFinish tests
 }
