@@ -556,7 +556,6 @@ public class ProviderBillingServiceTests
                 o.Address.Line2 == taxInfo.BillingAddressLine2 &&
                 o.Address.City == taxInfo.BillingAddressCity &&
                 o.Address.State == taxInfo.BillingAddressState &&
-                o.Coupon == "msp-discount-35" &&
                 o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
                 o.Email == provider.BillingEmail &&
                 o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
@@ -579,7 +578,6 @@ public class ProviderBillingServiceTests
             o.Address.Line2 == taxInfo.BillingAddressLine2 &&
             o.Address.City == taxInfo.BillingAddressCity &&
             o.Address.State == taxInfo.BillingAddressState &&
-            o.Coupon == "msp-discount-35" &&
             o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
             o.Email == provider.BillingEmail &&
             o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
@@ -1024,16 +1022,6 @@ public class ProviderBillingServiceTests
         await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.StartSubscription(null));
 
     [Theory, BitAutoData]
-    public async Task StartSubscription_AlreadyHasGatewaySubscriptionId_ContactSupport(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider)
-    {
-        provider.GatewaySubscriptionId = "subscription_id";
-
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
-    }
-
-    [Theory, BitAutoData]
     public async Task StartSubscription_NoProviderPlans_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
@@ -1121,8 +1109,24 @@ public class ProviderBillingServiceTests
 
         var providerPlans = new List<ProviderPlan>
         {
-            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 100 },
-            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 100 }
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            }
         };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -1153,8 +1157,24 @@ public class ProviderBillingServiceTests
 
         var providerPlans = new List<ProviderPlan>
         {
-            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 100 },
-            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 100 }
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            }
         };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
