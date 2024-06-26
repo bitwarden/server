@@ -582,16 +582,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Restore_V2]"
-            : $"[{Schema}].[Cipher_Restore]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteScalarAsync<DateTime>(
-                sprocName,
+                $"[{Schema}].[Cipher_Restore]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
 

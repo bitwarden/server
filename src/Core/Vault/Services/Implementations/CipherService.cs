@@ -944,7 +944,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId, useFlexibleCollections: UseFlexibleCollections);
             restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
 
-            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId, UseFlexibleCollections);
+            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId);
         }
 
         var events = restoringCiphers.Select(c =>

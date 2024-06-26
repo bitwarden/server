@@ -644,9 +644,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        return await ToggleCipherStates(ids, userId, CipherStateAction.Restore, useFlexibleCollections);
+        return await ToggleCipherStates(ids, userId, CipherStateAction.Restore, false);
     }
 
     public async Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
