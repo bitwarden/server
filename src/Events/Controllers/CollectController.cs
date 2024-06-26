@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
