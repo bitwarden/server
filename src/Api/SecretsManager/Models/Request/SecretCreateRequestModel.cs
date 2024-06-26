@@ -13,7 +13,7 @@ public class SecretCreateRequestModel : IValidatableObject
 
     [Required]
     [EncryptedString]
-    [EncryptedStringLength(5000)]
+    [EncryptedStringLength(35000)]
     public string Value { get; set; }
 
     [Required]
@@ -22,6 +22,8 @@ public class SecretCreateRequestModel : IValidatableObject
     public string Note { get; set; }
 
     public Guid[] ProjectIds { get; set; }
+
+    public SecretAccessPoliciesRequestsModel AccessPoliciesRequests { get; set; }
 
     public Secret ToSecret(Guid organizationId)
     {

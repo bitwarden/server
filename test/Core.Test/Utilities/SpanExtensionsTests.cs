@@ -31,22 +31,4 @@ public class SpanExtensionsTests
         Assert.True(splitChunk.IsEmpty);
         Assert.Equal(fullString, rest.ToString());
     }
-
-    [Theory]
-    [InlineData("11111", '1', 5)]
-    [InlineData("Text", 'z', 0)]
-    [InlineData("1", '1', 1)]
-    public void Count_ReturnsCount(string text, char countChar, int expectedInstances)
-    {
-        Assert.Equal(expectedInstances, text.AsSpan().Count(countChar));
-    }
-
-    [Theory]
-    [InlineData(new[] { 5, 4 }, 5, 1)]
-    [InlineData(new[] { 1 }, 5, 0)]
-    [InlineData(new[] { 5, 5, 5 }, 5, 3)]
-    public void CountIntegers_ReturnsCount(int[] array, int countNumber, int expectedInstances)
-    {
-        Assert.Equal(expectedInstances, ((ReadOnlySpan<int>)array.AsSpan()).Count(countNumber));
-    }
 }

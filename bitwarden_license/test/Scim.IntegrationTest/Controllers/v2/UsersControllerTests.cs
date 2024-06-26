@@ -17,7 +17,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     public UsersControllerTests(ScimApplicationFactory factory)
     {
         _factory = factory;
-        _factory.DatabaseName = "test_database_users";
     }
 
     public Task InitializeAsync()

@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # Helper script for applying the same user secrets to each project
 param (
-    [bool]$clear,
+    [switch]$clear,
     [Parameter(ValueFromRemainingArguments = $true, Position=1)]
     $cmdArgs
 )
@@ -24,8 +24,9 @@ $projects = @{
     Icons = "../src/Icons"
     Identity = "../src/Identity"
     Notifications = "../src/Notifications"
-    Sso = "../bitwarden_license/src/Sso" 
-    Scim = "../bitwarden_license/src/Scim" 
+    Sso = "../bitwarden_license/src/Sso"
+    Scim = "../bitwarden_license/src/Scim"
+    IntegrationTests = "../test/Infrastructure.IntegrationTest"
 }
 
 foreach ($key in $projects.keys) {

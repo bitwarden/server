@@ -6,8 +6,17 @@
     <ProjectGuid>{58554e52-fdec-4832-aff9-302b01e08dca}</ProjectGuid>
     <DSP>Microsoft.Data.Tools.Schema.Sql.SqlAzureV12DatabaseSchemaProvider</DSP>
     <ModelCollation>1033,CI</ModelCollation>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
-    <Build Remove="dbo_future/**/*"/>
+    <Build Remove="dbo_future/**/*" />
+
+    <!-- Remove file just so we can add it back with some suppressions -->
+    <Build Remove="dbo/Stored Procedures/AzureSQLMaintenance.sql" />
+    <Build Include="dbo/Stored Procedures/AzureSQLMaintenance.sql">
+      <SuppressTSqlWarnings>71502</SuppressTSqlWarnings>
+    </Build>
   </ItemGroup>
 </Project>

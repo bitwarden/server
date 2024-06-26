@@ -28,10 +28,6 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!(await userService.CanAccessPremium(user)))
-        {
-            return false;
-        }
 
         var webAuthnProvider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
         if (!HasProperMetaData(webAuthnProvider))
@@ -45,10 +41,6 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!(await userService.CanAccessPremium(user)))
-        {
-            return null;
-        }
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
         var keys = LoadKeys(provider);
@@ -81,7 +73,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!(await userService.CanAccessPremium(user)) || string.IsNullOrWhiteSpace(token))
+        if (string.IsNullOrWhiteSpace(token))
         {
             return false;
         }
@@ -111,19 +103,27 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         // established ownership in this context.
         IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
 
-        var res = await _fido2.MakeAssertionAsync(clientResponse, options, webAuthCred.Item2.PublicKey, webAuthCred.Item2.SignatureCounter, callback);
+        try
+        {
+            var res = await _fido2.MakeAssertionAsync(clientResponse, options, webAuthCred.Item2.PublicKey, webAuthCred.Item2.SignatureCounter, callback);
 
-        provider.MetaData.Remove("login");
+            provider.MetaData.Remove("login");
 
-        // Update SignatureCounter
-        webAuthCred.Item2.SignatureCounter = res.Counter;
+            // Update SignatureCounter
+            webAuthCred.Item2.SignatureCounter = res.Counter;
 
-        var providers = user.GetTwoFactorProviders();
-        providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
-        user.SetTwoFactorProviders(providers);
-        await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
+            var providers = user.GetTwoFactorProviders();
+            providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
+            user.SetTwoFactorProviders(providers);
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
 
-        return res.Status == "ok";
+            return res.Status == "ok";
+        }
+        catch (Fido2VerificationException)
+        {
+            return false;
+        }
+
     }
 
     private bool HasProperMetaData(TwoFactorProvider provider)

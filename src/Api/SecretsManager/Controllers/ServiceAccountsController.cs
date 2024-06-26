@@ -4,6 +4,7 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
@@ -13,14 +14,12 @@ using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [Authorize("secrets")]
-[SelfHosted(NotSelfHostedOnly = true)]
 [Route("service-accounts")]
 public class ServiceAccountsController : Controller
 {
@@ -125,8 +124,9 @@ public class ServiceAccountsController : Controller
         if (newServiceAccountSlotsRequired > 0)
         {
             var org = await _organizationRepository.GetByIdAsync(organizationId);
-            await _updateSecretsManagerSubscriptionCommand.AdjustServiceAccountsAsync(org,
-                newServiceAccountSlotsRequired);
+            var update = new SecretsManagerSubscriptionUpdate(org, true)
+                .AdjustServiceAccounts(newServiceAccountSlotsRequired);
+            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }
 
         var userId = _userService.GetProperUserId(User).Value;

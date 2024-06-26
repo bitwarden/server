@@ -1,8 +1,7 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.SecretsManager.Models.Request;
-using Bit.Core.SecretsManager.Repositories;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
@@ -11,8 +10,7 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
-    private readonly IProjectRepository _projectRepository;
-    private readonly IAccessPolicyRepository _accessPolicyRepository;
+    private readonly LoginHelper _loginHelper;
 
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
@@ -21,8 +19,7 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
     {
         _factory = factory;
         _client = _factory.CreateClient();
-        _projectRepository = _factory.GetService<IProjectRepository>();
-        _accessPolicyRepository = _factory.GetService<IAccessPolicyRepository>();
+        _loginHelper = new LoginHelper(_factory, _client);
     }
 
     public async Task InitializeAsync()
@@ -38,20 +35,18 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
         return Task.CompletedTask;
     }
 
-    private async Task LoginAsync(string email)
-    {
-        var tokens = await _factory.LoginAsync(email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-    }
-
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Import_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Import_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await _loginHelper.LoginAsync(_email);
 
         var projectsList = new List<SMImportRequestModel.InnerProjectImportRequestModel>();
         var secretsList = new List<SMImportRequestModel.InnerSecretImportRequestModel>();
@@ -62,13 +57,17 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Export_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Export_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await _loginHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"sm/{org.Id}/export");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

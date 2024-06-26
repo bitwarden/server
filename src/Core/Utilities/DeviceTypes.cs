@@ -17,5 +17,8 @@ public static class DeviceTypes
         DeviceType.MacOsDesktop,
         DeviceType.WindowsDesktop,
         DeviceType.UWP,
+        DeviceType.WindowsCLI,
+        DeviceType.MacOsCLI,
+        DeviceType.LinuxCLI,
     };
 }

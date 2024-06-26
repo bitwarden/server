@@ -41,7 +41,7 @@ public class DeviceServiceTests
     }
 
     /// <summary>
-    /// Story: A user choosed to keep trust in one of their current trusted devices, but not in another one of their
+    /// Story: A user chose to keep trust in one of their current trusted devices, but not in another one of their
     /// devices. We will rotate the trust of the currently signed in device as well as the device they chose but will
     /// remove the trust of the device they didn't give new keys for.
     /// </summary>
@@ -117,8 +117,7 @@ public class DeviceServiceTests
             .Received(3)
             .UpsertAsync(Arg.Any<Device>());
 
-        // TODO: .NET 8: Use nameof for parameter name.
-        static void SetupOldTrust(Device device, [CallerArgumentExpression("device")] string expression = null)
+        static void SetupOldTrust(Device device, [CallerArgumentExpression(nameof(device))] string expression = null)
         {
             device.EncryptedPublicKey = $"old_public_{expression}";
             device.EncryptedPrivateKey = $"old_private_{expression}";

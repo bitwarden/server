@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 using Bit.Sso.Models;
-using IdentityServer4.Services;
+using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;

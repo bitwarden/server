@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
@@ -52,9 +53,9 @@ public class CloudSyncSponsorshipsCommand : ICloudSyncSponsorshipsCommand
 
         foreach (var selfHostedSponsorship in sponsorshipsData)
         {
-            var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(selfHostedSponsorship.PlanSponsorshipType)?.SponsoringProductType;
+            var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(selfHostedSponsorship.PlanSponsorshipType)?.SponsoringProductTierType;
             if (requiredSponsoringProductType == null
-                || StaticStore.GetPasswordManagerPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+                || StaticStore.GetPlan(sponsoringOrg.PlanType).ProductTier != requiredSponsoringProductType.Value)
             {
                 continue; // prevent unsupported sponsorships
             }

@@ -2,15 +2,18 @@
 name: Enforce PR labels
 
 on:
+  workflow_call:
   pull_request:
-    types: [labeled, unlabeled, opened, edited, synchronize]
-
+    types: [labeled, unlabeled, opened, reopened, synchronize]
 jobs:
   enforce-label:
-    name: EnforceLabel
-    runs-on: ubuntu-20.04
+    if: ${{ contains(github.event.*.labels.*.name, 'hold') || contains(github.event.*.labels.*.name, 'needs-qa') || contains(github.event.*.labels.*.name, 'DB-migrations-changed') }}
+    name: Enforce label
+    runs-on: ubuntu-22.04
+
     steps:
-      - name: Enforce Label
-        uses: yogevbd/enforce-label-action@a3c219da6b8fa73f6ba62b68ff09c469b3a1c024 # 2.2.2
-        with:
-          BANNED_LABELS: "hold,DB-migrations-changed,needs-qa"
+      - name: Check for label
+        run: |
+          echo "PRs with the hold or needs-qa labels cannot be merged"
+          echo "### :x: PRs with the hold or needs-qa labels cannot be merged" >> $GITHUB_STEP_SUMMARY
+          exit 1

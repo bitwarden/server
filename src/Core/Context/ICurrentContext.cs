@@ -1,4 +1,8 @@
-﻿using System.Security.Claims;
+﻿#nullable enable
+
+using System.Security.Claims;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -16,7 +20,7 @@ public interface ICurrentContext
     string DeviceIdentifier { get; set; }
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }
-    List<CurrentContentOrganization> Organizations { get; set; }
+    List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
     ClientType ClientType { get; set; }
@@ -32,6 +36,7 @@ public interface ICurrentContext
 
 
     Task<bool> OrganizationUser(Guid orgId);
+    [Obsolete("Manager role is deprecated after Flexible Collections.")]
     Task<bool> OrganizationManager(Guid orgId);
     Task<bool> OrganizationAdmin(Guid orgId);
     Task<bool> OrganizationOwner(Guid orgId);
@@ -39,12 +44,13 @@ public interface ICurrentContext
     Task<bool> AccessEventLogs(Guid orgId);
     Task<bool> AccessImportExport(Guid orgId);
     Task<bool> AccessReports(Guid orgId);
-    Task<bool> CreateNewCollections(Guid orgId);
     Task<bool> EditAnyCollection(Guid orgId);
-    Task<bool> DeleteAnyCollection(Guid orgId);
     Task<bool> ViewAllCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> EditAssignedCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> DeleteAssignedCollections(Guid orgId);
+    [Obsolete("Pre-Flexible Collections logic.")]
     Task<bool> ViewAssignedCollections(Guid orgId);
     Task<bool> ManageGroups(Guid orgId);
     Task<bool> ManagePolicies(Guid orgId);
@@ -64,12 +70,13 @@ public interface ICurrentContext
     bool AccessProviderOrganizations(Guid providerId);
     bool ManageProviderOrganizations(Guid providerId);
 
-    Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
+    Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId);
 
-    Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
+    Task<ICollection<CurrentContextProvider>> ProviderMembershipAsync(
         IProviderUserRepository providerUserRepository, Guid userId);
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);
+    CurrentContextOrganization? GetOrganization(Guid orgId);
 }

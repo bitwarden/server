@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -16,14 +18,15 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Services;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4;
-using IdentityServer4.Extensions;
-using IdentityServer4.Services;
-using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
+using DIM = Duende.IdentityServer.Models;
 
 namespace Bit.Sso.Controllers;
 
@@ -47,6 +50,7 @@ public class AccountController : Controller
     private readonly IGlobalSettings _globalSettings;
     private readonly Core.Services.IEventService _eventService;
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -65,7 +69,8 @@ public class AccountController : Controller
         UserManager<User> userManager,
         IGlobalSettings globalSettings,
         Core.Services.IEventService eventService,
-        IDataProtectorTokenFactory<SsoTokenable> dataProtector)
+        IDataProtectorTokenFactory<SsoTokenable> dataProtector,
+        IOrganizationDomainRepository organizationDomainRepository)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -84,6 +89,7 @@ public class AccountController : Controller
         _eventService = eventService;
         _globalSettings = globalSettings;
         _dataProtector = dataProtector;
+        _organizationDomainRepository = organizationDomainRepository;
     }
 
     [HttpGet]
@@ -203,6 +209,8 @@ public class AccountController : Controller
             returnUrl = "~/";
         }
 
+        // Clean the returnUrl
+        returnUrl = CoreHelpers.ReplaceWhiteSpace(returnUrl, string.Empty);
         if (!Url.IsLocalUrl(returnUrl) && !_interaction.IsValidReturnUrl(returnUrl))
         {
             throw new Exception(_i18nService.T("InvalidReturnUrl"));
@@ -475,7 +483,8 @@ public class AccountController : Controller
             if (orgUser.Status == OrganizationUserStatusType.Invited)
             {
                 // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name));
+                // This allows us to enroll them in MP reset if required
+                throw new Exception(_i18nService.T("AcceptInviteBeforeUsingSSO", organization.DisplayName()));
             }
 
             // Accepted or Confirmed - create SSO link and return;
@@ -489,7 +498,6 @@ public class AccountController : Controller
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var initialSeatCount = organization.Seats.Value;
             var availableSeats = initialSeatCount - occupiedSeats;
-            var prorationDate = DateTime.UtcNow;
             if (availableSeats < 1)
             {
                 try
@@ -499,18 +507,27 @@ public class AccountController : Controller
                         throw new Exception("Cannot autoscale on self-hosted instance.");
                     }
 
-                    await _organizationService.AutoAddSeatsAsync(organization, 1, prorationDate);
+                    await _organizationService.AutoAddSeatsAsync(organization, 1);
                 }
                 catch (Exception e)
                 {
                     if (organization.Seats.Value != initialSeatCount)
                     {
-                        await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
+                        await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value);
                     }
                     _logger.LogInformation(e, "SSO auto provisioning failed");
-                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
+                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
                 }
             }
+        }
+
+        // If the email domain is verified, we can mark the email as verified
+        var emailVerified = false;
+        var emailDomain = CoreHelpers.GetEmailDomain(email);
+        if (!string.IsNullOrWhiteSpace(emailDomain))
+        {
+            var organizationDomain = await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(orgId, emailDomain);
+            emailVerified = organizationDomain?.VerifiedDate.HasValue ?? false;
         }
 
         // Create user record - all existing user flows are handled above
@@ -518,6 +535,7 @@ public class AccountController : Controller
         {
             Name = name,
             Email = email,
+            EmailVerified = emailVerified,
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
         await _userService.RegisterUserAsync(user);
@@ -685,8 +703,10 @@ public class AccountController : Controller
             var idp = User.FindFirst(JwtClaimTypes.IdentityProvider)?.Value;
             if (idp != null && idp != IdentityServerConstants.LocalIdentityProvider)
             {
-                var providerSupportsSignout = await HttpContext.GetSchemeSupportsSignOutAsync(idp);
-                if (providerSupportsSignout)
+                var provider = HttpContext.RequestServices.GetRequiredService<IAuthenticationHandlerProvider>();
+                var handler = await provider.GetHandlerAsync(HttpContext, idp);
+
+                if (handler is IAuthenticationSignOutHandler)
                 {
                     if (logoutId == null)
                     {
@@ -704,7 +724,7 @@ public class AccountController : Controller
         return (logoutId, logout?.PostLogoutRedirectUri, externalAuthenticationScheme);
     }
 
-    public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+    public bool IsNativeClient(DIM.AuthorizationRequest context)
     {
         return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
            && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);

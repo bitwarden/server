@@ -118,6 +118,18 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         }
     }
 
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
+        DateTime startDate, DateTime endDate,
+        PageOptions pageOptions)
+    {
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationIdServiceAccountId]",
+            new Dictionary<string, object>
+            {
+                ["@OrganizationId"] = organizationId,
+                ["@ServiceAccountId"] = serviceAccountId
+            }, startDate, endDate, pageOptions);
+    }
+
     private async Task<PagedResult<IEvent>> GetManyAsync(string sprocName,
         IDictionary<string, object> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
@@ -187,6 +199,10 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(ipAddressColumn);
         var dateColumn = new DataColumn(nameof(e.Date), typeof(DateTime));
         eventsTable.Columns.Add(dateColumn);
+        var secretIdColumn = new DataColumn(nameof(e.SecretId), typeof(Guid));
+        eventsTable.Columns.Add(secretIdColumn);
+        var serviceAccountIdColumn = new DataColumn(nameof(e.ServiceAccountId), typeof(Guid));
+        eventsTable.Columns.Add(serviceAccountIdColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -217,6 +233,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[deviceTypeColumn] = ev.DeviceType.HasValue ? (object)ev.DeviceType.Value : DBNull.Value;
             row[ipAddressColumn] = ev.IpAddress != null ? (object)ev.IpAddress : DBNull.Value;
             row[dateColumn] = ev.Date;
+            row[secretIdColumn] = ev.SecretId.HasValue ? ev.SecretId.Value : DBNull.Value;
+            row[serviceAccountIdColumn] = ev.ServiceAccountId.HasValue ? ev.ServiceAccountId.Value : DBNull.Value;
 
             eventsTable.Rows.Add(row);
         }

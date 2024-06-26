@@ -29,8 +29,8 @@ public class Program
                             return e.Level >= globalSettings.MinLogLevel.IdentitySettings.IpRateLimit;
                         }
 
-                        if (context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                            context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
+                        if (context.Contains("Duende.IdentityServer.Validation.TokenValidator") ||
+                            context.Contains("Duende.IdentityServer.Validation.TokenRequestValidator"))
                         {
                             return e.Level >= globalSettings.MinLogLevel.IdentitySettings.IdentityToken;
                         }

@@ -13,7 +13,7 @@ public class SecretUpdateRequestModel : IValidatableObject
 
     [Required]
     [EncryptedString]
-    [EncryptedStringLength(5000)]
+    [EncryptedStringLength(35000)]
     public string Value { get; set; }
 
     [Required]
@@ -23,18 +23,27 @@ public class SecretUpdateRequestModel : IValidatableObject
 
     public Guid[] ProjectIds { get; set; }
 
-    public Secret ToSecret(Guid id, Guid organizationId)
+    public SecretAccessPoliciesRequestsModel AccessPoliciesRequests { get; set; }
+
+    public Secret ToSecret(Secret secret)
     {
-        return new Secret()
+        secret.Key = Key;
+        secret.Value = Value;
+        secret.Note = Note;
+        secret.RevisionDate = DateTime.UtcNow;
+
+        if (secret.Projects?.FirstOrDefault()?.Id == ProjectIds?.FirstOrDefault())
         {
-            Id = id,
-            OrganizationId = organizationId,
-            Key = Key,
-            Value = Value,
-            Note = Note,
-            DeletedDate = null,
-            Projects = ProjectIds != null && ProjectIds.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
-        };
+            secret.Projects = null;
+        }
+        else
+        {
+            secret.Projects = ProjectIds != null && ProjectIds.Length != 0
+                ? ProjectIds.Select(x => new Project() { Id = x }).ToList()
+                : [];
+        }
+
+        return secret;
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

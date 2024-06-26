@@ -14,6 +14,23 @@ public class OrganizationConnectionRepository : Repository<OrganizationConnectio
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
 
+    public async Task<OrganizationConnection> GetByIdOrganizationIdAsync(Guid id, Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationConnection>(
+                $"[{Schema}].[OrganizationConnection_ReadByIdOrganizationId]",
+                new
+                {
+                    Id = id,
+                    OrganizationId = organizationId
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
     public async Task<ICollection<OrganizationConnection>> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
     {
         using (var connection = new SqlConnection(ConnectionString))

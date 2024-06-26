@@ -43,12 +43,12 @@ public class DomainsResponseModel : ResponseModel
             IEnumerable<GlobalEquivalentDomainsType> excludedDomains,
             bool excluded)
         {
-            Type = globalDomain;
+            Type = (byte)globalDomain;
             Domains = domains;
             Excluded = excluded && (excludedDomains?.Contains(globalDomain) ?? false);
         }
 
-        public GlobalEquivalentDomainsType Type { get; set; }
+        public byte Type { get; set; }
         public IEnumerable<string> Domains { get; set; }
         public bool Excluded { get; set; }
     }

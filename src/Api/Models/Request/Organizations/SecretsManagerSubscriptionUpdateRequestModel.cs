@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Business;
 
 namespace Bit.Api.Models.Request.Organizations;
@@ -14,11 +14,12 @@ public class SecretsManagerSubscriptionUpdateRequestModel
 
     public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
     {
-        var orgUpdate = new SecretsManagerSubscriptionUpdate(
-            organization,
-            seatAdjustment: SeatAdjustment, maxAutoscaleSeats: MaxAutoscaleSeats,
-            serviceAccountAdjustment: ServiceAccountAdjustment, maxAutoscaleServiceAccounts: MaxAutoscaleServiceAccounts);
-
-        return orgUpdate;
+        return new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            MaxAutoscaleSmSeats = MaxAutoscaleSeats,
+            MaxAutoscaleSmServiceAccounts = MaxAutoscaleServiceAccounts
+        }
+        .AdjustSeats(SeatAdjustment)
+        .AdjustServiceAccounts(ServiceAccountAdjustment);
     }
 }

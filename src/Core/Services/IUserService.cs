@@ -4,8 +4,6 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Vault.Entities;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
@@ -33,15 +31,12 @@ public interface IUserService
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
-    Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key, string orgIdentifier = null);
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
         KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
-    Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-        IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
@@ -55,11 +50,10 @@ public interface IUserService
     Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
         PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
         TaxInfo taxInfo);
-    Task IapCheckAsync(User user, PaymentMethodType paymentMethodType);
     Task UpdateLicenseAsync(User user, UserLicense license);
     Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
     Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType, TaxInfo taxInfo);
-    Task CancelPremiumAsync(User user, bool? endOfPeriod = null, bool accountDelete = false);
+    Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
     Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task EnablePremiumAsync(User user, DateTime? expirationDate);
@@ -74,9 +68,18 @@ public interface IUserService
     Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
     Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
+
+    Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
+        bool validatePassword = true, bool refreshStamp = true);
     Task RotateApiKeyAsync(User user);
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret);
+
+    /// <summary>
+    /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
+    /// We force these users to the web to migrate their encryption scheme.
+    /// </summary>
+    Task<bool> IsLegacyUser(string userId);
 }

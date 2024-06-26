@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -11,16 +12,22 @@ public class NotificationHubPushRegistrationServiceTests
     private readonly NotificationHubPushRegistrationService _sut;
 
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<NotificationHubPushRegistrationService> _logger;
     private readonly GlobalSettings _globalSettings;
 
     public NotificationHubPushRegistrationServiceTests()
     {
         _installationDeviceRepository = Substitute.For<IInstallationDeviceRepository>();
+        _serviceProvider = Substitute.For<IServiceProvider>();
+        _logger = Substitute.For<ILogger<NotificationHubPushRegistrationService>>();
         _globalSettings = new GlobalSettings();
 
         _sut = new NotificationHubPushRegistrationService(
             _installationDeviceRepository,
-            _globalSettings
+            _globalSettings,
+            _serviceProvider,
+            _logger
         );
     }
 

@@ -1,4 +1,4 @@
-﻿using Bit.Api.Auth.Models.Public.Request;
+﻿using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Core.Entities;
 
 namespace Bit.Api.Models.Public.Request;

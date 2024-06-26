@@ -4,6 +4,8 @@ namespace Bit.Core.Tools.Enums;
 
 public enum ReferenceEventType
 {
+    [EnumMember(Value = "signup-email-submit")]
+    SignupEmailSubmit,
     [EnumMember(Value = "signup")]
     Signup,
     [EnumMember(Value = "upgrade-plan")]
@@ -42,6 +44,8 @@ public enum ReferenceEventType
     OrganizationEditedByAdmin,
     [EnumMember(Value = "organization-created-by-admin")]
     OrganizationCreatedByAdmin,
+    [EnumMember(Value = "organization-edited-in-stripe")]
+    OrganizationEditedInStripe,
     [EnumMember(Value = "sm-service-account-accessed-secret")]
     SmServiceAccountAccessedSecret,
 }

@@ -1,0 +1,42 @@
+---
+name: Collect code references
+
+on:
+  pull_request:
+    branches-ignore:
+      - "renovate/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  refs:
+    name: Code reference collection
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Collect
+        id: collect
+        uses: launchdarkly/find-code-references-in-pull-request@2e9333c88539377cfbe818c265ba8b9ebced3c91 # v1.1.0
+        with:
+          project-key: default
+          environment-key: dev
+          access-token: ${{ secrets.LD_ACCESS_TOKEN }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add label
+        if: steps.collect.outputs.any-changed == 'true'
+        run: gh pr edit $PR_NUMBER --add-label feature-flag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Remove label
+        if: steps.collect.outputs.any-changed == 'false'
+        run: gh pr edit $PR_NUMBER --remove-label feature-flag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}

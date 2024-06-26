@@ -63,6 +63,7 @@ public class CipherMiniResponseModel : ResponseModel
         CreationDate = cipher.CreationDate;
         DeletedDate = cipher.DeletedDate;
         Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
+        Key = cipher.Key;
     }
 
     public Guid Id { get; set; }
@@ -83,6 +84,7 @@ public class CipherMiniResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
     public DateTime? DeletedDate { get; set; }
     public CipherRepromptType Reprompt { get; set; }
+    public string Key { get; set; }
 }
 
 public class CipherResponseModel : CipherMiniResponseModel
@@ -125,6 +127,12 @@ public class CipherDetailsResponseModel : CipherResponseModel
         CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? new List<Guid>();
     }
 
+    public CipherDetailsResponseModel(CipherDetailsWithCollections cipher, GlobalSettings globalSettings, string obj = "cipherDetails")
+        : base(cipher, globalSettings, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+    }
+
     public IEnumerable<Guid> CollectionIds { get; set; }
 }
 
@@ -142,6 +150,13 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         {
             CollectionIds = new Guid[] { };
         }
+    }
+
+    public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
+        GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMiniDetails")
+        : base(cipher, globalSettings, orgUseTotp, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
     }
 
     public IEnumerable<Guid> CollectionIds { get; set; }
