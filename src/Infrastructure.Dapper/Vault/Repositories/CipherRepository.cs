@@ -567,16 +567,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_SoftDelete_V2]"
-            : $"[{Schema}].[Cipher_SoftDelete]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_SoftDelete]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }

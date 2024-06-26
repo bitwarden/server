@@ -33,7 +33,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
-    Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections);
+    Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);

@@ -878,7 +878,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, useFlexibleCollections: UseFlexibleCollections);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
 
-            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, UseFlexibleCollections);
+            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
         var events = deletingCiphers.Select(c =>
