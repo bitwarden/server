@@ -68,6 +68,15 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     }
 
     [Fact]
+    public async Task GetByOrganizationAsync_ServiceAccountAccess_NotFound()
+    {
+        var (_, org) = await SetupProjectsWithAccessAsync(PermissionType.RunAsServiceAccountWithPermission);
+
+        var response = await _client.GetAsync($"/organizations/{org.Id}/sm-counts");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetByOrganizationAsync_UserWithoutPermission_EmptyList()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
@@ -89,7 +98,6 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [Theory]
     [InlineData(PermissionType.RunAsAdmin)]
     [InlineData(PermissionType.RunAsUserWithPermission)]
-    [InlineData(PermissionType.RunAsServiceAccountWithPermission)]
     public async Task GetByOrganizationAsync_Success(PermissionType permissionType)
     {
         var (projectIds, org) = await SetupProjectsWithAccessAsync(permissionType);
@@ -110,16 +118,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         }
 
         // TODO
-        // Assert.Equal(0, result.Secrets);
-        if (permissionType == PermissionType.RunAsServiceAccountWithPermission)
-        {
-            Assert.Equal(1, result.ServiceAccounts);
-        }
-        else
-        {
-            // TODO
-            // Assert.Equal(?, result.ServiceAccounts);
-        }
+        // Assert.Equal(?, result.ServiceAccounts);
     }
 
     private async Task<List<Guid>> CreateProjectsAsync(Guid orgId, int numberToCreate = 3)

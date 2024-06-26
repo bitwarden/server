@@ -1,5 +1,6 @@
 ﻿using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
@@ -40,6 +41,10 @@ public class CountsController : Controller
         }
 
         var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
+        if (accessType == AccessClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
 
         var projectsCountTask = _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId,
             userId, accessType);
@@ -76,6 +81,10 @@ public class CountsController : Controller
         }
 
         var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, project.OrganizationId);
+        if (accessType == AccessClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
 
         var projectsCounts = await _projectRepository.GetProjectCountsByIdAsync(projectId, userId, accessType);
 
@@ -102,6 +111,10 @@ public class CountsController : Controller
         }
 
         var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, serviceAccount.OrganizationId);
+        if (accessType == AccessClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
 
         var serviceAccountCounts =
             await _serviceAccountRepository.GetServiceAccountCountsByIdAsync(serviceAccountId, userId, accessType);
