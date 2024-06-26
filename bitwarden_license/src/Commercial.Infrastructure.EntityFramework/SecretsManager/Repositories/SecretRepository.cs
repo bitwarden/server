@@ -320,7 +320,6 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
-            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 

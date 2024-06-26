@@ -180,7 +180,6 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
-            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToProject(userId)),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
@@ -197,7 +196,6 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
-            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToProject(userId)),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 

@@ -136,7 +136,6 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasReadAccessToServiceAccount(userId)),
-            AccessClientType.ServiceAccount => query.Where(sa => sa.Id == userId),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
