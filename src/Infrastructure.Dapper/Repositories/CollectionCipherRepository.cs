@@ -79,16 +79,12 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
     }
 
     public async Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId,
-        Guid organizationId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
+        Guid organizationId, IEnumerable<Guid> collectionIds)
     {
-        var sprocName = useFlexibleCollections
-            ? "[dbo].[CollectionCipher_UpdateCollectionsForCiphers_V2]"
-            : "[dbo].[CollectionCipher_UpdateCollectionsForCiphers]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                "[dbo].[CollectionCipher_UpdateCollectionsForCiphers]",
                 new
                 {
                     CipherIds = cipherIds.ToGuidIdArrayTVP(),
