@@ -11,7 +11,7 @@ public class RegisterFinishRequestModel : IValidatableObject
 {
     [Required, StrictEmailAddress, StringLength(256)]
     public string Email { get; set; }
-    public string EmailVerificationToken { get; set; }
+    public string? EmailVerificationToken { get; set; }
 
     [Required]
     [StringLength(1000)]
@@ -31,7 +31,7 @@ public class RegisterFinishRequestModel : IValidatableObject
     public int? KdfParallelism { get; set; }
 
     public Guid? OrganizationUserId { get; set; }
-    public string? orgInviteToken { get; set; }
+    public string? OrgInviteToken { get; set; }
 
 
     public User ToUser()
