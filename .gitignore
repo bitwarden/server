@@ -215,7 +215,6 @@ bitwarden_license/src/Sso/wwwroot/css
 **/CoverageOutput/
 .idea/*
 **/**.swp
-.mono
 
 src/Admin/Admin.zip
 src/Api/Api.zip
