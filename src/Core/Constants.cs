@@ -130,6 +130,7 @@ public static class FeatureFlagKeys
     public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
+    public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
 
     public static List<string> GetAllKeys()
     {
@@ -145,7 +146,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"}
+            { UnassignedItemsBanner, "true"},
+            { FlexibleCollectionsV1, "true" }
         };
     }
 }
