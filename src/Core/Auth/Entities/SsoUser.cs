@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 
+#nullable enable
+
 namespace Bit.Core.Auth.Entities;
 
 public class SsoUser : ITableObject<long>
@@ -9,7 +11,7 @@ public class SsoUser : ITableObject<long>
     public Guid UserId { get; set; }
     public Guid? OrganizationId { get; set; }
     [MaxLength(50)]
-    public string ExternalId { get; set; }
+    public string ExternalId { get; set; } = null!;
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
 
     public void SetNewId()
