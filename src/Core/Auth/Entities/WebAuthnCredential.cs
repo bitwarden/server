@@ -3,6 +3,8 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Auth.Entities;
 
 public class WebAuthnCredential : ITableObject<Guid>
@@ -10,21 +12,21 @@ public class WebAuthnCredential : ITableObject<Guid>
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
     [MaxLength(50)]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     [MaxLength(256)]
-    public string PublicKey { get; set; }
+    public string PublicKey { get; set; } = null!;
     [MaxLength(256)]
-    public string CredentialId { get; set; }
+    public string CredentialId { get; set; } = null!;
     public int Counter { get; set; }
     [MaxLength(20)]
-    public string Type { get; set; }
+    public string? Type { get; set; }
     public Guid AaGuid { get; set; }
     [MaxLength(2000)]
-    public string EncryptedUserKey { get; set; }
+    public string? EncryptedUserKey { get; set; }
     [MaxLength(2000)]
-    public string EncryptedPrivateKey { get; set; }
+    public string? EncryptedPrivateKey { get; set; }
     [MaxLength(2000)]
-    public string EncryptedPublicKey { get; set; }
+    public string? EncryptedPublicKey { get; set; }
     public bool SupportsPrf { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
