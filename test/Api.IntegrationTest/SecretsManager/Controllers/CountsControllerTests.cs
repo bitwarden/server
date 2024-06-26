@@ -177,11 +177,9 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task GetByProjectAsync_NonExistingProject_NotFound(PermissionType permissionType)
     {
-        var (projects, _, _) = await SetupProjectsWithAccessAsync(permissionType);
+        await SetupProjectsWithAccessAsync(permissionType);
 
-        await _projectRepository.DeleteManyByIdAsync([projects[0].Id]);
-
-        var response = await _client.GetAsync($"/projects/{projects[0].Id}/sm-counts");
+        var response = await _client.GetAsync($"/projects/{Guid.NewGuid().ToString()}/sm-counts");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -276,13 +274,9 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task GetByServiceAccountAsync_NonExistingServiceAccount_NotFound(PermissionType permissionType)
     {
-        var (_, org, _) = await SetupProjectsWithAccessAsync(permissionType);
+        await SetupProjectsWithAccessAsync(permissionType);
 
-        var serviceAccounts = await CreateServiceAccountsAsync(org.Id);
-
-        await _serviceAccountRepository.DeleteManyByIdAsync([serviceAccounts[0].Id]);
-
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccounts[0].Id}/sm-counts");
+        var response = await _client.GetAsync($"/service-accounts/{Guid.NewGuid().ToString()}/sm-counts");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
