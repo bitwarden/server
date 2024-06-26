@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.SecretsManager.Commands.Requests.Interfaces;
 using Bit.Core.Services;
@@ -24,7 +25,7 @@ public class RequestSMAccessCommand : IRequestSMAccessCommand
 
         if (!emailList.Any())
         {
-            throw new UnauthorizedAccessException();
+            throw new BadRequestException("The organization is in an invalid state. Please contact Customer Support.");
         }
 
         await _mailService.SendRequestSMAccessToAdminEmailAsync(emailList, organization.Name, user.Name, emailContent);

@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.Context;
@@ -26,11 +25,9 @@ public class RequestSMAccessControllerTests
     public async Task RequestSMAccessFromAdminst_WhenSendingNoModel_ShouldThrowNotFoundException(
     User user, SutProvider<RequestSMAccessController> sutProvider)
     {
-        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).ReturnsNullForAnyArgs();
 
-        // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RequestSMAccessFromAdmins(new RequestSMAccessRequestModel()));
     }
 
@@ -43,12 +40,11 @@ public class RequestSMAccessControllerTests
     ICollection<OrganizationUserUserDetails> orgUsers,
     SutProvider<RequestSMAccessController> sutProvider)
     {
-        // Arrange
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(model.OrganizationId).Returns(org);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(orgUsers);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(model.OrganizationId).Returns(true);
-        // Act & Assert
+
         await sutProvider.Sut.RequestSMAccessFromAdmins(model);
 
         //Also check that the command was called
@@ -61,10 +57,8 @@ public class RequestSMAccessControllerTests
     [BitAutoData]
     public async Task RequestSMAccessFromAdmins_WhenUserInvalid_ShouldThrowBadRequestException(RequestSMAccessRequestModel model, SutProvider<RequestSMAccessController> sutProvider)
     {
-        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNullForAnyArgs();
 
-        // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.RequestSMAccessFromAdmins(model));
     }
 
@@ -72,11 +66,21 @@ public class RequestSMAccessControllerTests
     [BitAutoData]
     public async Task RequestSMAccessFromAdmins_WhenOrgInvalid_ShouldThrowNotFoundException(RequestSMAccessRequestModel model, User user, SutProvider<RequestSMAccessController> sutProvider)
     {
-        // Arrange
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).ReturnsNullForAnyArgs();
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(model.OrganizationId).Returns(true);
 
-        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RequestSMAccessFromAdmins(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RequestSMAccessFromAdmins_WhenOrgUserInvalid_ShouldThrowNotFoundException(RequestSMAccessRequestModel model, User user, SutProvider<RequestSMAccessController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).ReturnsNullForAnyArgs();
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(model.OrganizationId).Returns(false);
+
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RequestSMAccessFromAdmins(model));
     }
 }

@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -44,7 +45,7 @@ public class RequestSMAccessCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SendRequestAccessToSM_NoAdmins_ThrowsUnauthorizedAccess(
+    public async Task SendRequestAccessToSM_NoAdmins_ThrowsBadRequestException(
        User user,
        Organization organization,
        ICollection<OrganizationUserUserDetails> orgUsers,
@@ -57,7 +58,7 @@ public class RequestSMAccessCommandTests
             userDetails.Type = OrganizationUserType.User;
         }
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.SendRequestAccessToSM(organization, orgUsers, user, emailContent));
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendRequestAccessToSM(organization, orgUsers, user, emailContent));
     }
 
 
