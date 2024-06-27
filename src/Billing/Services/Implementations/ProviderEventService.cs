@@ -79,7 +79,7 @@ public class ProviderEventService(
                         ClientName = client.OrganizationName,
                         PlanName = client.Plan,
                         AssignedSeats = client.Seats ?? 0,
-                        UsedSeats = client.UserCount,
+                        UsedSeats = (client.Seats ?? 0) - (client.AssignedSeats ?? 0),
                         Total = client.Plan == enterprisePlan.Name
                             ? (client.Seats ?? 0) * discountedEnterpriseSeatPrice
                             : (client.Seats ?? 0) * discountedTeamsSeatPrice
