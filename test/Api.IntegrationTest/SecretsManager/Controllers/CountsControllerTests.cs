@@ -353,33 +353,33 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         return projects;
     }
 
-    private async Task<List<Secret>> CreateSecretsAsync(Guid organizatonId, Project? project, int numberToCreate = 3)
+    private async Task<List<Secret>> CreateSecretsAsync(Guid organizationId, Project? project, int numberToCreate = 3)
     {
-        var secretIds = new List<Secret>();
+        var secrets = new List<Secret>();
         for (var i = 0; i < numberToCreate; i++)
         {
             var secret = await _secretRepository.CreateAsync(new Secret
             {
-                OrganizationId = organizatonId,
+                OrganizationId = organizationId,
                 Key = _mockEncryptedString,
                 Value = _mockEncryptedString,
                 Note = _mockEncryptedString,
                 Projects = project != null ? new List<Project> { project } : null
             });
-            secretIds.Add(secret);
+            secrets.Add(secret);
         }
 
-        return secretIds;
+        return secrets;
     }
 
-    private async Task<List<ServiceAccount>> CreateServiceAccountsAsync(Guid organizatonId, int numberToCreate = 3)
+    private async Task<List<ServiceAccount>> CreateServiceAccountsAsync(Guid organizationId, int numberToCreate = 3)
     {
         var serviceAccounts = new List<ServiceAccount>();
         for (var i = 0; i < numberToCreate; i++)
         {
             var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
             {
-                OrganizationId = organizatonId,
+                OrganizationId = organizationId,
                 Name = _mockEncryptedString
             });
             serviceAccounts.Add(serviceAccount);
@@ -465,8 +465,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
                     foreach (var project in projects)
                     {
-                        await CreateServiceAccountProjectAccessPolicyAsync(project.Id,
-                            (Guid)apiKeyDetails.ApiKey.ServiceAccountId!);
+                        await CreateServiceAccountProjectAccessPolicyAsync(project.Id, apiKeyDetails.ApiKey.ServiceAccountId!.Value);
                     }
 
                     break;

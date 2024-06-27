@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿#nullable enable
+using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;

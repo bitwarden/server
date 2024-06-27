@@ -1,4 +1,5 @@
-﻿using Bit.Api.SecretsManager.Models.Response;
+﻿#nullable enable
+using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -35,16 +36,7 @@ public class CountsController : Controller
     [HttpGet("organizations/{organizationId}/sm-counts")]
     public async Task<OrganizationCountsResponseModel> GetByOrganizationAsync([FromRoute] Guid organizationId)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
-        if (accessType == AccessClientType.ServiceAccount)
-        {
-            throw new NotFoundException();
-        }
+        var (accessType, userId) = await GetAccessClientAsync(organizationId);
 
         var projectsCountTask = _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId,
             userId, accessType);
@@ -75,16 +67,7 @@ public class CountsController : Controller
             throw new NotFoundException();
         }
 
-        if (!_currentContext.AccessSecretsManager(project.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, project.OrganizationId);
-        if (accessType == AccessClientType.ServiceAccount)
-        {
-            throw new NotFoundException();
-        }
+        var (accessType, userId) = await GetAccessClientAsync(project.OrganizationId);
 
         var projectsCounts = await _projectRepository.GetProjectCountsByIdAsync(projectId, userId, accessType);
 
@@ -105,16 +88,7 @@ public class CountsController : Controller
             throw new NotFoundException();
         }
 
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, serviceAccount.OrganizationId);
-        if (accessType == AccessClientType.ServiceAccount)
-        {
-            throw new NotFoundException();
-        }
+        var (accessType, userId) = await GetAccessClientAsync(serviceAccount.OrganizationId);
 
         var serviceAccountCounts =
             await _serviceAccountRepository.GetServiceAccountCountsByIdAsync(serviceAccountId, userId, accessType);
@@ -125,5 +99,21 @@ public class CountsController : Controller
             People = serviceAccountCounts.People,
             AccessTokens = serviceAccountCounts.AccessTokens
         };
+    }
+
+    private async Task<(AccessClientType, Guid)> GetAccessClientAsync(Guid organizationId)
+    {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
+        if (accessType == AccessClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
+
+        return (accessType, userId);
     }
 }

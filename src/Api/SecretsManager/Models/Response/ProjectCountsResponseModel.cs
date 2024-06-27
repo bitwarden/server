@@ -1,11 +1,11 @@
-﻿using Bit.Core.Models.Api;
+﻿#nullable enable
+using Bit.Core.Models.Api;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
 public class ProjectCountsResponseModel() : ResponseModel(_objectName)
 {
     private const string _objectName = "projectCounts";
-
 
     public int Secrets { get; set; }
 

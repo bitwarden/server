@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Api;
+﻿#nullable enable
+using Bit.Core.Models.Api;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 

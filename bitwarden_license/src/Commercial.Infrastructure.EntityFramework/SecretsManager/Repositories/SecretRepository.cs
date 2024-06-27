@@ -312,7 +312,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     public async Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId, Guid userId,
         AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Secret.Where(s => s.OrganizationId == organizationId && s.DeletedDate == null);
 

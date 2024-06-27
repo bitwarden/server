@@ -172,7 +172,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
     public async Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId, Guid userId,
         AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
 
@@ -188,7 +188,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
     public async Task<ProjectCounts> GetProjectCountsByIdAsync(Guid projectId, Guid userId, AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Project.Where(p => p.Id == projectId && p.DeletedDate == null);
 

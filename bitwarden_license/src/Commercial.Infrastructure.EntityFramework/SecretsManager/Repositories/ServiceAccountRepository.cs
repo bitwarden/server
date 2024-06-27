@@ -128,7 +128,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
     public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId, Guid userId,
         AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.ServiceAccount.Where(sa => sa.OrganizationId == organizationId);
 
@@ -145,7 +145,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
     public async Task<ServiceAccountCounts> GetServiceAccountCountsByIdAsync(Guid serviceAccountId, Guid userId,
         AccessClientType accessType)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.ServiceAccount.Where(sa => sa.Id == serviceAccountId);
 
@@ -160,7 +160,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         {
             Projects = serviceAccount.ProjectAccessPolicies.Count,
             People = serviceAccount.UserAccessPolicies.Count + serviceAccount.GroupAccessPolicies.Count,
-            AccessTokens = serviceAccount.ApiKeys.Count()
+            AccessTokens = serviceAccount.ApiKeys.Count
         });
 
         var serviceAccountCounts = await serviceAccountCountsQuery.FirstOrDefaultAsync();
