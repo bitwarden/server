@@ -194,8 +194,6 @@ public class AccountsControllerTests : IDisposable
         await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.SignupEmailSubmit));
     }
 
-    // TODO: finish adding PostRegisterFinish tests
-
     [Theory, BitAutoData]
     public async Task PostRegisterFinish_WhenGivenOrgInvite_ShouldRegisterUser(
         string email, string masterPasswordHash, string orgInviteToken, Guid organizationUserId, string userSymmetricKey,
@@ -290,5 +288,96 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(duplicateUserEmailErrorDesc, modelError.ErrorMessage);
     }
 
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_WhenGivenEmailVerificationToken_ShouldRegisterUser(
+        string email, string masterPasswordHash, string emailVerificationToken, string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys)
+    {
+        // Arrange
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys
+        };
+
+        var user = model.ToUser();
+
+        _registerUserCommand.RegisterUserViaEmailVerificationToken(Arg.Any<User>(), masterPasswordHash, emailVerificationToken)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        var result = await _sut.PostRegisterFinish(model);
+
+        // Assert
+        Assert.NotNull(result);
+        await _registerUserCommand.Received(1).RegisterUserViaEmailVerificationToken(Arg.Is<User>(u =>
+            u.Email == user.Email &&
+            u.MasterPasswordHint == user.MasterPasswordHint &&
+            u.Kdf == user.Kdf &&
+            u.KdfIterations == user.KdfIterations &&
+            u.KdfMemory == user.KdfMemory &&
+            u.KdfParallelism == user.KdfParallelism &&
+            u.Key == user.Key
+        ), masterPasswordHash, emailVerificationToken);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_WhenGivenEmailVerificationTokenDuplicateUser_ThrowsBadRequestException(
+        string email, string masterPasswordHash, string emailVerificationToken, string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys)
+    {
+        // Arrange
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys
+        };
+
+        var user = model.ToUser();
+
+        // Duplicates throw 2 errors, one for the email and one for the username
+        var duplicateUserNameErrorCode = "DuplicateUserName";
+        var duplicateUserNameErrorDesc = $"Username '{user.Email}' is already taken.";
+
+        var duplicateUserEmailErrorCode = "DuplicateEmail";
+        var duplicateUserEmailErrorDesc = $"Email '{user.Email}' is already taken.";
+
+        var failedIdentityResult = IdentityResult.Failed(
+            new IdentityError { Code = duplicateUserNameErrorCode, Description = duplicateUserNameErrorDesc },
+            new IdentityError { Code = duplicateUserEmailErrorCode, Description = duplicateUserEmailErrorDesc }
+        );
+
+        _registerUserCommand.RegisterUserViaEmailVerificationToken(Arg.Is<User>(u =>
+                u.Email == user.Email &&
+                u.MasterPasswordHint == user.MasterPasswordHint &&
+                u.Kdf == user.Kdf &&
+                u.KdfIterations == user.KdfIterations &&
+                u.KdfMemory == user.KdfMemory &&
+                u.KdfParallelism == user.KdfParallelism &&
+                u.Key == user.Key
+            ), masterPasswordHash, emailVerificationToken)
+            .Returns(Task.FromResult(failedIdentityResult));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterFinish(model));
+
+        // We filter out the duplicate username error
+        // so we should only see the duplicate email error
+        Assert.Equal(1, exception.ModelState.ErrorCount);
+        exception.ModelState.TryGetValue(string.Empty, out var modelStateEntry);
+        Assert.NotNull(modelStateEntry);
+        var modelError = modelStateEntry.Errors.First();
+        Assert.Equal(duplicateUserEmailErrorDesc, modelError.ErrorMessage);
+    }
 
 }
