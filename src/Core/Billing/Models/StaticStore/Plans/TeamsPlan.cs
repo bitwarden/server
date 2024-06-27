@@ -86,8 +86,10 @@ public record TeamsPlan : Plan
             else
             {
                 StripeSeatPlanId = "2023-teams-org-seat-monthly";
+                StripeProviderPortalSeatPlanId = "password-manager-provider-portal-teams-monthly-2024";
                 StripeStoragePlanId = "storage-gb-monthly";
                 SeatPrice = 5;
+                ProviderPortalSeatPrice = 4;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }
