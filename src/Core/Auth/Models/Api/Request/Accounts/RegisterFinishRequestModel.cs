@@ -9,24 +9,22 @@ using System.ComponentModel.DataAnnotations;
 
 public class RegisterFinishRequestModel : IValidatableObject
 {
-    [Required, StrictEmailAddress, StringLength(256)]
-    public string Email { get; set; }
+    [StrictEmailAddress, StringLength(256)]
+    public required string Email { get; set; }
     public string? EmailVerificationToken { get; set; }
 
-    [Required]
     [StringLength(1000)]
-    public string MasterPasswordHash { get; set; }
+    public required string MasterPasswordHash { get; set; }
 
     [StringLength(50)]
-    public string MasterPasswordHint { get; set; }
+    public string? MasterPasswordHint { get; set; }
 
+    public required string UserSymmetricKey { get; set; }
 
-    public string UserSymmetricKey { get; set; }
+    public required KeysRequestModel UserAsymmetricKeys { get; set; }
 
-    public KeysRequestModel UserAsymmetricKeys { get; set; }
-
-    public KdfType Kdf { get; set; }
-    public int KdfIterations { get; set; }
+    public required KdfType Kdf { get; set; }
+    public required int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
 
