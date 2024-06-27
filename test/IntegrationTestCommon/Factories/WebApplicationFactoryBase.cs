@@ -38,7 +38,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     private bool _handleSqliteDisposal { get; set; }
 
 
-    public void SubstitueService<TService>(Action<TService> mockService)
+    public void SubstituteService<TService>(Action<TService> mockService)
         where TService : class
     {
         _configureTestServices.Add(services =>
