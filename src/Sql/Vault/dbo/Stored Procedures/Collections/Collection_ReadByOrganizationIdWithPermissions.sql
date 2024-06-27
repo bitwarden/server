@@ -41,7 +41,6 @@ BEGIN
 	                JOIN [dbo].[OrganizationUser] OU2 ON CU2.[OrganizationUserId] = OU2.[Id]
                     WHERE
                         CU2.[CollectionId] = C.[Id] AND
-                        OU2.[Status] IN (-1, 2) AND
                         CU2.[Manage] = 1
 	            )
 	            AND NOT EXISTS (

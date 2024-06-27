@@ -1,5 +1,4 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
@@ -51,8 +50,7 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
         var activeUserManageRights = from cu in dbContext.CollectionUsers
                                      join ou in dbContext.OrganizationUsers
                                          on cu.OrganizationUserId equals ou.Id
-                                     where (ou.Status == OrganizationUserStatusType.Confirmed
-                                            || ou.Status == OrganizationUserStatusType.Revoked) && cu.Manage
+                                     where cu.Manage
                                      select cu.CollectionId;
 
         var activeGroupManageRights = from cg in dbContext.CollectionGroups
