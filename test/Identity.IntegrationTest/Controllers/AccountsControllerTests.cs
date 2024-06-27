@@ -84,15 +84,17 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
-    public async Task RegistrationWithEmailVerification_WithEmailVerificationToken_Succeeds(string name, bool receiveMarketingEmails,
-         [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
-        KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
+    public async Task RegistrationWithEmailVerification_WithEmailVerificationToken_Succeeds([Required] string name, bool receiveMarketingEmails,
+         [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
+         [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
     {
+        // Localize substitutions to this test.
+        var localFactory = new IdentityApplicationFactory();
 
         // First we must substitute the mail service in order to be able to get a valid email verification token
         // for the complete registration step
         string capturedEmailVerificationToken = null;
-        _factory.SubstituteService<IMailService>(mailService =>
+        localFactory.SubstituteService<IMailService>(mailService =>
         {
             mailService.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Do<string>(t => capturedEmailVerificationToken = t))
                 .Returns(Task.CompletedTask);
@@ -108,7 +110,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             ReceiveMarketingEmails = receiveMarketingEmails
         };
 
-        var sendEmailVerificationResponseHttpContext = await _factory.PostRegisterSendEmailVerificationAsync(sendVerificationEmailReqModel);
+        var sendEmailVerificationResponseHttpContext = await localFactory.PostRegisterSendEmailVerificationAsync(sendVerificationEmailReqModel);
 
         Assert.Equal(StatusCodes.Status204NoContent, sendEmailVerificationResponseHttpContext.Response.StatusCode);
         Assert.NotNull(capturedEmailVerificationToken);
@@ -128,11 +130,11 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             KdfParallelism = kdfParallelism
         };
 
-        var postRegisterFinishHttpContext = await _factory.PostRegisterFinishAsync(registerFinishReqModel);
+        var postRegisterFinishHttpContext = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
 
         Assert.Equal(StatusCodes.Status200OK, postRegisterFinishHttpContext.Response.StatusCode);
 
-        var database = _factory.GetDatabaseContext();
+        var database = localFactory.GetDatabaseContext();
         var user = await database.Users
             .SingleAsync(u => u.Email == email);
 
