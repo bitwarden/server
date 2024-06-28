@@ -160,6 +160,10 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
          [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
         KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
     {
+
+        // Localize factory to just this test.
+        var localFactory = new IdentityApplicationFactory();
+
         // To avoid having to call the API send org invite endpoint, I'm going to hardcode some valid org invite data:
         var email = "jsnider+local410@bitwarden.com";
         var orgInviteToken = "BwOrgUserInviteToken_CfDJ8HOzu6wr6nVLouuDxgOHsMwPcj9Guuip5k_XLD1bBGpwQS1f66c9kB6X4rvKGxNdywhgimzgvG9SgLwwJU70O8P879XyP94W6kSoT4N25a73kgW3nU3vl3fAtGSS52xdBjNU8o4sxmomRvhOZIQ0jwtVjdMC2IdybTbxwCZhvN0hKIFs265k6wFRSym1eu4NjjZ8pmnMneG0PlKnNZL93tDe8FMcqStJXoddIEgbA99VJp8z1LQmOMfEdoMEM7Zs8W5bZ34N4YEGu8XCrVau59kGtWQk7N4rPV5okzQbTpeoY_4FeywgLFGm-tDtTPEdSEBJkRjexANri7CGdg3dpnMifQc_bTmjZd32gOjw8N8v";
@@ -180,11 +184,11 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             KdfParallelism = kdfParallelism
         };
 
-        var postRegisterFinishHttpContext = await _factory.PostRegisterFinishAsync(registerFinishReqModel);
+        var postRegisterFinishHttpContext = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
 
         Assert.Equal(StatusCodes.Status200OK, postRegisterFinishHttpContext.Response.StatusCode);
 
-        var database = _factory.GetDatabaseContext();
+        var database = localFactory.GetDatabaseContext();
         var user = await database.Users
             .SingleAsync(u => u.Email == email);
 
