@@ -65,7 +65,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     [Theory]
     [BitAutoData(true)]
     [BitAutoData(false)]
-    public async Task PostRegisterSendEmailVerification_WhenGivenNewOrExistingUser_ReturnsNoContent(bool shouldPreCreateUser, string name, bool receiveMarketingEmails)
+    public async Task PostRegisterSendEmailVerification_WhenGivenNewOrExistingUser__WithEnableEmailVerificationTrue_ReturnsNoContent(bool shouldPreCreateUser, string name, bool receiveMarketingEmails)
     {
         var email = $"test+register+{name}@email.com";
         if (shouldPreCreateUser)
@@ -83,6 +83,47 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         var context = await _factory.PostRegisterSendEmailVerificationAsync(model);
 
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+    }
+
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task PostRegisterSendEmailVerification_WhenGivenNewOrExistingUser_WithEnableEmailVerificationFalse_ReturnsNoContent(bool shouldPreCreateUser, string name, bool receiveMarketingEmails)
+    {
+
+        // Localize substitutions to this test.
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:enableEmailVerification", "false");
+
+        var email = $"test+register+{name}@email.com";
+        if (shouldPreCreateUser)
+        {
+            await CreateUserAsync(email, name, localFactory);
+        }
+
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails
+        };
+
+        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
+
+        if (shouldPreCreateUser)
+        {
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+            var body = await context.ReadBodyAsStringAsync();
+            Assert.Contains($"Email {email} is already taken", body);
+        }
+        else
+        {
+            Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+            var body = await context.ReadBodyAsStringAsync();
+            Assert.NotNull(body);
+            Assert.StartsWith("BwRegistrationEmailVerificationToken_", body);
+        }
     }
 
     [Theory, BitAutoData]
@@ -227,9 +268,11 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
 
-    private async Task<User> CreateUserAsync(string email, string name)
+    private async Task<User> CreateUserAsync(string email, string name, IdentityApplicationFactory factory = null)
     {
-        var userRepository = _factory.Services.GetRequiredService<IUserRepository>();
+        var factoryToUse = factory ?? _factory;
+
+        var userRepository = factoryToUse.Services.GetRequiredService<IUserRepository>();
 
         var user = new User
         {
