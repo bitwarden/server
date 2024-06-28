@@ -61,6 +61,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// Add your own configuration provider to the application.
     /// </summary>
     /// <param name="configure">The action adding your own providers.</param>
+    /// <remarks>This needs to be ran BEFORE making any calls through the factory to take effect.</remarks>
     /// <example>
     ///   <code lang="C#">
     ///   factory.UpdateConfiguration(builder =&gt;
@@ -83,6 +84,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// </summary>
     /// <param name="key">The fully qualified name of the setting, using <c>:</c> as delimiter between sections.</param>
     /// <param name="value">The value of the setting.</param>
+    /// <remarks>This needs to be ran BEFORE making any calls through the factory to take effect.</remarks>
     /// <example>
     ///   <code lang="C#">
     ///   factory.UpdateConfiguration("globalSettings:attachment:connectionString", null);
