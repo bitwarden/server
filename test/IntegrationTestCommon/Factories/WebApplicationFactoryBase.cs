@@ -208,13 +208,16 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         }
     }
 
-    private static void MigrateDbContext<TContext>(IServiceCollection serviceCollection) where TContext : DbContext
+    private void MigrateDbContext<TContext>(IServiceCollection serviceCollection) where TContext : DbContext
     {
         var serviceProvider = serviceCollection.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
         var services = scope.ServiceProvider;
         var context = services.GetService<TContext>();
-        context.Database.EnsureDeleted();
+        if (_handleSqliteDisposal)
+        {
+            context.Database.EnsureDeleted();
+        }
         context.Database.EnsureCreated();
     }
 }
