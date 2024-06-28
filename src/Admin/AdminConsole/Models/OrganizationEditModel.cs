@@ -179,13 +179,29 @@ public class OrganizationEditModel : OrganizationViewModel
      * This is mapped manually below to provide some type safety in case the plan objects change
      * Add mappings for individual properties as you need them
      */
-    public IEnumerable<Dictionary<string, object>> GetPlansHelper() =>
+    public object GetPlansHelper() =>
         StaticStore.Plans
             .Where(p => p.SupportsSecretsManager)
-            .Select(p => new Dictionary<string, object>
+            .Select(p =>
             {
-                { "type", p.Type },
-                { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
+                var plan = new
+                {
+                    p.Type,
+                    p.Has2fa,
+                    p.HasApi,
+                    p.HasGroups,
+                    p.HasPolicies,
+                    p.HasSso,
+                    p.HasScim,
+                    p.HasDirectory,
+                    p.HasEvents,
+                    p.HasResetPassword,
+                    p.HasCustomPermissions,
+                    p.PasswordManager,
+                    p.SecretsManager,
+                };
+
+                return plan;
             });
 
     public Organization CreateOrganization(Provider provider, bool flexibleCollectionsV1Enabled)
