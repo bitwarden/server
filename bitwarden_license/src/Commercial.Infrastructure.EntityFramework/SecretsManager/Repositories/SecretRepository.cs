@@ -300,7 +300,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     }
 
     public async Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToSecretsAsync(
-        IEnumerable<Guid> secretIds,
+        IEnumerable<Guid> ids,
         Guid userId,
         AccessClientType accessType)
     {
@@ -308,7 +308,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         var dbContext = GetDatabaseContext(scope);
 
         var secrets = dbContext.Secret
-            .Where(s => secretIds.Contains(s.Id));
+            .Where(s => ids.Contains(s.Id));
 
         var accessQuery = BuildSecretAccessQuery(secrets, userId, accessType);
 
