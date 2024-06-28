@@ -83,6 +83,7 @@ public class OrganizationAuthRequestsController : Controller
         await _updateOrganizationAuthRequestCommand.UpdateAsync(orgId, model.Select(x => x.ToOrganizationAuthRequestUpdate()));
     }
 
+    [NonAction]
     public async Task ValidateAdminRequest(Guid orgId)
     {
         if (!await _currentContext.ManageResetPassword(orgId))
