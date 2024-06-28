@@ -12,7 +12,8 @@ public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
     public SponsorOrganizationSubscriptionUpdate(StaticStore.Plan existingPlan, StaticStore.SponsoredPlan sponsoredPlan, bool applySponsorship)
     {
         _existingPlanStripeId = existingPlan.PasswordManager.StripePlanId;
-        _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId;
+        _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId
+                                 ?? Utilities.StaticStore.SponsoredPlans.FirstOrDefault()?.StripePlanId;
         _applySponsorship = applySponsorship;
     }
 
