@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 
+#nullable enable
+
 namespace Bit.Api.IntegrationTest.Factories;
 
 public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
@@ -62,7 +64,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        SqliteConnection.Dispose();
+        SqliteConnection!.Dispose();
     }
 
     /// <summary>
