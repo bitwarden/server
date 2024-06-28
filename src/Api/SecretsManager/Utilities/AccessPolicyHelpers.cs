@@ -13,12 +13,16 @@ public static class AccessPolicyHelpers
             return baseAccessPolicy switch
             {
                 UserProjectAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.OrganizationUserId, ap.GrantedProjectId),
-                GroupProjectAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.GroupId, ap.GrantedProjectId),
-                ServiceAccountProjectAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.ServiceAccountId,
-                    ap.GrantedProjectId),
+                UserSecretAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.OrganizationUserId, ap.GrantedSecretId),
                 UserServiceAccountAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.OrganizationUserId,
                     ap.GrantedServiceAccountId),
+                GroupProjectAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.GroupId, ap.GrantedProjectId),
+                GroupSecretAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.GroupId, ap.GrantedSecretId),
                 GroupServiceAccountAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.GroupId, ap.GrantedServiceAccountId),
+                ServiceAccountProjectAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.ServiceAccountId,
+                    ap.GrantedProjectId),
+                ServiceAccountSecretAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.ServiceAccountId,
+                    ap.GrantedSecretId),
                 _ => throw new ArgumentException("Unsupported access policy type provided.", nameof(baseAccessPolicy)),
             };
         }).ToList();

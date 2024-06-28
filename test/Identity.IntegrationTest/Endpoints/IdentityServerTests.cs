@@ -3,10 +3,10 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -330,6 +330,53 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         await AssertDefaultTokenBodyAsync(context, "api");
     }
+
+    [Theory, BitAutoData]
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_NotOnWebClient_Fails(string deviceId)
+    {
+        var server = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("globalSettings:launchDarkly:flagValues:block-legacy-users", "true");
+        }).Server;
+
+        var username = "test+tokenclientcredentials@email.com";
+
+
+        await server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
+        {
+            Email = username,
+            MasterPasswordHash = "master_password_hash"
+        }));
+
+
+        var database = _factory.GetDatabaseContext();
+        var user = await database.Users
+            .FirstAsync(u => u.Email == username);
+
+        user.PrivateKey = "EncryptedPrivateKey";
+        await database.SaveChangesAsync();
+
+        var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "scope", "api offline_access" },
+                { "client_id", "browser" },
+                { "deviceType", DeviceTypeAsString(DeviceType.ChromeBrowser) },
+                { "deviceIdentifier", deviceId },
+                { "deviceName", "chrome" },
+                { "grant_type", "password" },
+                { "username", username },
+                { "password", "master_password_hash" },
+            }), context => context.SetAuthEmail(username));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+        var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "ErrorModel", JsonValueKind.Object);
+        var message = AssertHelper.AssertJsonProperty(error, "Message", JsonValueKind.String).GetString();
+        Assert.StartsWith("Encryption key migration is required.", message);
+    }
+
 
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization, Bit.Core.Entities.OrganizationApiKey organizationApiKey)

@@ -10,6 +10,7 @@ public interface IMailService
 {
     Task SendWelcomeEmailAsync(User user);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
+    Task SendRegistrationVerificationEmailAsync(string email, string token);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
@@ -79,5 +80,6 @@ public interface IMailService
     Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier);
     Task SendTrialInitiationEmailAsync(string email);
     Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
+    Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
 }
 

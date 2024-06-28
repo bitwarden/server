@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -12,6 +13,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -60,6 +62,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IProviderRepository _providerRepository;
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
@@ -94,6 +97,7 @@ public class OrganizationService : IOrganizationService
         IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
         IFeatureService featureService)
     {
@@ -123,6 +127,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _providerRepository = providerRepository;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
@@ -278,7 +283,7 @@ public class OrganizationService : IOrganizationService
         await ReplaceAndUpdateCacheAsync(organization);
     }
 
-    public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null)
+    public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -286,10 +291,10 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        return await AdjustSeatsAsync(organization, seatAdjustment, prorationDate);
+        return await AdjustSeatsAsync(organization, seatAdjustment);
     }
 
-    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null, IEnumerable<string> ownerEmails = null)
+    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, IEnumerable<string> ownerEmails = null)
     {
         if (organization.Seats == null)
         {
@@ -345,7 +350,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
+        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
             {
@@ -434,9 +439,6 @@ public class OrganizationService : IOrganizationService
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var flexibleCollectionsV1Enabled =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
@@ -478,14 +480,12 @@ public class OrganizationService : IOrganizationService
             // Secrets Manager not available for purchase with Consolidated Billing.
             UseSecretsManager = false,
 
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
+            // AC-1714 will remove this flag after all old code has been removed.
+            FlexibleCollections = true,
 
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
+            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
 
@@ -529,9 +529,6 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var flexibleCollectionsV1IsEnabled =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
 
@@ -573,14 +570,12 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
 
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
+            // AC-1714 will remove this flag after all old code has been removed.
+            FlexibleCollections = true,
 
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
+            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
         };
 
@@ -661,9 +656,6 @@ public class OrganizationService : IOrganizationService
 
         await ValidateSignUpPoliciesAsync(owner.Id);
 
-        var flexibleCollectionsSignupEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-
         var organization = new Organization
         {
             Name = license.Name,
@@ -709,7 +701,7 @@ public class OrganizationService : IOrganizationService
 
             // This feature flag indicates that new organizations should be automatically onboarded to
             // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
+            FlexibleCollections = true,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -809,6 +801,23 @@ public class OrganizationService : IOrganizationService
 
             throw;
         }
+    }
+
+    public async Task InitiateDeleteAsync(Organization organization, string orgAdminEmail)
+    {
+        var orgAdmin = await _userRepository.GetByEmailAsync(orgAdminEmail);
+        if (orgAdmin == null)
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+        var orgAdminOrgUser = await _organizationUserRepository.GetDetailsByUserAsync(orgAdmin.Id, organization.Id);
+        if (orgAdminOrgUser == null || orgAdminOrgUser.Status != OrganizationUserStatusType.Confirmed ||
+            (orgAdminOrgUser.Type != OrganizationUserType.Admin && orgAdminOrgUser.Type != OrganizationUserType.Owner))
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, 1));
+        await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
     }
 
     public async Task DeleteAsync(Organization organization)
@@ -949,12 +958,53 @@ public class OrganizationService : IOrganizationService
         await UpdateAsync(organization);
     }
 
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
+        OrganizationUserInvite invite, string externalId)
+    {
+        // Ideally OrganizationUserInvite should represent a single user so that this doesn't have to be a runtime check
+        if (invite.Emails.Count() > 1)
+        {
+            throw new BadRequestException("This method can only be used to invite a single user.");
+        }
+
+        // Validate Collection associations if org is using latest collection enhancements
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (organizationAbility?.FlexibleCollections ?? false)
+        {
+            var invalidAssociations = invite.Collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            if (invalidAssociations?.Any() ?? false)
+            {
+                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+            }
+        }
+
+        var results = await InviteUsersAsync(organizationId, invitingUserId, systemUser,
+            new (OrganizationUserInvite, string)[] { (invite, externalId) });
+
+        var result = results.FirstOrDefault();
+        if (result == null)
+        {
+            throw new BadRequestException("This user has already been invited.");
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Invite users to an organization.
+    /// </summary>
+    /// <param name="organizationId">The organization Id</param>
+    /// <param name="invitingUserId">The current authenticated user who is sending the invite. Only used when inviting via a client app; null if using SCIM or Public API.</param>
+    /// <param name="systemUser">The system user which is sending the invite. Only used when inviting via SCIM; null if using a client app or Public API</param>
+    /// <param name="invites">Details about the users being invited</param>
+    /// <returns></returns>
+    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
         var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
             .Select(i => i.invite.Type.Value));
 
+        // If authenticating via a client app, verify the inviting user has permissions
+        // cf. SCIM and Public API have superuser permissions here
         if (invitingUserId.HasValue && inviteTypes.Count > 0)
         {
             foreach (var (invite, _) in invites)
@@ -964,25 +1014,24 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser: null);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
 
-        await _eventService.LogOrganizationUserEventsAsync(events);
-
-        return organizationUsers;
-    }
-
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
-    {
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser);
-
-        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser, e.Item3)));
+        if (systemUser.HasValue)
+        {
+            // Log SCIM event
+            await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser.Value, e.Item3)));
+        }
+        else
+        {
+            // Log client app or Public Api event
+            await _eventService.LogOrganizationUserEventsAsync(events);
+        }
 
         return organizationUsers;
     }
 
     private async Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)> SaveUsersSendInvitesAsync(Guid organizationId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser)
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
         var organization = await GetOrgById(organizationId);
         var initialSeatCount = organization.Seats;
@@ -1079,9 +1128,9 @@ public class OrganizationService : IOrganizationService
                         RevisionDate = DateTime.UtcNow,
                     };
 
-                    if (invite.Permissions != null)
+                    if (invite.Type == OrganizationUserType.Custom)
                     {
-                        orgUser.Permissions = JsonSerializer.Serialize(invite.Permissions, JsonHelpers.CamelCase);
+                        orgUser.SetPermissions(invite.Permissions ?? new Permissions());
                     }
 
                     if (!orgUser.AccessAll && invite.Collections.Any())
@@ -1113,7 +1162,6 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        var prorationDate = DateTime.UtcNow;
         try
         {
             await _organizationUserRepository.CreateManyAsync(orgUsers);
@@ -1132,11 +1180,10 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
 
-            await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
+            await AutoAddSeatsAsync(organization, newSeatsRequired);
 
             if (additionalSmSeatsRequired > 0)
             {
-                smSubscriptionUpdate.ProrationDate = prorationDate;
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
 
@@ -1158,7 +1205,7 @@ public class OrganizationService : IOrganizationService
             // Revert autoscaling
             if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
             {
-                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value, prorationDate);
+                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value);
             }
 
             // Revert SmSeat autoscaling
@@ -1167,8 +1214,7 @@ public class OrganizationService : IOrganizationService
             {
                 var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
                 {
-                    SmSeats = initialSmSeatCount.Value,
-                    ProrationDate = prorationDate
+                    SmSeats = initialSmSeatCount.Value
                 };
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
             }
@@ -1409,7 +1455,7 @@ public class OrganizationService : IOrganizationService
         return (true, failureReason);
     }
 
-    public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
+    public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd)
     {
         if (seatsToAdd < 1 || !organization.Seats.HasValue)
         {
@@ -1437,7 +1483,7 @@ public class OrganizationService : IOrganizationService
         }
         var initialSeatCount = organization.Seats.Value;
 
-        await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
+        await AdjustSeatsAsync(organization, seatsToAdd, ownerEmails);
 
         if (!organization.OwnersNotifiedOfAutoscaling.HasValue)
         {
@@ -1659,54 +1705,6 @@ public class OrganizationService : IOrganizationService
             EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
     }
 
-    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, ICollection<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
-    {
-        // Validate Collection associations if org is using latest collection enhancements
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (organizationAbility?.FlexibleCollections ?? false)
-        {
-            var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-            if (invalidAssociations?.Any() ?? false)
-            {
-                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-            }
-        }
-
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId, systemUser: null, email, type, accessAll, externalId, collections, groups);
-    }
-
-    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
-    {
-        // Collection associations validation not required as they are always an empty list - created via system user (scim)
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups);
-    }
-
-    private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
-    {
-        var invite = new OrganizationUserInvite()
-        {
-            Emails = new List<string> { email },
-            Type = type,
-            AccessAll = accessAll,
-            Collections = collections,
-            Groups = groups
-        };
-        var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) });
-        var result = results.FirstOrDefault();
-        if (result == null)
-        {
-            throw new BadRequestException("This user has already been invited.");
-        }
-        return result;
-    }
-
     public async Task ImportAsync(Guid organizationId,
         Guid? importingUserId,
         IEnumerable<ImportedGroup> groups,
@@ -1793,6 +1791,8 @@ public class OrganizationService : IOrganizationService
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
 
+            var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+
             var userInvites = new List<(OrganizationUserInvite, string)>();
             foreach (var user in newUsers)
             {
@@ -1809,6 +1809,7 @@ public class OrganizationService : IOrganizationService
                         Type = OrganizationUserType.User,
                         AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
+                        AccessSecretsManager = hasStandaloneSecretsManager
                     };
                     userInvites.Add((invite, user.ExternalId));
                 }
@@ -1819,7 +1820,7 @@ public class OrganizationService : IOrganizationService
                 }
             }
 
-            var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, userInvites);
+            var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, systemUser: null, userInvites);
             foreach (var invitedUser in invitedUsers)
             {
                 existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
@@ -2054,9 +2055,9 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
-        if ((plan.Product == ProductType.TeamsStarter &&
+        if ((plan.ProductTier == ProductTierType.TeamsStarter &&
             upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
-            (plan.Product != ProductType.TeamsStarter &&
+            (plan.ProductTier != ProductTierType.TeamsStarter &&
              upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
@@ -2361,7 +2362,7 @@ public class OrganizationService : IOrganizationService
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         if (availableSeats < 1)
         {
-            await AutoAddSeatsAsync(organization, 1, DateTime.UtcNow);
+            await AutoAddSeatsAsync(organization, 1);
         }
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
@@ -2388,7 +2389,7 @@ public class OrganizationService : IOrganizationService
         var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
-        await AutoAddSeatsAsync(organization, newSeatsRequired, DateTime.UtcNow);
+        await AutoAddSeatsAsync(organization, newSeatsRequired);
 
         var deletingUserIsOwner = false;
         if (restoringUserId.HasValue)

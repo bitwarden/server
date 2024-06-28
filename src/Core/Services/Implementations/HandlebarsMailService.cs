@@ -53,6 +53,23 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendRegistrationVerificationEmailAsync(string email, string token)
+    {
+        var message = CreateDefaultMessage("Verify Your Email", email);
+        var model = new RegisterVerifyEmail
+        {
+            Token = WebUtility.UrlEncode(token),
+            Email = email,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "VerifyEmail";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+
     public async Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token)
     {
         var message = CreateDefaultMessage("Delete Your Account", email);
@@ -999,6 +1016,30 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Auth.TrustedDeviceAdminApproval", model);
         message.Category = "TrustedDeviceAdminApproval";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
+    {
+        var message = CreateDefaultMessage("Request to Delete Your Organization", email);
+        var model = new OrganizationInitiateDeleteModel
+        {
+            Token = WebUtility.UrlEncode(token),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            OrganizationId = organization.Id,
+            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false),
+            OrganizationNameUrlEncoded = WebUtility.UrlEncode(organization.Name),
+            OrganizationBillingEmail = organization.BillingEmail,
+            OrganizationPlan = organization.Plan,
+            OrganizationSeats = organization.Seats.ToString(),
+            OrganizationCreationDate = organization.CreationDate.ToLongDateString(),
+            OrganizationCreationTime = organization.CreationDate.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+        };
+        await AddMessageContentAsync(message, "InitiateDeleteOrganzation", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "InitiateDeleteOrganzation";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

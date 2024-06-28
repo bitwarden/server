@@ -39,14 +39,12 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             organization,
             Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -56,7 +54,7 @@ public class GroupsControllerTests
     {
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true, AllowAdminAccessToAllCollectionItems = false });
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -85,15 +83,13 @@ public class GroupsControllerTests
         // Assert that it saved the data
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             organization,
             Arg.Is<ICollection<CollectionAccessSelection>>(access =>
                 access.All(c => requestModelCollectionIds.Contains(c.Id))),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -102,7 +98,7 @@ public class GroupsControllerTests
     {
         // Enable FC and v1
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, FlexibleCollections = true, AllowAdminAccessToAllCollectionItems = false });
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -133,7 +129,7 @@ public class GroupsControllerTests
 
         // Enable FC and v1, set Collection Management Setting
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
-            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true, FlexibleCollections = true });
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -151,8 +147,7 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             // Should overwrite any existing collections
             Arg.Is<ICollection<CollectionAccessSelection>>(access =>
@@ -160,7 +155,6 @@ public class GroupsControllerTests
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -177,7 +171,6 @@ public class GroupsControllerTests
             {
                 Id = organization.Id,
                 AllowAdminAccessToAllCollectionItems = false,
-                FlexibleCollections = true
             });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
@@ -218,7 +211,6 @@ public class GroupsControllerTests
             {
                 Id = organization.Id,
                 AllowAdminAccessToAllCollectionItems = false,
-                FlexibleCollections = true
             });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
@@ -250,14 +242,12 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -274,7 +264,6 @@ public class GroupsControllerTests
             {
                 Id = organization.Id,
                 AllowAdminAccessToAllCollectionItems = false,
-                FlexibleCollections = true
             });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
@@ -298,14 +287,12 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             Arg.Any<ICollection<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -314,7 +301,6 @@ public class GroupsControllerTests
         Group group, Organization organization,
         SutProvider<GroupsController> sutProvider, Guid savingUserId)
     {
-        organization.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         Put_Setup(sutProvider, organization, group, savingUserId);
 
@@ -382,8 +368,7 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll),
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.Select(c => c.Id).SequenceEqual(currentCollectionAccess.Select(c => c.Id)) &&
@@ -393,7 +378,6 @@ public class GroupsControllerTests
             Arg.Any<IEnumerable<Guid>>());
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id, response.OrganizationId);
-        Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
     [Theory]
@@ -402,7 +386,6 @@ public class GroupsControllerTests
         Group group, Organization organization,
         SutProvider<GroupsController> sutProvider, Guid savingUserId)
     {
-        organization.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         Put_Setup(sutProvider, organization, group, savingUserId);
 
@@ -434,7 +417,6 @@ public class GroupsControllerTests
             .Returns(new OrganizationAbility
             {
                 Id = organization.Id,
-                FlexibleCollections = true,
                 AllowAdminAccessToAllCollectionItems = false
             });
 

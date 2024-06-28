@@ -5,10 +5,9 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -42,12 +41,11 @@ public class OrganizationsController(
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
-    ICancelSubscriptionCommand cancelSubscriptionCommand,
-    ISubscriberQueries subscriberQueries,
-    IReferenceEventService referenceEventService)
+    IReferenceEventService referenceEventService,
+    ISubscriberService subscriberService)
     : Controller
 {
-    [HttpGet("{id}/billing-status")]
+    [HttpGet("{id:guid}/billing-status")]
     public async Task<OrganizationBillingStatusResponseModel> GetBillingStatus(Guid id)
     {
         if (!await currentContext.EditPaymentMethods(id))
@@ -261,9 +259,7 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        var subscription = await subscriberQueries.GetSubscriptionOrThrow(organization);
-
-        await cancelSubscriptionCommand.CancelSubscription(subscription,
+        await subscriberService.CancelSubscription(organization,
             new OffboardingSurveyResponse
             {
                 UserId = currentContext.UserId!.Value,

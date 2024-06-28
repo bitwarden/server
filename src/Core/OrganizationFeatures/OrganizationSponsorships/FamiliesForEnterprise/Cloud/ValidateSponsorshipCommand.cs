@@ -59,7 +59,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
 
         var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
         if (OrgDisabledForMoreThanGracePeriod(sponsoringOrganization) ||
-            sponsoredPlan.SponsoringProductType != sponsoringOrgPlan.Product ||
+            sponsoredPlan.SponsoringProductTierType != sponsoringOrgPlan.ProductTier ||
             existingSponsorship.ToDelete ||
             SponsorshipIsSelfHostedOutOfSync(existingSponsorship))
         {

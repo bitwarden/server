@@ -3,6 +3,7 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 
 namespace Bit.Infrastructure.EntityFramework.Billing.Models;
 
+// ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
 public class ProviderPlan : Core.Billing.Entities.ProviderPlan
 {
     public virtual Provider Provider { get; set; }

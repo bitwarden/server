@@ -8,6 +8,7 @@ public enum StripeEventType
     CustomerSubscriptionUpdated,
     CustomerUpdated,
     InvoiceCreated,
+    InvoiceFinalized,
     InvoiceUpcoming,
     PaymentMethodAttached
 }
@@ -22,6 +23,7 @@ public static class StripeTestEvents
             StripeEventType.CustomerSubscriptionUpdated => "customer.subscription.updated.json",
             StripeEventType.CustomerUpdated => "customer.updated.json",
             StripeEventType.InvoiceCreated => "invoice.created.json",
+            StripeEventType.InvoiceFinalized => "invoice.finalized.json",
             StripeEventType.InvoiceUpcoming => "invoice.upcoming.json",
             StripeEventType.PaymentMethodAttached => "payment_method.attached.json"
         };
