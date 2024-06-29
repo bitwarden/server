@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Context;
-using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -23,8 +22,14 @@ public class RequireFeatureAttributeTests
         // Arrange
         var rfa = new RequireFeatureAttribute(_testFeature);
 
-        // Act & Assert
-        Assert.Throws<FeatureUnavailableException>(() => rfa.OnActionExecuting(GetContext(enabled: false)));
+        // Act
+        var context = GetContext(enabled: false);
+        rfa.OnActionExecuting(context);
+
+        // Assert
+        Assert.IsType<NotFoundObjectResult>(context.Result);
+        var result = (NotFoundObjectResult)context.Result;
+        Assert.Contains("This feature is unavailable", (string)result.Value);
     }
 
     [Fact]
@@ -33,8 +38,14 @@ public class RequireFeatureAttributeTests
         // Arrange
         var rfa = new RequireFeatureAttribute("missing-feature");
 
-        // Act & Assert
-        Assert.Throws<FeatureUnavailableException>(() => rfa.OnActionExecuting(GetContext(enabled: false)));
+        // Act
+        var context = GetContext(enabled: false);
+        rfa.OnActionExecuting(context);
+
+        // Assert
+        Assert.IsType<NotFoundObjectResult>(context.Result);
+        var result = (NotFoundObjectResult)context.Result;
+        Assert.Contains("This feature is unavailable", (string)result.Value);
     }
 
     [Fact]
@@ -44,12 +55,12 @@ public class RequireFeatureAttributeTests
         var rfa = new RequireFeatureAttribute(_testFeature);
 
         // Act
-        rfa.OnActionExecuting(GetContext(enabled: true));
+        var context = GetContext(enabled: true);
+        rfa.OnActionExecuting(context);
 
         // Assert
-        // The Assert here is NOT throwing an exception
+        Assert.IsNotType<NotFoundObjectResult>(context.Result);
     }
-
 
     /// <summary>
     /// Generates a ActionExecutingContext with the necessary services registered to test
