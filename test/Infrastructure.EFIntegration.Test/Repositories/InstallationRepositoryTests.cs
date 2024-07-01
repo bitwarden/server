@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class InstallationRepositoryTests
 {
     [CiSkippedTheory, EfInstallationAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         Installation installation,
         InstallationCompare equalityComparer,
         List<EfRepo.InstallationRepository> suts,

@@ -43,20 +43,12 @@ public class SubscriptionResponseModel : ResponseModel
     public DateTime? Expiration { get; set; }
 }
 
-public class BillingCustomerDiscount
+public class BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
 {
-    public BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
-    {
-        Id = discount.Id;
-        Active = discount.Active;
-        PercentOff = discount.PercentOff;
-        AppliesTo = discount.AppliesTo;
-    }
-
-    public string Id { get; }
-    public bool Active { get; }
-    public decimal? PercentOff { get; }
-    public List<string> AppliesTo { get; }
+    public string Id { get; } = discount.Id;
+    public bool Active { get; } = discount.Active;
+    public decimal? PercentOff { get; } = discount.PercentOff;
+    public List<string> AppliesTo { get; } = discount.AppliesTo;
 }
 
 public class BillingSubscription
@@ -75,6 +67,10 @@ public class BillingSubscription
         {
             Items = sub.Items.Select(i => new BillingSubscriptionItem(i));
         }
+        CollectionMethod = sub.CollectionMethod;
+        SuspensionDate = sub.SuspensionDate;
+        UnpaidPeriodEndDate = sub.UnpaidPeriodEndDate;
+        GracePeriod = sub.GracePeriod;
     }
 
     public DateTime? TrialStartDate { get; set; }
@@ -86,6 +82,10 @@ public class BillingSubscription
     public string Status { get; set; }
     public bool Cancelled { get; set; }
     public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
+    public string CollectionMethod { get; set; }
+    public DateTime? SuspensionDate { get; set; }
+    public DateTime? UnpaidPeriodEndDate { get; set; }
+    public int? GracePeriod { get; set; }
 
     public class BillingSubscriptionItem
     {

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.BitStripe;
+using Stripe;
 
 namespace Bit.Core.Services;
 
@@ -8,6 +9,7 @@ public interface IStripeAdapter
     Task<Stripe.Customer> CustomerGetAsync(string id, Stripe.CustomerGetOptions options = null);
     Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null);
     Task<Stripe.Customer> CustomerDeleteAsync(string id);
+    Task<List<PaymentMethod>> CustomerListPaymentMethods(string id, CustomerListPaymentMethodsOptions options = null);
     Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions subscriptionCreateOptions);
     Task<Stripe.Subscription> SubscriptionGetAsync(string id, Stripe.SubscriptionGetOptions options = null);
     Task<List<Stripe.Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions subscriptionSearchOptions);
@@ -16,6 +18,7 @@ public interface IStripeAdapter
     Task<Stripe.Invoice> InvoiceUpcomingAsync(Stripe.UpcomingInvoiceOptions options);
     Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options);
     Task<List<Stripe.Invoice>> InvoiceListAsync(StripeInvoiceListOptions options);
+    Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options);
     Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options);
     Task<Stripe.Invoice> InvoiceFinalizeInvoiceAsync(string id, Stripe.InvoiceFinalizeOptions options);
     Task<Stripe.Invoice> InvoiceSendInvoiceAsync(string id, Stripe.InvoiceSendOptions options);
@@ -36,5 +39,10 @@ public interface IStripeAdapter
     Task<Stripe.BankAccount> BankAccountCreateAsync(string customerId, Stripe.BankAccountCreateOptions options = null);
     Task<Stripe.BankAccount> BankAccountDeleteAsync(string customerId, string bankAccount, Stripe.BankAccountDeleteOptions options = null);
     Task<Stripe.StripeList<Stripe.Price>> PriceListAsync(Stripe.PriceListOptions options = null);
+    Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options);
+    Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options);
+    Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null);
+    Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null);
+    Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options);
     Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
 }

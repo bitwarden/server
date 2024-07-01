@@ -45,7 +45,7 @@
                         {
                             <tr>
                                 <td class="align-middle">
-                                    <a asp-controller="Organizations" asp-action="Edit" asp-route-id="@providerOrganization.OrganizationId">@providerOrganization.OrganizationName</a>
+                                    <a asp-controller="Organizations" asp-action="Edit" asp-route-id="@providerOrganization.OrganizationId">@providerOrganization.DisplayName()</a>
                                 </td>
                                 <td>
                                     @providerOrganization.Status

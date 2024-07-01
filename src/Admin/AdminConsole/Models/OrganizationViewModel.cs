@@ -9,11 +9,15 @@ namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationViewModel
 {
-    public OrganizationViewModel() { }
+    public OrganizationViewModel()
+    {
+    }
 
     public OrganizationViewModel(Organization org, Provider provider, IEnumerable<OrganizationConnection> connections,
-        IEnumerable<OrganizationUserUserDetails> orgUsers, IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<Group> groups, IEnumerable<Policy> policies, int secretsCount, int projectCount, int serviceAccountsCount,
+        IEnumerable<OrganizationUserUserDetails> orgUsers, IEnumerable<Cipher> ciphers,
+        IEnumerable<Collection> collections,
+        IEnumerable<Group> groups, IEnumerable<Policy> policies, int secretsCount, int projectCount,
+        int serviceAccountsCount,
         int occupiedSmSeatsCount)
 
     {
@@ -34,12 +38,12 @@ public class OrganizationViewModel
             : OrganizationUserStatusType.Confirmed;
         Owners = string.Join(", ",
             orgUsers
-            .Where(u => u.Type == OrganizationUserType.Owner && u.Status == organizationUserStatus)
-            .Select(u => u.Email));
+                .Where(u => u.Type == OrganizationUserType.Owner && u.Status == organizationUserStatus)
+                .Select(u => u.Email));
         Admins = string.Join(", ",
             orgUsers
-            .Where(u => u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus)
-            .Select(u => u.Email));
+                .Where(u => u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus)
+                .Select(u => u.Email));
         SecretsCount = secretsCount;
         ProjectsCount = projectCount;
         ServiceAccountsCount = serviceAccountsCount;
@@ -65,4 +69,14 @@ public class OrganizationViewModel
     public int ServiceAccountsCount { get; set; }
     public int OccupiedSmSeatsCount { get; set; }
     public bool UseSecretsManager => Organization.UseSecretsManager;
+
+    public string GetCollectionManagementSetting(bool collectionManagementSetting)
+    {
+        if (!Organization.FlexibleCollections)
+        {
+            return "N/A";
+        }
+
+        return collectionManagementSetting ? "On" : "Off";
+    }
 }

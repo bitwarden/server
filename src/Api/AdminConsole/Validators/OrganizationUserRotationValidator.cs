@@ -27,13 +27,9 @@ public class OrganizationUserRotationValidator : IRotationValidator<IEnumerable<
         }
 
         var result = new List<OrganizationUser>();
-        if (resetPasswordKeys == null || !resetPasswordKeys.Any())
-        {
-            return result;
-        }
 
         var existing = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        if (existing == null || !existing.Any())
+        if (existing == null || existing.Count == 0)
         {
             return result;
         }

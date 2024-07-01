@@ -22,14 +22,18 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
         return new OrganizationUserInvitedViewModel
         {
             TitleFirst = orgInvitesInfo.IsFreeOrg ? freeOrgTitle : "Join ",
-            TitleSecondBold = orgInvitesInfo.IsFreeOrg ? string.Empty : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
+            TitleSecondBold =
+                orgInvitesInfo.IsFreeOrg
+                    ? string.Empty
+                    : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
             TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
             OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false) + orgUser.Status,
             Email = WebUtility.UrlEncode(orgUser.Email),
             OrganizationId = orgUser.OrganizationId.ToString(),
             OrganizationUserId = orgUser.Id.ToString(),
             Token = WebUtility.UrlEncode(expiringToken.Token),
-            ExpirationDate = $"{expiringToken.ExpirationDate.ToLongDateString()} {expiringToken.ExpirationDate.ToShortTimeString()} UTC",
+            ExpirationDate =
+                $"{expiringToken.ExpirationDate.ToLongDateString()} {expiringToken.ExpirationDate.ToShortTimeString()} UTC",
             OrganizationNameUrlEncoded = WebUtility.UrlEncode(orgInvitesInfo.OrganizationName),
             WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = globalSettings.SiteName,

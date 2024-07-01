@@ -46,7 +46,7 @@
                 {
                     <tr>
                         <td>
-                            <a asp-action="@Model.Action" asp-route-id="@org.Id">@org.Name</a>
+                            <a asp-action="@Model.Action" asp-route-id="@org.Id">@org.DisplayName()</a>
                         </td>
                         <td>
                             @org.Plan

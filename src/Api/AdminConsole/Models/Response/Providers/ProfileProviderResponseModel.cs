@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -20,9 +21,11 @@ public class ProfileProviderResponseModel : ResponseModel
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(provider.Permissions);
         UserId = provider.UserId;
         UseEvents = provider.UseEvents;
+        ProviderStatus = provider.ProviderStatus;
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public string Key { get; set; }
     public ProviderUserStatusType Status { get; set; }
@@ -31,4 +34,5 @@ public class ProfileProviderResponseModel : ResponseModel
     public Permissions Permissions { get; set; }
     public Guid? UserId { get; set; }
     public bool UseEvents { get; set; }
+    public ProviderStatusType ProviderStatus { get; set; }
 }

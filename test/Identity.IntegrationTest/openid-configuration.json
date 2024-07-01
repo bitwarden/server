@@ -5,6 +5,8 @@
   "token_endpoint": "http://localhost:33656/connect/token",
   "device_authorization_endpoint": "http://localhost:33656/connect/deviceauthorization",
   "backchannel_authentication_endpoint": "http://localhost:33656/connect/ciba",
+  "pushed_authorization_request_endpoint": "http://localhost:33656/connect/par",
+  "require_pushed_authorization_requests": false,
   "scopes_supported": [
     "api",
     "api.push",

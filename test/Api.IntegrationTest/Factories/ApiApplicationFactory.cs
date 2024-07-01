@@ -1,8 +1,10 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
+
+#nullable enable
 
 namespace Bit.Api.IntegrationTest.Factories;
 
@@ -62,6 +64,24 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        SqliteConnection.Dispose();
+        SqliteConnection!.Dispose();
+    }
+
+    /// <summary>
+    /// Helper for logging in via client secret.
+    /// Currently used for Secrets Manager service accounts
+    /// </summary>
+    public async Task<string> LoginWithClientSecretAsync(Guid clientId, string clientSecret)
+    {
+        return await _identityApplicationFactory.TokenFromAccessTokenAsync(clientId, clientSecret);
+    }
+
+    /// <summary>
+    /// Helper for logging in with an Organization api key.
+    /// Currently used for the Public Api
+    /// </summary>
+    public async Task<string> LoginWithOrganizationApiKeyAsync(string clientId, string clientSecret)
+    {
+        return await _identityApplicationFactory.TokenFromOrganizationApiKeyAsync(clientId, clientSecret);
     }
 }

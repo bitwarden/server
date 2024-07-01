@@ -79,4 +79,14 @@ public interface IStripeFacade
         TaxRateGetOptions options = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
+
+    Task<Discount> DeleteCustomerDiscount(
+        string customerId,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
+    Task<Discount> DeleteSubscriptionDiscount(
+        string subscriptionId,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
 }

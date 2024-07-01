@@ -10,6 +10,7 @@ public interface IMailService
 {
     Task SendWelcomeEmailAsync(User user);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
+    Task SendRegistrationVerificationEmailAsync(string email, string token);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
@@ -24,8 +25,8 @@ public interface IMailService
     Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo);
     Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
-    Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);
-    Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
+    Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false);
+    Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false);
     Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
     Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
     Task SendInvoiceUpcoming(
@@ -77,5 +78,8 @@ public interface IMailService
     Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier);
+    Task SendTrialInitiationEmailAsync(string email);
+    Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
+    Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
 }
 

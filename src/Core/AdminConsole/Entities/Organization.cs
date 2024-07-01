@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -17,8 +19,14 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public Guid Id { get; set; }
     [MaxLength(50)]
     public string Identifier { get; set; }
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
+    /// </summary>
     [MaxLength(50)]
     public string Name { get; set; }
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
+    /// </summary>
     [MaxLength(50)]
     public string BusinessName { get; set; }
     [MaxLength(50)]
@@ -79,20 +87,20 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
     /// <summary>
-    /// Refers to the ability for an organization to limit collection creation and deletion to owners and admins only
+    /// If set to true, only owners, admins, and some custom users can create and delete collections.
+    /// If set to false, any organization member can create a collection, and any member can delete a collection that
+    /// they have Can Manage permissions for.
     /// </summary>
     public bool LimitCollectionCreationDeletion { get; set; }
     /// <summary>
-    /// Refers to the ability for an organization to limit owner/admin access to all collection items
-    /// <remarks>
-    /// True: Owner/admins can access all items belonging to any collections
-    /// False: Owner/admins can only access items for collections they are assigned
-    /// </remarks>
+    /// If set to true, admins, owners, and some custom users can read/write all collections and items in the Admin Console.
+    /// If set to false, users generally need collection-level permissions to read/write a collection or its items.
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>
-    /// True if the organization is using the Flexible Collections permission changes, false otherwise.
-    /// For existing organizations, this must only be set to true once data migrations have been run for this organization.
+    /// This is an organization-level feature flag (not controlled via LaunchDarkly) to onboard organizations to the
+    /// Flexible Collections MVP changes. This has been fully released and must always be set to TRUE for all organizations.
+    /// AC-1714 will remove this flag after all old code has been removed.
     /// </summary>
     public bool FlexibleCollections { get; set; }
 
@@ -104,6 +112,22 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         }
     }
 
+    /// <summary>
+    /// Returns the name of the organization, HTML decoded ready for display.
+    /// </summary>
+    public string DisplayName()
+    {
+        return WebUtility.HtmlDecode(Name);
+    }
+
+    /// <summary>
+    /// Returns the business name of the organization, HTML decoded ready for display.
+    /// </summary>
+    public string DisplayBusinessName()
+    {
+        return WebUtility.HtmlDecode(BusinessName);
+    }
+
     public string BillingEmailAddress()
     {
         return BillingEmail?.ToLowerInvariant()?.Trim();
@@ -111,12 +135,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
 
     public string BillingName()
     {
-        return BusinessName;
+        return DisplayBusinessName();
     }
 
     public string SubscriberName()
     {
-        return Name;
+        return DisplayName();
     }
 
     public string BraintreeCustomerIdPrefix()

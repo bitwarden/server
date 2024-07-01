@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -6,6 +9,8 @@ public class OrganizationUserOrganizationDetails
 {
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }
+    public Guid OrganizationUserId { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
@@ -29,7 +34,7 @@ public class OrganizationUserOrganizationDetails
     public Enums.OrganizationUserStatusType Status { get; set; }
     public Enums.OrganizationUserType Type { get; set; }
     public bool Enabled { get; set; }
-    public Enums.PlanType PlanType { get; set; }
+    public PlanType PlanType { get; set; }
     public string SsoExternalId { get; set; }
     public string Identifier { get; set; }
     public string Permissions { get; set; }
@@ -37,6 +42,7 @@ public class OrganizationUserOrganizationDetails
     public string PublicKey { get; set; }
     public string PrivateKey { get; set; }
     public Guid? ProviderId { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }

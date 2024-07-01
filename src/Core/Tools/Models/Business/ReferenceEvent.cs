@@ -1,8 +1,8 @@
 ﻿#nullable enable
 
 using System.Text.Json.Serialization;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 
@@ -234,4 +234,24 @@ public class ReferenceEvent
     /// <see langword="null"/> when the event was not originated by an application.
     /// </value>
     public Version? ClientVersion { get; set; }
+
+    /// <summary>
+    /// The initiation path of a user who signed up for a paid version of Bitwarden. For example, "Trial from marketing website".
+    /// </summary>
+    /// <value>
+    /// This value should only be populated when the <see cref="ReferenceEventType"/> is <see cref="ReferenceEventType.Signup"/>. Otherwise,
+    /// the value should be <see langword="null" />.
+    /// </value>
+    public string? SignupInitiationPath { get; set; }
+
+    /// <summary>
+    /// The upgrade applied to an account. The current plan is listed first,
+    /// followed by the plan they are migrating to. For example,
+    /// "Teams Starter → Teams, Enterprise".
+    /// </summary>
+    /// <value>
+    /// <see langword="null"/> when the event was not originated by an application,
+    /// or when a downgrade occurred.
+    /// </value>
+    public string? PlanUpgradePath { get; set; }
 }

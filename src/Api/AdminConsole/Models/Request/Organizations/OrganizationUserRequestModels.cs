@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -15,7 +16,6 @@ public class OrganizationUserInviteRequestModel
     public IEnumerable<string> Emails { get; set; }
     [Required]
     public OrganizationUserType? Type { get; set; }
-    public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
@@ -27,7 +27,6 @@ public class OrganizationUserInviteRequestModel
         {
             Emails = Emails,
             Type = Type,
-            AccessAll = AccessAll,
             AccessSecretsManager = AccessSecretsManager,
             Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
             Groups = Groups,
@@ -86,7 +85,6 @@ public class OrganizationUserUpdateRequestModel
 {
     [Required]
     public OrganizationUserType? Type { get; set; }
-    public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
@@ -96,19 +94,12 @@ public class OrganizationUserUpdateRequestModel
     {
         existingUser.Type = Type.Value;
         existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
-        existingUser.AccessAll = AccessAll;
         existingUser.AccessSecretsManager = AccessSecretsManager;
         return existingUser;
     }
 }
 
-public class OrganizationUserUpdateGroupsRequestModel
-{
-    [Required]
-    public IEnumerable<string> GroupIds { get; set; }
-}
-
-public class OrganizationUserResetPasswordEnrollmentRequestModel
+public class OrganizationUserResetPasswordEnrollmentRequestModel : SecretVerificationRequestModel
 {
     public string ResetPasswordKey { get; set; }
 }

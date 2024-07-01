@@ -6,6 +6,7 @@ public interface IBaseServiceUriSettings
     string CloudRegion { get; set; }
     string Vault { get; set; }
     string VaultWithHash { get; }
+    string VaultWithHashAndSecretManagerProduct { get; }
     string Api { get; set; }
     public string Identity { get; set; }
     public string Admin { get; set; }

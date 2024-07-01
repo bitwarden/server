@@ -24,6 +24,12 @@ public class CreateProviderModel : IValidatableObject
     [Display(Name = "Primary Billing Email")]
     public string BillingEmail { get; set; }
 
+    [Display(Name = "Teams (Monthly) Seat Minimum")]
+    public int TeamsMonthlySeatMinimum { get; set; }
+
+    [Display(Name = "Enterprise (Monthly) Seat Minimum")]
+    public int EnterpriseMonthlySeatMinimum { get; set; }
+
     public virtual Provider ToProvider()
     {
         return new Provider()
@@ -44,6 +50,16 @@ public class CreateProviderModel : IValidatableObject
                 {
                     var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(OwnerEmail);
                     yield return new ValidationResult($"The {ownerEmailDisplayName} field is required.");
+                }
+                if (TeamsMonthlySeatMinimum < 0)
+                {
+                    var teamsMinimumSeatsDisplayName = nameof(TeamsMonthlySeatMinimum).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(TeamsMonthlySeatMinimum);
+                    yield return new ValidationResult($"The {teamsMinimumSeatsDisplayName} field can not be negative.");
+                }
+                if (EnterpriseMonthlySeatMinimum < 0)
+                {
+                    var enterpriseMinimumSeatsDisplayName = nameof(EnterpriseMonthlySeatMinimum).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(EnterpriseMonthlySeatMinimum);
+                    yield return new ValidationResult($"The {enterpriseMinimumSeatsDisplayName} field can not be negative.");
                 }
                 break;
             case ProviderType.Reseller:

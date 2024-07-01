@@ -2,11 +2,11 @@
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,14 +23,12 @@ namespace Bit.Api.Test.Controllers;
 public class CollectionsControllerTests
 {
     [Theory, BitAutoData]
-    public async Task Post_Success(OrganizationAbility organizationAbility, CollectionRequestModel collectionRequest,
+    public async Task Post_Success(Organization organization, CollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-
         Collection ExpectedCollection() => Arg.Is<Collection>(c =>
             c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId &&
-            c.OrganizationId == organizationAbility.Id);
+            c.OrganizationId == organization.Id);
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
@@ -38,7 +36,7 @@ public class CollectionsControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Create)))
             .Returns(AuthorizationResult.Success());
 
-        _ = await sutProvider.Sut.Post(organizationAbility.Id, collectionRequest);
+        _ = await sutProvider.Sut.Post(organization.Id, collectionRequest);
 
         await sutProvider.GetDependency<ICollectionService>()
             .Received(1)
@@ -48,11 +46,8 @@ public class CollectionsControllerTests
 
     [Theory, BitAutoData]
     public async Task Put_Success(Collection collection, CollectionRequestModel collectionRequest,
-        SutProvider<CollectionsController> sutProvider, OrganizationAbility organizationAbility)
+        SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-        collection.OrganizationId = organizationAbility.Id;
-
         Collection ExpectedCollection() => Arg.Is<Collection>(c => c.Id == collection.Id &&
             c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId &&
             c.OrganizationId == collection.OrganizationId);
@@ -77,11 +72,8 @@ public class CollectionsControllerTests
 
     [Theory, BitAutoData]
     public async Task Put_WithNoCollectionPermission_ThrowsNotFound(Collection collection, CollectionRequestModel collectionRequest,
-        SutProvider<CollectionsController> sutProvider, OrganizationAbility organizationAbility)
+        SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-        collection.OrganizationId = organizationAbility.Id;
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 collection,
@@ -96,11 +88,9 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationCollectionsWithGroups_WithReadAllPermissions_GetsAllCollections(OrganizationAbility organizationAbility,
+    public async Task GetOrganizationCollectionsWithGroups_WithReadAllPermissions_GetsAllCollections(Organization organization,
         Guid userId, SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -110,20 +100,25 @@ public class CollectionsControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
                     requirements.Cast<CollectionOperationRequirement>().All(operation =>
                         operation.Name == nameof(CollectionOperations.ReadAllWithAccess)
-                        && operation.OrganizationId == organizationAbility.Id)))
+                        && operation.OrganizationId == organization.Id)))
             .Returns(AuthorizationResult.Success());
 
-        await sutProvider.Sut.GetManyWithDetails(organizationAbility.Id);
+        await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdWithAccessAsync(userId, organizationAbility.Id, Arg.Any<bool>());
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithAccessAsync(organizationAbility.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithPermissionsAsync(organization.Id, userId, true);
     }
 
     [Theory, BitAutoData]
     public async Task GetOrganizationCollectionsWithGroups_MissingReadAllPermissions_GetsAssignedCollections(
-        OrganizationAbility organizationAbility, Guid userId, SutProvider<CollectionsController> sutProvider)
+        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider,
+        List<CollectionAdminDetails> collections)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+        collections.ForEach(c => c.Manage = false);
+
+        var managedCollection = collections.First();
+        managedCollection.Manage = true;
+
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -133,7 +128,7 @@ public class CollectionsControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
                     requirements.Cast<CollectionOperationRequirement>().All(operation =>
                         operation.Name == nameof(CollectionOperations.ReadAllWithAccess)
-                        && operation.OrganizationId == organizationAbility.Id)))
+                        && operation.OrganizationId == organization.Id)))
             .Returns(AuthorizationResult.Failed());
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -145,18 +140,24 @@ public class CollectionsControllerTests
                         operation.Name == nameof(BulkCollectionOperations.ReadWithAccess))))
             .Returns(AuthorizationResult.Success());
 
-        await sutProvider.Sut.GetManyWithDetails(organizationAbility.Id);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdWithPermissionsAsync(organization.Id, userId, true)
+            .Returns(collections);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdWithAccessAsync(userId, organizationAbility.Id, Arg.Any<bool>());
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdWithAccessAsync(organizationAbility.Id);
+        var response = await sutProvider.Sut.GetManyWithDetails(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithPermissionsAsync(organization.Id, userId, true);
+        Assert.Single(response.Data);
+        Assert.All(response.Data, c => Assert.Equal(organization.Id, c.OrganizationId));
+        Assert.All(response.Data, c => Assert.Equal(managedCollection.Id, c.Id));
     }
 
     [Theory, BitAutoData]
     public async Task GetOrganizationCollections_WithReadAllPermissions_GetsAllCollections(
-        OrganizationAbility organizationAbility, List<Collection> collections, Guid userId, SutProvider<CollectionsController> sutProvider)
+        Organization organization, List<Collection> collections, Guid userId,
+        SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-        collections.ForEach(c => c.OrganizationId = organizationAbility.Id);
+        collections.ForEach(c => c.OrganizationId = organization.Id);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
 
@@ -167,26 +168,25 @@ public class CollectionsControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
                     requirements.Cast<CollectionOperationRequirement>().All(operation =>
                         operation.Name == nameof(CollectionOperations.ReadAll)
-                        && operation.OrganizationId == organizationAbility.Id)))
+                        && operation.OrganizationId == organization.Id)))
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdAsync(organizationAbility.Id)
+            .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(collections);
 
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
+        var response = await sutProvider.Sut.Get(organization.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organizationAbility.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organization.Id);
 
         Assert.Equal(collections.Count, response.Data.Count());
     }
 
     [Theory, BitAutoData]
     public async Task GetOrganizationCollections_MissingReadAllPermissions_GetsManageableCollections(
-        OrganizationAbility organizationAbility, List<CollectionDetails> collections, Guid userId, SutProvider<CollectionsController> sutProvider)
+        Organization organization, List<CollectionDetails> collections, Guid userId, SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-        collections.ForEach(c => c.OrganizationId = organizationAbility.Id);
+        collections.ForEach(c => c.OrganizationId = organization.Id);
         collections.ForEach(c => c.Manage = false);
 
         var managedCollection = collections.First();
@@ -201,7 +201,7 @@ public class CollectionsControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
                     requirements.Cast<CollectionOperationRequirement>().All(operation =>
                         operation.Name == nameof(CollectionOperations.ReadAll)
-                        && operation.OrganizationId == organizationAbility.Id)))
+                        && operation.OrganizationId == organization.Id)))
             .Returns(AuthorizationResult.Failed());
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -217,24 +217,22 @@ public class CollectionsControllerTests
             .GetManyByUserIdAsync(userId, false)
             .Returns(collections);
 
-        var result = await sutProvider.Sut.Get(organizationAbility.Id);
+        var result = await sutProvider.Sut.Get(organization.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdAsync(organizationAbility.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdAsync(organization.Id);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId, false);
 
         Assert.Single(result.Data);
-        Assert.All(result.Data, c => Assert.Equal(organizationAbility.Id, c.OrganizationId));
+        Assert.All(result.Data, c => Assert.Equal(organization.Id, c.OrganizationId));
         Assert.All(result.Data, c => Assert.Equal(managedCollection.Id, c.Id));
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteMany_Success(OrganizationAbility organizationAbility, Collection collection1, Collection collection2,
+    public async Task DeleteMany_Success(Organization organization, Collection collection1, Collection collection2,
          SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
-        var orgId = organizationAbility.Id;
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-
+        var orgId = organization.Id;
         var model = new CollectionBulkDeleteRequestModel
         {
             Ids = new[] { collection1.Id, collection2.Id }
@@ -274,13 +272,11 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteMany_PermissionDenied_ThrowsNotFound(OrganizationAbility organizationAbility, Collection collection1,
+    public async Task DeleteMany_PermissionDenied_ThrowsNotFound(Organization organization, Collection collection1,
         Collection collection2, SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
-        var orgId = organizationAbility.Id;
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-
+        var orgId = organization.Id;
         var model = new CollectionBulkDeleteRequestModel
         {
             Ids = new[] { collection1.Id, collection2.Id }
@@ -320,12 +316,10 @@ public class CollectionsControllerTests
 
     [Theory, BitAutoData]
     public async Task PostBulkCollectionAccess_Success(User actingUser, List<Collection> collections,
-        OrganizationAbility organizationAbility, SutProvider<CollectionsController> sutProvider)
+        Organization organization, SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-        collections.ForEach(c => c.OrganizationId = organizationAbility.Id);
-
+        collections.ForEach(c => c.OrganizationId = organization.Id);
         var userId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var model = new BulkCollectionAccessRequestModel
@@ -345,22 +339,25 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(), ExpectedCollectionAccess(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                    r => r.Contains(BulkCollectionOperations.ModifyAccess)
+                    reqs => reqs.All(r =>
+                        r == BulkCollectionOperations.ModifyUserAccess ||
+                        r == BulkCollectionOperations.ModifyGroupAccess)
                 ))
             .Returns(AuthorizationResult.Success());
 
         IEnumerable<Collection> ExpectedCollectionAccess() => Arg.Is<IEnumerable<Collection>>(cols => cols.SequenceEqual(collections));
 
         // Act
-        await sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model);
+        await sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model);
 
         // Assert
         await sutProvider.GetDependency<IAuthorizationService>().Received().AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(),
             ExpectedCollectionAccess(),
             Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                r => r.Contains(BulkCollectionOperations.ModifyAccess))
-            );
+                reqs => reqs.All(r =>
+                    r == BulkCollectionOperations.ModifyUserAccess ||
+                    r == BulkCollectionOperations.ModifyGroupAccess)));
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().Received()
             .AddAccessAsync(
                 Arg.Is<ICollection<Collection>>(g => g.SequenceEqual(collections)),
@@ -370,11 +367,10 @@ public class CollectionsControllerTests
 
     [Theory, BitAutoData]
     public async Task PostBulkCollectionAccess_CollectionsNotFound_Throws(User actingUser,
-        OrganizationAbility organizationAbility, List<Collection> collections,
+        Organization organization, List<Collection> collections,
         SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-        collections.ForEach(c => c.OrganizationId = organizationAbility.Id);
+        collections.ForEach(c => c.OrganizationId = organization.Id);
 
         var userId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
@@ -393,7 +389,7 @@ public class CollectionsControllerTests
             .Returns(collections.Skip(1).ToList());
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model));
+            () => sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model));
 
         Assert.Equal("One or more collections not found.", exception.Message);
         await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs().AuthorizeAsync(
@@ -407,13 +403,11 @@ public class CollectionsControllerTests
 
     [Theory, BitAutoData]
     public async Task PostBulkCollectionAccess_CollectionsBelongToDifferentOrganizations_Throws(User actingUser,
-        OrganizationAbility organizationAbility, List<Collection> collections,
+        Organization organization, List<Collection> collections,
         SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-
         // First collection has a different orgId
-        collections.Skip(1).ToList().ForEach(c => c.OrganizationId = organizationAbility.Id);
+        collections.Skip(1).ToList().ForEach(c => c.OrganizationId = organization.Id);
 
         var userId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
@@ -432,7 +426,7 @@ public class CollectionsControllerTests
             .Returns(collections);
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model));
+            () => sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model));
 
         Assert.Equal("One or more collections not found.", exception.Message);
         await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs().AuthorizeAsync(
@@ -445,41 +439,10 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostBulkCollectionAccess_FlexibleCollectionsDisabled_Throws(OrganizationAbility organizationAbility, List<Collection> collections,
-        SutProvider<CollectionsController> sutProvider)
-    {
-        organizationAbility.FlexibleCollections = false;
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
-
-        var userId = Guid.NewGuid();
-        var groupId = Guid.NewGuid();
-        var model = new BulkCollectionAccessRequestModel
-        {
-            CollectionIds = collections.Select(c => c.Id),
-            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, Manage = true } },
-            Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId, ReadOnly = true } },
-        };
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model));
-
-        Assert.Equal("Feature disabled.", exception.Message);
-        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs().AuthorizeAsync(
-            Arg.Any<ClaimsPrincipal>(),
-            Arg.Any<IEnumerable<Collection>>(),
-            Arg.Any<IEnumerable<IAuthorizationRequirement>>()
-        );
-        await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
-            .AddAccessAsync(default, default, default);
-    }
-
-    [Theory, BitAutoData]
     public async Task PostBulkCollectionAccess_AccessDenied_Throws(User actingUser, List<Collection> collections,
-        OrganizationAbility organizationAbility, SutProvider<CollectionsController> sutProvider)
+        Organization organization, SutProvider<CollectionsController> sutProvider)
     {
-        ArrangeOrganizationAbility(sutProvider, organizationAbility);
-        collections.ForEach(c => c.OrganizationId = organizationAbility.Id);
+        collections.ForEach(c => c.OrganizationId = organization.Id);
 
         var userId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
@@ -500,28 +463,24 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(), ExpectedCollectionAccess(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                    r => r.Contains(BulkCollectionOperations.ModifyAccess)
+                    reqs => reqs.All(r =>
+                        r == BulkCollectionOperations.ModifyUserAccess ||
+                        r == BulkCollectionOperations.ModifyGroupAccess)
                 ))
             .Returns(AuthorizationResult.Failed());
 
         IEnumerable<Collection> ExpectedCollectionAccess() => Arg.Is<IEnumerable<Collection>>(cols => cols.SequenceEqual(collections));
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollectionAccess(organizationAbility.Id, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model));
         await sutProvider.GetDependency<IAuthorizationService>().Received().AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(),
             ExpectedCollectionAccess(),
             Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                r => r.Contains(BulkCollectionOperations.ModifyAccess))
+                    reqs => reqs.All(r =>
+                        r == BulkCollectionOperations.ModifyUserAccess ||
+                        r == BulkCollectionOperations.ModifyGroupAccess))
             );
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
             .AddAccessAsync(default, default, default);
-    }
-
-    private void ArrangeOrganizationAbility(SutProvider<CollectionsController> sutProvider, OrganizationAbility organizationAbility)
-    {
-        organizationAbility.FlexibleCollections = true;
-
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
     }
 }

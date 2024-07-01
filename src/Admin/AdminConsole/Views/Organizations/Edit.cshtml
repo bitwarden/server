@@ -1,10 +1,11 @@
-﻿@using Bit.Admin.Enums;
+@using Bit.Admin.Enums;
 @using Bit.Admin.Models
+@using Bit.Core.Billing.Enums
 @using Bit.Core.Enums
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model OrganizationEditModel
 @{
-    ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Organization.Name;
+    ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Name;
 
     var canViewOrganizationInformation = AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View);
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_View);
@@ -18,24 +19,43 @@
 
     <script>
         (() => {
-            document.getElementById('teams-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
-                    alert('Organization is not on a free plan.');
-                    return;
-                }
-                setTrialDefaults('@((byte)PlanType.TeamsAnnually)');
-                togglePlanFeatures('@((byte)PlanType.TeamsAnnually)');
-                document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
-            });
-            document.getElementById('enterprise-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
-                    alert('Organization is not on a free plan.');
-                    return;
-                }
-                setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
-                togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
-                document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
-            });
+            const treamsTrialButton = document.getElementById('teams-trial');
+            if (treamsTrialButton != null) {
+                treamsTrialButton.addEventListener('click', () => {
+                    if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
+                        alert('Organization is not on a free plan.');
+                        return;
+                    }
+                    setTrialDefaults('@((byte)PlanType.TeamsAnnually)');
+                    togglePlanFeatures('@((byte)PlanType.TeamsAnnually)');
+                    document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
+                });
+            }
+
+            const entTrialButton = document.getElementById('enterprise-trial');
+            if (entTrialButton != null) {
+                entTrialButton.addEventListener('click', () => {
+                    if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
+                        alert('Organization is not on a free plan.');
+                        return;
+                    }
+                    setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
+                    togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
+                    document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
+                });
+            }
+
+            const initDeleteButton = document.getElementById('initiate-delete-form');
+            if (initDeleteButton != null) {
+                initDeleteButton.addEventListener('submit', (e) => {
+                    const email = prompt('Enter the email address of the owner/admin that your want to ' +
+                        'request the organization delete verification process with.');
+                    document.getElementById('AdminEmail').value = email;
+                    if (email == null || email === '') {
+                        e.preventDefault();
+                    }
+                });
+            }
 
             function setTrialDefaults(planType) {
                 // Plan
@@ -58,7 +78,7 @@
     </script>
 }
 
-<h1>@(Model.Provider != null ? "Client " : string.Empty)Organization <small>@Model.Organization.Name</small></h1>
+<h1>@(Model.Provider != null ? "Client " : string.Empty)Organization <small>@Model.Name</small></h1>
 
 @if (Model.Provider != null)
 {
@@ -76,7 +96,7 @@
 {
     <h2>Billing Information</h2>
     @await Html.PartialAsync("_BillingInformation",
-        new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
+                new BillingInformationModel { BillingInfo = Model.BillingInfo, BillingHistoryInfo = Model.BillingHistoryInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
 }
 
 @await Html.PartialAsync("~/AdminConsole/Views/Shared/_OrganizationForm.cshtml", Model)
@@ -95,18 +115,20 @@
         }
         @if (canUnlinkFromProvider && Model.Provider is not null)
         {
-            <button
-                class="btn btn-outline-danger mr-2"
-                onclick="return unlinkProvider('@Model.Organization.Id');"
-            >
+            <button class="btn btn-outline-danger mr-2"
+                    onclick="return unlinkProvider('@Model.Organization.Id');">
                 Unlink provider
             </button>
         }
         @if (canDelete)
         {
+            <form asp-action="DeleteInitiation" asp-route-id="@Model.Organization.Id" id="initiate-delete-form">
+                <input type="hidden" name="AdminEmail" id="AdminEmail" />
+                <button class="btn btn-danger mr-2" type="submit">Request Delete</button>
+            </form>
             <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
-                onsubmit="return confirm('Are you sure you want to delete this organization?')">
-                <button class="btn btn-danger" type="submit">Delete</button>
+                  onsubmit="return confirm('Are you sure you want to hard delete this organization?')">
+                <button class="btn btn-outline-danger" type="submit">Delete</button>
             </form>
         }
     </div>

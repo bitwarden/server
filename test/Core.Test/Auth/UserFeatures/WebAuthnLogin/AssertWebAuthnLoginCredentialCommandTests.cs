@@ -20,7 +20,7 @@ namespace Bit.Core.Test.Auth.UserFeatures.WebAuthnLogin;
 public class AssertWebAuthnLoginCredentialCommandTests
 {
     [Theory, BitAutoData]
-    internal async void InvalidUserHandle_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, AssertionOptions options, AuthenticatorAssertionRawResponse response)
+    internal async Task InvalidUserHandle_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
         response.Response.UserHandle = Encoding.UTF8.GetBytes("invalid-user-handle");
@@ -33,7 +33,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     }
 
     [Theory, BitAutoData]
-    internal async void UserNotFound_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
+    internal async Task UserNotFound_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
         response.Response.UserHandle = user.Id.ToByteArray();
@@ -47,7 +47,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     }
 
     [Theory, BitAutoData]
-    internal async void NoMatchingCredentialExists_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
+    internal async Task NoMatchingCredentialExists_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
         response.Response.UserHandle = user.Id.ToByteArray();
@@ -62,7 +62,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     }
 
     [Theory, BitAutoData]
-    internal async void AssertionFails_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
+    internal async Task AssertionFails_ThrowsBadRequestException(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
     {
         // Arrange
         var credentialId = Guid.NewGuid().ToByteArray();
@@ -83,7 +83,7 @@ public class AssertWebAuthnLoginCredentialCommandTests
     }
 
     [Theory, BitAutoData]
-    internal async void AssertionSucceeds_ReturnsUserAndCredential(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
+    internal async Task AssertionSucceeds_ReturnsUserAndCredential(SutProvider<AssertWebAuthnLoginCredentialCommand> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
     {
         // Arrange
         var credentialId = Guid.NewGuid().ToByteArray();

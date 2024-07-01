@@ -83,7 +83,7 @@ public class PoliciesController : Controller
     /// </remarks>
     /// <param name="type">The type of policy to be updated.</param>
     /// <param name="model">The request model.</param>
-    [HttpPut("{id}")]
+    [HttpPut("{type}")]
     [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -93,7 +93,7 @@ public class PoliciesController : Controller
             _currentContext.OrganizationId.Value, type);
         if (policy == null)
         {
-            policy = model.ToPolicy(_currentContext.OrganizationId.Value);
+            policy = model.ToPolicy(_currentContext.OrganizationId.Value, type);
         }
         else
         {

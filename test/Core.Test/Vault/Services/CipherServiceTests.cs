@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -185,7 +186,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
             {
-                PlanType = Enums.PlanType.EnterpriseAnnually,
+                PlanType = PlanType.EnterpriseAnnually,
                 MaxStorageGb = 100
             });
 
@@ -672,7 +673,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
             .Returns(new Organization
             {
-                PlanType = Enums.PlanType.EnterpriseAnnually,
+                PlanType = PlanType.EnterpriseAnnually,
                 MaxStorageGb = 100
             });
 
@@ -803,7 +804,7 @@ public class CipherServiceTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(new Organization
         {
-            PlanType = Enums.PlanType.Free
+            PlanType = PlanType.Free
         });
         ciphers.FirstOrDefault().Attachments =
             "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
@@ -825,7 +826,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
             {
-                PlanType = Enums.PlanType.EnterpriseAnnually,
+                PlanType = PlanType.EnterpriseAnnually,
                 MaxStorageGb = 100
             });
         ciphers.FirstOrDefault().Attachments =

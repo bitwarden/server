@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using Bit.Billing.Models;
-using Bit.Billing.Services;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -20,9 +20,9 @@ public class PayPalController : Controller
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPaymentService _paymentService;
-    private readonly IPayPalIPNClient _payPalIPNClient;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IProviderRepository _providerRepository;
 
     public PayPalController(
         IOptions<BillingSettings> billingSettings,
@@ -30,18 +30,18 @@ public class PayPalController : Controller
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         IPaymentService paymentService,
-        IPayPalIPNClient payPalIPNClient,
         ITransactionRepository transactionRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IProviderRepository providerRepository)
     {
         _billingSettings = billingSettings?.Value;
         _logger = logger;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
-        _payPalIPNClient = payPalIPNClient;
         _transactionRepository = transactionRepository;
         _userRepository = userRepository;
+        _providerRepository = providerRepository;
     }
 
     [HttpPost("ipn")]
@@ -79,23 +79,15 @@ public class PayPalController : Controller
 
         if (string.IsNullOrEmpty(transactionModel.TransactionId))
         {
-            _logger.LogError("PayPal IPN: Transaction ID is missing");
+            _logger.LogWarning("PayPal IPN: Transaction ID is missing");
             return Ok();
         }
 
-        var entityId = transactionModel.UserId ?? transactionModel.OrganizationId;
+        var entityId = transactionModel.UserId ?? transactionModel.OrganizationId ?? transactionModel.ProviderId;
 
         if (!entityId.HasValue)
         {
-            _logger.LogError("PayPal IPN ({Id}): 'custom' did not contain a User ID or Organization ID", transactionModel.TransactionId);
-            return BadRequest();
-        }
-
-        var verified = await _payPalIPNClient.VerifyIPN(transactionModel.TransactionId, requestContent);
-
-        if (!verified)
-        {
-            _logger.LogError("PayPal IPN ({Id}): Verification failed", transactionModel.TransactionId);
+            _logger.LogError("PayPal IPN ({Id}): 'custom' did not contain a User ID or Organization ID or provider ID", transactionModel.TransactionId);
             return BadRequest();
         }
 
@@ -164,6 +156,7 @@ public class PayPalController : Controller
                             CreationDate = transactionModel.PaymentDate,
                             OrganizationId = transactionModel.OrganizationId,
                             UserId = transactionModel.UserId,
+                            ProviderId = transactionModel.ProviderId,
                             Type = transactionModel.IsAccountCredit ? TransactionType.Credit : TransactionType.Charge,
                             Gateway = GatewayType.PayPal,
                             GatewayId = transactionModel.TransactionId,
@@ -204,8 +197,8 @@ public class PayPalController : Controller
 
                     if (parentTransaction == null)
                     {
-                        _logger.LogError("PayPal IPN ({Id}): Could not find parent transaction", transactionModel.TransactionId);
-                        return BadRequest();
+                        _logger.LogWarning("PayPal IPN ({Id}): Could not find parent transaction", transactionModel.TransactionId);
+                        return Ok();
                     }
 
                     var refundAmount = Math.Abs(transactionModel.MerchantGross);
@@ -229,6 +222,7 @@ public class PayPalController : Controller
                             CreationDate = transactionModel.PaymentDate,
                             OrganizationId = transactionModel.OrganizationId,
                             UserId = transactionModel.UserId,
+                            ProviderId = transactionModel.ProviderId,
                             Type = TransactionType.Refund,
                             Gateway = GatewayType.PayPal,
                             GatewayId = transactionModel.TransactionId,
@@ -268,6 +262,17 @@ public class PayPalController : Controller
                 await _userRepository.ReplaceAsync(user);
 
                 billingEmail = user.BillingEmailAddress();
+            }
+        }
+        else if (transaction.ProviderId.HasValue)
+        {
+            var provider = await _providerRepository.GetByIdAsync(transaction.ProviderId.Value);
+
+            if (await _paymentService.CreditAccountAsync(provider, transaction.Amount))
+            {
+                await _providerRepository.ReplaceAsync(provider);
+
+                billingEmail = provider.BillingEmailAddress();
             }
         }
 

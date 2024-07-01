@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -21,23 +23,46 @@ public class OrganizationEditModel : OrganizationViewModel
     {
         Provider = provider;
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
-        PlanType = Core.Enums.PlanType.TeamsMonthly;
-        Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+        PlanType = Core.Billing.Enums.PlanType.TeamsMonthly;
+        Plan = Core.Billing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
         LicenseKey = RandomLicenseKey;
     }
 
-    public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
-        IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
-        IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
-        GlobalSettings globalSettings, int secrets, int projects, int serviceAccounts, int occupiedSmSeats)
-        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies, secrets, projects,
-            serviceAccounts, occupiedSmSeats)
+    public OrganizationEditModel(
+        Organization org,
+        Provider provider,
+        IEnumerable<OrganizationUserUserDetails> orgUsers,
+        IEnumerable<Cipher> ciphers,
+        IEnumerable<Collection> collections,
+        IEnumerable<Group> groups,
+        IEnumerable<Policy> policies,
+        BillingInfo billingInfo,
+        BillingHistoryInfo billingHistoryInfo,
+        IEnumerable<OrganizationConnection> connections,
+        GlobalSettings globalSettings,
+        int secrets,
+        int projects,
+        int serviceAccounts,
+        int occupiedSmSeats)
+        : base(
+            org,
+            provider,
+            connections,
+            orgUsers,
+            ciphers,
+            collections,
+            groups,
+            policies,
+            secrets,
+            projects,
+            serviceAccounts,
+            occupiedSmSeats)
     {
         BillingInfo = billingInfo;
+        BillingHistoryInfo = billingHistoryInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
-        Name = org.Name;
-        BusinessName = org.BusinessName;
+        Name = org.DisplayName();
         BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
@@ -73,6 +98,7 @@ public class OrganizationEditModel : OrganizationViewModel
     }
 
     public BillingInfo BillingInfo { get; set; }
+    public BillingHistoryInfo BillingHistoryInfo { get; set; }
     public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
     public string FourteenDayExpirationDate => DateTime.Now.AddDays(14).ToString("yyyy-MM-ddTHH:mm");
     public string BraintreeMerchantId { get; set; }
@@ -80,8 +106,6 @@ public class OrganizationEditModel : OrganizationViewModel
     [Required]
     [Display(Name = "Organization Name")]
     public string Name { get; set; }
-    [Display(Name = "Business Name")]
-    public string BusinessName { get; set; }
     [Display(Name = "Billing Email")]
     public string BillingEmail { get; set; }
     [Required]
@@ -145,9 +169,9 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmSeats { get; set; }
     [Display(Name = "Max Autoscale Seats")]
     public int? MaxAutoscaleSmSeats { get; set; }
-    [Display(Name = "Service Accounts")]
+    [Display(Name = "Machine Accounts")]
     public int? SmServiceAccounts { get; set; }
-    [Display(Name = "Max Autoscale Service Accounts")]
+    [Display(Name = "Max Autoscale Machine Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
 
     /**
@@ -164,19 +188,18 @@ public class OrganizationEditModel : OrganizationViewModel
                 { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
             });
 
-    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsSignupEnabled, bool flexibleCollectionsV1Enabled)
+    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsV1Enabled)
     {
         BillingEmail = provider.BillingEmail;
 
         var newOrg = new Organization
         {
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
+            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
+            // AC-1714 will remove this flag after all old code has been removed.
+            FlexibleCollections = true,
+
+            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
+            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
         return ToOrganization(newOrg);
@@ -184,8 +207,7 @@ public class OrganizationEditModel : OrganizationViewModel
 
     public Organization ToOrganization(Organization existingOrganization)
     {
-        existingOrganization.Name = Name;
-        existingOrganization.BusinessName = BusinessName;
+        existingOrganization.Name = WebUtility.HtmlEncode(Name.Trim());
         existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
         existingOrganization.PlanType = PlanType.Value;
         existingOrganization.Plan = Plan;

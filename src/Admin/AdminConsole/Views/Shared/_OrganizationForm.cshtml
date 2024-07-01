@@ -1,6 +1,7 @@
 @using Bit.Admin.Enums;
 @using Bit.Core.Enums
 @using Bit.Core.AdminConsole.Enums.Provider
+@using Bit.Core.Billing.Enums
 @using Bit.SharedWeb.Utilities
 @inject Bit.Admin.Services.IAccessControlService AccessControlService;
 
@@ -9,7 +10,6 @@
 @{
     var canViewGeneralDetails = AccessControlService.UserHasPermission(Permission.Org_GeneralDetails_View);
     var canViewBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_View);
-    var canViewBusinessInformation = AccessControlService.UserHasPermission(Permission.Org_BusinessInformation_View);
     var canViewPlan = AccessControlService.UserHasPermission(Permission.Org_Plan_View);
     var canViewLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_View);
     var canCheckEnabled = AccessControlService.UserHasPermission(Permission.Org_CheckEnabledBox);
@@ -28,7 +28,7 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="Name"></label>
-                    <input type="text" class="form-control" asp-for="Name" required>
+                    <input type="text" class="form-control" asp-for="Name" value="@Model.Name" required>
                 </div>
             </div>
         </div>
@@ -61,19 +61,6 @@
         }
     }
 
-    @if (canViewBusinessInformation)
-    {
-        <h2>Business Information</h2>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="BusinessName"></label>
-                    <input type="text" class="form-control" asp-for="BusinessName">
-                </div>
-            </div>
-        </div>
-    }
-
     @if (canViewPlan)
     {
         <h2>Plan</h2>
@@ -84,9 +71,10 @@
                     @{
                         var planTypes = Enum.GetValues<PlanType>()
                             .Where(p =>
-                                Model.Provider == null ||
-                                (Model.Provider != null
-                                 && p is >= PlanType.TeamsMonthly2019 and <= PlanType.EnterpriseAnnually2019 or >= PlanType.TeamsMonthly2020 and <= PlanType.EnterpriseAnnually)
+                                (Model.Provider == null ||
+                                p is >= PlanType.TeamsMonthly2019 and <= PlanType.EnterpriseAnnually2019 or
+                                    >= PlanType.TeamsMonthly2020 and <= PlanType.EnterpriseAnnually) &&
+                                (Model.PlanType == PlanType.TeamsStarter || p is not PlanType.TeamsStarter)
                             )
                             .Select(e => new SelectListItem
                             {

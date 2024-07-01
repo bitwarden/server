@@ -85,6 +85,16 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         return Task.FromResult(0);
     }
 
+    public virtual Task DeleteProviderAbilityAsync(Guid providerId)
+    {
+        if (_providerAbilities != null && _providerAbilities.ContainsKey(providerId))
+        {
+            _providerAbilities.Remove(providerId);
+        }
+
+        return Task.FromResult(0);
+    }
+
     private async Task InitOrganizationAbilitiesAsync()
     {
         var now = DateTime.UtcNow;

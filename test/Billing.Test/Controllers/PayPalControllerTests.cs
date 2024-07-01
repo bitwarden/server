@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using Bit.Billing.Controllers;
-using Bit.Billing.Services;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -31,9 +31,9 @@ public class PayPalControllerTests
     private readonly IMailService _mailService = Substitute.For<IMailService>();
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
     private readonly IPaymentService _paymentService = Substitute.For<IPaymentService>();
-    private readonly IPayPalIPNClient _payPalIPNClient = Substitute.For<IPayPalIPNClient>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
 
     private const string _defaultWebhookKey = "webhook-key";
 
@@ -112,32 +112,7 @@ public class PayPalControllerTests
 
         HasStatusCode(result, 400);
 
-        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): 'custom' did not contain a User ID or Organization ID");
-    }
-
-    [Fact]
-    public async Task PostIpn_Unverified_BadRequest()
-    {
-        var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
-
-        _billingSettings.Value.Returns(new BillingSettings
-        {
-            PayPal = { WebhookKey = _defaultWebhookKey }
-        });
-
-        var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
-
-        var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
-
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(false);
-
-        var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
-
-        var result = await controller.PostIpn();
-
-        HasStatusCode(result, 400);
-
-        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): Verification failed");
+        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): 'custom' did not contain a User ID or Organization ID or provider ID");
     }
 
     [Fact]
@@ -153,8 +128,6 @@ public class PayPalControllerTests
         var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.UnsupportedTransactionType);
-
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
@@ -183,8 +156,6 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
 
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
-
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
@@ -211,8 +182,6 @@ public class PayPalControllerTests
         var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.RefundMissingParentTransaction);
-
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
@@ -241,8 +210,6 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.ECheckPayment);
 
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
-
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
@@ -270,8 +237,6 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.NonUSDPayment);
 
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
-
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
@@ -298,8 +263,6 @@ public class PayPalControllerTests
         var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
-
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -331,8 +294,6 @@ public class PayPalControllerTests
         var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPayment);
-
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -366,8 +327,6 @@ public class PayPalControllerTests
         var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPaymentForOrganizationCredit);
-
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -417,8 +376,6 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulPaymentForUserCredit);
 
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
-
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
             "2PK15573S8089712Y").ReturnsNull();
@@ -467,8 +424,6 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
-
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
             "2PK15573S8089712Y").Returns(new Transaction());
@@ -487,7 +442,7 @@ public class PayPalControllerTests
     }
 
     [Fact]
-    public async Task PostIpn_Refunded_MissingParentTransaction_BadRequest()
+    public async Task PostIpn_Refunded_MissingParentTransaction_Ok()
     {
         var logger = _testOutputHelper.BuildLoggerFor<PayPalController>();
 
@@ -504,8 +459,6 @@ public class PayPalControllerTests
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
 
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
-
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
             "2PK15573S8089712Y").ReturnsNull();
@@ -518,9 +471,9 @@ public class PayPalControllerTests
 
         var result = await controller.PostIpn();
 
-        HasStatusCode(result, 400);
+        HasStatusCode(result, 200);
 
-        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): Could not find parent transaction");
+        LoggedWarning(logger, "PayPal IPN (2PK15573S8089712Y): Could not find parent transaction");
 
         await _transactionRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<Transaction>());
 
@@ -544,8 +497,6 @@ public class PayPalControllerTests
         var organizationId = new Guid("ca8c6f2b-2d7b-4639-809f-b0e5013a304e");
 
         var ipnBody = await PayPalTestIPN.GetAsync(IPNBody.SuccessfulRefund);
-
-        _payPalIPNClient.VerifyIPN(Arg.Any<string>(), ipnBody).Returns(true);
 
         _transactionRepository.GetByGatewayIdAsync(
             GatewayType.PayPal,
@@ -592,9 +543,9 @@ public class PayPalControllerTests
             _mailService,
             _organizationRepository,
             _paymentService,
-            _payPalIPNClient,
             _transactionRepository,
-            _userRepository);
+            _userRepository,
+            _providerRepository);
 
         var httpContext = new DefaultHttpContext();
 

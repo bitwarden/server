@@ -33,7 +33,7 @@ public class DatabaseDataAttribute : DataAttribute
         }
     }
 
-    private IEnumerable<IServiceProvider> GetDatabaseProviders(IConfiguration config)
+    protected virtual IEnumerable<IServiceProvider> GetDatabaseProviders(IConfiguration config)
     {
         var configureLogging = (ILoggingBuilder builder) =>
         {

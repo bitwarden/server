@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -25,7 +26,7 @@ public class StripePaymentServiceTests
     [BitAutoData(PaymentMethodType.Credit)]
     [BitAutoData(PaymentMethodType.WireTransfer)]
     [BitAutoData(PaymentMethodType.Check)]
-    public async void PurchaseOrganizationAsync_Invalid(PaymentMethodType paymentMethodType, SutProvider<StripePaymentService> sutProvider)
+    public async Task PurchaseOrganizationAsync_Invalid(PaymentMethodType paymentMethodType, SutProvider<StripePaymentService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<GatewayException>(
             () => sutProvider.Sut.PurchaseOrganizationAsync(null, paymentMethodType, null, null, 0, 0, false, null, false, -1, -1));
@@ -34,7 +35,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo, bool provider = true)
+    public async Task PurchaseOrganizationAsync_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
@@ -88,7 +89,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_SM_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization,
+    public async Task PurchaseOrganizationAsync_SM_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization,
         string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
@@ -145,7 +146,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
@@ -201,7 +202,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Stripe_PM(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_Stripe_PM(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
@@ -258,7 +259,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
@@ -291,7 +292,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_SM_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_SM_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
@@ -325,7 +326,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
@@ -356,7 +357,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_SM_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_SM_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
@@ -388,7 +389,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
@@ -452,7 +453,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_SM_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_SM_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
@@ -525,7 +526,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
@@ -542,7 +543,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_SM_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_SM_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
@@ -560,7 +561,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_PayPal_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    public async Task PurchaseOrganizationAsync_PayPal_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plans = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
@@ -604,7 +605,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void UpgradeFreeOrganizationAsync_Success(SutProvider<StripePaymentService> sutProvider,
+    public async Task UpgradeFreeOrganizationAsync_Success(SutProvider<StripePaymentService> sutProvider,
         Organization organization, TaxInfo taxInfo)
     {
         organization.GatewaySubscriptionId = null;
@@ -649,7 +650,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void UpgradeFreeOrganizationAsync_SM_Success(SutProvider<StripePaymentService> sutProvider,
+    public async Task UpgradeFreeOrganizationAsync_SM_Success(SutProvider<StripePaymentService> sutProvider,
         Organization organization, TaxInfo taxInfo)
     {
         organization.GatewaySubscriptionId = null;
@@ -694,7 +695,7 @@ public class StripePaymentServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void UpgradeFreeOrganizationAsync_WhenCustomerHasNoAddress_UpdatesCustomerAddressWithTaxInfo(
+    public async Task UpgradeFreeOrganizationAsync_WhenCustomerHasNoAddress_UpdatesCustomerAddressWithTaxInfo(
         SutProvider<StripePaymentService> sutProvider,
         Organization organization,
         TaxInfo taxInfo)

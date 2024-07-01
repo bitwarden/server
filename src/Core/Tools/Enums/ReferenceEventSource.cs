@@ -8,4 +8,8 @@ public enum ReferenceEventSource
     Organization,
     [EnumMember(Value = "user")]
     User,
+    [EnumMember(Value = "provider")]
+    Provider,
+    [EnumMember(Value = "registrationStart")]
+    RegistrationStart,
 }

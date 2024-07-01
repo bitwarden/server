@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -15,12 +14,10 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
@@ -28,7 +25,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using File = System.IO.File;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bit.Core.Services;
 
@@ -337,7 +336,26 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var result = await base.CreateAsync(user, masterPassword);
         if (result == IdentityResult.Success)
         {
-            await _mailService.SendWelcomeEmailAsync(user);
+            if (!string.IsNullOrEmpty(user.ReferenceData))
+            {
+                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
+                if (referenceData.TryGetValue("initiationPath", out var value))
+                {
+                    var initiationPath = value.ToString();
+                    await SendAppropriateWelcomeEmailAsync(user, initiationPath);
+                    if (!string.IsNullOrEmpty(initiationPath))
+                    {
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
+                            {
+                                SignupInitiationPath = initiationPath
+                            });
+
+                        return result;
+                    }
+                }
+            }
+
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
@@ -776,7 +794,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.ForcePasswordReset = true;
 
         await _userRepository.ReplaceAsync(user);
-        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.Name);
+        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
         await _pushService.PushLogOutAsync(user.Id);
 
@@ -839,39 +857,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         Logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
-        return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
-    }
-
-    public async Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-        IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (await CheckPasswordAsync(user, masterPassword))
-        {
-            var now = DateTime.UtcNow;
-            user.RevisionDate = user.AccountRevisionDate = now;
-            user.LastKeyRotationDate = now;
-            user.SecurityStamp = Guid.NewGuid().ToString();
-            user.Key = key;
-            user.PrivateKey = privateKey;
-            if (ciphers.Any() || folders.Any() || sends.Any())
-            {
-                await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders, sends);
-            }
-            else
-            {
-                await _userRepository.ReplaceAsync(user);
-            }
-
-            await _pushService.PushLogOutAsync(user.Id, excludeCurrentContextFromPush: true);
-            return IdentityResult.Success;
-        }
-
-        Logger.LogWarning("Update key failed for user {userId}.", user.Id);
         return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
     }
 
@@ -1319,6 +1304,28 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
+    public async Task<bool> IsLegacyUser(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        var user = await FindByIdAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        return IsLegacyUser(user);
+    }
+
+    /// <inheritdoc cref="IsLegacyUser(string)"/>
+    public static bool IsLegacyUser(User user)
+    {
+        return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
+    }
+
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
@@ -1370,7 +1377,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await organizationService.DeleteUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                organization.Name, user.Email);
+                organization.DisplayName(), user.Email);
         }).ToArray();
 
         await Task.WhenAll(removeOrgUserTasks);
@@ -1431,5 +1438,19 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return isVerified;
+    }
+
+    private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)
+    {
+        var isFromMarketingWebsite = initiationPath.Contains("Secrets Manager trial");
+
+        if (isFromMarketingWebsite)
+        {
+            await _mailService.SendTrialInitiationEmailAsync(user.Email);
+        }
+        else
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+        }
     }
 }
