@@ -15,7 +15,7 @@ namespace Bit.SqliteMigrations.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "7.0.16");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.6");
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
@@ -706,9 +706,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProviderId");
-
-                    b.HasIndex("Id", "InvoiceId")
-                        .IsUnique();
 
                     b.ToTable("ProviderInvoiceItem", (string)null);
                 });
@@ -1545,6 +1542,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("Discriminator")
                         .IsRequired()
+                        .HasMaxLength(34)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Read")
