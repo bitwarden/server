@@ -456,6 +456,11 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        if (!string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.Secret))
+        {
+            throw new BadRequestException("Incorrect password");
+        }
+
         var callingUserId = user.Id;
         await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
             orgId, userId, model.ResetPasswordKey, callingUserId);
