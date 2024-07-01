@@ -46,7 +46,7 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
                                   from cg in cg_g.DefaultIfEmpty()
                                   select new { c, cu, cg };
 
-        // Subqueries to determine if a collection is managed by an active user or group.
+        // Subqueries to determine if a collection is managed by a user or group.
         var activeUserManageRights = from cu in dbContext.CollectionUsers
                                      join ou in dbContext.OrganizationUsers
                                          on cu.OrganizationUserId equals ou.Id
