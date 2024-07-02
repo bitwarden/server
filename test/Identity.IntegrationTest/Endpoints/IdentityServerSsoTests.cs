@@ -543,7 +543,7 @@ public class IdentityServerSsoTests
             Subject = null, // Temporarily set it to null
         };
 
-        factory.SubstitueService<IAuthorizationCodeStore>(service =>
+        factory.SubstituteService<IAuthorizationCodeStore>(service =>
         {
             service.GetAuthorizationCodeAsync("test_code")
                 .Returns(authorizationCode);

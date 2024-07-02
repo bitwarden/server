@@ -8,6 +8,7 @@ using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -21,6 +22,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
@@ -32,35 +34,37 @@ public class AccountsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
-    private readonly IUserService _userService;
+    private readonly IRegisterUserCommand _registerUserCommand;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IReferenceEventService _referenceEventService;
-
+    private readonly IFeatureService _featureService;
 
     public AccountsController(
         ICurrentContext currentContext,
         ILogger<AccountsController> logger,
         IUserRepository userRepository,
-        IUserService userService,
+        IRegisterUserCommand registerUserCommand,
         ICaptchaValidationService captchaValidationService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
-        IReferenceEventService referenceEventService
+        IReferenceEventService referenceEventService,
+        IFeatureService featureService
         )
     {
         _currentContext = currentContext;
         _logger = logger;
         _userRepository = userRepository;
-        _userService = userService;
+        _registerUserCommand = registerUserCommand;
         _captchaValidationService = captchaValidationService;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
         _referenceEventService = referenceEventService;
+        _featureService = featureService;
     }
 
     [HttpPost("register")]
@@ -68,21 +72,10 @@ public class AccountsController : Controller
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
         var user = model.ToUser();
-        var result = await _userService.RegisterUserAsync(user, model.MasterPasswordHash,
+        var identityResult = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
-        if (result.Succeeded)
-        {
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-            return new RegisterResponseModel(captchaBypassToken);
-        }
-
-        foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
+        // delaysEnabled false is only for the new registration with email verification process
+        return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
     }
 
     [RequireFeature(FeatureFlagKeys.EmailVerification)]
@@ -107,6 +100,50 @@ public class AccountsController : Controller
         }
 
         return NoContent();
+    }
+
+    [RequireFeature(FeatureFlagKeys.EmailVerification)]
+    [HttpPost("register/finish")]
+    public async Task<RegisterResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
+    {
+        var user = model.ToUser();
+
+        // Users will either have an org invite token or an email verification token - not both.
+
+        IdentityResult identityResult = null;
+        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
+
+        if (!string.IsNullOrEmpty(model.OrgInviteToken) && model.OrganizationUserId.HasValue)
+        {
+            identityResult = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
+                model.OrgInviteToken, model.OrganizationUserId);
+
+            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+        }
+
+        identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
+
+        return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+    }
+
+    private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)
+    {
+        if (result.Succeeded)
+        {
+            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
+            return new RegisterResponseModel(captchaBypassToken);
+        }
+
+        foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        if (delaysEnabled)
+        {
+            await Task.Delay(Random.Shared.Next(100, 130));
+        }
+        throw new BadRequestException(ModelState);
     }
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
