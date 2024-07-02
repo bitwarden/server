@@ -299,6 +299,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
+    public async Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToSecretsAsync(
+        IEnumerable<Guid> ids,
+        Guid userId,
+        AccessClientType accessType)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var secrets = dbContext.Secret
+            .Where(s => ids.Contains(s.Id));
+
+        var accessQuery = BuildSecretAccessQuery(secrets, userId, accessType);
+
+        return await accessQuery.ToDictionaryAsync(sa => sa.Id, sa => (sa.Read, sa.Write));
+    }
+
     public async Task EmptyTrash(DateTime currentDate, uint deleteAfterThisNumberOfDays)
     {
         using var scope = ServiceScopeFactory.CreateScope();
