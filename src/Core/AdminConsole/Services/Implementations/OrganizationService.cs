@@ -745,10 +745,8 @@ public class OrganizationService : IOrganizationService
                     AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-
-                    // If using Flexible Collections, AccessAll is deprecated and set to false.
-                    // If not using Flexible Collections, set AccessAll to true (previous behavior)
-                    AccessAll = !organization.FlexibleCollections,
+                    // AccessAll is deprecated and set to false.
+                    AccessAll = false,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
@@ -773,9 +771,9 @@ public class OrganizationService : IOrganizationService
                     RevisionDate = organization.CreationDate
                 };
 
-                // If using Flexible Collections, give the owner Can Manage access over the default collection
+                // Give the owner Can Manage access over the default collection
                 List<CollectionAccessSelection> defaultOwnerAccess = null;
-                if (orgUser != null && organization.FlexibleCollections)
+                if (orgUser != null)
                 {
                     defaultOwnerAccess =
                         [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
@@ -967,15 +965,11 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("This method can only be used to invite a single user.");
         }
 
-        // Validate Collection associations if org is using latest collection enhancements
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (organizationAbility?.FlexibleCollections ?? false)
+        // Validate Collection associations
+        var invalidAssociations = invite.Collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+        if (invalidAssociations?.Any() ?? false)
         {
-            var invalidAssociations = invite.Collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-            if (invalidAssociations?.Any() ?? false)
-            {
-                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-            }
+            throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
         }
 
         var results = await InviteUsersAsync(organizationId, invitingUserId, systemUser,
@@ -1040,17 +1034,16 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        if (organization.FlexibleCollections && invites.Any(i => i.invite.Type is OrganizationUserType.Manager))
+        // Prevent use of any deprecated permissions
+        if (invites.Any(i => i.invite.Type is OrganizationUserType.Manager))
         {
             throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
         }
 
-        if (organization.FlexibleCollections && invites.Any(i => i.invite.AccessAll))
+        if (invites.Any(i => i.invite.AccessAll))
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
         }
-        // End Flexible Collections
 
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
@@ -2525,10 +2518,8 @@ public class OrganizationService : IOrganizationService
             Key = null,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Invited,
-
-            // If using Flexible Collections, AccessAll is deprecated and set to false.
-            // If not using Flexible Collections, set AccessAll to true (previous behavior)
-            AccessAll = !organization.FlexibleCollections,
+            // AccessAll is deprecated and set to false.
+            AccessAll = false,
         };
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 

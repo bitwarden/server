@@ -37,7 +37,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     }
 
     public async Task UpdateUserAsync(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid>? groups)
+        List<CollectionAccessSelection>? collections, IEnumerable<Guid>? groups)
     {
         if (user.Id.Equals(default(Guid)))
         {
@@ -59,19 +59,18 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-        if (organization.FlexibleCollections && user.Type == OrganizationUserType.Manager)
+        // Prevent use of any deprecated permissions
+        if (user.Type == OrganizationUserType.Manager)
         {
             throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
         }
 
-        if (organization.FlexibleCollections && user.AccessAll)
+        if (user.AccessAll)
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
         }
 
-        if (organization.FlexibleCollections && collections?.Any() == true)
+        if (collections?.Count > 0)
         {
             var invalidAssociations = collections.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())
@@ -79,7 +78,6 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
                 throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
             }
         }
-        // End Flexible Collections
 
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
         // updating Stripe
@@ -88,17 +86,13 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
+                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
                 var update = new SecretsManagerSubscriptionUpdate(organization, true)
                     .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
 
-        if (user.AccessAll)
-        {
-            // We don't need any collections if we're flagged to have all access.
-            collections = new List<CollectionAccessSelection>();
-        }
         await _organizationUserRepository.ReplaceAsync(user, collections);
 
         if (groups != null)

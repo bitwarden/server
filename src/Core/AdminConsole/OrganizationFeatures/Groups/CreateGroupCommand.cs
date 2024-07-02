@@ -115,18 +115,15 @@ public class CreateGroupCommand : ICreateGroupCommand
             throw new BadRequestException("This organization cannot use groups.");
         }
 
-        if (organization.FlexibleCollections)
+        if (group.AccessAll)
         {
-            if (group.AccessAll)
-            {
-                throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
-            }
+            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
+        }
 
-            var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-            if (invalidAssociations?.Any() ?? false)
-            {
-                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-            }
+        var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+        if (invalidAssociations?.Any() ?? false)
+        {
+            throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
         }
     }
 }
