@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json.Nodes;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.IntegrationTest.SecretsManager.Helpers;
@@ -935,7 +936,10 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             ServiceAccountId = serviceAccountId,
             Name = name,
             ExpireAt = expiresAt ?? DateTime.MinValue,
-            Scope = "Test Scope",
+            Scope = new JsonArray
+            {
+                "api.secrets",
+            }.ToJsonString(),
             EncryptedPayload = "Test Payload",
             Key = "Test Key",
         };
