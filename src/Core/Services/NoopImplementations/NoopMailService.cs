@@ -280,5 +280,6 @@ public class NoopMailService : IMailService
     {
         return Task.FromResult(0);
     }
+    public Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent) => throw new NotImplementedException();
 }
 
