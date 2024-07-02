@@ -1,17 +1,19 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
+    private readonly INotificationHubPool _notificationHubPool;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationHubPushRegistrationService> _logger;
     private Dictionary<NotificationHubType, NotificationHubClient> _clients = [];
@@ -19,11 +21,13 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         GlobalSettings globalSettings,
+        INotificationHubPool notificationHubPool,
         IServiceProvider serviceProvider,
         ILogger<NotificationHubPushRegistrationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
+        _notificationHubPool = notificationHubPool;
         _serviceProvider = serviceProvider;
         _logger = logger;
 

@@ -95,7 +95,7 @@ public static class CoreHelpers
         return new DateTime(_baseDateTicks + time.Ticks, DateTimeKind.Utc);
     }
 
-    internal static double BinForComb(Guid combGuid, int binCount)
+    internal static long BinForComb(Guid combGuid, int binCount)
     {
         // From System.Web.Util.HashCodeCombiner
         uint CombineHashCodes(uint h1, byte h2)

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.NotificationHub;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
@@ -6,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.NotificationHub;
 
 public class NotificationHubPushNotificationServiceTests
 {

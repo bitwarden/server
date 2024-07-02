@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -13,7 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushNotificationService : IPushNotificationService
 {
