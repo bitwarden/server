@@ -1,9 +1,6 @@
 general:
   webVersionOverride: 2024.3.0
 component:
-  admin:
-    image:
-      name: bitwardenprod.azurecr.io/admin
   api:
     image:
       name: bitwardenprod.azurecr.io/api
