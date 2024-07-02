@@ -1,5 +1,4 @@
-
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29102.190
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -123,6 +122,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventsProcessor.Test", "test\EventsProcessor.Test\EventsProcessor.Test.csproj", "{81673EFB-7134-4B4B-A32F-1EA05F0EF3CE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notifications.Test", "test\Notifications.Test\Notifications.Test.csproj", "{90D85D8F-5577-4570-A96E-5A2E185F0F6F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions.Hosting", "src\Extensions.Hosting\Extensions.Hosting.csproj", "{6A0CE712-62B1-4929-9D17-570298AAFC38}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions.WebHosting", "src\Extensions.WebHosting\Extensions.WebHosting.csproj", "{1879B737-BDDD-4881-B32B-046DA41CACE0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -308,6 +311,14 @@ Global
 		{90D85D8F-5577-4570-A96E-5A2E185F0F6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{90D85D8F-5577-4570-A96E-5A2E185F0F6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{90D85D8F-5577-4570-A96E-5A2E185F0F6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A0CE712-62B1-4929-9D17-570298AAFC38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A0CE712-62B1-4929-9D17-570298AAFC38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A0CE712-62B1-4929-9D17-570298AAFC38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A0CE712-62B1-4929-9D17-570298AAFC38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1879B737-BDDD-4881-B32B-046DA41CACE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1879B737-BDDD-4881-B32B-046DA41CACE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1879B737-BDDD-4881-B32B-046DA41CACE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1879B737-BDDD-4881-B32B-046DA41CACE0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -353,6 +364,8 @@ Global
 		{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{07143DFA-F242-47A4-A15E-39C9314D4140} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
+		{6A0CE712-62B1-4929-9D17-570298AAFC38} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
+		{1879B737-BDDD-4881-B32B-046DA41CACE0} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 		{52D22B52-26D3-463A-8EB5-7FDC849D3761} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{916AFD8C-30AF-49B6-A5C9-28CA1B5D9298} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{81673EFB-7134-4B4B-A32F-1EA05F0EF3CE} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
