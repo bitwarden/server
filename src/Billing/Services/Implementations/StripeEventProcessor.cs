@@ -16,6 +16,7 @@ public class StripeEventProcessor : IStripeEventProcessor
     private readonly IInvoiceCreatedHandler _invoiceCreatedHandler;
     private readonly IPaymentMethodAttachedHandler _paymentMethodAttachedHandler;
     private readonly ICustomerUpdatedHandler _customerUpdatedHandler;
+    private readonly IInvoiceFinalizedHandler _invoiceFinalizedHandler;
 
     public StripeEventProcessor(
         ILogger<StripeEventProcessor> logger,
@@ -28,7 +29,8 @@ public class StripeEventProcessor : IStripeEventProcessor
         IPaymentFailedHandler paymentFailedHandler,
         IInvoiceCreatedHandler invoiceCreatedHandler,
         IPaymentMethodAttachedHandler paymentMethodAttachedHandler,
-        ICustomerUpdatedHandler customerUpdatedHandler)
+        ICustomerUpdatedHandler customerUpdatedHandler,
+        IInvoiceFinalizedHandler invoiceFinalizedHandler)
     {
         _logger = logger;
         _subscriptionDeletedHandler = subscriptionDeletedHandler;
@@ -41,6 +43,7 @@ public class StripeEventProcessor : IStripeEventProcessor
         _invoiceCreatedHandler = invoiceCreatedHandler;
         _paymentMethodAttachedHandler = paymentMethodAttachedHandler;
         _customerUpdatedHandler = customerUpdatedHandler;
+        _invoiceFinalizedHandler = invoiceFinalizedHandler;
     }
 
     public async Task ProcessEventAsync(Event parsedEvent)
@@ -78,7 +81,7 @@ public class StripeEventProcessor : IStripeEventProcessor
                 await _customerUpdatedHandler.HandleAsync(parsedEvent);
                 break;
             case HandledStripeWebhook.InvoiceFinalized:
-                await _customerUpdatedHandler.HandleAsync(parsedEvent);
+                await _invoiceFinalizedHandler.HandleAsync(parsedEvent);
                 break;
             default:
                 _logger.LogWarning("Unsupported event received. {EventType}", parsedEvent.Type);
