@@ -66,10 +66,12 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task PutResetPasswordEnrollment_PasswordValidationFails_Throws(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
-        User user, SutProvider<OrganizationUsersController> sutProvider)
+        User user, SutProvider<OrganizationUsersController> sutProvider, OrganizationUser orgUser)
     {
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
         model.MasterPasswordHash = "NotThePassword";
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model));
     }
 
@@ -79,7 +81,7 @@ public class OrganizationUsersControllerTests
         User user, OrganizationUser orgUser, SutProvider<OrganizationUsersController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
-        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, model.Secret).Returns(true);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, model.MasterPasswordHash).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
         await sutProvider.GetDependency<IOrganizationService>().Received(1).UpdateUserResetPasswordEnrollmentAsync(
