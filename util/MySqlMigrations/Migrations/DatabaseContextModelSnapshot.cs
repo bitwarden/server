@@ -16,7 +16,7 @@ namespace Bit.MySqlMigrations.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.16")
+                .HasAnnotation("ProductVersion", "7.0.20")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
@@ -681,6 +681,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("ClientName")
                         .HasColumnType("longtext");
 
@@ -688,7 +691,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("InvoiceId")
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("longtext");
 
                     b.Property<string>("InvoiceNumber")
                         .HasColumnType("longtext");
@@ -708,9 +711,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProviderId");
-
-                    b.HasIndex("Id", "InvoiceId")
-                        .IsUnique();
 
                     b.ToTable("ProviderInvoiceItem", (string)null);
                 });

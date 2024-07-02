@@ -9,6 +9,7 @@ CREATE TABLE [dbo].[ProviderInvoiceItem] (
     [UsedSeats]      INT NOT NULL,
     [Total]          MONEY NOT NULL,
     [Created]        DATETIME2 (7) NOT NULL,
+    [ClientId]       UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_ProviderInvoiceItem] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_ProviderInvoiceItem_Provider] FOREIGN KEY ([ProviderId]) REFERENCES [dbo].[Provider] ([Id]) ON DELETE CASCADE
 );

@@ -7,6 +7,7 @@ namespace Bit.Commercial.Core.Billing.Models;
 public class ProviderClientInvoiceReportRow
 {
     public string Client { get; set; }
+    public string Id { get; set; }
     public int Assigned { get; set; }
     public int Used { get; set; }
     public int Remaining { get; set; }
@@ -18,6 +19,7 @@ public class ProviderClientInvoiceReportRow
         => new()
         {
             Client = providerInvoiceItem.ClientName,
+            Id = providerInvoiceItem.ClientId?.ToString(),
             Assigned = providerInvoiceItem.AssignedSeats,
             Used = providerInvoiceItem.UsedSeats,
             Remaining = providerInvoiceItem.AssignedSeats - providerInvoiceItem.UsedSeats,
