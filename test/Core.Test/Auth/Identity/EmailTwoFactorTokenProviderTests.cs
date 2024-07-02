@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Auth.Identity;
 
-public class EmailTokenProviderTests : BaseTokenProviderTests<EmailTokenProvider>
+public class EmailTwoFactorTokenProviderTests : BaseTokenProviderTests<EmailTwoFactorTokenProvider>
 {
     public override TwoFactorProviderType TwoFactorProviderType => TwoFactorProviderType.Email;
 
@@ -38,7 +38,7 @@ public class EmailTokenProviderTests : BaseTokenProviderTests<EmailTokenProvider
 
     [Theory, BitMemberAutoData(nameof(CanGenerateTwoFactorTokenAsyncData))]
     public override async Task RunCanGenerateTwoFactorTokenAsync(Dictionary<string, object> metaData, bool expectedResponse,
-        User user, SutProvider<EmailTokenProvider> sutProvider)
+        User user, SutProvider<EmailTwoFactorTokenProvider> sutProvider)
     {
         await base.RunCanGenerateTwoFactorTokenAsync(metaData, expectedResponse, user, sutProvider);
     }

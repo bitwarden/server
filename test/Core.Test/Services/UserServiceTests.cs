@@ -89,10 +89,10 @@ public class UserServiceTests
             .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
             .Returns(Task.FromResult(true));
         userTwoFactorTokenProvider
-            .GenerateAsync("2faEmail:" + email, Arg.Any<UserManager<User>>(), user)
+            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
             .Returns(Task.FromResult(token));
 
-        sutProvider.Sut.RegisterTokenProvider("Email", userTwoFactorTokenProvider);
+        sutProvider.Sut.RegisterTokenProvider("Custom_Email", userTwoFactorTokenProvider);
 
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
