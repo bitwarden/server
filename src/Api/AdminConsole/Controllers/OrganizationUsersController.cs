@@ -456,7 +456,10 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (!string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.Secret))
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
+        var isTdeEnrollment = orgUser.Status == OrganizationUserStatusType.Invited;
+
+        if (!isTdeEnrollment && !string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
         {
             throw new BadRequestException("Incorrect password");
         }
@@ -465,8 +468,7 @@ public class OrganizationUsersController : Controller
         await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
             orgId, userId, model.ResetPasswordKey, callingUserId);
 
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
-        if (orgUser.Status == OrganizationUserStatusType.Invited)
+        if (isTdeEnrollment)
         {
             await _acceptOrgUserCommand.AcceptOrgUserByOrgIdAsync(orgId, user, _userService);
         }
