@@ -1,4 +1,5 @@
-﻿CREATE VIEW [dbo].[ProviderOrganizationOrganizationDetailsView]
+-- Add column 'AssignedSeats'
+CREATE OR AlTER VIEW [dbo].[ProviderOrganizationOrganizationDetailsView]
 AS
 SELECT
     PO.[Id],
@@ -18,3 +19,4 @@ FROM
     [dbo].[ProviderOrganization] PO
 LEFT JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
+GO
