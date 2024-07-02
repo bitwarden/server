@@ -11,17 +11,16 @@ public class NotificationHubClientProxy : INotificationHubProxy
         _clients = clients;
     }
 
-    private async Task ApplyToAllClientsAsync(Func<INotificationHubClient, Task> action)
+    private async Task<(INotificationHubClient, T)[]> ApplyToAllClientsAsync<T>(Func<INotificationHubClient, Task<T>> action)
     {
-        var tasks = _clients.Select(async c => await action(c));
-        await Task.WhenAll(tasks);
+        var tasks = _clients.Select(async c => (c, await action(c)));
+        return await Task.WhenAll(tasks);
     }
 
-    // partial INotificationHubClient implementation
+    // partial proxy of INotificationHubClient implementation
     // Note: Any other methods that are needed can simply be delegated as done here.
-    public async Task DeleteInstallationAsync(string installationId) => await ApplyToAllClientsAsync((c) => c.DeleteInstallationAsync(installationId));
-    public async Task DeleteInstallationAsync(string installationId, CancellationToken cancellationToken) => await ApplyToAllClientsAsync(c => c.DeleteInstallationAsync(installationId, cancellationToken));
-    public async Task PatchInstallationAsync(string installationId, IList<PartialUpdateOperation> operations) => await ApplyToAllClientsAsync(c => c.PatchInstallationAsync(installationId, operations));
-    public async Task PatchInstallationAsync(string installationId, IList<PartialUpdateOperation> operations, CancellationToken cancellationToken) => await ApplyToAllClientsAsync(c => c.PatchInstallationAsync(installationId, operations, cancellationToken));
-
+    public async Task<(INotificationHubClient client, NotificationOutcome outcome)[]> SendTemplateNotificationAsync(IDictionary<string, string> properties, string tagExpression)
+    {
+        return await ApplyToAllClientsAsync(async c => await c.SendTemplateNotificationAsync(properties, tagExpression));
+    }
 }
