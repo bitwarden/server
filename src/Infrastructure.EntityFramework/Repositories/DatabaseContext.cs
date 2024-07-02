@@ -32,6 +32,7 @@ public class DatabaseContext : DbContext
     public DbSet<GroupSecretAccessPolicy> GroupSecretAccessPolicy { get; set; }
     public DbSet<ServiceAccountSecretAccessPolicy> ServiceAccountSecretAccessPolicy { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
+    public DbSet<Cache> Cache { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
