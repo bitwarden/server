@@ -411,7 +411,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var cipher = await _cipherRepository.GetByIdAsync(cipherId, emergencyAccess.GrantorId, UseFlexibleCollections);
+        var cipher = await _cipherRepository.GetByIdAsync(cipherId, emergencyAccess.GrantorId);
         return await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
     }
 
