@@ -28,6 +28,7 @@ public class RequestSMAccessCommand : IRequestSMAccessCommand
             throw new BadRequestException("The organization is in an invalid state. Please contact Customer Support.");
         }
 
-        await _mailService.SendRequestSMAccessToAdminEmailAsync(emailList, organization.Name, user.Name, emailContent);
+        var userRequestingAccess = user.Name ?? user.Email;
+        await _mailService.SendRequestSMAccessToAdminEmailAsync(emailList, organization.Name, userRequestingAccess, emailContent);
     }
 }
