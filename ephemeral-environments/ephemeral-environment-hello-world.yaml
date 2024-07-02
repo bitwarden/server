@@ -4,6 +4,7 @@ component:
   admin:
     image:
       name: bitwardenprod.azurecr.io/admin
+      tag:
   api:
     image:
       name: bitwardenprod.azurecr.io/api
