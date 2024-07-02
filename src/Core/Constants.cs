@@ -133,6 +133,7 @@ public static class FeatureFlagKeys
     public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
+    public const string GroupsComponentRefactor = "groups-component-refactor";
 
     public static List<string> GetAllKeys()
     {
