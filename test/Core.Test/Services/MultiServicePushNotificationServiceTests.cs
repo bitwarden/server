@@ -1,7 +1,6 @@
-﻿using Bit.Core.Repositories;
+﻿using AutoFixture;
 using Bit.Core.Services;
-using Bit.Core.Settings;
-using Microsoft.AspNetCore.Http;
+using Bit.Test.Common.AutoFixture;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -12,35 +11,21 @@ public class MultiServicePushNotificationServiceTests
 {
     private readonly MultiServicePushNotificationService _sut;
 
-    private readonly IHttpClientFactory _httpFactory;
-    private readonly IDeviceRepository _deviceRepository;
-    private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<MultiServicePushNotificationService> _logger;
     private readonly ILogger<RelayPushNotificationService> _relayLogger;
     private readonly ILogger<NotificationsApiPushNotificationService> _hubLogger;
+    private readonly IEnumerable<IPushNotificationService> _services;
 
     public MultiServicePushNotificationServiceTests()
     {
-        _httpFactory = Substitute.For<IHttpClientFactory>();
-        _deviceRepository = Substitute.For<IDeviceRepository>();
-        _installationDeviceRepository = Substitute.For<IInstallationDeviceRepository>();
-        _globalSettings = new GlobalSettings();
-        _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
         _logger = Substitute.For<ILogger<MultiServicePushNotificationService>>();
         _relayLogger = Substitute.For<ILogger<RelayPushNotificationService>>();
         _hubLogger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
+        _services = new Fixture().WithAutoNSubstitutions().CreateMany<IPushNotificationService>();
 
         _sut = new MultiServicePushNotificationService(
-            _httpFactory,
-            _deviceRepository,
-            _installationDeviceRepository,
-            _globalSettings,
-            _httpContextAccessor,
-            _logger,
-            _relayLogger,
-            _hubLogger
+            _services,
+            _logger
         );
     }
 

@@ -1,7 +1,6 @@
 ﻿using Bit.Core.NotificationHub;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -14,20 +13,20 @@ public class NotificationHubPushNotificationServiceTests
     private readonly NotificationHubPushNotificationService _sut;
 
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
+    private readonly INotificationHubPool _notificationHubPool;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<NotificationsApiPushNotificationService> _logger;
 
     public NotificationHubPushNotificationServiceTests()
     {
         _installationDeviceRepository = Substitute.For<IInstallationDeviceRepository>();
-        _globalSettings = new GlobalSettings();
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        _notificationHubPool = Substitute.For<INotificationHubPool>();
         _logger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
 
         _sut = new NotificationHubPushNotificationService(
             _installationDeviceRepository,
-            _globalSettings,
+            _notificationHubPool,
             _httpContextAccessor,
             _logger
         );

@@ -19,7 +19,7 @@ public class NotificationHubProxyTests
     [
         [
             (NotificationHubClientProxy c) => c.SendTemplateNotificationAsync(new Dictionary<string, string>() { { "key", "value" } }, "tag"),
-            (INotificationHubClient c) => c.SendTemplateNotificationAsync(new Dictionary<string, string>() { { "key", "value" } }, "tag"),
+            (INotificationHubClient c) => c.SendTemplateNotificationAsync(Arg.Is<Dictionary<string, string>>((a) => a.Keys.Count == 1 && a.ContainsKey("key") && a["key"] == "value"), "tag"),
         ],
     ];
 
