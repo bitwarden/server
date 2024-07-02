@@ -42,8 +42,8 @@ public class ProviderOrganizationResponseModel : ResponseModel
         RevisionDate = providerOrganization.RevisionDate;
         UserCount = providerOrganization.UserCount;
         Seats = providerOrganization.Seats;
-        AssignedSeats = providerOrganization.AssignedSeats;
-        RemainingSeats = providerOrganization.Seats - providerOrganization.AssignedSeats;
+        OccupiedSeats = providerOrganization.OccupiedSeats;
+        RemainingSeats = providerOrganization.Seats - providerOrganization.OccupiedSeats;
         Plan = providerOrganization.Plan;
     }
 
@@ -56,7 +56,7 @@ public class ProviderOrganizationResponseModel : ResponseModel
     public DateTime RevisionDate { get; set; }
     public int UserCount { get; set; }
     public int? Seats { get; set; }
-    public int? AssignedSeats { get; set; }
+    public int? OccupiedSeats { get; set; }
     public int? RemainingSeats { get; set; }
     public string Plan { get; set; }
 }
