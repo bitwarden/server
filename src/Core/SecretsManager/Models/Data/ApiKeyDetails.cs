@@ -1,4 +1,5 @@
-﻿using Bit.Core.SecretsManager.Entities;
+﻿using System.Diagnostics.CodeAnalysis;
+using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
@@ -28,6 +29,7 @@ public class ServiceAccountApiKeyDetails : ApiKeyDetails
 
     }
 
+    [SetsRequiredMembers]
     public ServiceAccountApiKeyDetails(ApiKey apiKey, Guid organizationId) : base(apiKey)
     {
         ServiceAccountOrganizationId = organizationId;
