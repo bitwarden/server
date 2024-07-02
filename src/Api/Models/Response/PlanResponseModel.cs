@@ -121,8 +121,10 @@ public class PlanResponseModel : ResponseModel
         {
             StripePlanId = plan.StripePlanId;
             StripeSeatPlanId = plan.StripeSeatPlanId;
+            StripeProviderPortalSeatPlanId = plan.StripeProviderPortalSeatPlanId;
             BasePrice = plan.BasePrice;
             SeatPrice = plan.SeatPrice;
+            ProviderPortalSeatPrice = plan.ProviderPortalSeatPrice;
             AllowSeatAutoscale = plan.AllowSeatAutoscale;
             HasAdditionalSeatsOption = plan.HasAdditionalSeatsOption;
             MaxAdditionalSeats = plan.MaxAdditionalSeats;
@@ -141,8 +143,10 @@ public class PlanResponseModel : ResponseModel
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
+        public string StripeProviderPortalSeatPlanId { get; init; }
         public decimal BasePrice { get; init; }
         public decimal SeatPrice { get; init; }
+        public decimal ProviderPortalSeatPrice { get; init; }
         public bool AllowSeatAutoscale { get; init; }
         public bool HasAdditionalSeatsOption { get; init; }
         public int? MaxAdditionalSeats { get; init; }

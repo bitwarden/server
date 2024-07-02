@@ -24,7 +24,9 @@ public class ProviderSubscriptionUpdate : SubscriptionUpdate
             throw ContactSupport($"Cannot create a {nameof(ProviderSubscriptionUpdate)} for {nameof(PlanType)} that doesn't support consolidated billing");
         }
 
-        _planId = GetPasswordManagerPlanId(Utilities.StaticStore.GetPlan(planType));
+        var plan = Utilities.StaticStore.GetPlan(planType);
+
+        _planId = plan.PasswordManager.StripeProviderPortalSeatPlanId;
         _previouslyPurchasedSeats = previouslyPurchasedSeats;
         _newlyPurchasedSeats = newlyPurchasedSeats;
     }
