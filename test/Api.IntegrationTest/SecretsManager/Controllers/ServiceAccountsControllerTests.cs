@@ -440,7 +440,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Name = _mockEncryptedString,
         });
 
-        await _apiKeyRepository.CreateAsync(new ApiKey { ServiceAccountId = serviceAccount.Id });
+        await _apiKeyRepository.CreateAsync(CreateTestApiKey(serviceAccount.Id));
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
@@ -507,12 +507,9 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Name = _mockEncryptedString,
         });
 
-        await _apiKeyRepository.CreateAsync(new ApiKey
-        {
-            ServiceAccountId = serviceAccount.Id,
-            Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30),
-        });
+        await _apiKeyRepository.CreateAsync(
+            CreateTestApiKey(serviceAccount.Id, _mockEncryptedString, DateTime.UtcNow.AddDays(30))
+        );
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-tokens");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -548,12 +545,9 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             });
         }
 
-        var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
-        {
-            ServiceAccountId = serviceAccount.Id,
-            Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30),
-        });
+        var accessToken = await _apiKeyRepository.CreateAsync(
+            CreateTestApiKey(serviceAccount.Id, _mockEncryptedString, DateTime.UtcNow.AddDays(30))
+        );
 
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-tokens");
@@ -746,12 +740,9 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             Name = _mockEncryptedString
         });
 
-        var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
-        {
-            ServiceAccountId = serviceAccount.Id,
-            Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30)
-        });
+        var accessToken = await _apiKeyRepository.CreateAsync(
+            CreateTestApiKey(serviceAccount.Id, _mockEncryptedString, DateTime.UtcNow.AddDays(30))
+        );
 
         var request = new RevokeAccessTokensRequest
         {
@@ -790,12 +781,9 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             });
         }
 
-        var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
-        {
-            ServiceAccountId = serviceAccount.Id,
-            Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30)
-        });
+        var accessToken = await _apiKeyRepository.CreateAsync(
+            CreateTestApiKey(serviceAccount.Id, _mockEncryptedString, DateTime.UtcNow.AddDays(30))
+        );
 
         var request = new RevokeAccessTokensRequest
         {
@@ -839,12 +827,9 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             });
         }
 
-        var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
-        {
-            ServiceAccountId = serviceAccount.Id,
-            Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30),
-        });
+        var accessToken = await _apiKeyRepository.CreateAsync(
+            CreateTestApiKey(serviceAccount.Id, _mockEncryptedString, DateTime.UtcNow.AddDays(30))
+        );
 
         var request = new RevokeAccessTokensRequest
         {
@@ -941,6 +926,19 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);
 
         return (org.Id, serviceAccountIds);
+    }
+
+    private static ApiKey CreateTestApiKey(Guid serviceAccountId, string name = "Test Name", DateTime? expiresAt = null)
+    {
+        return new ApiKey
+        {
+            ServiceAccountId = serviceAccountId,
+            Name = name,
+            ExpireAt = expiresAt ?? DateTime.MinValue,
+            Scope = "Test Scope",
+            EncryptedPayload = "Test Payload",
+            Key = "Test Key",
+        };
     }
 
     private async Task<Dictionary<Guid, int>> SetupServiceAccountSecretAccessAsync(List<Guid> serviceAccountIds,
