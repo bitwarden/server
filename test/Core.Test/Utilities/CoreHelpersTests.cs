@@ -71,6 +71,31 @@ public class CoreHelpersTests
         Assert.Equal(expectedComb, comb);
     }
 
+    [Theory]
+    [MemberData(nameof(GenerateCombCases))]
+    public void DateFromComb_WithComb_Success(Guid inputGuid, DateTime inputTime)
+    {
+        var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
+        var inverseComb = CoreHelpers.DateFromComb(comb);
+
+        Assert.Equal(inputTime, inverseComb, TimeSpan.FromMilliseconds(4));
+    }
+
+    [Theory]
+    [InlineData("00000000-0000-0000-0000-000000000000", 1, 0)]
+    [InlineData("00000000-0000-0000-0000-000000000001", 1, 0)]
+    [InlineData("00000000-0000-0000-0000-000000000000", 500, 430)]
+    [InlineData("00000000-0000-0000-0000-000000000001", 500, 430)]
+    [InlineData("10000000-0000-0000-0000-000000000001", 500, 454)]
+    [InlineData("00000000-0000-0100-0000-000000000001", 500, 19)]
+    public void BinForComb_Success(string guidString, int nbins, int expectedBin)
+    {
+        var guid = Guid.Parse(guidString);
+        var bin = CoreHelpers.BinForComb(guid, nbins);
+
+        Assert.Equal(expectedBin, bin);
+    }
+
     /*
     [Fact]
     public void ToGuidIdArrayTVP_Success()
