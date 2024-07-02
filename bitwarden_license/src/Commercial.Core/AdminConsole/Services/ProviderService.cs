@@ -436,11 +436,15 @@ public class ProviderService : IProviderService
             return;
         }
 
-        var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
-        var extractedPlanType = PlanTypeMappings(organization);
-        if (subscriptionItem != null)
+        if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId,
+                GetStripeSeatPlanId(organization.PlanType));
+            var extractedPlanType = PlanTypeMappings(organization);
+            if (subscriptionItem != null)
+            {
+                await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            }
         }
 
         await _organizationRepository.UpsertAsync(organization);
