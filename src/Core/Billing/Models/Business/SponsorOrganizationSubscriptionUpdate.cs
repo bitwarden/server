@@ -1,6 +1,7 @@
-﻿using Stripe;
+﻿using Bit.Core.Models.Business;
+using Stripe;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.Billing.Models.Business;
 
 public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
 {
@@ -9,10 +10,11 @@ public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
     private readonly bool _applySponsorship;
     protected override List<string> PlanIds => new() { _existingPlanStripeId, _sponsoredPlanStripeId };
 
-    public SponsorOrganizationSubscriptionUpdate(StaticStore.Plan existingPlan, StaticStore.SponsoredPlan sponsoredPlan, bool applySponsorship)
+    public SponsorOrganizationSubscriptionUpdate(Core.Models.StaticStore.Plan existingPlan, Core.Models.StaticStore.SponsoredPlan sponsoredPlan, bool applySponsorship)
     {
         _existingPlanStripeId = existingPlan.PasswordManager.StripePlanId;
-        _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId;
+        _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId
+                                 ?? Core.Utilities.StaticStore.SponsoredPlans.FirstOrDefault()?.StripePlanId;
         _applySponsorship = applySponsorship;
     }
 
