@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Collect
         id: collect
-        uses: launchdarkly/find-code-references-in-pull-request@2e9333c88539377cfbe818c265ba8b9ebced3c91 # v1.1.0
+        uses: launchdarkly/find-code-references-in-pull-request@1f65b77748f7debdccbf2b845dc480ec83dc8073 # v1.3.0
         with:
           project-key: default
           environment-key: dev
