@@ -290,22 +290,37 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         }
 
-        services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
-        if (globalSettings.SelfHosted &&
-            CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-            globalSettings.Installation?.Id != null &&
-            CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+        if (globalSettings.SelfHosted)
         {
-            services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
+                globalSettings.Installation?.Id != null &&
+                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("pushNotification");
+                services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            }
+            if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
+                CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("pushNotification");
+            }
         }
         else if (!globalSettings.SelfHosted)
         {
+            services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
+            services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("pushNotification");
+            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            {
+                services.AddSingleton<IPushNotificationService, AzureQueuePushNotificationService>();
+            }
         }
         else
         {
             services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         }
+        // Must be last registered IPushNotificationService
+        services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
         {

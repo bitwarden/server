@@ -1,12 +1,8 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
-using Bit.Core.NotificationHub;
-using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
@@ -17,44 +13,10 @@ public class MultiServicePushNotificationService : IPushNotificationService
     private readonly ILogger<MultiServicePushNotificationService> _logger;
 
     public MultiServicePushNotificationService(
-        IHttpClientFactory httpFactory,
-        IDeviceRepository deviceRepository,
-        IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
-        IHttpContextAccessor httpContextAccessor,
-        ILogger<MultiServicePushNotificationService> logger,
-        ILogger<RelayPushNotificationService> relayLogger,
-        ILogger<NotificationsApiPushNotificationService> hubLogger)
+        [FromKeyedServices("pushNotification")] IEnumerable<IPushNotificationService> services,
+        ILogger<MultiServicePushNotificationService> logger)
     {
-        if (globalSettings.SelfHosted)
-        {
-            if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-                globalSettings.Installation?.Id != null &&
-                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
-            {
-                _services.Add(new RelayPushNotificationService(httpFactory, deviceRepository, globalSettings,
-                    httpContextAccessor, relayLogger));
-            }
-            if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
-                CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
-            {
-                _services.Add(new NotificationsApiPushNotificationService(
-                    httpFactory, globalSettings, httpContextAccessor, hubLogger));
-            }
-        }
-        else
-        {
-            var generalHub = globalSettings.NotificationHubs?.FirstOrDefault(h => h.HubType == NotificationHubType.General);
-            if (CoreHelpers.SettingHasValue(generalHub?.ConnectionString))
-            {
-                _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
-                    globalSettings, httpContextAccessor, hubLogger));
-            }
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
-            {
-                _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
-            }
-        }
+        _services = services.ToList();
 
         _logger = logger;
     }
