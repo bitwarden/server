@@ -40,7 +40,7 @@ public class NotificationHubPool : INotificationHubPool
     /// </summary>
     /// <param name="comb"></param>
     /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="InvalidOperationException">Thrown when no notification hub is found for a given comb.</exception>
     public NotificationHubClient ClientFor(Guid comb)
     {
         var possibleConnections = _connections.Where(c => c.RegistrationEnabled(comb)).ToArray();
