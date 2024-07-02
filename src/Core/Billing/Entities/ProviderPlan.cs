@@ -2,6 +2,8 @@
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Billing.Entities;
 
 public class ProviderPlan : ITableObject<Guid>
