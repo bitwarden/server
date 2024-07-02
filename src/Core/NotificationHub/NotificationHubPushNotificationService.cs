@@ -7,11 +7,9 @@ using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
@@ -19,24 +17,20 @@ namespace Bit.Core.NotificationHub;
 public class NotificationHubPushNotificationService : IPushNotificationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly List<NotificationHubClient> _clients = [];
     private readonly bool _enableTracing = false;
     private readonly INotificationHubPool _notificationHubPool;
     private readonly ILogger _logger;
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
         INotificationHubPool notificationHubPool,
         IHttpContextAccessor httpContextAccessor,
         ILogger<NotificationsApiPushNotificationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
-        _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
-
+        _notificationHubPool = notificationHubPool;
         _logger = logger;
     }
 
