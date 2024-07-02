@@ -13,10 +13,10 @@ public class MultiServicePushNotificationService : IPushNotificationService
     private readonly ILogger<MultiServicePushNotificationService> _logger;
 
     public MultiServicePushNotificationService(
-        [FromKeyedServices("pushNotification")] IEnumerable<IPushNotificationService> services,
+        [FromKeyedServices("implementation")] IEnumerable<IPushNotificationService> services,
         ILogger<MultiServicePushNotificationService> logger)
     {
-        _services = services.ToList();
+        _services.AddRange(services);
 
         _logger = logger;
     }
