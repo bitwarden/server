@@ -151,7 +151,8 @@ public static class FeatureFlagKeys
         {
             { DuoRedirect, "true" },
             { UnassignedItemsBanner, "true"},
-            { FlexibleCollectionsV1, "true" }
+            { FlexibleCollectionsV1, "true" },
+            { BulkDeviceApproval, "true" }
         };
     }
 }

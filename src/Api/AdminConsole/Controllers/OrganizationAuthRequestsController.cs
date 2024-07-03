@@ -75,7 +75,6 @@ public class OrganizationAuthRequestsController : Controller
         }
     }
 
-    [RequireFeature(FeatureFlagKeys.BulkDeviceApproval)]
     [HttpPost("")]
     public async Task UpdateManyAuthRequests(Guid orgId, [FromBody] IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> model)
     {
