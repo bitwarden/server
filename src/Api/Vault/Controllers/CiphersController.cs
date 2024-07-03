@@ -1261,7 +1261,7 @@ public class CiphersController : Controller
 
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
     {
-        return await _cipherRepository.GetByIdAsync(cipherId, userId, UseFlexibleCollections);
+        return await _cipherRepository.GetByIdAsync(cipherId, userId);
     }
 
     private bool UseFlexibleCollectionsV1()
