@@ -336,12 +336,6 @@ public class CurrentContext : ICurrentContext
         return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
     }
 
-    public async Task<bool> DeleteAssignedCollections(Guid orgId)
-    {
-        return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.DeleteAssignedCollections ?? false)) ?? false);
-    }
-
     public async Task<bool> ViewAssignedCollections(Guid orgId)
     {
         /*
@@ -351,8 +345,7 @@ public class CurrentContext : ICurrentContext
          */
 
         var org = GetOrganization(orgId);
-        return await DeleteAssignedCollections(orgId)
-               || (org != null && org.Permissions.CreateNewCollections);
+        return org != null && org.Permissions.CreateNewCollections;
     }
 
     public async Task<bool> ManageGroups(Guid orgId)

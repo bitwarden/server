@@ -979,7 +979,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         currentContext.ManageSso(organization.Id).Returns(true);
         currentContext.AccessEventLogs(organization.Id).Returns(true);
         currentContext.AccessImportExport(organization.Id).Returns(true);
-        currentContext.DeleteAssignedCollections(organization.Id).Returns(true);
         currentContext.EditAnyCollection(organization.Id).Returns(true);
         currentContext.ManageResetPassword(organization.Id).Returns(true);
         currentContext.GetOrganization(organization.Id)
