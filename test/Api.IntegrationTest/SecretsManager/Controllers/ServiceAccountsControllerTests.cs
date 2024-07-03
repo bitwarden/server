@@ -929,7 +929,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         return (org.Id, serviceAccountIds);
     }
 
-    private static ApiKey CreateTestApiKey(Guid serviceAccountId, string name = "Test Name", DateTime? expiresAt = null)
+    private static ApiKey CreateTestApiKey(Guid serviceAccountId, string name = _mockEncryptedString, DateTime? expiresAt = null)
     {
         return new ApiKey
         {
@@ -940,8 +940,8 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
             {
                 "api.secrets",
             }.ToJsonString(),
-            EncryptedPayload = "Test Payload",
-            Key = "Test Key",
+            EncryptedPayload = _mockEncryptedString,
+            Key = _mockEncryptedString,
         };
     }
 
