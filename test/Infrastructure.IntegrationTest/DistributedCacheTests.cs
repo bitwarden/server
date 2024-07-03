@@ -10,6 +10,14 @@ public class DistributedCacheTests
     [DatabaseTheory, DatabaseData(UseFakeTimeProvider = true)]
     public async Task Simple_NotExpiredItem_StartsScan(IDistributedCache cache, TimeProvider timeProvider)
     {
+        if (cache is not EntityFrameworkCache efCache)
+        {
+            // We don't write the SqlServer cache implementation so we don't need to test it
+            // also it doesn't use TimeProvider under the hood so we'd have to delay the test
+            // for 30 minutes to get it to work. So just skip it.
+            return;
+        }
+
         var fakeTimeProvider = (FakeTimeProvider)timeProvider;
 
         cache.Set("test-key", "some-value"u8.ToArray(), new DistributedCacheEntryOptions
@@ -26,12 +34,9 @@ public class DistributedCacheTests
         var secondValue = cache.Get("test-key");
 
         // This should have forced the EF cache to start a scan task
-        if (cache is EntityFrameworkCache efCache)
-        {
-            Assert.NotNull(efCache.scanTask);
-            // We don't want the scan task to throw an exception, unwrap it.
-            await efCache.scanTask;
-        }
+        Assert.NotNull(efCache.scanTask);
+        // We don't want the scan task to throw an exception, unwrap it.
+        await efCache.scanTask;
 
         Assert.NotNull(firstValue);
         Assert.Null(secondValue);
