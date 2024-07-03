@@ -20,6 +20,7 @@ public class Transaction : ITableObject<Guid>
     [MaxLength(50)]
     public string GatewayId { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+    public Guid? ProviderId { get; set; }
 
     public void SetNewId()
     {

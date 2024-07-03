@@ -14,7 +14,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Auth.Repositories;
 public class EmergencyAccessRepositoryTests
 {
     [CiSkippedTheory, EfEmergencyAccessAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         EmergencyAccess emergencyAccess,
         List<User> users,
         EmergencyAccessCompare equalityComparer,

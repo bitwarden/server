@@ -19,7 +19,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NS = Newtonsoft.Json;
 using NSL = Newtonsoft.Json.Linq;
-using User = Bit.Core.Entities.User;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Repositories;
 
@@ -201,9 +200,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete, useFlexibleCollections);
+        await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete);
     }
 
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
@@ -304,12 +303,12 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var userCipherDetails = new UserCipherDetailsQuery(userId, useFlexibleCollections);
+            var userCipherDetails = new UserCipherDetailsQuery(userId, false);
             var data = await userCipherDetails.Run(dbContext).FirstOrDefaultAsync(c => c.Id == id);
             return data;
         }
@@ -408,13 +407,13 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, bool useFlexibleCollections)
+    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var cipherEntities = dbContext.Ciphers.Where(c => ids.Contains(c.Id));
-            var userCipherDetails = new UserCipherDetailsQuery(userId, useFlexibleCollections).Run(dbContext);
+            var userCipherDetails = new UserCipherDetailsQuery(userId, false).Run(dbContext);
             var idsToMove = from ucd in userCipherDetails
                             join c in cipherEntities
                                 on ucd.Id equals c.Id
@@ -645,9 +644,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        return await ToggleCipherStates(ids, userId, CipherStateAction.Restore, useFlexibleCollections);
+        return await ToggleCipherStates(ids, userId, CipherStateAction.Restore);
     }
 
     public async Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
@@ -675,12 +674,12 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        await ToggleCipherStates(ids, userId, CipherStateAction.SoftDelete, useFlexibleCollections);
+        await ToggleCipherStates(ids, userId, CipherStateAction.SoftDelete);
     }
 
-    private async Task<DateTime> ToggleCipherStates(IEnumerable<Guid> ids, Guid userId, CipherStateAction action, bool useFlexibleCollections)
+    private async Task<DateTime> ToggleCipherStates(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
     {
         static bool FilterDeletedDate(CipherStateAction action, CipherDetails ucd)
         {
@@ -695,7 +694,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var userCipherDetailsQuery = new UserCipherDetailsQuery(userId, useFlexibleCollections);
+            var userCipherDetailsQuery = new UserCipherDetailsQuery(userId, false);
             var cipherEntitiesToCheck = await (dbContext.Ciphers.Where(c => ids.Contains(c.Id))).ToListAsync();
             var query = from ucd in await (userCipherDetailsQuery.Run(dbContext)).ToListAsync()
                         join c in cipherEntitiesToCheck
@@ -863,23 +862,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
             await dbContext.SaveChangesAsync();
         };
-    }
-
-
-    public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders, IEnumerable<Core.Tools.Entities.Send> sends)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            await UserUpdateKeys(user);
-            var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-            var folderEntities = Mapper.Map<List<Folder>>(folders);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
-            var sendEntities = Mapper.Map<List<Send>>(sends);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, sendEntities);
-            await dbContext.SaveChangesAsync();
-        }
     }
 
     public async Task UpsertAsync(CipherDetails cipher)

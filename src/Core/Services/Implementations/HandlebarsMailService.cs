@@ -53,6 +53,23 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendRegistrationVerificationEmailAsync(string email, string token)
+    {
+        var message = CreateDefaultMessage("Verify Your Email", email);
+        var model = new RegisterVerifyEmail
+        {
+            Token = WebUtility.UrlEncode(token),
+            Email = WebUtility.UrlEncode(email),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "VerifyEmail";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+
     public async Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token)
     {
         var message = CreateDefaultMessage("Delete Your Account", email);
@@ -145,7 +162,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.Name} Seat Count Has Increased", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Count Has Increased", ownerEmails);
         var model = new OrganizationSeatsAutoscaledViewModel
         {
             OrganizationId = organization.Id,
@@ -160,7 +177,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.Name} Seat Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             OrganizationId = organization.Id,
@@ -173,13 +190,13 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
-        IEnumerable<string> adminEmails)
+        IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
     {
         var message = CreateDefaultMessage($"Action Required: {userIdentifier} Needs to Be Confirmed", adminEmails);
         var model = new OrganizationUserAcceptedViewModel
         {
             OrganizationId = organization.Id,
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false),
             UserIdentifier = userIdentifier,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
@@ -189,7 +206,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
+    public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
     {
         var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
         var model = new OrganizationUserConfirmedViewModel
@@ -198,7 +215,9 @@ public class HandlebarsMailService : IMailService
             TitleSecondBold = CoreHelpers.SanitizeForEmail(organizationName, false),
             TitleThird = "!",
             OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            WebVaultUrl = hasAccessSecretsManager
+                ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
+                : _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "OrganizationUserConfirmed", model);
@@ -216,6 +235,7 @@ public class HandlebarsMailService : IMailService
 
         var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
         {
+
             var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
                 orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings);
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
@@ -248,6 +268,41 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Welcome", model);
         message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendTrialInitiationEmailAsync(string userEmail)
+    {
+        var message = CreateDefaultMessage("Welcome to Bitwarden!", userEmail);
+        var model = new BaseMailModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "TrialInitiation", model);
+        message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token)
+    {
+        var message = CreateDefaultMessage("Request to Delete Your Provider", email);
+        var model = new ProviderInitiateDeleteModel
+        {
+            Token = WebUtility.UrlEncode(token),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            ProviderId = provider.Id,
+            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName(), false),
+            ProviderNameUrlEncoded = WebUtility.UrlEncode(provider.Name),
+            ProviderBillingEmail = provider.BillingEmail,
+            ProviderCreationDate = provider.CreationDate.ToLongDateString(),
+            ProviderCreationTime = provider.CreationDate.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+        };
+        await AddMessageContentAsync(message, "Provider.InitiateDeleteProvider", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "InitiateDeleteProvider";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -920,7 +975,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.Name} Secrets Manager Seat Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             OrganizationId = organization.Id,
@@ -935,7 +990,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.Name} Secrets Manager Service Accounts Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Machine Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
             OrganizationId = organization.Id,
@@ -961,6 +1016,30 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Auth.TrustedDeviceAdminApproval", model);
         message.Category = "TrustedDeviceAdminApproval";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
+    {
+        var message = CreateDefaultMessage("Request to Delete Your Organization", email);
+        var model = new OrganizationInitiateDeleteModel
+        {
+            Token = WebUtility.UrlEncode(token),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            OrganizationId = organization.Id,
+            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false),
+            OrganizationNameUrlEncoded = WebUtility.UrlEncode(organization.Name),
+            OrganizationBillingEmail = organization.BillingEmail,
+            OrganizationPlan = organization.Plan,
+            OrganizationSeats = organization.Seats.ToString(),
+            OrganizationCreationDate = organization.CreationDate.ToLongDateString(),
+            OrganizationCreationTime = organization.CreationDate.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+        };
+        await AddMessageContentAsync(message, "InitiateDeleteOrganzation", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "InitiateDeleteOrganzation";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Microsoft.Extensions.Logging;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Identity;
@@ -25,6 +26,7 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory;
+    private readonly ILogger<TemporaryDuoWebV4SDKService> _logger;
 
     /// <summary>
     /// Constructor for the DuoUniversalPromptService. Used to supplement v2 implementation of Duo with v4 SDK
@@ -34,11 +36,13 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     public TemporaryDuoWebV4SDKService(
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
+        ILogger<TemporaryDuoWebV4SDKService> logger)
     {
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _tokenDataFactory = tokenDataFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -51,7 +55,10 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     {
         if (!HasProperMetaData(provider))
         {
-            return null;
+            if (!HasProperMetaData_SDKV2(provider))
+            {
+                return null;
+            }
         }
 
 
@@ -78,7 +85,10 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     {
         if (!HasProperMetaData(provider))
         {
-            return false;
+            if (!HasProperMetaData_SDKV2(provider))
+            {
+                return false;
+            }
         }
 
         var duoClient = await BuildDuoClientAsync(provider);
@@ -106,8 +116,31 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
 
     private bool HasProperMetaData(TwoFactorProvider provider)
     {
-        return provider?.MetaData != null && provider.MetaData.ContainsKey("IKey") &&
-            provider.MetaData.ContainsKey("SKey") && provider.MetaData.ContainsKey("Host");
+        return provider?.MetaData != null && provider.MetaData.ContainsKey("ClientId") &&
+            provider.MetaData.ContainsKey("ClientSecret") && provider.MetaData.ContainsKey("Host");
+    }
+
+    /// <summary>
+    /// Checks if the metadata for SDK V2 is present.
+    /// Transitional method to support Duo during v4 database rename
+    /// </summary>
+    /// <param name="provider">The TwoFactorProvider object to check.</param>
+    /// <returns>True if the provider has the proper metadata; otherwise, false.</returns>
+    private bool HasProperMetaData_SDKV2(TwoFactorProvider provider)
+    {
+        if (provider?.MetaData != null &&
+            provider.MetaData.TryGetValue("IKey", out var iKey) &&
+            provider.MetaData.TryGetValue("SKey", out var sKey) &&
+            provider.MetaData.ContainsKey("Host"))
+        {
+            provider.MetaData.Add("ClientId", iKey);
+            provider.MetaData.Add("ClientSecret", sKey);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -118,19 +151,20 @@ public class TemporaryDuoWebV4SDKService : ITemporaryDuoWebV4SDKService
     private async Task<Duo.Client> BuildDuoClientAsync(TwoFactorProvider provider)
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
-        // to redirect back to the correct client
+        // to redirect back to the initiating client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
         var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
             _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
 
         var client = new Duo.ClientBuilder(
-            (string)provider.MetaData["IKey"],
-            (string)provider.MetaData["SKey"],
+            (string)provider.MetaData["ClientId"],
+            (string)provider.MetaData["ClientSecret"],
             (string)provider.MetaData["Host"],
             redirectUri).Build();
 
-        if (!await client.DoHealthCheck())
+        if (!await client.DoHealthCheck(true))
         {
+            _logger.LogError("Unable to connect to Duo. Health check failed.");
             return null;
         }
         return client;

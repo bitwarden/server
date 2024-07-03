@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -25,22 +27,24 @@ public interface IPaymentService
         bool subscribedToSecretsManager,
         int? newlyPurchasedSecretsManagerSeats,
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
-        int newlyPurchasedAdditionalStorage,
-        DateTime? prorationDate = null);
-    Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
-    Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
-    Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
+        int newlyPurchasedAdditionalStorage);
+    Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats);
+    Task<string> AdjustSeats(
+        Provider provider,
+        Plan plan,
+        int currentlySubscribedSeats,
+        int newlySubscribedSeats);
+    Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats);
+    Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
 
-    Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts,
-        DateTime? prorationDate = null);
+    Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts);
     Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
     Task ReinstateSubscriptionAsync(ISubscriber subscriber);
     Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
         string paymentToken, TaxInfo taxInfo = null);
     Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
     Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
-    Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber);
-    Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber);
+    Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber);
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
     Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber);
     Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo);
@@ -48,6 +52,8 @@ public interface IPaymentService
     Task UpdateTaxRateAsync(TaxRate taxRate);
     Task ArchiveTaxRateAsync(TaxRate taxRate);
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
-        int additionalServiceAccount, DateTime? prorationDate = null);
+        int additionalServiceAccount);
     Task<bool> RisksSubscriptionFailure(Organization organization);
+    Task<bool> HasSecretsManagerStandalone(Organization organization);
+    Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Stripe.Subscription subscription);
 }

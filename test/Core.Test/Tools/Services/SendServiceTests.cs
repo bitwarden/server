@@ -45,7 +45,7 @@ public class SendServiceTests
     [Theory]
     [BitAutoData(SendType.File)]
     [BitAutoData(SendType.Text)]
-    public async void SaveSendAsync_DisableSend_Applies_throws(SendType sendType,
+    public async Task SaveSendAsync_DisableSend_Applies_throws(SendType sendType,
         SutProvider<SendService> sutProvider, Send send)
     {
         SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: true, sutProvider, send);
@@ -56,7 +56,7 @@ public class SendServiceTests
     [Theory]
     [BitAutoData(SendType.File)]
     [BitAutoData(SendType.Text)]
-    public async void SaveSendAsync_DisableSend_DoesntApply_success(SendType sendType,
+    public async Task SaveSendAsync_DisableSend_DoesntApply_success(SendType sendType,
         SutProvider<SendService> sutProvider, Send send)
     {
         SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: false, sutProvider, send);
@@ -92,7 +92,7 @@ public class SendServiceTests
     [Theory]
     [BitAutoData(SendType.File)]
     [BitAutoData(SendType.Text)]
-    public async void SaveSendAsync_DisableHideEmail_Applies_throws(SendType sendType,
+    public async Task SaveSendAsync_DisableHideEmail_Applies_throws(SendType sendType,
         SutProvider<SendService> sutProvider, Send send, Policy policy)
     {
         SaveSendAsync_Setup(sendType, false, sutProvider, send);
@@ -104,7 +104,7 @@ public class SendServiceTests
     [Theory]
     [BitAutoData(SendType.File)]
     [BitAutoData(SendType.Text)]
-    public async void SaveSendAsync_DisableHideEmail_DoesntApply_success(SendType sendType,
+    public async Task SaveSendAsync_DisableHideEmail_DoesntApply_success(SendType sendType,
         SutProvider<SendService> sutProvider, Send send, Policy policy)
     {
         SaveSendAsync_Setup(sendType, false, sutProvider, send);
@@ -117,7 +117,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveSendAsync_ExistingSend_Updates(SutProvider<SendService> sutProvider,
+    public async Task SaveSendAsync_ExistingSend_Updates(SutProvider<SendService> sutProvider,
         Send send)
     {
         send.Id = Guid.NewGuid();
@@ -138,7 +138,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_TextType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_TextType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         send.Type = SendType.Text;
@@ -152,7 +152,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_EmptyFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_EmptyFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         send.Type = SendType.File;
@@ -166,7 +166,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_UserCannotAccessPremium_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_UserCannotAccessPremium_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -194,7 +194,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_UserHasUnconfirmedEmail_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_UserHasUnconfirmedEmail_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -223,7 +223,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_UserCanAccessPremium_HasNoStorage_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_UserCanAccessPremium_HasNoStorage_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -255,7 +255,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_UserCanAccessPremium_StorageFull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_UserCanAccessPremium_StorageFull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -287,7 +287,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsSelfHosted_GiantFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsSelfHosted_GiantFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -320,7 +320,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_TwoGigabyteFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_TwoGigabyteFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -353,7 +353,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var org = new Organization
@@ -379,7 +379,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var org = new Organization
@@ -405,7 +405,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsOneGB_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_ThroughOrg_MaxStorageIsOneGB_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var org = new Organization
@@ -431,7 +431,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_HasEnoughStorage_Success(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_HasEnoughStorage_Success(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -485,7 +485,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_HasEnoughStorage_SendFileThrows_CleansUp(SutProvider<SendService> sutProvider,
+    public async Task SaveFileSendAsync_HasEnoughStorage_SendFileThrows_CleansUp(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -543,7 +543,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateFileToExistingSendAsync_SendNull_ThrowsBadRequest(SutProvider<SendService> sutProvider)
+    public async Task UpdateFileToExistingSendAsync_SendNull_ThrowsBadRequest(SutProvider<SendService> sutProvider)
     {
 
         var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -555,7 +555,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateFileToExistingSendAsync_SendDataNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task UpdateFileToExistingSendAsync_SendDataNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         send.Data = null;
@@ -569,7 +569,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateFileToExistingSendAsync_NotFileType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+    public async Task UpdateFileToExistingSendAsync_NotFileType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
         var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -581,7 +581,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateFileToExistingSendAsync_Success(SutProvider<SendService> sutProvider,
+    public async Task UpdateFileToExistingSendAsync_Success(SutProvider<SendService> sutProvider,
         Send send)
     {
         var fileContents = "Test file content";
@@ -605,7 +605,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateFileToExistingSendAsync_InvalidSize(SutProvider<SendService> sutProvider,
+    public async Task UpdateFileToExistingSendAsync_InvalidSize(SutProvider<SendService> sutProvider,
         Send send)
     {
         var fileContents = "Test file content";

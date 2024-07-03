@@ -28,7 +28,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public async void GetLicenseAsync_Success(Organization organization,
+    public async Task GetLicenseAsync_Success(Organization organization,
         OrganizationConnection<BillingSyncConfig> billingSyncConnection, BillingSyncConfig config, OrganizationLicense license)
     {
         var sutProvider = GetSutProvider(config, JsonSerializer.Serialize(license));
@@ -41,7 +41,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async void GetLicenseAsync_WhenNotSelfHosted_Throws(Organization organization,
+    public async Task GetLicenseAsync_WhenNotSelfHosted_Throws(Organization organization,
         OrganizationConnection billingSyncConnection, BillingSyncConfig config)
     {
         var sutProvider = GetSutProvider(config);
@@ -54,7 +54,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async void GetLicenseAsync_WhenCloudCommunicationDisabled_Throws(Organization organization,
+    public async Task GetLicenseAsync_WhenCloudCommunicationDisabled_Throws(Organization organization,
         OrganizationConnection billingSyncConnection, BillingSyncConfig config)
     {
         var sutProvider = GetSutProvider(config);
@@ -67,7 +67,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async void GetLicenseAsync_WhenCantUseConnection_Throws(Organization organization,
+    public async Task GetLicenseAsync_WhenCantUseConnection_Throws(Organization organization,
         OrganizationConnection<BillingSyncConfig> billingSyncConnection, BillingSyncConfig config)
     {
         var sutProvider = GetSutProvider(config);
@@ -80,7 +80,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async void GetLicenseAsync_WhenNullResponse_Throws(Organization organization,
+    public async Task GetLicenseAsync_WhenNullResponse_Throws(Organization organization,
         OrganizationConnection<BillingSyncConfig> billingSyncConnection, BillingSyncConfig config)
     {
         var sutProvider = GetSutProvider(config);

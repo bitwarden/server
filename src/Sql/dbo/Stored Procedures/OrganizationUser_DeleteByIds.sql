@@ -58,11 +58,29 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION GoupUser_DeleteMany_GroupUsers
+        COMMIT TRANSACTION GroupUser_DeleteMany_GroupUsers
+    END
+
+    SET @BatchSize = 100;
+
+    -- Delete User Access Policies
+    WHILE @BatchSize > 0
+    BEGIN
+        BEGIN TRANSACTION AccessPolicy_DeleteMany_Users
+
+        DELETE TOP(@BatchSize) AP
+        FROM
+            [dbo].[AccessPolicy] AP
+        INNER JOIN
+            @Ids I ON I.Id = AP.OrganizationUserId
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION AccessPolicy_DeleteMany_Users
     END
 
     EXEC [dbo].[OrganizationSponsorship_OrganizationUsersDeleted] @Ids
-    
+
     SET @BatchSize = 100;
 
     -- Delete OrganizationUsers

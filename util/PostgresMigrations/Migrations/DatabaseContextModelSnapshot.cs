@@ -18,7 +18,7 @@ namespace Bit.PostgresMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
-                .HasAnnotation("ProductVersion", "7.0.15")
+                .HasAnnotation("ProductVersion", "8.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -281,6 +281,15 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
+
+                    b.Property<byte?>("Gateway")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("GatewayCustomerId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GatewaySubscriptionId")
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");
@@ -676,6 +685,106 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("WebAuthnCredential", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AssignedSeats")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ClientName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvoiceId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("PlanName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("UsedSeats")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.ToTable("ProviderInvoiceItem", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AllocatedSeats")
+                        .HasColumnType("integer");
+
+                    b.Property<byte>("PlanType")
+                        .HasColumnType("smallint");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("PurchasedSeats")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SeatMinimum")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.HasIndex("Id", "PlanType")
+                        .IsUnique();
+
+                    b.ToTable("ProviderPlan", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cache", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(449)
+                        .HasColumnType("character varying(449)");
+
+                    b.Property<DateTime?>("AbsoluteExpiration")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("SlidingExpirationInSeconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("Value")
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("ExpiresAtTime")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("Cache", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
@@ -1170,6 +1279,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("CipherId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -1283,6 +1395,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<byte?>("PaymentMethodType")
                         .HasColumnType("smallint");
 
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool?>("Refunded")
                         .HasColumnType("boolean");
 
@@ -1298,6 +1413,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProviderId");
 
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -1474,7 +1591,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("Discriminator")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(34)
+                        .HasColumnType("character varying(34)");
 
                     b.Property<bool>("Read")
                         .HasColumnType("boolean");
@@ -1746,6 +1864,27 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasDiscriminator().HasValue("group_project");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupSecretAccessPolicy", b =>
+                {
+                    b.HasBaseType("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy");
+
+                    b.Property<Guid?>("GrantedSecretId")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("uuid")
+                        .HasColumnName("GrantedSecretId");
+
+                    b.Property<Guid?>("GroupId")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("uuid")
+                        .HasColumnName("GroupId");
+
+                    b.HasIndex("GrantedSecretId");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasDiscriminator().HasValue("group_secret");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupServiceAccountAccessPolicy", b =>
                 {
                     b.HasBaseType("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy");
@@ -1777,6 +1916,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnName("GrantedProjectId");
 
                     b.Property<Guid?>("ServiceAccountId")
+                        .ValueGeneratedOnUpdateSometimes()
                         .HasColumnType("uuid")
                         .HasColumnName("ServiceAccountId");
 
@@ -1785,6 +1925,27 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("ServiceAccountId");
 
                     b.HasDiscriminator().HasValue("service_account_project");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccountSecretAccessPolicy", b =>
+                {
+                    b.HasBaseType("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy");
+
+                    b.Property<Guid?>("GrantedSecretId")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("uuid")
+                        .HasColumnName("GrantedSecretId");
+
+                    b.Property<Guid?>("ServiceAccountId")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("uuid")
+                        .HasColumnName("ServiceAccountId");
+
+                    b.HasIndex("GrantedSecretId");
+
+                    b.HasIndex("ServiceAccountId");
+
+                    b.HasDiscriminator().HasValue("service_account_secret");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.UserProjectAccessPolicy", b =>
@@ -1806,6 +1967,27 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("OrganizationUserId");
 
                     b.HasDiscriminator().HasValue("user_project");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.UserSecretAccessPolicy", b =>
+                {
+                    b.HasBaseType("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy");
+
+                    b.Property<Guid?>("GrantedSecretId")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("uuid")
+                        .HasColumnName("GrantedSecretId");
+
+                    b.Property<Guid?>("OrganizationUserId")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("uuid")
+                        .HasColumnName("OrganizationUserId");
+
+                    b.HasIndex("GrantedSecretId");
+
+                    b.HasIndex("OrganizationUserId");
+
+                    b.HasDiscriminator().HasValue("user_secret");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.UserServiceAccountAccessPolicy", b =>
@@ -1953,6 +2135,28 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
@@ -2150,11 +2354,17 @@ namespace Bit.PostgresMigrations.Migrations
                         .WithMany("Transactions")
                         .HasForeignKey("OrganizationId");
 
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("Transactions")
                         .HasForeignKey("UserId");
 
                     b.Navigation("Organization");
+
+                    b.Navigation("Provider");
 
                     b.Navigation("User");
                 });
@@ -2259,6 +2469,23 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Group");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupSecretAccessPolicy", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "GrantedSecret")
+                        .WithMany("GroupAccessPolicies")
+                        .HasForeignKey("GrantedSecretId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("GrantedSecret");
+
+                    b.Navigation("Group");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupServiceAccountAccessPolicy", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "GrantedServiceAccount")
@@ -2291,6 +2518,22 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("ServiceAccount");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccountSecretAccessPolicy", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "GrantedSecret")
+                        .WithMany("ServiceAccountAccessPolicies")
+                        .HasForeignKey("GrantedSecretId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "ServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("ServiceAccountId");
+
+                    b.Navigation("GrantedSecret");
+
+                    b.Navigation("ServiceAccount");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.UserProjectAccessPolicy", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", "GrantedProject")
@@ -2303,6 +2546,22 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasForeignKey("OrganizationUserId");
 
                     b.Navigation("GrantedProject");
+
+                    b.Navigation("OrganizationUser");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.UserSecretAccessPolicy", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", "GrantedSecret")
+                        .WithMany("UserAccessPolicies")
+                        .HasForeignKey("GrantedSecretId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
+                        .WithMany()
+                        .HasForeignKey("OrganizationUserId");
+
+                    b.Navigation("GrantedSecret");
 
                     b.Navigation("OrganizationUser");
                 });
@@ -2382,6 +2641,15 @@ namespace Bit.PostgresMigrations.Migrations
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", b =>
+                {
+                    b.Navigation("GroupAccessPolicies");
+
+                    b.Navigation("ServiceAccountAccessPolicies");
+
+                    b.Navigation("UserAccessPolicies");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Navigation("GroupAccessPolicies");
 

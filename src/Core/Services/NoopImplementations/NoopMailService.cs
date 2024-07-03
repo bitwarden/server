@@ -18,6 +18,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendRegistrationVerificationEmailAsync(string email, string hint)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendChangeEmailEmailAsync(string newEmailAddress, string token)
     {
         return Task.FromResult(0);
@@ -43,12 +48,13 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails)
+    public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
+        IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
+    public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
     {
         return Task.FromResult(0);
     }
@@ -259,6 +265,18 @@ public class NoopMailService : IMailService
     }
 
     public Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendTrialInitiationEmailAsync(string email)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token) => throw new NotImplementedException();
+
+    public Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
     {
         return Task.FromResult(0);
     }

@@ -1,6 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response.Providers;
 
@@ -40,6 +42,8 @@ public class ProviderOrganizationResponseModel : ResponseModel
         RevisionDate = providerOrganization.RevisionDate;
         UserCount = providerOrganization.UserCount;
         Seats = providerOrganization.Seats;
+        OccupiedSeats = providerOrganization.OccupiedSeats;
+        RemainingSeats = providerOrganization.Seats - providerOrganization.OccupiedSeats;
         Plan = providerOrganization.Plan;
     }
 
@@ -52,6 +56,8 @@ public class ProviderOrganizationResponseModel : ResponseModel
     public DateTime RevisionDate { get; set; }
     public int UserCount { get; set; }
     public int? Seats { get; set; }
+    public int? OccupiedSeats { get; set; }
+    public int? RemainingSeats { get; set; }
     public string Plan { get; set; }
 }
 
@@ -68,5 +74,6 @@ public class ProviderOrganizationOrganizationDetailsResponseModel : ProviderOrga
         OrganizationName = providerOrganization.OrganizationName;
     }
 
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string OrganizationName { get; set; }
 }

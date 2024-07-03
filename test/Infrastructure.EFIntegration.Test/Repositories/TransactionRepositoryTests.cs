@@ -13,7 +13,7 @@ public class TransactionRepositoryTests
 {
 
     [CiSkippedTheory, EfUserTransactionAutoData, EfOrganizationTransactionAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         Transaction transaction,
         User user,
         Organization org,

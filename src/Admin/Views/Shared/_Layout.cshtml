@@ -125,7 +125,8 @@
                     @if (GlobalSettings.SelfHosted)
                     {
                         <li class="nav-item">
-                            <a class="nav-link" href="https://help.bitwarden.com/hosting/" target="_blank">Docs</a>
+                            <a class="nav-link" href="https://help.bitwarden.com/hosting/" target="_blank"
+                                rel="noreferrer">Docs</a>
                         </li>
                     }
                 </ul>
@@ -170,6 +171,14 @@
         <script>
             $(document).ready(function () {
                 toastr.error("@TempData["Error"]")
+            });
+        </script>
+    }
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(document).ready(function () {
+                toastr.success("@TempData["Success"]")
             });
         </script>
     }

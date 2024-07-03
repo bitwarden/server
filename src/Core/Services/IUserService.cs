@@ -4,8 +4,6 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Vault.Entities;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
@@ -19,8 +17,8 @@ public interface IUserService
     Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal);
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
-    Task<IdentityResult> RegisterUserAsync(User user, string masterPassword, string token, Guid? orgUserId);
-    Task<IdentityResult> RegisterUserAsync(User user);
+    Task<IdentityResult> CreateUserAsync(User user);
+    Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
     Task SendTwoFactorEmailAsync(User user);
     Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
@@ -39,8 +37,6 @@ public interface IUserService
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
         KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
-    Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-        IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
@@ -80,4 +76,13 @@ public interface IUserService
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret);
+
+
+    void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
+
+    /// <summary>
+    /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
+    /// We force these users to the web to migrate their encryption scheme.
+    /// </summary>
+    Task<bool> IsLegacyUser(string userId);
 }

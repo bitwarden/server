@@ -116,7 +116,7 @@ public class SyncControllerTests
 
         // Returns for methods only called if we have enabled orgs
         collectionRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
@@ -280,7 +280,7 @@ public class SyncControllerTests
 
         // Returns for methods only called if we have enabled orgs
         collectionRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
@@ -306,14 +306,14 @@ public class SyncControllerTests
 
             if (matchedProviderUserOrgDetails != null)
             {
-                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).Product;
-                Assert.Equal(providerOrgProductType, profProviderOrg.PlanProductType);
+                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).ProductTier;
+                Assert.Equal(providerOrgProductType, profProviderOrg.ProductTierType);
             }
         }
     }
 
 
-    private async void AssertMethodsCalledAsync(IUserService userService,
+    private async Task AssertMethodsCalledAsync(IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository, IFolderRepository folderRepository,
         ICipherRepository cipherRepository, ISendRepository sendRepository,
@@ -344,7 +344,7 @@ public class SyncControllerTests
             await collectionRepository.ReceivedWithAnyArgs(1)
                 .GetManyByUserIdAsync(default, default);
             await collectionCipherRepository.ReceivedWithAnyArgs(1)
-                .GetManyByUserIdAsync(default, default);
+                .GetManyByUserIdAsync(default);
         }
         else
         {
@@ -352,7 +352,7 @@ public class SyncControllerTests
             await collectionRepository.ReceivedWithAnyArgs(0)
                 .GetManyByUserIdAsync(default, default);
             await collectionCipherRepository.ReceivedWithAnyArgs(0)
-                .GetManyByUserIdAsync(default, default);
+                .GetManyByUserIdAsync(default);
         }
 
         await userService.ReceivedWithAnyArgs(1)
