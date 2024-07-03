@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Auth.Settings;
-using Bit.Core.Enums;
 using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
@@ -442,7 +441,6 @@ public class GlobalSettings : IGlobalSettings
         /// If null, hub registration has no yet known expiry.
         /// </summary>
         public DateTime? RegistrationEndDate { get; set; }
-        public NotificationHubType HubType { get; set; }
     }
 
     public class NotificationHubPoolSettings
