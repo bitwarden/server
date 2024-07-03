@@ -267,7 +267,7 @@ public class EntityFrameworkCache : IDistributedCache
             {
                 _lastExpirationScan = utcNow;
 #if DEBUG
-                scanTask = 
+                scanTask =
 #endif
                 Task.Run(_deleteExpiredCachedItemsDelegate);
             }
