@@ -2188,11 +2188,6 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
-        {
-            return false;
-        }
-
         if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
         {
             return false;
