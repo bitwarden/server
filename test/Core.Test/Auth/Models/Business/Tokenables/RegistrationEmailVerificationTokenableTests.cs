@@ -96,31 +96,6 @@ public class RegistrationEmailVerificationTokenableTests
     }
 
     /// <summary>
-    /// Tests the token validity when the name is null
-    /// </summary>
-    [Theory, AutoData]
-    public void TokenIsValid_NullName_ReturnsTrue(string email)
-    {
-        var token = new RegistrationEmailVerificationTokenable(email, null);
-
-        Assert.True(token.TokenIsValid(email, null));
-    }
-
-    /// <summary>
-    /// Tests the token validity when the receiveMarketingEmails input is not provided
-    /// </summary>
-    [Theory, AutoData]
-    public void TokenIsValid_ReceiveMarketingEmailsNotProvided_ReturnsTrue(string email, string name)
-    {
-        var token = new RegistrationEmailVerificationTokenable(email, name);
-
-        Assert.True(token.TokenIsValid(email, name));
-    }
-
-
-    // TokenIsValid_IncorrectEmail_ReturnsFalse
-
-    /// <summary>
     /// Tests the token validity when an incorrect email is provided
     /// </summary>
     [Theory, AutoData]
@@ -128,41 +103,9 @@ public class RegistrationEmailVerificationTokenableTests
     {
         var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
-        Assert.False(token.TokenIsValid("wrong@email.com", name, receiveMarketingEmails));
+        Assert.False(token.TokenIsValid("wrong@email.com"));
     }
 
-    /// <summary>
-    /// Tests the token validity when an incorrect name is provided
-    /// </summary>
-    [Theory, AutoData]
-    public void TokenIsValid_IncorrectName_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
-    {
-        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
-
-        Assert.False(token.TokenIsValid(email, "wrongName", receiveMarketingEmails));
-    }
-
-    /// <summary>
-    /// Tests the token validity when an incorrect receiveMarketingEmails is provided
-    /// </summary>
-    [Theory, AutoData]
-    public void TokenIsValid_IncorrectReceiveMarketingEmails_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
-    {
-        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
-
-        Assert.False(token.TokenIsValid(email, name, !receiveMarketingEmails));
-    }
-
-    /// <summary>
-    /// Tests the token validity when valid inputs are provided
-    /// </summary>
-    [Theory, AutoData]
-    public void TokenIsValid_ValidInputs_ReturnsTrue(string email, string name, bool receiveMarketingEmails)
-    {
-        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
-
-        Assert.True(token.TokenIsValid(email, name, receiveMarketingEmails));
-    }
 
     /// <summary>
     /// Tests the deserialization of a token to ensure that the expiration date is preserved.
