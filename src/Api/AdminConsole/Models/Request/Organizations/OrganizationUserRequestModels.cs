@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -99,9 +98,10 @@ public class OrganizationUserUpdateRequestModel
     }
 }
 
-public class OrganizationUserResetPasswordEnrollmentRequestModel : SecretVerificationRequestModel
+public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
     public string ResetPasswordKey { get; set; }
+    public string MasterPasswordHash { get; set; }
 }
 
 public class OrganizationUserBulkRequestModel

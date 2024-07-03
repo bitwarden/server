@@ -820,6 +820,47 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.All(result.Data, data => Assert.Equal(org.Id, data.OrganizationId));
     }
 
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task GetSecretsByIds_DuplicateIds_BadRequest(PermissionType permissionType)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        var (project, secretIds) = await CreateSecretsAsync(org.Id);
+
+        secretIds.Add(secretIds[0]);
+
+        if (permissionType == PermissionType.RunAsUserWithPermission)
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await _loginHelper.LoginAsync(email);
+
+            var accessPolicies = new List<BaseAccessPolicy>
+            {
+                new UserProjectAccessPolicy
+                {
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                },
+            };
+            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+        }
+        else
+        {
+            var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.Admin, true);
+            await _loginHelper.LoginAsync(email);
+        }
+
+        var request = new GetSecretsRequestModel { Ids = secretIds };
+        var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.True(response.StatusCode == HttpStatusCode.BadRequest);
+        Assert.Contains("The following GUIDs were duplicated", content);
+    }
+
     [Theory]
     [InlineData(false, false, false)]
     [InlineData(false, false, true)]
