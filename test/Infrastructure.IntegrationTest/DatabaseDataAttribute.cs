@@ -55,7 +55,7 @@ public class DatabaseDataAttribute : DataAttribute
             if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
             {
                 var dapperSqlServerCollection = new ServiceCollection();
-                AddCommonServices(dapperSqlServerCollection);
+                AddCommonServices(dapperSqlServerCollection, configureLogging);
                 dapperSqlServerCollection.AddLogging(configureLogging);
                 dapperSqlServerCollection.AddDapperRepositories(SelfHosted);
                 var globalSettings = new GlobalSettings
@@ -80,7 +80,7 @@ public class DatabaseDataAttribute : DataAttribute
             else
             {
                 var efCollection = new ServiceCollection();
-                AddCommonServices(efCollection);
+                AddCommonServices(efCollection, configureLogging);
                 efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
                 efCollection.AddPasswordManagerEFRepositories(SelfHosted);
                 efCollection.AddSingleton(database);
@@ -90,8 +90,9 @@ public class DatabaseDataAttribute : DataAttribute
         }
     }
 
-    private void AddCommonServices(IServiceCollection services)
+    private void AddCommonServices(IServiceCollection services, Action<ILoggingBuilder> configureLogging)
     {
+        services.AddLogging(configureLogging);
         services.AddDataProtection();
 
         if (UseFakeTimeProvider)
