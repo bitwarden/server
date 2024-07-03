@@ -336,18 +336,6 @@ public class CurrentContext : ICurrentContext
         return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
     }
 
-    public async Task<bool> ViewAssignedCollections(Guid orgId)
-    {
-        /*
-         * Required to display the existing collections under which the new collection can be nested.
-         * Owner, Admin, Manager, and Provider checks are handled via the EditAssigned/DeleteAssigned context calls.
-         * This entire method will be moved to the CollectionAuthorizationHandler in the future
-         */
-
-        var org = GetOrganization(orgId);
-        return org != null && org.Permissions.CreateNewCollections;
-    }
-
     public async Task<bool> ManageGroups(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
