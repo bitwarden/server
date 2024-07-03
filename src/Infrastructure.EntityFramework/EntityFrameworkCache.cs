@@ -8,9 +8,13 @@ namespace Bit.Infrastructure.EntityFramework;
 
 public class EntityFrameworkCache : IDistributedCache
 {
+#if DEBUG
+    // Used for debugging in tests
+    public Task scanTask;
+#endif
     private static readonly TimeSpan _defaultSlidingExpiration = TimeSpan.FromMinutes(20);
     private static readonly TimeSpan _expiredItemsDeletionInterval = TimeSpan.FromMinutes(30);
-    private static DateTimeOffset _lastExpirationScan;
+    private DateTimeOffset _lastExpirationScan;
     private readonly Action _deleteExpiredCachedItemsDelegate;
     private readonly object _mutex = new();
     private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -262,6 +266,9 @@ public class EntityFrameworkCache : IDistributedCache
             if ((utcNow - _lastExpirationScan) > _expiredItemsDeletionInterval)
             {
                 _lastExpirationScan = utcNow;
+#if DEBUG
+                scanTask = 
+#endif
                 Task.Run(_deleteExpiredCachedItemsDelegate);
             }
         }

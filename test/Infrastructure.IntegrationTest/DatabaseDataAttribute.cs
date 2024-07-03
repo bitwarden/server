@@ -3,9 +3,11 @@ using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Xunit.Sdk;
 
 namespace Bit.Infrastructure.IntegrationTest;
@@ -13,6 +15,7 @@ namespace Bit.Infrastructure.IntegrationTest;
 public class DatabaseDataAttribute : DataAttribute
 {
     public bool SelfHosted { get; set; }
+    public bool UseFakeTimeProvider { get; set; }
 
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
@@ -52,6 +55,7 @@ public class DatabaseDataAttribute : DataAttribute
             if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
             {
                 var dapperSqlServerCollection = new ServiceCollection();
+                AddCommonServices(dapperSqlServerCollection);
                 dapperSqlServerCollection.AddLogging(configureLogging);
                 dapperSqlServerCollection.AddDapperRepositories(SelfHosted);
                 var globalSettings = new GlobalSettings
@@ -65,19 +69,34 @@ public class DatabaseDataAttribute : DataAttribute
                 dapperSqlServerCollection.AddSingleton(globalSettings);
                 dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
                 dapperSqlServerCollection.AddSingleton(database);
-                dapperSqlServerCollection.AddDataProtection();
+                dapperSqlServerCollection.AddDistributedSqlServerCache((o) =>
+                {
+                    o.ConnectionString = database.ConnectionString;
+                    o.SchemaName = "dbo";
+                    o.TableName = "Cache";
+                });
                 yield return dapperSqlServerCollection.BuildServiceProvider();
             }
             else
             {
                 var efCollection = new ServiceCollection();
-                efCollection.AddLogging(configureLogging);
+                AddCommonServices(efCollection);
                 efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
                 efCollection.AddPasswordManagerEFRepositories(SelfHosted);
                 efCollection.AddSingleton(database);
-                efCollection.AddDataProtection();
+                efCollection.AddSingleton<IDistributedCache, EntityFrameworkCache>();
                 yield return efCollection.BuildServiceProvider();
             }
+        }
+    }
+
+    private void AddCommonServices(IServiceCollection services)
+    {
+        services.AddDataProtection();
+
+        if (UseFakeTimeProvider)
+        {
+            services.AddSingleton<TimeProvider, FakeTimeProvider>();
         }
     }
 }
