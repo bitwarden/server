@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
-
-#nullable enable
 
 namespace Bit.Core.SecretsManager.Entities;
 
