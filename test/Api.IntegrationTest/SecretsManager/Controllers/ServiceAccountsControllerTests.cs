@@ -935,7 +935,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         {
             ServiceAccountId = serviceAccountId,
             Name = name,
-            ExpireAt = expiresAt ?? DateTime.MinValue,
+            ExpireAt = expiresAt,
             Scope = new JsonArray
             {
                 "api.secrets",
