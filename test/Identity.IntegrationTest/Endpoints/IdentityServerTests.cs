@@ -608,7 +608,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var policyRepository = _factory.Services.GetService<IPolicyRepository>();
 
         var organization = new Organization
-        { 
+        {
             Id = organizationId,
             Name = $"Org Name | {organizationId}",
             Enabled = true,
