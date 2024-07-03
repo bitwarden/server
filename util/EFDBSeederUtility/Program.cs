@@ -10,30 +10,20 @@ internal class Program
 
     [DefaultCommand]
     public void Execute(
-        
-        
-        
-     
-        
-        
-        [Operand(Description = "Database provider (mssql, mysql, postgres, sqlite).")] string databaseProvider,
-        [Operand(Description = "Database connection string.")] string ConnectionString
-       
-        
-        
-        
-        
-        ) => SeedDatabase(ConnectionString, databaseProvider);
+
+      [Operand(Description = "Database provider (mssql, mysql, postgres, sqlite).")] string databaseProvider,
+      [Operand(Description = "Database connection string.")] string ConnectionString
+
+    ) => SeedDatabase(ConnectionString, databaseProvider);
 
     private static bool SeedDatabase(string databaseConnectionString,
-   string databaseProvider)
-{
-    var seeder = new EFDBSeeder(databaseConnectionString, databaseProvider);
-    bool success;
- 
-    success = seeder.SeedDatabase(); // Change this line
-    
+      string databaseProvider)
+    {
+        var seeder = new EFDBSeeder(databaseConnectionString, databaseProvider);
+        bool success;
 
-    return success;
-}
+        success = seeder.SeedDatabase(); // Change this line
+
+        return success;
+    }
 }
