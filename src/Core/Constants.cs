@@ -121,7 +121,6 @@ public static class FeatureFlagKeys
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EnableConsolidatedBilling = "enable-consolidated-billing";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
-    public const string UnassignedItemsBanner = "unassigned-items-banner";
     public const string EnableDeleteProvider = "AC-1218-delete-provider";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
@@ -150,7 +149,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"},
             { FlexibleCollectionsV1, "true" }
         };
     }
