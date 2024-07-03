@@ -13,11 +13,11 @@ public class NotificationHubPool : INotificationHubPool
     public NotificationHubPool(ILogger<NotificationHubPool> logger, GlobalSettings globalSettings)
     {
         _logger = logger;
-        _connections = filterInvalidHubs(globalSettings.NotificationHubPool.NotificationHubSettings);
+        _connections = FilterInvalidHubs(globalSettings.NotificationHubPool.NotificationHubSettings);
         _clients = _connections.Select(c => c.HubClient);
     }
 
-    private List<NotificationHubConnection> filterInvalidHubs(IEnumerable<GlobalSettings.NotificationHubSettings> hubs)
+    private List<NotificationHubConnection> FilterInvalidHubs(IEnumerable<GlobalSettings.NotificationHubSettings> hubs)
     {
         List<NotificationHubConnection> result = new();
         foreach (var hub in hubs)
