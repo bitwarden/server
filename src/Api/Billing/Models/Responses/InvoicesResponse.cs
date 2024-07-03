@@ -19,8 +19,7 @@ public record InvoiceDTO(
     decimal Total,
     string Status,
     DateTime? DueDate,
-    string Url,
-    string PdfUrl)
+    string Url)
 {
     public static InvoiceDTO From(Invoice invoice) => new(
         invoice.Id,
@@ -29,6 +28,5 @@ public record InvoiceDTO(
         invoice.Total / 100M,
         invoice.Status,
         invoice.DueDate,
-        invoice.HostedInvoiceUrl,
-        invoice.InvoicePdf);
+        invoice.HostedInvoiceUrl);
 }

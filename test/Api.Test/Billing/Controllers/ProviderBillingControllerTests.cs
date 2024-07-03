@@ -92,7 +92,6 @@ public class ProviderBillingControllerTests
         Assert.Equal(1000, openInvoice.Total);
         Assert.Equal(new DateTime(2024, 7, 1), openInvoice.DueDate);
         Assert.Equal("https://example.com/invoice/2", openInvoice.Url);
-        Assert.Equal("https://example.com/invoice/2/pdf", openInvoice.PdfUrl);
 
         var paidInvoice = response.Invoices.FirstOrDefault(i => i.Status == "paid");
 
@@ -103,7 +102,6 @@ public class ProviderBillingControllerTests
         Assert.Equal(1000, paidInvoice.Total);
         Assert.Equal(new DateTime(2024, 6, 1), paidInvoice.DueDate);
         Assert.Equal("https://example.com/invoice/1", paidInvoice.Url);
-        Assert.Equal("https://example.com/invoice/1/pdf", paidInvoice.PdfUrl);
     }
 
     #endregion
@@ -385,19 +383,34 @@ public class ProviderBillingControllerTests
 
         var subscription = new Subscription
         {
-            Status = "active",
-            CurrentPeriodEnd = new DateTime(2025, 1, 1),
-            Customer = new Customer { Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } } }
+            Status = "unpaid",
+            CurrentPeriodEnd = new DateTime(2024, 6, 30),
+            Customer = new Customer
+            {
+                Balance = 100000,
+                Discount = new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        PercentOff = 10
+                    }
+                }
+            }
         };
 
-        DateTime? SuspensionDate = new DateTime();
-        DateTime? UnpaidPeriodEndDate = new DateTime();
-        var gracePeriod = 30;
+        var taxInformation =
+            new TaxInformationDTO("US", "12345", "123456789", "123 Example St.", null, "Example Town", "NY");
+
+        var suspension = new SubscriptionSuspensionDTO(
+            new DateTime(2024, 7, 30),
+            new DateTime(2024, 5, 30),
+            30);
+
         var consolidatedBillingSubscription = new ConsolidatedBillingSubscriptionDTO(
             configuredProviderPlans,
             subscription,
-            SuspensionDate,
-            UnpaidPeriodEndDate);
+            taxInformation,
+            suspension);
 
         sutProvider.GetDependency<IProviderBillingService>().GetConsolidatedBillingSubscription(provider)
             .Returns(consolidatedBillingSubscription);
@@ -408,13 +421,10 @@ public class ProviderBillingControllerTests
 
         var response = ((Ok<ConsolidatedBillingSubscriptionResponse>)result).Value;
 
-        Assert.Equal(response.Status, subscription.Status);
-        Assert.Equal(response.CurrentPeriodEndDate, subscription.CurrentPeriodEnd);
-        Assert.Equal(response.DiscountPercentage, subscription.Customer!.Discount!.Coupon!.PercentOff);
-        Assert.Equal(response.CollectionMethod, subscription.CollectionMethod);
-        Assert.Equal(response.UnpaidPeriodEndDate, UnpaidPeriodEndDate);
-        Assert.Equal(response.GracePeriod, gracePeriod);
-        Assert.Equal(response.SuspensionDate, SuspensionDate);
+        Assert.Equal(subscription.Status, response.Status);
+        Assert.Equal(subscription.CurrentPeriodEnd, response.CurrentPeriodEndDate);
+        Assert.Equal(subscription.Customer!.Discount!.Coupon!.PercentOff, response.DiscountPercentage);
+        Assert.Equal(subscription.CollectionMethod, response.CollectionMethod);
 
         var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
         var providerTeamsPlan = response.Plans.FirstOrDefault(plan => plan.PlanName == teamsPlan.Name);
@@ -433,7 +443,13 @@ public class ProviderBillingControllerTests
         Assert.Equal(90, providerEnterprisePlan.AssignedSeats);
         Assert.Equal(100 * enterprisePlan.PasswordManager.ProviderPortalSeatPrice, providerEnterprisePlan.Cost);
         Assert.Equal("Monthly", providerEnterprisePlan.Cadence);
+
+        Assert.Equal(100000, response.AccountCredit);
+        Assert.Equal(taxInformation, response.TaxInformation);
+        Assert.Null(response.CancelAt);
+        Assert.Equal(suspension, response.Suspension);
     }
+
     #endregion
 
     #region GetTaxInformationAsync
