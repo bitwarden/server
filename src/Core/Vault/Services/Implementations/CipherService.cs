@@ -433,7 +433,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, useFlexibleCollections: UseFlexibleCollections);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
 
-            await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, UseFlexibleCollections);
+            await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
         var events = deletingCiphers.Select(c =>
@@ -485,7 +485,7 @@ public class CipherService : ICipherService
             }
         }
 
-        await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId, UseFlexibleCollections);
+        await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId);
         // push
         await _pushService.PushSyncCiphersAsync(movingUserId);
     }
@@ -878,7 +878,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, useFlexibleCollections: UseFlexibleCollections);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
 
-            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, UseFlexibleCollections);
+            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
         var events = deletingCiphers.Select(c =>
@@ -944,7 +944,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId, useFlexibleCollections: UseFlexibleCollections);
             restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
 
-            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId, UseFlexibleCollections);
+            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId);
         }
 
         var events = restoringCiphers.Select(c =>

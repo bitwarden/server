@@ -45,7 +45,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<ICipherRepository>()
-            .GetByIdAsync(cipherId, userId, Arg.Any<bool>())
+            .GetByIdAsync(cipherId, userId)
             .Returns(Task.FromResult(cipherDetails));
 
         var result = await sutProvider.Sut.PutPartial(cipherId, new CipherPartialRequestModel { Favorite = isFavorite, FolderId = folderId.ToString() });
@@ -60,7 +60,7 @@ public class CiphersControllerTests
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(Guid.NewGuid()).Returns(false);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsNull();
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsNull();
 
         var requestAction = async () => await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -72,7 +72,7 @@ public class CiphersControllerTests
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
         var cipherService = sutProvider.GetDependency<ICipherService>();
@@ -87,7 +87,7 @@ public class CiphersControllerTests
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
 
@@ -102,7 +102,7 @@ public class CiphersControllerTests
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails, [(CipherDetails)null]);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails, [(CipherDetails)null]);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
 
