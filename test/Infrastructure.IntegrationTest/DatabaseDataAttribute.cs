@@ -56,7 +56,6 @@ public class DatabaseDataAttribute : DataAttribute
             {
                 var dapperSqlServerCollection = new ServiceCollection();
                 AddCommonServices(dapperSqlServerCollection, configureLogging);
-                dapperSqlServerCollection.AddLogging(configureLogging);
                 dapperSqlServerCollection.AddDapperRepositories(SelfHosted);
                 var globalSettings = new GlobalSettings
                 {
