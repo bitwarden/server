@@ -176,7 +176,7 @@ public class ProviderEventServiceTests
                 OrganizationName = "Client 1",
                 Plan = "Teams (Monthly)",
                 Seats = 50,
-                UserCount = 30,
+                OccupiedSeats = 30,
                 Status = OrganizationStatusType.Managed
             },
             new ()
@@ -184,7 +184,7 @@ public class ProviderEventServiceTests
                 OrganizationName = "Client 2",
                 Plan = "Enterprise (Monthly)",
                 Seats = 50,
-                UserCount = 30,
+                OccupiedSeats = 30,
                 Status = OrganizationStatusType.Managed
             }
         };
