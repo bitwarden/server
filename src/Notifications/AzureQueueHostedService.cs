@@ -65,7 +65,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                         try
                         {
                             await HubHelpers.SendNotificationToHubAsync(
-                                message.DecodeMessageText(), _hubContext, _anonymousHubContext, cancellationToken);
+                                message.DecodeMessageText(), _hubContext, _anonymousHubContext, _logger, cancellationToken);
                             await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                         }
                         catch (Exception e)

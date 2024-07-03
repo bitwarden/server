@@ -101,6 +101,7 @@ public class OrganizationUserUpdateRequestModel
 public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
     public string ResetPasswordKey { get; set; }
+    public string MasterPasswordHash { get; set; }
 }
 
 public class OrganizationUserBulkRequestModel
