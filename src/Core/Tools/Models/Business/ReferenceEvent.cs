@@ -254,4 +254,9 @@ public class ReferenceEvent
     /// or when a downgrade occurred.
     /// </value>
     public string? PlanUpgradePath { get; set; }
+
+    /// <summary>
+    /// Used for the sign up event to determine if the user has opted in to marketing emails.
+    /// </summary>
+    public bool? ReceiveMarketingEmails { get; set; }
 }

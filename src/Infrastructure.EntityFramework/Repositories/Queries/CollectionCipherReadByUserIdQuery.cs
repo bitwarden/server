@@ -6,19 +6,15 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 public class CollectionCipherReadByUserIdQuery : IQuery<CollectionCipher>
 {
     private readonly Guid _userId;
-    private readonly bool _useFlexibleCollections;
 
-    public CollectionCipherReadByUserIdQuery(Guid userId, bool useFlexibleCollections)
+    public CollectionCipherReadByUserIdQuery(Guid userId)
     {
         _userId = userId;
-        _useFlexibleCollections = useFlexibleCollections;
     }
 
     public virtual IQueryable<CollectionCipher> Run(DatabaseContext dbContext)
     {
-        return _useFlexibleCollections
-            ? Run_VNext(dbContext)
-            : Run_VCurrent(dbContext);
+        return Run_VCurrent(dbContext);
     }
 
     private IQueryable<CollectionCipher> Run_VNext(DatabaseContext dbContext)

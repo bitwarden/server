@@ -3,211 +3,206 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20240701175209_Net8Sync")]
+    partial class Net8Sync
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
-                .HasAnnotation("ProductVersion", "8.0.6")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
-
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.6");
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("AllowAdminAccessToAllCollectionItems")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<string>("BillingEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessAddress1")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessAddress2")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessAddress3")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessCountry")
                         .HasMaxLength(2)
-                        .HasColumnType("character varying(2)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessName")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessTaxNumber")
                         .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("FlexibleCollections")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte?>("Gateway")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("GatewayCustomerId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("GatewaySubscriptionId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .UseCollation("postgresIndetermanisticCollation");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("LimitCollectionCreationDeletion")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<int?>("MaxAutoscaleSeats")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("MaxAutoscaleSmSeats")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("MaxAutoscaleSmServiceAccounts")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<short?>("MaxCollections")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<short?>("MaxStorageGb")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Plan")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("PlanType")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("PrivateKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PublicKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ReferenceData")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("Seats")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("SelfHost")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("SmSeats")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("SmServiceAccounts")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Status")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("Storage")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("TwoFactorProviders")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Use2fa")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseApi")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseCustomPermissions")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseDirectory")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseEvents")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseGroups")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseKeyConnector")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsePasswordManager")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsePolicies")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseResetPassword")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseScim")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseSecretsManager")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseSso")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseTotp")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsersGetPremium")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Id", "Enabled");
-
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("Id", "Enabled"), new[] { "UseTotp" });
+                    b.HasIndex("Id", "Enabled")
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp" });
 
                     b.ToTable("Organization", (string)null);
                 });
@@ -215,25 +210,25 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Data")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -250,61 +245,61 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.Provider", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BillingEmail")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BillingPhone")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessAddress1")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessAddress2")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessAddress3")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessCountry")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessName")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BusinessTaxNumber")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte?>("Gateway")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("GatewayCustomerId")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("GatewaySubscriptionId")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Status")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseEvents")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -314,25 +309,25 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.ProviderOrganization", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("ProviderId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Settings")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -346,34 +341,34 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider.ProviderUser", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Permissions")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("ProviderId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Status")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -387,55 +382,55 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AccessCode")
                         .HasMaxLength(25)
-                        .HasColumnType("character varying(25)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool?>("Approved")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("AuthenticationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("MasterPasswordHash")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PublicKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RequestDeviceIdentifier")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("RequestDeviceType")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("RequestIpAddress")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ResponseDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ResponseDeviceId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -451,41 +446,41 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.EmergencyAccess", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GranteeId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("GrantorId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("KeyEncrypted")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastNotificationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("RecoveryInitiatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Status")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("WaitTimeDays")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -500,49 +495,47 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClientId")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ConsumedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Data")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("SessionId")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("SubjectId")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id")
                         .HasName("PK_Grant")
@@ -561,24 +554,22 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Data")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -591,23 +582,20 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .UseCollation("postgresIndetermanisticCollation");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -618,9 +606,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId", "ExternalId")
                         .IsUnique()
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "UserId" })
                         .HasAnnotation("SqlServer:Clustered", false);
-
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("OrganizationId", "ExternalId"), new[] { "UserId" });
 
                     b.HasIndex("OrganizationId", "UserId")
                         .IsUnique()
@@ -632,53 +619,53 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.WebAuthnCredential", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("AaGuid")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Counter")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CredentialId")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EncryptedPrivateKey")
                         .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EncryptedPublicKey")
                         .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EncryptedUserKey")
                         .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PublicKey")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("SupportsPrf")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Type")
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -690,41 +677,38 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("AssignedSeats")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("ClientId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClientName")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("Created")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("InvoiceId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("InvoiceNumber")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PlanName")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("ProviderId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("Total")
-                        .HasColumnType("numeric");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("UsedSeats")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -736,22 +720,22 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderPlan", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("AllocatedSeats")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("PlanType")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("ProviderId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("PurchasedSeats")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("SeatMinimum")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -766,23 +750,23 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -794,10 +778,10 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionCipher", b =>
                 {
                     b.Property<Guid>("CollectionId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("CipherId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("CollectionId", "CipherId");
 
@@ -809,19 +793,19 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionGroup", b =>
                 {
                     b.Property<Guid>("CollectionId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("GroupId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("HidePasswords")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("Manage")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("ReadOnly")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("CollectionId", "GroupId");
 
@@ -833,19 +817,19 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
                 {
                     b.Property<Guid>("CollectionId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("HidePasswords")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("Manage")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("ReadOnly")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("CollectionId", "OrganizationUserId");
 
@@ -858,40 +842,40 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EncryptedPrivateKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EncryptedPublicKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EncryptedUserKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PushToken")
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -911,68 +895,68 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Event", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ActingUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("CipherId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("CollectionId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte?>("DeviceType")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("DomainName")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GroupId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("InstallationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("IpAddress")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("PolicyId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ProviderId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ProviderOrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ProviderUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("SecretId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ServiceAccountId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte?>("SystemUser")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("Type")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -985,27 +969,27 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("AccessAll")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1017,10 +1001,10 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.GroupUser", b =>
                 {
                     b.Property<Guid>("GroupId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("GroupId", "OrganizationUserId");
 
@@ -1032,21 +1016,21 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Installation", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Key")
                         .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1056,20 +1040,20 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ApiKey")
                         .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1081,19 +1065,19 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationConnection", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Config")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1105,32 +1089,32 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationDomain", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("DomainName")
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("JobRunCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("LastCheckedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("NextRunDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Txt")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("VerifiedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1142,36 +1126,36 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("FriendlyName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastSyncDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte?>("PlanSponsorshipType")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("SponsoredOrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("SponsoringOrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("SponsoringOrganizationUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("ToDelete")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("ValidUntil")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1188,48 +1172,48 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("AccessAll")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AccessSecretsManager")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Permissions")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ResetPasswordKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<short>("Status")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1240,9 +1224,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("UserId", "OrganizationId", "Status")
+                        .HasAnnotation("Npgsql:IndexInclude", new[] { "AccessAll" })
                         .HasAnnotation("SqlServer:Clustered", false);
-
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "OrganizationId", "Status"), new[] { "AccessAll" });
 
                     b.ToTable("OrganizationUser", (string)null);
                 });
@@ -1250,53 +1233,53 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Send", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("AccessCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("CipherId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Data")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("DeletionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Disabled")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool?>("HideEmail")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("MaxAccessCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Password")
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1318,25 +1301,25 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Active")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Country")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PostalCode")
                         .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("Rate")
-                        .HasColumnType("numeric");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("State")
                         .HasMaxLength(2)
-                        .HasColumnType("character varying(2)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1346,45 +1329,45 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("numeric");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Details")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte?>("Gateway")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("GatewayId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte?>("PaymentMethodType")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("ProviderId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool?>("Refunded")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<decimal?>("RefundedAmount")
-                        .HasColumnType("numeric");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1404,146 +1387,145 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("AccountRevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ApiKey")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AvatarColor")
                         .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Culture")
                         .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .UseCollation("postgresIndetermanisticCollation");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("EmailVerified")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("EquivalentDomains")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ExcludedGlobalEquivalentDomains")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("FailedLoginCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("ForcePasswordReset")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<byte?>("Gateway")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("GatewayCustomerId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("GatewaySubscriptionId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Kdf")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("KdfIterations")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("KdfMemory")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("KdfParallelism")
-                        .HasColumnType("integer");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastEmailChangeDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastFailedLoginDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastKdfChangeDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastKeyRotationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastPasswordChangeDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("MasterPassword")
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("MasterPasswordHint")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<short?>("MaxStorageGb")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Premium")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("PremiumExpirationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PrivateKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PublicKey")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ReferenceData")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("RenewalReminderDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("SecurityStamp")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("Storage")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("TwoFactorProviders")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("TwoFactorRecoveryCode")
                         .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("UsesKeyConnector")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1560,24 +1542,24 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Discriminator")
                         .IsRequired()
                         .HasMaxLength(34)
-                        .HasColumnType("character varying(34)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Read")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Write")
-                        .HasColumnType("boolean");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
@@ -1592,38 +1574,38 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ClientSecretHash")
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EncryptedPayload")
                         .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpireAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Scope")
                         .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ServiceAccountId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
@@ -1637,22 +1619,22 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
@@ -1669,28 +1651,28 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Secret", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Note")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Value")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
@@ -1707,19 +1689,19 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
@@ -1733,43 +1715,43 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Attachments")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Data")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Favorites")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Folders")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Key")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte?>("Reprompt")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("smallint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1783,19 +1765,19 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Folder", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1807,10 +1789,10 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("ProjectSecret", b =>
                 {
                     b.Property<Guid>("ProjectsId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("SecretsId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("ProjectsId", "SecretsId");
 
@@ -1825,12 +1807,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("GrantedProjectId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GrantedProjectId");
 
                     b.Property<Guid?>("GroupId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GroupId");
 
                     b.HasIndex("GrantedProjectId");
@@ -1846,12 +1828,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("GrantedSecretId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GrantedSecretId");
 
                     b.Property<Guid?>("GroupId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GroupId");
 
                     b.HasIndex("GrantedSecretId");
@@ -1867,12 +1849,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("GrantedServiceAccountId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GrantedServiceAccountId");
 
                     b.Property<Guid?>("GroupId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GroupId");
 
                     b.HasIndex("GrantedServiceAccountId");
@@ -1888,12 +1870,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("GrantedProjectId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GrantedProjectId");
 
                     b.Property<Guid?>("ServiceAccountId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ServiceAccountId");
 
                     b.HasIndex("GrantedProjectId");
@@ -1909,12 +1891,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("GrantedSecretId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GrantedSecretId");
 
                     b.Property<Guid?>("ServiceAccountId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ServiceAccountId");
 
                     b.HasIndex("GrantedSecretId");
@@ -1930,12 +1912,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("GrantedProjectId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GrantedProjectId");
 
                     b.Property<Guid?>("OrganizationUserId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("OrganizationUserId");
 
                     b.HasIndex("GrantedProjectId");
@@ -1951,12 +1933,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("GrantedSecretId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GrantedSecretId");
 
                     b.Property<Guid?>("OrganizationUserId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("OrganizationUserId");
 
                     b.HasIndex("GrantedSecretId");
@@ -1972,12 +1954,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("GrantedServiceAccountId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("GrantedServiceAccountId");
 
                     b.Property<Guid?>("OrganizationUserId")
                         .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("OrganizationUserId");
 
                     b.HasIndex("GrantedServiceAccountId");

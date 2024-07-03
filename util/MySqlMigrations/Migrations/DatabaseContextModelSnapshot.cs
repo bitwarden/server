@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -16,8 +17,10 @@ namespace Bit.MySqlMigrations.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.20")
+                .HasAnnotation("ProductVersion", "8.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
+
+            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
@@ -496,6 +499,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
                     b.Property<string>("ClientId")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -555,6 +560,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
 
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
@@ -582,6 +589,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
@@ -685,19 +694,23 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<string>("ClientName")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("InvoiceId")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("InvoiceNumber")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("PlanName")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<Guid>("ProviderId")
                         .HasColumnType("char(36)");
@@ -1547,7 +1560,8 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("Discriminator")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(34)
+                        .HasColumnType("varchar(34)");
 
                     b.Property<bool>("Read")
                         .HasColumnType("tinyint(1)");

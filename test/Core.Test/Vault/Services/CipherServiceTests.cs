@@ -425,7 +425,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id, Arg.Any<bool>()).Returns(
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
             Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
             {
                 new CollectionCipher
@@ -505,7 +505,7 @@ public class CipherServiceTests
         Assert.Contains("ex from StartShareAttachmentAsync", exception.Message);
 
         await collectionCipherRepository.Received().UpdateCollectionsAsync(cipher.Id, cipher.UserId.Value,
-            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]), Arg.Any<bool>());
+            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]));
 
         await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
                 c.GetAttachments()[v0AttachmentId].Key == null
@@ -530,7 +530,7 @@ public class CipherServiceTests
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id, Arg.Any<bool>()).Returns(
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
             Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
             {
                 new CollectionCipher
@@ -637,7 +637,7 @@ public class CipherServiceTests
         Assert.Contains("ex from StartShareAttachmentAsync", exception.Message);
 
         await collectionCipherRepository.Received().UpdateCollectionsAsync(cipher.Id, cipher.UserId.Value,
-            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]), Arg.Any<bool>());
+            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]));
 
         await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
                 c.GetAttachments()[v0AttachmentId1].Key == null
@@ -735,7 +735,7 @@ public class CipherServiceTests
 
         sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
         var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
-        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId, Arg.Any<bool>()).Returns(revisionDate);
+        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId).Returns(revisionDate);
 
         await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
 
@@ -848,7 +848,7 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreByIdsOrganizationIdAsync(default, default);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreByIdsOrganizationIdAsync(default, default);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, useFlexibleCollections: default);
-        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreAsync(default, default, default);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventsAsync(default);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCiphersAsync(default);
     }
