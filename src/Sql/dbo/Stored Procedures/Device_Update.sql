@@ -9,7 +9,8 @@
     @RevisionDate DATETIME2(7),
     @EncryptedUserKey VARCHAR(MAX) = NULL,
     @EncryptedPublicKey VARCHAR(MAX) = NULL,
-    @EncryptedPrivateKey VARCHAR(MAX) = NULL
+    @EncryptedPrivateKey VARCHAR(MAX) = NULL,
+    @applicationChannel TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,7 +27,8 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [EncryptedUserKey] = @EncryptedUserKey,
         [EncryptedPublicKey] = @EncryptedPublicKey,
-        [EncryptedPrivateKey] = @EncryptedPrivateKey
+        [EncryptedPrivateKey] = @EncryptedPrivateKey,
+        [ApplicationChannel] = @applicationChannel
     WHERE
         [Id] = @Id
 END
