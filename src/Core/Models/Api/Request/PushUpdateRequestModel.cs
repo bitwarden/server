@@ -7,9 +7,9 @@ public class PushUpdateRequestModel
     public PushUpdateRequestModel()
     { }
 
-    public PushUpdateRequestModel(IEnumerable<string> deviceIds, string organizationId)
+    public PushUpdateRequestModel(IEnumerable<(string deviceIds, ApplicationChannel channel)> devices, string organizationId)
     {
-        Devices = deviceIds.Select(d => new PushDeviceRequestModel { Id = d });
+        Devices = devices.Select(d => new PushDeviceRequestModel { Id = d.deviceIds, Channel = d.channel });
         OrganizationId = organizationId;
     }
 

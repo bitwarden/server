@@ -32,7 +32,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+        string identifier, DeviceType type, ApplicationChannel channel)
     {
         if (string.IsNullOrWhiteSpace(pushToken))
         {
@@ -101,7 +101,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
             userId, identifier);
 
-        await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
+        await ClientFor(GetComb(deviceId), channel).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
         {
             await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
@@ -136,11 +136,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         installation.Templates.Add(fullTemplateId, template);
     }
 
-    public async Task DeleteRegistrationAsync(string deviceId)
+    public async Task DeleteRegistrationAsync(string deviceId, ApplicationChannel channel)
     {
         try
         {
-            await ClientFor(GetComb(deviceId)).DeleteInstallationAsync(deviceId);
+            await ClientFor(GetComb(deviceId), channel).DeleteInstallationAsync(deviceId);
             if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
                 await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
@@ -152,31 +152,31 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<(string deviceId, ApplicationChannel channel)> devices, string organizationId)
     {
-        await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Add, $"organizationId:{organizationId}");
-        if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+        await PatchTagsForUserDevicesAsync(devices, UpdateOperationType.Add, $"organizationId:{organizationId}");
+        if (devices.Any() && InstallationDeviceEntity.IsInstallationDeviceId(devices.First().deviceId))
         {
-            var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
+            var entities = devices.Select(e => new InstallationDeviceEntity(e.deviceId));
             await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
         }
     }
 
-    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<(string deviceId, ApplicationChannel channel)> devices, string organizationId)
     {
-        await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Remove,
+        await PatchTagsForUserDevicesAsync(devices, UpdateOperationType.Remove,
             $"organizationId:{organizationId}");
-        if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
+        if (devices.Any() && InstallationDeviceEntity.IsInstallationDeviceId(devices.First().deviceId))
         {
-            var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
+            var entities = devices.Select(e => new InstallationDeviceEntity(e.deviceId));
             await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
         }
     }
 
-    private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op,
+    private async Task PatchTagsForUserDevicesAsync(IEnumerable<(string deviceId, ApplicationChannel channel)> devices, UpdateOperationType op,
         string tag)
     {
-        if (!deviceIds.Any())
+        if (!devices.Any())
         {
             return;
         }
@@ -196,11 +196,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             operation.Path += $"/{tag}";
         }
 
-        foreach (var deviceId in deviceIds)
+        foreach (var (deviceId, channel) in devices)
         {
             try
             {
-                await ClientFor(GetComb(deviceId)).PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
+                await ClientFor(GetComb(deviceId), channel).PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
             }
             catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {
@@ -209,9 +209,9 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private NotificationHubClient ClientFor(Guid deviceId)
+    private NotificationHubClient ClientFor(Guid deviceId, ApplicationChannel channel)
     {
-        return _notificationHubPool.ClientFor(deviceId);
+        return _notificationHubPool.ClientFor(deviceId, channel);
     }
 
     private Guid GetComb(string deviceId)

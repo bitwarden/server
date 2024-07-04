@@ -10,6 +10,7 @@
     [EncryptedUserKey] VARCHAR (MAX) NULL,
     [EncryptedPublicKey] VARCHAR (MAX) NULL,
     [EncryptedPrivateKey] VARCHAR (MAX) NULL,
+    [ApplicationChannel] TINYINT DEFAULT 0 NOT NULL, -- Default to production channel
     CONSTRAINT [PK_Device] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Device_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );

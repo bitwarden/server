@@ -39,14 +39,14 @@ public class PushController : Controller
     {
         CheckUsage();
         await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
-            Prefix(model.UserId), Prefix(model.Identifier), model.Type);
+            Prefix(model.UserId), Prefix(model.Identifier), model.Type, model.Channel);
     }
 
     [HttpPost("delete")]
     public async Task PostDelete([FromBody] PushDeviceRequestModel model)
     {
         CheckUsage();
-        await _pushRegistrationService.DeleteRegistrationAsync(Prefix(model.Id));
+        await _pushRegistrationService.DeleteRegistrationAsync(Prefix(model.Id), model.Channel);
     }
 
     [HttpPut("add-organization")]
@@ -54,7 +54,7 @@ public class PushController : Controller
     {
         CheckUsage();
         await _pushRegistrationService.AddUserRegistrationOrganizationAsync(
-            model.Devices.Select(d => Prefix(d.Id)),
+            model.Devices.Select(d => (deviceId: Prefix(d.Id), channel: d.Channel)),
             Prefix(model.OrganizationId));
     }
 
@@ -63,7 +63,7 @@ public class PushController : Controller
     {
         CheckUsage();
         await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(
-            model.Devices.Select(d => Prefix(d.Id)),
+            model.Devices.Select(d => (deviceId: Prefix(d.Id), channel: d.Channel)),
             Prefix(model.OrganizationId));
     }
 

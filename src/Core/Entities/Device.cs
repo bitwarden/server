@@ -36,6 +36,11 @@ public class Device : ITableObject<Guid>
     /// </summary>
     public string EncryptedPrivateKey { get; set; }
 
+    /// <summary>
+    /// The channel that the device is registered with.
+    /// </summary>
+    public ApplicationChannel ApplicationChannel { get; set; }
+
 
     public void SetNewId()
     {

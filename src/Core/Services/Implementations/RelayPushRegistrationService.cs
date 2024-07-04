@@ -25,7 +25,7 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+        string identifier, DeviceType type, ApplicationChannel channel)
     {
         var requestModel = new PushRegistrationRequestModel
         {
@@ -33,41 +33,43 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
             Identifier = identifier,
             PushToken = pushToken,
             Type = type,
-            UserId = userId
+            UserId = userId,
+            Channel = channel,
         };
         await SendAsync(HttpMethod.Post, "push/register", requestModel);
     }
 
-    public async Task DeleteRegistrationAsync(string deviceId)
+    public async Task DeleteRegistrationAsync(string deviceId, ApplicationChannel channel)
     {
         var requestModel = new PushDeviceRequestModel
         {
             Id = deviceId,
+            Channel = channel,
         };
         await SendAsync(HttpMethod.Post, "push/delete", requestModel);
     }
 
     public async Task AddUserRegistrationOrganizationAsync(
-        IEnumerable<string> deviceIds, string organizationId)
+        IEnumerable<(string deviceId, ApplicationChannel channel)> devices, string organizationId)
     {
-        if (!deviceIds.Any())
+        if (!devices.Any())
         {
             return;
         }
 
-        var requestModel = new PushUpdateRequestModel(deviceIds, organizationId);
+        var requestModel = new PushUpdateRequestModel(devices, organizationId);
         await SendAsync(HttpMethod.Put, "push/add-organization", requestModel);
     }
 
     public async Task DeleteUserRegistrationOrganizationAsync(
-        IEnumerable<string> deviceIds, string organizationId)
+        IEnumerable<(string deviceId, ApplicationChannel channel)> devices, string organizationId)
     {
-        if (!deviceIds.Any())
+        if (!devices.Any())
         {
             return;
         }
 
-        var requestModel = new PushUpdateRequestModel(deviceIds, organizationId);
+        var requestModel = new PushUpdateRequestModel(devices, organizationId);
         await SendAsync(HttpMethod.Put, "push/delete-organization", requestModel);
     }
 }

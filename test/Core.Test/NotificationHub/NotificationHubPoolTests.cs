@@ -82,6 +82,7 @@ public class NotificationHubPoolTests
                     new() {
                         ConnectionString = "connection",
                         HubName = "hub",
+                        Channel = ApplicationChannel.Production,
                         RegistrationStartDate = null,
                         RegistrationEndDate = null,
                     }
@@ -92,7 +93,7 @@ public class NotificationHubPoolTests
         var sut = new NotificationHubPool(logger, globalSettings);
 
         // Act
-        Action act = () => sut.ClientFor(Guid.NewGuid());
+        Action act = () => sut.ClientFor(Guid.NewGuid(), ApplicationChannel.Production);
 
         // Assert
         Assert.Throws<InvalidOperationException>(act);
@@ -110,6 +111,7 @@ public class NotificationHubPoolTests
                     new() {
                         ConnectionString = "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKey=example///example=",
                         HubName = "hub",
+                        Channel = ApplicationChannel.Production,
                         RegistrationStartDate = DateTime.UtcNow,
                         RegistrationEndDate = DateTime.UtcNow.AddDays(1),
                     }
@@ -120,7 +122,7 @@ public class NotificationHubPoolTests
         var sut = new NotificationHubPool(logger, globalSettings);
 
         // Act
-        var client = sut.ClientFor(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow));
+        var client = sut.ClientFor(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow), ApplicationChannel.Production);
 
         // Assert
         Assert.NotNull(client);

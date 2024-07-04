@@ -441,6 +441,12 @@ public class GlobalSettings : IGlobalSettings
         /// If null, hub registration has no yet known expiry.
         /// </summary>
         public DateTime? RegistrationEndDate { get; set; }
+        /// <summary>
+        /// The application channel for the hub.
+        /// 
+        /// iOS and Android devices are registered to different hubs based on the channel.
+        /// </summary>
+        public ApplicationChannel Channel { get; set; } = ApplicationChannel.Production;
     }
 
     public class NotificationHubPoolSettings

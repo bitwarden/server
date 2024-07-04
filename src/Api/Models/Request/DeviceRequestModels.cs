@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
@@ -17,6 +18,8 @@ public class DeviceRequestModel
     public string Identifier { get; set; }
     [StringLength(255)]
     public string PushToken { get; set; }
+    [DefaultValue(ApplicationChannel.Production)]
+    public ApplicationChannel Channel { get; set; }
 
     public Device ToDevice(Guid? userId = null)
     {
@@ -32,6 +35,7 @@ public class DeviceRequestModel
         existingDevice.Identifier = Identifier;
         existingDevice.PushToken = PushToken;
         existingDevice.Type = Type.Value;
+        // Note updating channel not supported
 
         return existingDevice;
     }

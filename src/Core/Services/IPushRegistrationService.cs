@@ -5,8 +5,8 @@ namespace Bit.Core.Services;
 public interface IPushRegistrationService
 {
     Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type);
-    Task DeleteRegistrationAsync(string deviceId);
-    Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId);
-    Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId);
+        string identifier, DeviceType type, ApplicationChannel channel);
+    Task DeleteRegistrationAsync(string deviceId, ApplicationChannel channel);
+    Task AddUserRegistrationOrganizationAsync(IEnumerable<(string deviceId, ApplicationChannel channel)> devices, string organizationId);
+    Task DeleteUserRegistrationOrganizationAsync(IEnumerable<(string deviceId, ApplicationChannel channel)> devices, string organizationId);
 }

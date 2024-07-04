@@ -31,13 +31,14 @@ public class DeviceServiceTests
             Type = DeviceType.Android,
             UserId = userId,
             PushToken = "testtoken",
-            Identifier = "testid"
+            Identifier = "testid",
+            ApplicationChannel = ApplicationChannel.Production,
         };
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
         await pushRepo.Received().CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
-            userId.ToString(), "testid", DeviceType.Android);
+            userId.ToString(), "testid", DeviceType.Android, ApplicationChannel.Production);
     }
 
     /// <summary>

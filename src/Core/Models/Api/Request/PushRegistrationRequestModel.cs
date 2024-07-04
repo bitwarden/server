@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Api;
@@ -15,4 +16,6 @@ public class PushRegistrationRequestModel
     public DeviceType Type { get; set; }
     [Required]
     public string Identifier { get; set; }
+    [DefaultValue(ApplicationChannel.Production)]
+    public ApplicationChannel Channel { get; set; }
 }

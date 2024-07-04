@@ -32,19 +32,19 @@ public class DeviceService : IDeviceService
         }
 
         await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type);
+            device.UserId.ToString(), device.Identifier, device.Type, device.ApplicationChannel);
     }
 
     public async Task ClearTokenAsync(Device device)
     {
         await _deviceRepository.ClearPushTokenAsync(device.Id);
-        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
+        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString(), device.ApplicationChannel);
     }
 
     public async Task DeleteAsync(Device device)
     {
         await _deviceRepository.DeleteAsync(device);
-        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
+        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString(), device.ApplicationChannel);
     }
 
     public async Task UpdateDevicesTrustAsync(string currentDeviceIdentifier,

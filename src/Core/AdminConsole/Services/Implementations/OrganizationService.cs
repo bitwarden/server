@@ -1952,12 +1952,12 @@ public class OrganizationService : IOrganizationService
     }
 
 
-    private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
+    private async Task<IEnumerable<(string deviceId, ApplicationChannel channel)>> GetUserDeviceIdsAsync(Guid userId)
     {
         var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
-            .Select(d => d.Id.ToString());
+            .Select(d => (deviceId: d.Id.ToString(), channel: d.ApplicationChannel));
     }
 
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)

@@ -400,11 +400,17 @@ public abstract class BaseRequestValidator<T> where T : class
         var deviceType = request.Raw["DeviceType"]?.ToString();
         var deviceName = request.Raw["DeviceName"]?.ToString();
         var devicePushToken = request.Raw["DevicePushToken"]?.ToString();
+        var deviceChannel = request.Raw["ApplicationChannel"];
 
         if (string.IsNullOrWhiteSpace(deviceIdentifier) || string.IsNullOrWhiteSpace(deviceType) ||
             string.IsNullOrWhiteSpace(deviceName) || !Enum.TryParse(deviceType, out DeviceType type))
         {
             return null;
+        }
+        ApplicationChannel channel;
+        if (!Enum.TryParse(deviceChannel?.ToString(), out channel))
+        {
+            channel = ApplicationChannel.Production;
         }
 
         return new Device
@@ -412,7 +418,8 @@ public abstract class BaseRequestValidator<T> where T : class
             Identifier = deviceIdentifier,
             Name = deviceName,
             Type = type,
-            PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken
+            PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken,
+            ApplicationChannel = channel,
         };
     }
 
