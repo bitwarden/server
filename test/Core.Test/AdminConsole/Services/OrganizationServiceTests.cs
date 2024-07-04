@@ -844,7 +844,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     [OrganizationInviteCustomize(
         InviteeUserType = OrganizationUserType.User,
         InvitorUserType = OrganizationUserType.Custom
-    ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
+    ), OrganizationCustomize, BitAutoData]
     public async Task InviteUser_Passes(Organization organization, OrganizationUserInvite invite, string externalId,
         OrganizationUser invitor,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
@@ -1212,7 +1212,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invite.Type = OrganizationUserType.User;
-        invite.AccessAll = true;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)

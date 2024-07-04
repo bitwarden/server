@@ -745,8 +745,6 @@ public class OrganizationService : IOrganizationService
                     AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-                    // AccessAll is deprecated and set to false.
-                    AccessAll = false,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
@@ -1040,11 +1038,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
         }
 
-        if (invites.Any(i => i.invite.AccessAll))
-        {
-            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
-        }
-
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
 
@@ -1114,7 +1107,6 @@ public class OrganizationService : IOrganizationService
                         Key = null,
                         Type = invite.Type.Value,
                         Status = OrganizationUserStatusType.Invited,
-                        AccessAll = invite.AccessAll,
                         AccessSecretsManager = invite.AccessSecretsManager,
                         ExternalId = externalId,
                         CreationDate = DateTime.UtcNow,
@@ -1800,7 +1792,6 @@ public class OrganizationService : IOrganizationService
                     {
                         Emails = new List<string> { user.Email },
                         Type = OrganizationUserType.User,
-                        AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
                         AccessSecretsManager = hasStandaloneSecretsManager
                     };
@@ -2518,8 +2509,6 @@ public class OrganizationService : IOrganizationService
             Key = null,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Invited,
-            // AccessAll is deprecated and set to false.
-            AccessAll = false,
         };
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 
