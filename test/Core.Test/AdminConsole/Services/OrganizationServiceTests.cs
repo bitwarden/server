@@ -2348,12 +2348,24 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
     private void SetupOrgUserRepositoryCreateManyAsyncMock(IOrganizationUserRepository organizationUserRepository)
     {
+        organizationUserRepository.CreateManyAsync(Arg.Any<IEnumerable<OrganizationUser>>()).Returns(
+            info =>
+            {
+                var orgUsers = info.Arg<IEnumerable<OrganizationUser>>();
+                foreach (var orgUser in orgUsers)
+                {
+                    orgUser.Id = Guid.NewGuid();
+                }
+
+                return Task.FromResult<ICollection<Guid>>(orgUsers.Select(u => u.Id).ToList());
+            }
+        );
+
         organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>()).Returns(
             info =>
             {
                 var orgUser = info.Arg<OrganizationUser>();
                 orgUser.Id = Guid.NewGuid();
-
                 return Task.FromResult<Guid>(orgUser.Id);
             }
         );
