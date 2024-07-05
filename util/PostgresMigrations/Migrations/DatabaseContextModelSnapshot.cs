@@ -698,6 +698,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ClientName")
                         .IsRequired()
                         .HasMaxLength(50)
