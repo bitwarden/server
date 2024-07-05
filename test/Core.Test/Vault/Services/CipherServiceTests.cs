@@ -26,7 +26,7 @@ namespace Bit.Core.Test.Services;
 public class CipherServiceTests
 {
     [Theory, BitAutoData]
-    public async Task ImportCiphersAsync_IntoOrganization_WithFlexibleCollectionsEnabled_Success(
+    public async Task ImportCiphersAsync_IntoOrganization_Success(
         Organization organization,
         Guid importingUserId,
         OrganizationUser importingOrganizationUser,

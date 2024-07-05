@@ -20,7 +20,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
 [SutProviderCustomize]
 public class CreateGroupCommandTests
 {
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task CreateGroup_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group)
     {
         // Deprecated with Flexible Collections
@@ -35,7 +35,7 @@ public class CreateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task CreateGroup_WithCollections_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, List<CollectionAccessSelection> collections)
     {
         // Deprecated with Flexible Collections
@@ -59,7 +59,7 @@ public class CreateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task CreateGroup_WithEventSystemUser_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, EventSystemUser eventSystemUser)
     {
         // Deprecated with Flexible Collections
@@ -74,7 +74,7 @@ public class CreateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task CreateGroup_WithNullOrganization_Throws(SutProvider<CreateGroupCommand> sutProvider, Group group, EventSystemUser eventSystemUser)
     {
         // Deprecated with Flexible Collections
@@ -89,7 +89,7 @@ public class CreateGroupCommandTests
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceiveWithAnyArgs().RaiseEventAsync(default);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = false, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
     public async Task CreateGroup_WithUseGroupsAsFalse_Throws(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, EventSystemUser eventSystemUser)
     {
         // Deprecated with Flexible Collections
@@ -104,7 +104,7 @@ public class CreateGroupCommandTests
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceiveWithAnyArgs().RaiseEventAsync(default);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task CreateGroup_WithAccessAll_Throws(
         SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group)
     {

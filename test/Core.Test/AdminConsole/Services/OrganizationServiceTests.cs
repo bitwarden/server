@@ -1183,8 +1183,8 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         });
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task InviteUsers_WithFlexibleCollections_WhenInvitingManager_Throws(Organization organization,
+    [Theory, OrganizationCustomize, BitAutoData]
+    public async Task InviteUsers_WhenInvitingManager_Throws(Organization organization,
         OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         invite.Type = OrganizationUserType.Manager;

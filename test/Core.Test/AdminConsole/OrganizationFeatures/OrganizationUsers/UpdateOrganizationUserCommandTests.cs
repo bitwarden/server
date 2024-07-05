@@ -91,7 +91,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithFlexibleCollections_WhenUpgradingToManager_Throws(
+    public async Task UpdateUserAsync_WhenUpgradingToManager_Throws(
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Manager)] OrganizationUser newUserData,
@@ -100,7 +100,6 @@ public class UpdateOrganizationUserCommandTests
         IEnumerable<Guid> groups,
         SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
-        organization.FlexibleCollections = true;
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = oldUserData.OrganizationId = savingUser.OrganizationId = organization.Id;
@@ -129,7 +128,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithFlexibleCollections_WithAccessAll_Throws(
+    public async Task UpdateUserAsync_WithAccessAll_Throws(
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser newUserData,
@@ -138,7 +137,6 @@ public class UpdateOrganizationUserCommandTests
         IEnumerable<Guid> groups,
         SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
-        organization.FlexibleCollections = true;
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = oldUserData.OrganizationId = savingUser.OrganizationId = organization.Id;

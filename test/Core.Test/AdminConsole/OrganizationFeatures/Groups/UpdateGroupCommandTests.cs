@@ -17,7 +17,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
 [SutProviderCustomize]
 public class UpdateGroupCommandTests
 {
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Organization organization)
     {
         // Deprecated with Flexible Collections
@@ -30,7 +30,7 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_WithCollections_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Organization organization, List<CollectionAccessSelection> collections)
     {
         // Deprecated with Flexible Collections
@@ -52,7 +52,7 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_WithEventSystemUser_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Organization organization, EventSystemUser eventSystemUser)
     {
         // Deprecated with Flexible Collections
@@ -65,7 +65,7 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_WithNullOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider, Group group, EventSystemUser eventSystemUser)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, null, eventSystemUser));
@@ -76,7 +76,7 @@ public class UpdateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = false, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
     public async Task UpdateGroup_WithUseGroupsAsFalse_Throws(SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group, EventSystemUser eventSystemUser)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, organization, eventSystemUser));
@@ -87,12 +87,11 @@ public class UpdateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
-    public async Task UpdateGroup_WithFlexibleCollections_WithAccessAll_Throws(
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task UpdateGroup_WithAccessAll_Throws(
         SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group)
     {
         group.AccessAll = true;
-        organization.FlexibleCollections = true;
 
         var exception =
             await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, organization));

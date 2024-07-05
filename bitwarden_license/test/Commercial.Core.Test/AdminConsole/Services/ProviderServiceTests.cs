@@ -720,8 +720,8 @@ public class ProviderServiceTests
                         t.First().Item2 == null));
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task CreateOrganizationAsync_WithFlexibleCollections_SetsAccessAllToFalse
+    [Theory, OrganizationCustomize, BitAutoData]
+    public async Task CreateOrganizationAsync_SetsAccessAllToFalse
         (Provider provider, OrganizationSignup organizationSignup, Organization organization, string clientOwnerEmail,
             User user, SutProvider<ProviderService> sutProvider, Collection defaultCollection)
     {
