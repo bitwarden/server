@@ -13,13 +13,6 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<Tuple<Collection, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id);
 
     /// <summary>
-    /// Returns a collection with permission details for the provided userId and fetches group/user associations for
-    /// the collection.
-    /// If the user does not have a relationship with the collection, nothing is returned.
-    /// </summary>
-    Task<Tuple<CollectionDetails, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id, Guid userId, bool useFlexibleCollections);
-
-    /// <summary>
     /// Return all collections that belong to the organization. Does not include any permission details or group/user
     /// access relationships.
     /// </summary>
@@ -30,18 +23,6 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// </summary>
     Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
 
-    /// <summary>
-    /// Returns collections that both, belong to the organization AND have an access relationship with the provided user.
-    /// Includes permission details for the provided user and group/user access relationships for each collection.
-    /// </summary>
-    Task<ICollection<Tuple<CollectionDetails, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId, bool useFlexibleCollections);
-
-    /// <summary>
-    /// Returns a collection with permission details for the provided userId. Does not include group/user access
-    /// relationships.
-    /// If the user does not have a relationship with the collection, nothing is returned.
-    /// </summary>
-    Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections);
     Task<ICollection<Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds);
 
     /// <summary>

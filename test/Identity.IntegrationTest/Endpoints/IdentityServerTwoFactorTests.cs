@@ -78,6 +78,8 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 Name = "Test Org",
                 Use2fa = true,
                 TwoFactorProviders = orgTwoFactor,
+                BillingEmail = "billing-email@example.com",
+                Plan = "Enterprise",
             });
 
             await _factory.Services.GetService<IOrganizationUserRepository>()
