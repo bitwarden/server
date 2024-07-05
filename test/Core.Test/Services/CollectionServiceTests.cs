@@ -77,7 +77,7 @@ public class CollectionServiceTest
 
     [Theory, BitAutoData]
     public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection,
-        [CollectionAccessSelectionCustomize]IEnumerable<CollectionAccessSelection> groups, [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users,
+        [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> groups, [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users,
         Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
