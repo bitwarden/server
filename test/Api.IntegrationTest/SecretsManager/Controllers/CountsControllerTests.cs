@@ -209,11 +209,12 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     }
 
     [Theory]
-    [InlineData(PermissionType.RunAsAdmin)]
-    [InlineData(PermissionType.RunAsUserWithPermission)]
-    public async Task GetByProjectAsync_Success(PermissionType permissionType)
+    [InlineData(PermissionType.RunAsAdmin, true)]
+    [InlineData(PermissionType.RunAsUserWithPermission, false)]
+    [InlineData(PermissionType.RunAsUserWithPermission, true)]
+    public async Task GetByProjectAsync_Success(PermissionType permissionType, bool userProjectWriteAccess)
     {
-        var (projects, org, user) = await SetupProjectsWithAccessAsync(permissionType);
+        var (projects, org, user) = await SetupProjectsWithAccessAsync(permissionType, 3, userProjectWriteAccess);
 
         var secrets = await CreateSecretsAsync(org.Id, projects[0]);
         await CreateSecretsAsync(org.Id, projects[1]);
@@ -234,8 +235,16 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         var result = await response.Content.ReadFromJsonAsync<ProjectCountsResponseModel>();
         Assert.NotNull(result);
         Assert.Equal(secrets.Count, result.Secrets);
-        Assert.Equal(permissionType == PermissionType.RunAsAdmin ? 2 : 3, result.People);
-        Assert.Equal(1, result.ServiceAccounts);
+        if (userProjectWriteAccess)
+        {
+            Assert.Equal(permissionType == PermissionType.RunAsAdmin ? 2 : 3, result.People);
+            Assert.Equal(1, result.ServiceAccounts);
+        }
+        else
+        {
+            Assert.Equal(0, result.People);
+            Assert.Equal(0, result.ServiceAccounts);
+        }
     }
 
     [Theory]
@@ -434,7 +443,8 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
     private async Task<(List<Project>, Organization, OrganizationUser)> SetupProjectsWithAccessAsync(
         PermissionType permissionType,
-        int projectsToCreate = 3)
+        int projectsToCreate = 3,
+        bool writeAccess = false)
     {
         var (org, owner) = await _organizationHelper.Initialize(true, true, true);
         var projects = await CreateProjectsAsync(org.Id, projectsToCreate);
@@ -453,7 +463,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
                     foreach (var project in projects)
                     {
-                        await CreateUserProjectAccessPolicyAsync(user.Id, project.Id);
+                        await CreateUserProjectAccessPolicyAsync(user.Id, project.Id, writeAccess);
                     }
 
                     break;
@@ -477,14 +487,14 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         return (projects, org, user);
     }
 
-    private async Task CreateUserProjectAccessPolicyAsync(Guid userId, Guid projectId)
+    private async Task CreateUserProjectAccessPolicyAsync(Guid userId, Guid projectId, bool write = false)
     {
         var policy = new UserProjectAccessPolicy
         {
             OrganizationUserId = userId,
             GrantedProjectId = projectId,
             Read = true,
-            Write = false,
+            Write = write,
         };
         await _accessPolicyRepository.CreateManyAsync([policy]);
     }

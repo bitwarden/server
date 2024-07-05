@@ -192,22 +192,30 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Project.Where(p => p.Id == projectId && p.DeletedDate == null);
 
-        query = accessType switch
+        var queryReadAccess = accessType switch
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
-        var projectCountsQuery = query.Select(project => new ProjectCounts
+        var queryWriteAccess = accessType switch
         {
-            Secrets = project.Secrets.Count(s => s.DeletedDate == null),
-            People = project.UserAccessPolicies.Count + project.GroupAccessPolicies.Count,
-            ServiceAccounts = project.ServiceAccountAccessPolicies.Count
-        });
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasWriteAccessToProject(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
 
-        var projectCounts = await projectCountsQuery.FirstOrDefaultAsync();
-        return projectCounts ?? new ProjectCounts { Secrets = 0, People = 0, ServiceAccounts = 0 };
+        var secretsQuery = queryReadAccess.Select(project => project.Secrets.Count(s => s.DeletedDate == null));
+        var peopleQuery = queryWriteAccess.Select(project => project.UserAccessPolicies.Count
+                                                             + project.GroupAccessPolicies.Count);
+        var serviceAccountsQuery = queryWriteAccess.Select(project => project.ServiceAccountAccessPolicies.Count);
+
+        var secrets = await secretsQuery.FirstOrDefaultAsync();
+        var people = await peopleQuery.FirstOrDefaultAsync();
+        var serviceAccounts = await serviceAccountsQuery.FirstOrDefaultAsync();
+
+        return new ProjectCounts { Secrets = secrets, People = people, ServiceAccounts = serviceAccounts };
     }
 
     private record ProjectAccess(Guid Id, bool Read, bool Write);
