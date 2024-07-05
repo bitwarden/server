@@ -138,6 +138,10 @@ internal class OrganizationInvite : ICustomization
             .With(ou => ou.Permissions, PermissionsBlob));
         fixture.Customize<OrganizationUserInvite>(composer => composer
             .With(oi => oi.Type, InviteeUserType));
+
+        // Set Manage to false, this ensures it doesn't conflict with the other properties during validation
+        fixture.Customize<CollectionAccessSelection>(composer => composer
+            .With(c => c.Manage, false));
     }
 }
 
