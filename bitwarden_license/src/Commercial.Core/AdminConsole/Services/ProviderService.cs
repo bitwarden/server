@@ -566,8 +566,6 @@ public class ProviderService : IProviderService
                     new OrganizationUserInvite
                     {
                         Emails = new[] { clientOwnerEmail },
-                        // AccessAll is deprecated and set to false.
-                        AccessAll = false,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
                         Collections = defaultOwnerAccess,

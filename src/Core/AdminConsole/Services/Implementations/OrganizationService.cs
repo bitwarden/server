@@ -745,8 +745,6 @@ public class OrganizationService : IOrganizationService
                     AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-                    // AccessAll is deprecated and set to false.
-                    AccessAll = false,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
@@ -1040,11 +1038,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
         }
 
-        if (invites.Any(i => i.invite.AccessAll))
-        {
-            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
-        }
-
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
 
@@ -1087,8 +1080,8 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        var orgUsers = new List<OrganizationUser>();
-        var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
+        var orgUsersWithoutCollections = new List<OrganizationUser>();
+        var orgUsersWithCollections = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
         var orgUserGroups = new List<(OrganizationUser, IEnumerable<Guid>)>();
         var orgUserInvitedCount = 0;
         var exceptions = new List<Exception>();
@@ -1114,7 +1107,6 @@ public class OrganizationService : IOrganizationService
                         Key = null,
                         Type = invite.Type.Value,
                         Status = OrganizationUserStatusType.Invited,
-                        AccessAll = invite.AccessAll,
                         AccessSecretsManager = invite.AccessSecretsManager,
                         ExternalId = externalId,
                         CreationDate = DateTime.UtcNow,
@@ -1126,13 +1118,13 @@ public class OrganizationService : IOrganizationService
                         orgUser.SetPermissions(invite.Permissions ?? new Permissions());
                     }
 
-                    if (!orgUser.AccessAll && invite.Collections.Any())
+                    if (invite.Collections.Any())
                     {
-                        limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
+                        orgUsersWithCollections.Add((orgUser, invite.Collections));
                     }
                     else
                     {
-                        orgUsers.Add(orgUser);
+                        orgUsersWithoutCollections.Add(orgUser);
                     }
 
                     if (invite.Groups != null && invite.Groups.Any())
@@ -1155,10 +1147,14 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
+        var allOrgUsers = orgUsersWithoutCollections
+            .Concat(orgUsersWithCollections.Select(u => u.Item1))
+            .ToList();
+
         try
         {
-            await _organizationUserRepository.CreateManyAsync(orgUsers);
-            foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
+            await _organizationUserRepository.CreateManyAsync(orgUsersWithoutCollections);
+            foreach (var (orgUser, collections) in orgUsersWithCollections)
             {
                 await _organizationUserRepository.CreateAsync(orgUser, collections);
             }
@@ -1180,7 +1176,7 @@ public class OrganizationService : IOrganizationService
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
 
-            await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
+            await SendInvitesAsync(allOrgUsers, organization);
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
@@ -1191,7 +1187,7 @@ public class OrganizationService : IOrganizationService
         catch (Exception e)
         {
             // Revert any added users.
-            var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
+            var invitedOrgUserIds = allOrgUsers.Select(ou => ou.Id);
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
@@ -1220,7 +1216,7 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        return (orgUsers, events);
+        return (allOrgUsers, events);
     }
 
     public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
@@ -1800,7 +1796,6 @@ public class OrganizationService : IOrganizationService
                     {
                         Emails = new List<string> { user.Email },
                         Type = OrganizationUserType.User,
-                        AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
                         AccessSecretsManager = hasStandaloneSecretsManager
                     };
@@ -2518,8 +2513,6 @@ public class OrganizationService : IOrganizationService
             Key = null,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Invited,
-            // AccessAll is deprecated and set to false.
-            AccessAll = false,
         };
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 

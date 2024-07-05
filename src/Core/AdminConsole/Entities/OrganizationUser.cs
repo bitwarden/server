@@ -19,7 +19,11 @@ public class OrganizationUser : ITableObject<Guid>, IExternal
     public string? ResetPasswordKey { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
-    public bool AccessAll { get; set; }
+
+    /// <summary>
+    /// AccessAll is deprecated and should always be left as false. Scheduled for removal.
+    /// </summary>
+    public bool AccessAll { get; set; } = false;
     [MaxLength(300)]
     public string? ExternalId { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;

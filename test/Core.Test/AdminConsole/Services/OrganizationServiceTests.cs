@@ -730,9 +730,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory]
-    [OrganizationCustomize(FlexibleCollections = false)]
     [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.User)]
     public async Task InviteUsers_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
@@ -844,7 +842,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     [OrganizationInviteCustomize(
         InviteeUserType = OrganizationUserType.User,
         InvitorUserType = OrganizationUserType.Custom
-    ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
+    ), OrganizationCustomize, BitAutoData]
     public async Task InviteUser_Passes(Organization organization, OrganizationUserInvite invite, string externalId,
         OrganizationUser invitor,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
@@ -1205,28 +1203,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                 new (OrganizationUserInvite, string)[] { (invite, null) }));
 
         Assert.Contains("manager role has been deprecated", exception.Message.ToLowerInvariant());
-    }
-
-    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task InviteUsers_WithFlexibleCollections_WithAccessAll_Throws(Organization organization,
-        OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
-    {
-        invite.Type = OrganizationUserType.User;
-        invite.AccessAll = true;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organization.Id)
-            .Returns(true);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null,
-                new (OrganizationUserInvite, string)[] { (invite, null) }));
-
-        Assert.Contains("accessall property has been deprecated", exception.Message.ToLowerInvariant());
     }
 
     private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
@@ -2360,6 +2336,15 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                 }
 
                 return Task.FromResult<ICollection<Guid>>(orgUsers.Select(u => u.Id).ToList());
+            }
+        );
+
+        organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>()).Returns(
+            info =>
+            {
+                var orgUser = info.Arg<OrganizationUser>();
+                orgUser.Id = Guid.NewGuid();
+                return Task.FromResult<Guid>(orgUser.Id);
             }
         );
     }
