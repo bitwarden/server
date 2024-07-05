@@ -637,7 +637,7 @@ public class ProviderServiceTests
                 t.First().Item1.Emails.Count() == 1 &&
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
                 t.First().Item1.Type == OrganizationUserType.Owner &&
-                !t.First().Item1.Collections.Any() &&
+                t.First().Item1.Collections.Count() == 1 &&
                 t.First().Item2 == null));
     }
 
@@ -716,7 +716,7 @@ public class ProviderServiceTests
                         t.First().Item1.Emails.Count() == 1 &&
                         t.First().Item1.Emails.First() == clientOwnerEmail &&
                         t.First().Item1.Type == OrganizationUserType.Owner &&
-                        !t.First().Item1.Collections.Any() &&
+                        t.First().Item1.Collections.Count() == 1 &&
                         t.First().Item2 == null));
     }
 
