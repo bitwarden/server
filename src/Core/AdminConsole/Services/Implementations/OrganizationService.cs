@@ -1187,7 +1187,7 @@ public class OrganizationService : IOrganizationService
         catch (Exception e)
         {
             // Revert any added users.
-            var invitedOrgUserIds = orgUsersWithoutCollections.Select(u => u.Id).Concat(orgUsersWithCollections.Select(u => u.Item1.Id));
+            var invitedOrgUserIds = allOrgUsers.Select(ou => ou.Id);
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
