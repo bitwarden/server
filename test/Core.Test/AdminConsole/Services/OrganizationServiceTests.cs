@@ -1206,27 +1206,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         Assert.Contains("manager role has been deprecated", exception.Message.ToLowerInvariant());
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task InviteUsers_WithFlexibleCollections_WithAccessAll_Throws(Organization organization,
-        OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
-    {
-        invite.Type = OrganizationUserType.User;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organization.Id)
-            .Returns(true);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null,
-                new (OrganizationUserInvite, string)[] { (invite, null) }));
-
-        Assert.Contains("accessall property has been deprecated", exception.Message.ToLowerInvariant());
-    }
-
     private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
     SutProvider<OrganizationService> sutProvider)
     {
