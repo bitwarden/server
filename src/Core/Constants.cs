@@ -124,6 +124,7 @@ public static class FeatureFlagKeys
     public const string UnassignedItemsBanner = "unassigned-items-banner";
     public const string EnableDeleteProvider = "AC-1218-delete-provider";
     public const string EmailVerification = "email-verification";
+    public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
     public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
@@ -132,6 +133,8 @@ public static class FeatureFlagKeys
     public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
+    public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
+    public const string GroupsComponentRefactor = "groups-component-refactor";
 
     public static List<string> GetAllKeys()
     {
@@ -147,7 +150,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"}
+            { UnassignedItemsBanner, "true"},
+            { FlexibleCollectionsV1, "true" }
         };
     }
 }

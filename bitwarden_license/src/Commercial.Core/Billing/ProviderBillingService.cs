@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using Bit.Commercial.Core.Billing.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -29,7 +28,6 @@ namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -81,7 +79,7 @@ public class ProviderBillingService(
         if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
             string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
         {
-            logger.LogError("Cannot create Stripe customer for provider ({ID}) - Both the provider's country and postal code are required", provider.Id);
+            logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
 
             throw ContactSupport();
         }
@@ -99,7 +97,6 @@ public class ProviderBillingService(
                 City = taxInfo.BillingAddressCity,
                 State = taxInfo.BillingAddressState
             },
-            Coupon = "msp-discount-35",
             Description = provider.DisplayBusinessName(),
             Email = provider.BillingEmail,
             InvoiceSettings = new CustomerInvoiceSettingsOptions
@@ -272,13 +269,6 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        if (provider.Type == ProviderType.Reseller)
-        {
-            logger.LogError("Consolidated billing subscription cannot be retrieved for reseller-type provider ({ID})", provider.Id);
-
-            throw ContactSupport("Consolidated billing does not support reseller-type providers");
-        }
-
         var subscription = await subscriberService.GetSubscription(provider, new SubscriptionGetOptions
         {
             Expand = ["customer", "test_clock"]
@@ -289,18 +279,6 @@ public class ProviderBillingService(
             return null;
         }
 
-        DateTime? subscriptionSuspensionDate = null;
-        DateTime? subscriptionUnpaidPeriodEndDate = null;
-        if (featureService.IsEnabled(FeatureFlagKeys.AC1795_UpdatedSubscriptionStatusSection))
-        {
-            var (suspensionDate, unpaidPeriodEndDate) = await paymentService.GetSuspensionDateAsync(subscription);
-            if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
-            {
-                subscriptionSuspensionDate = suspensionDate;
-                subscriptionUnpaidPeriodEndDate = unpaidPeriodEndDate;
-            }
-        }
-
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
         var configuredProviderPlans = providerPlans
@@ -308,11 +286,15 @@ public class ProviderBillingService(
             .Select(ConfiguredProviderPlanDTO.From)
             .ToList();
 
+        var taxInformation = await subscriberService.GetTaxInformation(provider);
+
+        var suspension = await GetSuspensionAsync(stripeAdapter, subscription);
+
         return new ConsolidatedBillingSubscriptionDTO(
             configuredProviderPlans,
             subscription,
-            subscriptionSuspensionDate,
-            subscriptionUnpaidPeriodEndDate);
+            taxInformation,
+            suspension);
     }
 
     public async Task ScaleSeats(
@@ -416,20 +398,13 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        if (!string.IsNullOrEmpty(provider.GatewaySubscriptionId))
-        {
-            logger.LogWarning("Cannot start Provider subscription - Provider ({ID}) already has a {FieldName}", provider.Id, nameof(provider.GatewaySubscriptionId));
-
-            throw ContactSupport();
-        }
-
         var customer = await subscriberService.GetCustomerOrThrow(provider);
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
         if (providerPlans == null || providerPlans.Count == 0)
         {
-            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured plans", provider.Id);
+            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured plans", provider.Id);
 
             throw ContactSupport();
         }
@@ -439,9 +414,9 @@ public class ProviderBillingService(
         var teamsProviderPlan =
             providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
 
-        if (teamsProviderPlan == null)
+        if (teamsProviderPlan == null || !teamsProviderPlan.IsConfigured())
         {
-            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured Teams Monthly plan", provider.Id);
+            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Teams plan", provider.Id);
 
             throw ContactSupport();
         }
@@ -457,9 +432,9 @@ public class ProviderBillingService(
         var enterpriseProviderPlan =
             providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
 
-        if (enterpriseProviderPlan == null)
+        if (enterpriseProviderPlan == null || !enterpriseProviderPlan.IsConfigured())
         {
-            logger.LogError("Cannot start Provider subscription - Provider ({ID}) has no configured Enterprise Monthly plan", provider.Id);
+            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Enterprise plan", provider.Id);
 
             throw ContactSupport();
         }
@@ -498,7 +473,7 @@ public class ProviderBillingService(
         {
             await providerRepository.ReplaceAsync(provider);
 
-            logger.LogError("Started incomplete Provider ({ProviderID}) subscription ({SubscriptionID})", provider.Id, subscription.Id);
+            logger.LogError("Started incomplete provider ({ProviderID}) subscription ({SubscriptionID})", provider.Id, subscription.Id);
 
             throw ContactSupport();
         }
