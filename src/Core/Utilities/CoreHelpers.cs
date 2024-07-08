@@ -91,7 +91,7 @@ public static class CoreHelpers
         var days = BitConverter.ToInt32(daysArray, 0);
         var msecs = BitConverter.ToInt32(msecsArray, 0);
 
-        var time = new TimeSpan(days, 0, 0, 0, (int)(msecs * 3.333333));
+        var time = TimeSpan.FromDays(days) + TimeSpan.FromMilliseconds(msecs * 3.333333);
         return new DateTime(_baseDateTicks + time.Ticks, DateTimeKind.Utc);
     }
 
