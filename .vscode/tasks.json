@@ -226,7 +226,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "Setup Secrets",
+            "label": "Set Up Secrets",
             "detail": "A task to run setup_secrets.ps1",
             "type": "shell",
             "command": "pwsh -WorkingDirectory ${workspaceFolder}/dev -Command '${workspaceFolder}/dev/setup_secrets.ps1 -clear:$${input:setupSecretsClear}'",
