@@ -693,6 +693,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("ClientName")
                         .IsRequired()
                         .HasMaxLength(50)
