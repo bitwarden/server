@@ -9,14 +9,14 @@ namespace Bit.Core.Services;
 
 public class MultiServicePushNotificationService : IPushNotificationService
 {
-    private readonly List<IPushNotificationService> _services = new List<IPushNotificationService>();
+    private readonly IEnumerable<IPushNotificationService> _services;
     private readonly ILogger<MultiServicePushNotificationService> _logger;
 
     public MultiServicePushNotificationService(
         [FromKeyedServices("implementation")] IEnumerable<IPushNotificationService> services,
         ILogger<MultiServicePushNotificationService> logger)
     {
-        _services.AddRange(services);
+        _services = services;
 
         _logger = logger;
     }
