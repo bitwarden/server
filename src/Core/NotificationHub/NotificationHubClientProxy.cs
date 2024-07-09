@@ -19,7 +19,7 @@ public class NotificationHubClientProxy : INotificationHubProxy
 
     // partial proxy of INotificationHubClient implementation
     // Note: Any other methods that are needed can simply be delegated as done here.
-    public async Task<(INotificationHubClient client, NotificationOutcome outcome)[]> SendTemplateNotificationAsync(IDictionary<string, string> properties, string tagExpression)
+    public async Task<(INotificationHubClient Client, NotificationOutcome Outcome)[]> SendTemplateNotificationAsync(IDictionary<string, string> properties, string tagExpression)
     {
         return await ApplyToAllClientsAsync(async c => await c.SendTemplateNotificationAsync(properties, tagExpression));
     }
