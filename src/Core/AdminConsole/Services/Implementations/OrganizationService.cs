@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
@@ -1440,9 +1441,20 @@ public class OrganizationService : IOrganizationService
 
         var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
-        if (provider is { Enabled: true, Type: ProviderType.Reseller })
+        if (provider is { Enabled: true })
         {
-            return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+            var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+            if (consolidatedBillingEnabled && provider.Type == ProviderType.Msp &&
+                provider.Status == ProviderStatusType.Billable)
+            {
+                return (false, "Insufficient licenses. Please provision more on the provider portal.");
+            }
+
+            if (provider.Type == ProviderType.Reseller)
+            {
+                return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+            }
         }
 
         if (organization.Seats.HasValue &&
