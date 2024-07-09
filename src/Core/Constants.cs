@@ -136,6 +136,7 @@ public static class FeatureFlagKeys
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string GroupsComponentRefactor = "groups-component-refactor";
     public const string AC2828_ProviderPortalMembersPage = "AC-2828_provider-portal-members-page";
+    public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
 
     public static List<string> GetAllKeys()
     {
