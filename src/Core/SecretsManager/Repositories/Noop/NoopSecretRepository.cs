@@ -81,6 +81,12 @@ public class NoopSecretRepository : ISecretRepository
         return Task.FromResult((false, false));
     }
 
+    public Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToSecretsAsync(IEnumerable<Guid> ids,
+        Guid userId, AccessClientType accessType)
+    {
+        return Task.FromResult(null as Dictionary<Guid, (bool Read, bool Write)>);
+    }
+
     public Task EmptyTrash(DateTime nowTime, uint deleteAfterThisNumberOfDays)
     {
         return Task.FromResult(0);
