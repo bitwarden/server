@@ -31,7 +31,7 @@ public class OrganizationUserControllerPutTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId);
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
 
         // Authorize all changes for basic happy path test
         sutProvider.GetDependency<IAuthorizationService>()
@@ -258,7 +258,7 @@ public class OrganizationUserControllerPutTests
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider,
         OrganizationAbility organizationAbility, OrganizationUser organizationUser, Guid savingUserId,
-        List<CollectionAccessSelection> currentCollectionAccess = null)
+        List<CollectionAccessSelection> currentCollectionAccess)
     {
         // FCv1 is now fully enabled
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
