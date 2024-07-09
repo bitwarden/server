@@ -15,8 +15,6 @@ public class CollectionService : ICollectionService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IMailService _mailService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
@@ -26,8 +24,6 @@ public class CollectionService : ICollectionService
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
-        IUserRepository userRepository,
-        IMailService mailService,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IFeatureService featureService)
@@ -36,8 +32,6 @@ public class CollectionService : ICollectionService
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
-        _userRepository = userRepository;
-        _mailService = mailService;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _featureService = featureService;
@@ -131,10 +125,7 @@ public class CollectionService : ICollectionService
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(
-                _currentContext.UserId.Value,
-                _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections)
-            );
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
             orgCollections = collections.Where(c => c.OrganizationId == organizationId);
         }
 

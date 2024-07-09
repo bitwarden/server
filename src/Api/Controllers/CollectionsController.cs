@@ -107,7 +107,7 @@ public class CollectionsController : Controller
         }
         else
         {
-            var assignedCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value, false);
+            var assignedCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
             orgCollections = assignedCollections.Where(c => c.OrganizationId == orgId && c.Manage).ToList();
         }
 
@@ -119,7 +119,7 @@ public class CollectionsController : Controller
     public async Task<ListResponseModel<CollectionDetailsResponseModel>> GetUser()
     {
         var collections = await _collectionRepository.GetManyByUserIdAsync(
-            _userService.GetProperUserId(User).Value, false);
+            _userService.GetProperUserId(User).Value);
         var responses = collections.Select(c => new CollectionDetailsResponseModel(c));
         return new ListResponseModel<CollectionDetailsResponseModel>(responses);
     }
