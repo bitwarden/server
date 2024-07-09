@@ -261,6 +261,27 @@ public class GroupsControllerPutTests
         Assert.Contains("You must have Can Manage permission", exception.Message);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Put_UpdateCollections_ThrowsIfSavingUserCannotAddCollections(GroupRequestModel groupRequestModel,
+        Group group, Organization organization,
+        SutProvider<GroupsController> sutProvider, OrganizationUser savingUser)
+    {
+        // Group is not assigned to the POSTed collections
+        Put_Setup(sutProvider, organization, false, group, savingUser, [], []);
+
+        var postedCollectionIds = groupRequestModel.Collections.Select(c => c.Id).ToHashSet();
+
+        // But the saving user does not have permission to update them
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => postedCollectionIds.Contains(c.Id)),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
+            .Returns(AuthorizationResult.Failed());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel));
+        Assert.Contains("You must have Can Manage permission", exception.Message);
+    }
+
     private void Put_Setup(SutProvider<GroupsController> sutProvider, Organization organization,
         bool adminAccess, Group group, OrganizationUser? savingUser, List<CollectionAccessSelection> currentCollectionAccess,
         List<Guid> currentGroupUsers)
