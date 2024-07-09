@@ -207,15 +207,18 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         };
 
         var secretsQuery = queryReadAccess.Select(project => project.Secrets.Count(s => s.DeletedDate == null));
-        var peopleQuery = queryWriteAccess.Select(project => project.UserAccessPolicies.Count
-                                                             + project.GroupAccessPolicies.Count);
-        var serviceAccountsQuery = queryWriteAccess.Select(project => project.ServiceAccountAccessPolicies.Count);
+
+        var projectCountsQuery = queryWriteAccess.Select(project => new ProjectCounts
+        {
+            People = project.UserAccessPolicies.Count + project.GroupAccessPolicies.Count,
+            ServiceAccounts = project.ServiceAccountAccessPolicies.Count
+        });
 
         var secrets = await secretsQuery.FirstOrDefaultAsync();
-        var people = await peopleQuery.FirstOrDefaultAsync();
-        var serviceAccounts = await serviceAccountsQuery.FirstOrDefaultAsync();
+        var projectCounts = await projectCountsQuery.FirstOrDefaultAsync() ?? new ProjectCounts { Secrets = 0, People = 0, ServiceAccounts = 0 };
+        projectCounts.Secrets = secrets;
 
-        return new ProjectCounts { Secrets = secrets, People = people, ServiceAccounts = serviceAccounts };
+        return projectCounts;
     }
 
     private record ProjectAccess(Guid Id, bool Read, bool Write);
