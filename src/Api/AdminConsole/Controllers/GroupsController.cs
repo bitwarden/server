@@ -175,7 +175,7 @@ public class GroupsController : Controller
     /// </summary>
     private async Task<GroupResponseModel> Put_vNext(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
-        if  (!await _currentContext.ManageGroups(orgId))
+        if (!await _currentContext.ManageGroups(orgId))
         {
             throw new NotFoundException();
         }
