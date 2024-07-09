@@ -18,13 +18,13 @@ public class ServiceAccountGrantedPoliciesPermissionDetailsResponseModel : Respo
         }
 
         GrantedProjectPolicies = grantedPoliciesPermissionDetails.ProjectGrantedPolicies
-            .Select(x => new ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel(x)).ToList();
+            .Select(x => new GrantedProjectAccessPolicyPermissionDetailsResponseModel(x)).ToList();
     }
 
     public ServiceAccountGrantedPoliciesPermissionDetailsResponseModel() : base(_objectName)
     {
     }
 
-    public List<ServiceAccountProjectAccessPolicyPermissionDetailsResponseModel> GrantedProjectPolicies { get; set; } =
+    public List<GrantedProjectAccessPolicyPermissionDetailsResponseModel> GrantedProjectPolicies { get; set; } =
         [];
 }

@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -33,7 +34,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UsePasswordManager = organization.UsePasswordManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise;
+        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).ProductTier == ProductTierType.Enterprise;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -48,6 +49,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
         ResetPasswordEnrolled = organization.ResetPasswordKey != null;
         UserId = organization.UserId;
+        OrganizationUserId = organization.OrganizationUserId;
         ProviderId = organization.ProviderId;
         ProviderName = organization.ProviderName;
         ProviderType = organization.ProviderType;
@@ -55,7 +57,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organization);
-        PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
+        ProductTierType = StaticStore.GetPlan(organization.PlanType).ProductTier;
         FamilySponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
@@ -138,6 +140,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public Guid? UserId { get; set; }
+    public Guid OrganizationUserId { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
     public Guid? ProviderId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
@@ -145,7 +148,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
     public bool FamilySponsorshipAvailable { get; set; }
-    public ProductType PlanProductType { get; set; }
+    public ProductTierType ProductTierType { get; set; }
     public bool KeyConnectorEnabled { get; set; }
     public string KeyConnectorUrl { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }

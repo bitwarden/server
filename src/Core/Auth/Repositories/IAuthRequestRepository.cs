@@ -9,4 +9,5 @@ public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>
     Task<ICollection<AuthRequest>> GetManyByUserIdAsync(Guid userId);
     Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(Guid organizationId, IEnumerable<Guid> ids);
+    Task UpdateManyAsync(IEnumerable<AuthRequest> authRequests);
 }

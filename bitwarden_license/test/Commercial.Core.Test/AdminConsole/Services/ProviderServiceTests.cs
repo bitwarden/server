@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -631,7 +632,7 @@ public class ProviderServiceTests
             .Received().LogProviderOrganizationEventAsync(providerOrganization,
                 EventType.ProviderOrganization_Created);
         await sutProvider.GetDependency<IOrganizationService>()
-            .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+            .Received().InviteUsersAsync(organization.Id, user.Id, systemUser: null, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
                 t => t.Count() == 1 &&
                 t.First().Item1.Emails.Count() == 1 &&
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
@@ -709,6 +710,7 @@ public class ProviderServiceTests
             .InviteUsersAsync(
                 organization.Id,
                 user.Id,
+                systemUser: null,
                 Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
                     t =>
                         t.Count() == 1 &&
@@ -740,7 +742,7 @@ public class ProviderServiceTests
             .Received().LogProviderOrganizationEventAsync(providerOrganization,
                 EventType.ProviderOrganization_Created);
         await sutProvider.GetDependency<IOrganizationService>()
-            .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+            .Received().InviteUsersAsync(organization.Id, user.Id, systemUser: null, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
                 t => t.Count() == 1 &&
                 t.First().Item1.Emails.Count() == 1 &&
                 t.First().Item1.Emails.First() == clientOwnerEmail &&

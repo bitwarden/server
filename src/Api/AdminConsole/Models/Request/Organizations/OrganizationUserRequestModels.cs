@@ -15,7 +15,6 @@ public class OrganizationUserInviteRequestModel
     public IEnumerable<string> Emails { get; set; }
     [Required]
     public OrganizationUserType? Type { get; set; }
-    public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
@@ -27,7 +26,6 @@ public class OrganizationUserInviteRequestModel
         {
             Emails = Emails,
             Type = Type,
-            AccessAll = AccessAll,
             AccessSecretsManager = AccessSecretsManager,
             Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
             Groups = Groups,
@@ -86,7 +84,6 @@ public class OrganizationUserUpdateRequestModel
 {
     [Required]
     public OrganizationUserType? Type { get; set; }
-    public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
@@ -96,7 +93,6 @@ public class OrganizationUserUpdateRequestModel
     {
         existingUser.Type = Type.Value;
         existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
-        existingUser.AccessAll = AccessAll;
         existingUser.AccessSecretsManager = AccessSecretsManager;
         return existingUser;
     }
@@ -105,6 +101,7 @@ public class OrganizationUserUpdateRequestModel
 public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
     public string ResetPasswordKey { get; set; }
+    public string MasterPasswordHash { get; set; }
 }
 
 public class OrganizationUserBulkRequestModel

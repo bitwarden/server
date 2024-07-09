@@ -217,12 +217,22 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> CanUpdateUserAccessAsync(ICollection<Collection> resources, CurrentContextOrganization? org)
     {
-        return await CanUpdateCollectionAsync(resources, org) || org?.Permissions.ManageUsers == true;
+        if (await AllowAdminAccessToAllCollectionItems(org) && org?.Permissions.ManageUsers == true)
+        {
+            return true;
+        }
+
+        return await CanUpdateCollectionAsync(resources, org);
     }
 
     private async Task<bool> CanUpdateGroupAccessAsync(ICollection<Collection> resources, CurrentContextOrganization? org)
     {
-        return await CanUpdateCollectionAsync(resources, org) || org?.Permissions.ManageGroups == true;
+        if (await AllowAdminAccessToAllCollectionItems(org) && org?.Permissions.ManageGroups == true)
+        {
+            return true;
+        }
+
+        return await CanUpdateCollectionAsync(resources, org);
     }
 
     private async Task<bool> CanDeleteAsync(ICollection<Collection> resources, CurrentContextOrganization? org)
@@ -312,5 +322,12 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
 
         return await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
+    }
+
+    private async Task<bool> AllowAdminAccessToAllCollectionItems(CurrentContextOrganization? org)
+    {
+        var organizationAbility = await GetOrganizationAbilityAsync(org);
+        return !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
+            organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
     }
 }

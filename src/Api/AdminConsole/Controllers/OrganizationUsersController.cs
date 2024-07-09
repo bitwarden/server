@@ -10,6 +10,8 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -20,6 +22,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,6 +48,7 @@ public class OrganizationUsersController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
+    private readonly ISsoConfigRepository _ssoConfigRepository;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -62,7 +66,8 @@ public class OrganizationUsersController : Controller
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ISsoConfigRepository ssoConfigRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -80,6 +85,7 @@ public class OrganizationUsersController : Controller
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
+        _ssoConfigRepository = ssoConfigRepository;
     }
 
     [HttpGet("{id}")]
@@ -92,17 +98,15 @@ public class OrganizationUsersController : Controller
         }
 
         var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
-        if (await FlexibleCollectionsIsEnabledAsync(organizationUser.Item1.OrganizationId))
-        {
-            // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-            response.Type = GetFlexibleCollectionsUserType(response.Type, response.Permissions);
 
-            // Set 'Edit/Delete Assigned Collections' custom permissions to false
-            if (response.Permissions is not null)
-            {
-                response.Permissions.EditAssignedCollections = false;
-                response.Permissions.DeleteAssignedCollections = false;
-            }
+        // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+        response.Type = GetFlexibleCollectionsUserType(response.Type, response.Permissions);
+
+        // Set 'Edit/Delete Assigned Collections' custom permissions to false
+        if (response.Permissions is not null)
+        {
+            response.Permissions.EditAssignedCollections = false;
+            response.Permissions.DeleteAssignedCollections = false;
         }
 
         if (includeGroups)
@@ -116,24 +120,35 @@ public class OrganizationUsersController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
-        if (await FlexibleCollectionsIsEnabledAsync(orgId))
-        {
-            return await Get_vNext(orgId, includeGroups, includeCollections);
-        }
-
-        var authorized = await _currentContext.ViewAllCollections(orgId) ||
-              await _currentContext.ViewAssignedCollections(orgId) ||
-              await _currentContext.ManageGroups(orgId) ||
-              await _currentContext.ManageUsers(orgId);
+        var authorized = (await _authorizationService.AuthorizeAsync(
+            User, OrganizationUserOperations.ReadAll(orgId))).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
-        var responseTasks = organizationUsers.Select(async o => new OrganizationUserUserDetailsResponseModel(o,
-            await _userService.TwoFactorIsEnabledAsync(o)));
+        var organizationUsers = await _organizationUserRepository
+            .GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
+        var responseTasks = organizationUsers
+            .Select(async o =>
+            {
+                var orgUser = new OrganizationUserUserDetailsResponseModel(o,
+                    await _userService.TwoFactorIsEnabledAsync(o));
+
+                // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+                orgUser.Type = GetFlexibleCollectionsUserType(orgUser.Type, orgUser.Permissions);
+
+                // Set 'Edit/Delete Assigned Collections' custom permissions to false
+                if (orgUser.Permissions is not null)
+                {
+                    orgUser.Permissions.EditAssignedCollections = false;
+                    orgUser.Permissions.DeleteAssignedCollections = false;
+                }
+
+                return orgUser;
+            });
         var responses = await Task.WhenAll(responseTasks);
+
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
 
@@ -186,6 +201,20 @@ public class OrganizationUsersController : Controller
         return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
     }
 
+    [RequireFeature(FeatureFlagKeys.BulkDeviceApproval)]
+    [HttpPost("account-recovery-details")]
+    public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetAccountRecoveryDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        // Make sure the calling user can reset passwords for this org
+        if (!await _currentContext.ManageResetPassword(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var responses = await _organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(orgId, model.Ids);
+        return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(responses.Select(r => new OrganizationUserResetPasswordDetailsResponseModel(r)));
+    }
+
     [HttpPost("invite")]
     public async Task Invite(Guid orgId, [FromBody] OrganizationUserInviteRequestModel model)
     {
@@ -195,9 +224,7 @@ public class OrganizationUsersController : Controller
         }
 
         // Flexible Collections - check the user has permission to grant access to the collections for the new user
-        if (await FlexibleCollectionsIsEnabledAsync(orgId) &&
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) &&
-            model.Collections?.Any() == true)
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) && model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
@@ -210,7 +237,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.InviteUsersAsync(orgId, userId.Value,
+        await _organizationService.InviteUsersAsync(orgId, userId.Value, systemUser: null,
             new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
     }
 
@@ -332,7 +359,7 @@ public class OrganizationUsersController : Controller
     [HttpPost("{id}")]
     public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
-        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
         {
             // Use new Flexible Collections v1 logic
             await Put_vNext(orgId, id, model);
@@ -432,6 +459,13 @@ public class OrganizationUsersController : Controller
         if (user == null)
         {
             throw new UnauthorizedAccessException();
+        }
+
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
+        var isTdeEnrollment = ssoConfig != null && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption;
+        if (!isTdeEnrollment && !string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
+        {
+            throw new BadRequestException("Incorrect password");
         }
 
         var callingUserId = user.Id;
@@ -608,47 +642,6 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
-    }
-
-    private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
-    {
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        return organizationAbility?.FlexibleCollections ?? false;
-    }
-
-    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get_vNext(Guid orgId,
-        bool includeGroups = false, bool includeCollections = false)
-    {
-        var authorized = (await _authorizationService.AuthorizeAsync(
-            User, OrganizationUserOperations.ReadAll(orgId))).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
-        var organizationUsers = await _organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
-        var responseTasks = organizationUsers
-            .Select(async o =>
-            {
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o,
-                    await _userService.TwoFactorIsEnabledAsync(o));
-
-                // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-                orgUser.Type = GetFlexibleCollectionsUserType(orgUser.Type, orgUser.Permissions);
-
-                // Set 'Edit/Delete Assigned Collections' custom permissions to false
-                if (orgUser.Permissions is not null)
-                {
-                    orgUser.Permissions.EditAssignedCollections = false;
-                    orgUser.Permissions.DeleteAssignedCollections = false;
-                }
-
-                return orgUser;
-            });
-        var responses = await Task.WhenAll(responseTasks);
-
-        return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
 
     private OrganizationUserType GetFlexibleCollectionsUserType(OrganizationUserType type, Permissions permissions)

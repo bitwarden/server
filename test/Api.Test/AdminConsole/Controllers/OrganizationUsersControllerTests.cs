@@ -9,6 +9,8 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -40,6 +42,7 @@ public class OrganizationUsersControllerTests
     {
         orgUser.Status = Core.Enums.OrganizationUserStatusType.Invited;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(default, default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
 
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
@@ -54,11 +57,42 @@ public class OrganizationUsersControllerTests
     {
         orgUser.Status = Core.Enums.OrganizationUserStatusType.Confirmed;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(default, default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
 
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
 
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(0).AcceptOrgUserByOrgIdAsync(orgId, user, sutProvider.GetDependency<IUserService>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutResetPasswordEnrollment_PasswordValidationFails_Throws(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
+        User user, SutProvider<OrganizationUsersController> sutProvider, OrganizationUser orgUser)
+    {
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
+        model.MasterPasswordHash = "NotThePassword";
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(default).ReturnsForAnyArgs((SsoConfig)null);
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutResetPasswordEnrollment_PasswordValidationPasses_Continues(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
+        User user, OrganizationUser orgUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, model.MasterPasswordHash).Returns(true);
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(default).ReturnsForAnyArgs((SsoConfig)null);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
+        await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).UpdateUserResetPasswordEnrollmentAsync(
+            orgId,
+            userId,
+            model.ResetPasswordKey,
+            user.Id
+        );
     }
 
     [Theory]
@@ -113,7 +147,6 @@ public class OrganizationUsersControllerTests
     public async Task Invite_Success(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        organizationAbility.FlexibleCollections = true;
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
             .Returns(organizationAbility);
@@ -127,7 +160,7 @@ public class OrganizationUsersControllerTests
         await sutProvider.Sut.Invite(organizationAbility.Id, model);
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUsersAsync(organizationAbility.Id,
-            userId, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites =>
+            userId, systemUser: null, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites =>
                 invites.Count() == 1 &&
                 invites.First().Item1.Emails.SequenceEqual(model.Emails) &&
                 invites.First().Item1.Type == model.Type &&
@@ -139,7 +172,6 @@ public class OrganizationUsersControllerTests
     public async Task Invite_NotAuthorizedToGiveAccessToCollections_Throws(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        organizationAbility.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
@@ -161,10 +193,9 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
-        organizationAbility.FlexibleCollections = false;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(false);
 
-        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, true);
 
         // Save these for later - organizationUser object will be mutated
         var orgUserId = organizationUser.Id;
@@ -193,7 +224,6 @@ public class OrganizationUsersControllerTests
         // Updating self
         organizationUser.UserId = savingUserId;
         organizationAbility.AllowAdminAccessToAllCollectionItems = false;
-        organizationAbility.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
@@ -223,7 +253,6 @@ public class OrganizationUsersControllerTests
         // Updating self
         organizationUser.UserId = savingUserId;
         organizationAbility.AllowAdminAccessToAllCollectionItems = false;
-        organizationAbility.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, true);
@@ -253,7 +282,6 @@ public class OrganizationUsersControllerTests
     {
         // Updating self
         organizationUser.UserId = savingUserId;
-        organizationAbility.FlexibleCollections = true;
         organizationAbility.AllowAdminAccessToAllCollectionItems = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
@@ -282,7 +310,6 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
-        organizationAbility.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
 
@@ -372,7 +399,6 @@ public class OrganizationUsersControllerTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
-        organizationAbility.FlexibleCollections = true;
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, model, false);
 
@@ -396,7 +422,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_WithFlexibleCollections_ReturnsUsers(
+    public async Task Get_ReturnsUsers(
         ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -408,7 +434,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_WithFlexibleCollections_HandlesNullPermissionsObject(
+    public async Task Get_HandlesNullPermissionsObject(
         ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -421,7 +447,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_WithFlexibleCollections_SetsDeprecatedCustomPermissionstoFalse(
+    public async Task Get_SetsDeprecatedCustomPermissionstoFalse(
         ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -449,7 +475,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_WithFlexibleCollections_DowngradesCustomUsersWithDeprecatedPermissions(
+    public async Task Get_DowngradesCustomUsersWithDeprecatedPermissions(
         ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -469,6 +495,45 @@ public class OrganizationUsersControllerTests
         Assert.Equal(OrganizationUserType.User, customUserResponse.Type);
         Assert.False(customUserResponse.Permissions.EditAssignedCollections);
         Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAccountRecoveryDetails_ReturnsDetails(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        ICollection<OrganizationUserResetPasswordDetails> resetPasswordDetails,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organizationId, bulkRequestModel.Ids)
+            .Returns(resetPasswordDetails);
+
+        var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
+
+        Assert.Equal(resetPasswordDetails.Count, response.Data.Count());
+        Assert.True(response.Data.All(r =>
+            resetPasswordDetails.Any(ou =>
+                ou.OrganizationUserId == r.OrganizationUserId &&
+                ou.Kdf == r.Kdf &&
+                ou.KdfIterations == r.KdfIterations &&
+                ou.KdfMemory == r.KdfMemory &&
+                ou.KdfParallelism == r.KdfParallelism &&
+                ou.ResetPasswordKey == r.ResetPasswordKey &&
+                ou.EncryptedPrivateKey == r.EncryptedPrivateKey)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAccountRecoveryDetails_WithoutManageResetPasswordPermission_Throws(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel));
     }
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider, OrganizationAbility organizationAbility,
@@ -505,7 +570,6 @@ public class OrganizationUsersControllerTests
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        organizationAbility.FlexibleCollections = true;
         foreach (var orgUser in organizationUsers)
         {
             orgUser.Permissions = null;

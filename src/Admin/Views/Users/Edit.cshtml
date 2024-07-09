@@ -92,7 +92,7 @@
 {
     <h2>Billing Information</h2>
     @await Html.PartialAsync("_BillingInformation",
-        new BillingInformationModel { BillingInfo = Model.BillingInfo, UserId = Model.User.Id, Entity = "User" })
+        new BillingInformationModel { BillingInfo = Model.BillingInfo, BillingHistoryInfo = Model.BillingHistoryInfo, UserId = Model.User.Id, Entity = "User" })
 }
 @if (canViewGeneral)
 {

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -310,6 +311,7 @@ public class CollectionRepositoryTests
             Assert.True(c1.Manage);
             Assert.False(c1.ReadOnly);
             Assert.False(c1.HidePasswords);
+            Assert.False(c1.Unmanaged);
         }, c2 =>
         {
             Assert.NotNull(c2);
@@ -319,6 +321,7 @@ public class CollectionRepositoryTests
             Assert.False(c2.Manage);
             Assert.True(c2.ReadOnly);
             Assert.False(c2.HidePasswords);
+            Assert.True(c2.Unmanaged);
         }, c3 =>
         {
             Assert.NotNull(c3);
@@ -328,6 +331,7 @@ public class CollectionRepositoryTests
             Assert.False(c3.Manage);
             Assert.False(c3.ReadOnly);
             Assert.False(c3.HidePasswords);
+            Assert.False(c3.Unmanaged);
         });
     }
 
@@ -436,6 +440,7 @@ public class CollectionRepositoryTests
             Assert.True(c1.Manage);
             Assert.False(c1.ReadOnly);
             Assert.False(c1.HidePasswords);
+            Assert.False(c1.Unmanaged);
         }, c2 =>
         {
             Assert.NotNull(c2);
@@ -445,6 +450,7 @@ public class CollectionRepositoryTests
             Assert.False(c2.Manage);
             Assert.True(c2.ReadOnly);
             Assert.False(c2.HidePasswords);
+            Assert.True(c2.Unmanaged);
         }, c3 =>
         {
             Assert.NotNull(c3);
@@ -454,6 +460,7 @@ public class CollectionRepositoryTests
             Assert.True(c3.Manage); // Group 2 is Manage
             Assert.False(c3.ReadOnly);
             Assert.False(c3.HidePasswords);
+            Assert.False(c3.Unmanaged);
         });
     }
 }
