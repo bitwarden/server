@@ -13,12 +13,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Api
-          - name: Admin
+          # - name: Api
+          # - name: Admin
           - name: Billing
-          - name: Events
-          - name: Sso
-          - name: Identity
+          # - name: Events
+          # - name: Sso
+          # - name: Identity
     steps:
       - name: Setup
         id: setup
