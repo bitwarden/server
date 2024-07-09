@@ -74,6 +74,13 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
 
+      - name: Cache SonarCloud packages
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        with:
+          path: ~\sonar\cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
       - name: Install SonarCloud scanner
         run: dotnet tool install dotnet-sonarscanner -g
 
