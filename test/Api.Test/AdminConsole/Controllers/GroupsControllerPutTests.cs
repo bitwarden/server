@@ -115,6 +115,35 @@ public class GroupsControllerPutTests
 
     [Theory]
     [BitAutoData]
+    public async Task Put_UpdateMembers_WithAdminAccess_CanAddSelfToGroup(Organization organization, Group group,
+        GroupRequestModel groupRequestModel, OrganizationUser savingUser, List<Guid> currentGroupUsers,
+        SutProvider<GroupsController> sutProvider)
+    {
+        // Not updating collections
+        groupRequestModel.Collections = [];
+
+        Put_Setup(sutProvider, organization, true, group, savingUser,
+            currentCollectionAccess: [], currentGroupUsers);
+
+        // Saving user is trying to add themselves to the group
+        var updatedUsers = groupRequestModel.Users.ToList();
+        updatedUsers.Add(savingUser.Id);
+        groupRequestModel.Users = updatedUsers;
+
+        var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
+
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
+            Arg.Is<Group>(g =>
+                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
+            Arg.Is<Organization>(o => o.Id == organization.Id),
+            Arg.Any<ICollection<CollectionAccessSelection>>(),
+            Arg.Is<IEnumerable<Guid>>(guids => guids.ToHashSet().SetEquals(groupRequestModel.Users.ToHashSet())));
+        Assert.Equal(groupRequestModel.Name, response.Name);
+        Assert.Equal(organization.Id, response.OrganizationId);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task Put_UpdateMembers_NoAdminAccess_ProviderUser_Success(Organization organization, Group group,
         GroupRequestModel groupRequestModel, List<Guid> currentGroupUsers, SutProvider<GroupsController> sutProvider)
     {
