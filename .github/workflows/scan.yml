@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Set up JDK 17
-        uses: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
         with:
           java-version: 17
           distribution: "zulu"
@@ -72,7 +72,7 @@ jobs:
           ref: ${{  github.event.pull_request.head.sha }}
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
 
       - name: Install SonarCloud scanner
         run: dotnet tool install dotnet-sonarscanner -g
