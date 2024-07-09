@@ -265,7 +265,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 {
                     continue;
                 }
-                _logger.LogInformation("Azure Notification Hub Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
+                _logger.LogInformation("Azure Notification Hub Tracking ID: {Id} | {Type} push notification with {Success} successes and {Failure} failures with a payload of {@Payload} and result of {@Results}",
                     outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
             }
         }

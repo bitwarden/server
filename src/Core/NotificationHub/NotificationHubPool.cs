@@ -25,7 +25,7 @@ public class NotificationHubPool : INotificationHubPool
             var connection = NotificationHubConnection.From(hub);
             if (!connection.IsValid)
             {
-                _logger.LogWarning("Invalid notification hub settings: {0}", hub.HubName ?? "hub name missing");
+                _logger.LogWarning("Invalid notification hub settings: {HubName}", hub.HubName ?? "hub name missing");
                 continue;
             }
             result.Add(connection);
