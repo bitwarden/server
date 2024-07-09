@@ -37,10 +37,11 @@ public class InstallationDeviceEntity : ITableEntity
     {
         return deviceId != null && deviceId.Length == 73 && deviceId[36] == '_';
     }
-    public static bool TrySplit(string deviceId, out Guid installationId, out Guid deviceIdGuid)
+    public static bool TryParse(string deviceId, out InstallationDeviceEntity installationDeviceEntity)
     {
-        installationId = Guid.Empty;
-        deviceIdGuid = Guid.Empty;
+        installationDeviceEntity = null;
+        var installationId = Guid.Empty;
+        var deviceIdGuid = Guid.Empty;
         if (!IsInstallationDeviceId(deviceId))
         {
             return false;
@@ -54,6 +55,7 @@ public class InstallationDeviceEntity : ITableEntity
         {
             return false;
         }
+        installationDeviceEntity = new InstallationDeviceEntity(installationId, deviceIdGuid);
         return true;
     }
 }

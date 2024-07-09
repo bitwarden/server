@@ -216,11 +216,16 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 
     private Guid GetComb(string deviceId)
     {
+        var deviceIdString = deviceId;
+        InstallationDeviceEntity installationDeviceEntity;
         Guid deviceIdGuid;
-        if (InstallationDeviceEntity.TrySplit(deviceId, out _, out deviceIdGuid))
+        if (InstallationDeviceEntity.TryParse(deviceIdString, out installationDeviceEntity))
         {
+            // Strip off the installation id (PartitionId). RowKey is the ID in the Installation's table.
+            deviceIdString = installationDeviceEntity.RowKey;
         }
-        else if (Guid.TryParse(deviceId, out deviceIdGuid))
+
+        if (Guid.TryParse(deviceIdString, out deviceIdGuid))
         {
         }
         else
