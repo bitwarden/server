@@ -186,21 +186,61 @@ public class OrganizationEditModel : OrganizationViewModel
             {
                 var plan = new
                 {
-                    p.Type,
-                    p.Has2fa,
-                    p.HasApi,
-                    p.HasGroups,
-                    p.HasPolicies,
-                    p.HasSso,
-                    p.HasScim,
-                    p.HasDirectory,
-                    p.HasEvents,
-                    p.HasResetPassword,
-                    p.HasCustomPermissions,
-                    p.PasswordManager,
-                    p.SecretsManager,
+                    Type = p.Type,
+                    Has2fa = p.Has2fa,
+                    HasApi = p.HasApi,
+                    HasGroups = p.HasGroups,
+                    HasPolicies = p.HasPolicies,
+                    HasSso = p.HasSso,
+                    HasScim = p.HasScim,
+                    HasDirectory = p.HasDirectory,
+                    HasEvents = p.HasEvents,
+                    HasResetPassword = p.HasResetPassword,
+                    HasCustomPermissions = p.HasCustomPermissions,
+                    PasswordManager =
+                        new
+                        {
+                            StripePlanId = p.PasswordManager?.StripePlanId,
+                            StripeSeatPlanId = p.PasswordManager?.StripeSeatPlanId,
+                            StripeProviderPortalSeatPlanId = p.PasswordManager?.StripeProviderPortalSeatPlanId,
+                            BasePrice = p.PasswordManager?.BasePrice,
+                            SeatPrice = p.PasswordManager?.SeatPrice,
+                            ProviderPortalSeatPrice = p.PasswordManager?.ProviderPortalSeatPrice,
+                            AllowSeatAutoscale = p.PasswordManager?.AllowSeatAutoscale,
+                            HasAdditionalSeatsOption = p.PasswordManager?.HasAdditionalSeatsOption,
+                            MaxAdditionalSeats = p.PasswordManager?.MaxAdditionalSeats,
+                            BaseSeats = p.PasswordManager?.BaseSeats,
+                            HasPremiumAccessOption = p.PasswordManager?.HasPremiumAccessOption,
+                            StripePremiumAccessPlanId = p.PasswordManager?.StripePremiumAccessPlanId,
+                            PremiumAccessOptionPrice = p.PasswordManager?.PremiumAccessOptionPrice,
+                            MaxSeats = p.PasswordManager?.MaxSeats,
+                            BaseStorageGb = p.PasswordManager?.BaseStorageGb,
+                            HasAdditionalStorageOption = p.PasswordManager?.HasAdditionalStorageOption,
+                            AdditionalStoragePricePerGb = p.PasswordManager?.AdditionalStoragePricePerGb,
+                            StripeStoragePlanId = p.PasswordManager?.StripeStoragePlanId,
+                            MaxAdditionalStorage = p.PasswordManager?.MaxAdditionalStorage,
+                            MaxCollections = p.PasswordManager?.MaxCollections
+                        },
+                    SecretsManager = new
+                    {
+                        MaxServiceAccounts = p.SecretsManager?.MaxServiceAccounts,
+                        AllowServiceAccountsAutoscale = p.SecretsManager?.AllowServiceAccountsAutoscale,
+                        StripeServiceAccountPlanId = p.SecretsManager?.StripeServiceAccountPlanId,
+                        AdditionalPricePerServiceAccount = p.SecretsManager?.AdditionalPricePerServiceAccount,
+                        BaseServiceAccount = p.SecretsManager?.BaseServiceAccount,
+                        MaxAdditionalServiceAccount = p.SecretsManager?.MaxAdditionalServiceAccount,
+                        HasAdditionalServiceAccountOption = p.SecretsManager?.HasAdditionalServiceAccountOption,
+                        StripeSeatPlanId = p.SecretsManager?.StripeSeatPlanId,
+                        HasAdditionalSeatsOption = p.SecretsManager?.HasAdditionalSeatsOption,
+                        BasePrice = p.SecretsManager?.BasePrice,
+                        SeatPrice = p.SecretsManager?.SeatPrice,
+                        BaseSeats = p.SecretsManager?.BaseSeats,
+                        MaxSeats = p.SecretsManager?.MaxSeats,
+                        MaxAdditionalSeats = p.SecretsManager?.MaxAdditionalSeats,
+                        AllowSeatAutoscale = p.SecretsManager?.AllowSeatAutoscale,
+                        MaxProjects = p.SecretsManager?.MaxProjects
+                    }
                 };
-
                 return plan;
             });
 
