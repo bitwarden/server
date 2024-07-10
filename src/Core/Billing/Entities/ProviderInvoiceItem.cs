@@ -14,6 +14,7 @@ public class ProviderInvoiceItem : ITableObject<Guid>
     public string InvoiceId { get; set; } = null!;
     [MaxLength(50)]
     public string? InvoiceNumber { get; set; }
+    public Guid? ClientId { get; set; }
     [MaxLength(50)]
     public string ClientName { get; set; } = null!;
     [MaxLength(50)]

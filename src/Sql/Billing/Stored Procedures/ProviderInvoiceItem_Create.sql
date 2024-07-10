@@ -8,7 +8,8 @@ CREATE PROCEDURE [dbo].[ProviderInvoiceItem_Create]
     @AssignedSeats INT,
     @UsedSeats INT,
     @Total MONEY,
-    @Created DATETIME2 (7) = NULL
+    @Created DATETIME2 (7) = NULL,
+    @ClientId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,7 +27,8 @@ BEGIN
         [AssignedSeats],
         [UsedSeats],
         [Total],
-        [Created]
+        [Created],
+        [ClientId]
     )
     VALUES
     (
@@ -39,6 +41,7 @@ BEGIN
         @AssignedSeats,
         @UsedSeats,
         @Total,
-        @Created
+        @Created,
+        @ClientId
     )
 END
