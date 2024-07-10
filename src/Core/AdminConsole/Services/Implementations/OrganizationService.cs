@@ -148,9 +148,7 @@ public class OrganizationService : IOrganizationService
             organization,
             paymentMethodType,
             paymentToken,
-            _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
-                ? taxInfo
-                : null);
+            taxInfo);
         if (updated)
         {
             await ReplaceAndUpdateCacheAsync(organization);
@@ -2178,17 +2176,7 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
-        {
-            return false;
-        }
-
         if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
         {
             return false;
         }
