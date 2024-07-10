@@ -29,7 +29,8 @@ public class OrganizationUserResponseModel : ResponseModel
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
     }
 
-    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
+    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser,
+        string obj = "organizationUser", Permissions permissions = null)
         : base(obj)
     {
         if (organizationUser == null)
@@ -43,7 +44,8 @@ public class OrganizationUserResponseModel : ResponseModel
         Status = organizationUser.Status;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+        // So the OrganizationUserUserDetailsResponseModel constructor can init already converted permissions
+        Permissions = permissions ?? CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
         HasMasterPassword = organizationUser.HasMasterPassword;
@@ -85,9 +87,12 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
+    // Since the OrganizationUserUserDetailsQueryResponse object already has the permissions
+    // converted from json. Add it here as an optional param. If included the base method will
+    // use the permissions if not it will conver
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool twoFactorEnabled, string obj = "organizationUserUserDetails")
-        : base(organizationUser, obj)
+        bool twoFactorEnabled, string obj = "organizationUserUserDetails", Permissions permissions = null)
+        : base(organizationUser, obj, permissions: permissions)
     {
         if (organizationUser == null)
         {
@@ -104,7 +109,6 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
     }
-
 
     public string Name { get; set; }
     public string Email { get; set; }

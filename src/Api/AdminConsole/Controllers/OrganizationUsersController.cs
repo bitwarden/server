@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿using Api.AdminConsole.Queries;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
@@ -16,7 +17,6 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -49,6 +49,7 @@ public class OrganizationUsersController : Controller
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -67,7 +68,8 @@ public class OrganizationUsersController : Controller
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
         IFeatureService featureService,
-        ISsoConfigRepository ssoConfigRepository)
+        ISsoConfigRepository ssoConfigRepository,
+        IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -86,6 +88,7 @@ public class OrganizationUsersController : Controller
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
         _ssoConfigRepository = ssoConfigRepository;
+        _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
     }
 
     [HttpGet("{id}")]
@@ -100,7 +103,7 @@ public class OrganizationUsersController : Controller
         var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
 
         // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-        response.Type = GetFlexibleCollectionsUserType(response.Type, response.Permissions);
+        response.Type.GetFlexibleCollectionsUserType(response.Permissions);
 
         // Set 'Edit/Delete Assigned Collections' custom permissions to false
         if (response.Permissions is not null)
@@ -127,27 +130,27 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
-        var responseTasks = organizationUsers
-            .Select(async o =>
+        var queryResponses = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
+            new OrganizationUserUserDetailsQueryRequest
             {
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o,
-                    await _userService.TwoFactorIsEnabledAsync(o));
+                OrganizationId = orgId,
+                IncludeGroups = includeGroups,
+                IncludeCollections = includeCollections
+            }
+        );
 
-                // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-                orgUser.Type = GetFlexibleCollectionsUserType(orgUser.Type, orgUser.Permissions);
-
-                // Set 'Edit/Delete Assigned Collections' custom permissions to false
-                if (orgUser.Permissions is not null)
-                {
-                    orgUser.Permissions.EditAssignedCollections = false;
-                    orgUser.Permissions.DeleteAssignedCollections = false;
-                }
-
-                return orgUser;
-            });
-        var responses = await Task.WhenAll(responseTasks);
+        // I was not sure about automapper being a possible use case here? 
+        // If not I am sure I can likely implement a more elegant conversion solution
+        var responses = new List<OrganizationUserUserDetailsResponseModel>();
+        foreach (var queryResponse in queryResponses)
+        {
+            responses.Add(new OrganizationUserUserDetailsResponseModel(
+                    queryResponse.OrganizationUserUserDetails,
+                    queryResponse.TwoFactorEnabled,
+                    permissions: queryResponse.Permissions
+                )
+            );
+        }
 
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
@@ -642,34 +645,5 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
-    }
-
-    private OrganizationUserType GetFlexibleCollectionsUserType(OrganizationUserType type, Permissions permissions)
-    {
-        // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-        if (type == OrganizationUserType.Custom && permissions is not null)
-        {
-            if ((permissions.EditAssignedCollections || permissions.DeleteAssignedCollections) &&
-                permissions is
-                {
-                    AccessEventLogs: false,
-                    AccessImportExport: false,
-                    AccessReports: false,
-                    CreateNewCollections: false,
-                    EditAnyCollection: false,
-                    DeleteAnyCollection: false,
-                    ManageGroups: false,
-                    ManagePolicies: false,
-                    ManageSso: false,
-                    ManageUsers: false,
-                    ManageResetPassword: false,
-                    ManageScim: false
-                })
-            {
-                return OrganizationUserType.User;
-            }
-        }
-
-        return type;
     }
 }
