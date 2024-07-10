@@ -12,7 +12,8 @@ services:
     image: mcr.microsoft.com/azure-sql-edge:latest
     restart: unless-stopped
     env_file:
-      ../../dev/.env
+      - path: ../../dev/.env
+        required: false
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
