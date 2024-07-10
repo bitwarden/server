@@ -1445,7 +1445,7 @@ public class OrganizationService : IOrganizationService
             if (consolidatedBillingEnabled && provider.Type == ProviderType.Msp &&
                 provider.Status == ProviderStatusType.Billable)
             {
-                return (false, "Insufficient licenses. Please provision more on the provider portal.");
+                return (false, "Seat limit has been reached. Please contact your provider to add more seats.");
             }
 
             if (provider.Type == ProviderType.Reseller)
