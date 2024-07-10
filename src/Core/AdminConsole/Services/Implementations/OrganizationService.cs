@@ -148,9 +148,7 @@ public class OrganizationService : IOrganizationService
             organization,
             paymentMethodType,
             paymentToken,
-            _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
-                ? taxInfo
-                : null);
+            taxInfo);
         if (updated)
         {
             await ReplaceAndUpdateCacheAsync(organization);

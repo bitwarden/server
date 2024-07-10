@@ -115,13 +115,11 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
-    public const string PM5766AutomaticTax = "PM-5766-automatic-tax";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EnableConsolidatedBilling = "enable-consolidated-billing";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
-    public const string UnassignedItemsBanner = "unassigned-items-banner";
     public const string EnableDeleteProvider = "AC-1218-delete-provider";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
@@ -152,7 +150,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { UnassignedItemsBanner, "true"},
             { FlexibleCollectionsV1, "true" }
         };
     }
