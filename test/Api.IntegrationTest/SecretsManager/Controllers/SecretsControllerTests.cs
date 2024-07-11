@@ -741,44 +741,83 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Theory]
-    [InlineData(PermissionType.RunAsAdmin)]
-    [InlineData(PermissionType.RunAsUserWithPermission)]
-    public async Task GetSecretsByIds_Success(PermissionType permissionType)
+    [Fact]
+    public async Task GetSecretsByIds_SecretsNotInTheSameOrganization_NotFound()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
-
-        var (project, secretIds) = await CreateSecretsAsync(org.Id);
-
-        if (permissionType == PermissionType.RunAsUserWithPermission)
-        {
-            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await _loginHelper.LoginAsync(email);
-
-            var accessPolicies = new List<BaseAccessPolicy>
-            {
-                new UserProjectAccessPolicy
-                {
-                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
-                },
-            };
-            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-        }
-        else
-        {
-            var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.Admin, true);
-            await _loginHelper.LoginAsync(email);
-        }
+        var otherOrg = await _organizationHelper.CreateSmOrganizationAsync();
+        var (_, secretIds) = await CreateSecretsAsync(org.Id);
+        var (_, diffOrgSecrets) = await CreateSecretsAsync(otherOrg.Id, 1);
+        secretIds.AddRange(diffOrgSecrets);
 
         var request = new GetSecretsRequestModel { Ids = secretIds };
 
         var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetSecretsByIds_SecretsNonExistent_NotFound(bool partial)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+        var ids = new List<Guid>();
+
+        if (partial)
+        {
+            var (_, secretIds) = await CreateSecretsAsync(org.Id);
+            ids = secretIds;
+            ids.Add(Guid.NewGuid());
+        }
+
+        var request = new GetSecretsRequestModel { Ids = ids };
+
+        var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    public async Task GetSecretsByIds_NoAccess_NotFound(bool runAsServiceAccount, bool partialAccess)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+
+        var request = await SetupNoAccessRequestAsync(org.Id, runAsServiceAccount, partialAccess);
+
+        var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    [InlineData(PermissionType.RunAsServiceAccountWithPermission)]
+    public async Task GetSecretsByIds_Success(PermissionType permissionType)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+        var request = await SetupGetSecretsByIdsRequestAsync(org.Id, permissionType);
+
+        var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<BaseSecretResponseModel>>();
+
         Assert.NotNull(result);
         Assert.NotEmpty(result.Data);
-        Assert.Equal(secretIds.Count, result.Data.Count());
+        Assert.Equal(request.Ids.Count(), result.Data.Count());
+        Assert.All(result.Data, data => Assert.Equal(_mockEncryptedString, data.Value));
+        Assert.All(result.Data, data => Assert.Equal(_mockEncryptedString, data.Key));
+        Assert.All(result.Data, data => Assert.Equal(_mockEncryptedString, data.Note));
+        Assert.All(result.Data, data => Assert.Equal(org.Id, data.OrganizationId));
     }
 
 
@@ -1160,5 +1199,95 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         };
 
         return (secret, request);
+    }
+
+    private async Task<GetSecretsRequestModel> SetupGetSecretsByIdsRequestAsync(Guid organizationId,
+        PermissionType permissionType)
+    {
+        var (project, secretIds) = await CreateSecretsAsync(organizationId);
+
+        if (permissionType == PermissionType.RunAsUserWithPermission)
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await _loginHelper.LoginAsync(email);
+
+            var accessPolicies = new List<BaseAccessPolicy>
+            {
+                new UserProjectAccessPolicy
+                {
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true
+                }
+            };
+            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+        }
+
+        if (permissionType == PermissionType.RunAsServiceAccountWithPermission)
+        {
+            var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+            await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+
+            var accessPolicies = new List<BaseAccessPolicy>
+            {
+                new ServiceAccountProjectAccessPolicy
+                {
+                    GrantedProjectId = project.Id,
+                    ServiceAccountId = apiKeyDetails.ApiKey.ServiceAccountId,
+                    Read = true,
+                    Write = true
+                }
+            };
+            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+        }
+
+        return new GetSecretsRequestModel { Ids = secretIds };
+    }
+
+    private async Task<GetSecretsRequestModel> SetupNoAccessRequestAsync(Guid organizationId, bool runAsServiceAccount,
+        bool partialAccess)
+    {
+        var (_, secretIds) = await CreateSecretsAsync(organizationId);
+
+        if (runAsServiceAccount)
+        {
+            var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+            await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+
+            if (partialAccess)
+            {
+                var accessPolicies = new List<BaseAccessPolicy>
+                {
+                    new ServiceAccountSecretAccessPolicy
+                    {
+                        GrantedSecretId = secretIds[0],
+                        ServiceAccountId = apiKeyDetails.ApiKey.ServiceAccountId,
+                        Read = true,
+                        Write = true
+                    }
+                };
+                await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+            }
+        }
+        else
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await _loginHelper.LoginAsync(email);
+
+            if (partialAccess)
+            {
+                var accessPolicies = new List<BaseAccessPolicy>
+                {
+                    new UserSecretAccessPolicy
+                    {
+                        GrantedSecretId = secretIds[0],
+                        OrganizationUserId = orgUser.Id,
+                        Read = true,
+                        Write = true
+                    }
+                };
+                await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+            }
+        }
+
+        return new GetSecretsRequestModel { Ids = secretIds };
     }
 }
