@@ -142,7 +142,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Group_CreateWithCollections_V2]",
+                $"[{Schema}].[Group_CreateWithCollections]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -156,7 +156,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Group_UpdateWithCollections_V2]",
+                $"[{Schema}].[Group_UpdateWithCollections]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }

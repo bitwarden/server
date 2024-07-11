@@ -169,22 +169,27 @@ public class ProviderEventServiceTests
 
         _stripeFacade.GetSubscription(subscriptionId).Returns(subscription);
 
+        var client1Id = Guid.NewGuid();
+        var client2Id = Guid.NewGuid();
+
         var clients = new List<ProviderOrganizationOrganizationDetails>
         {
             new ()
             {
+                OrganizationId = client1Id,
                 OrganizationName = "Client 1",
                 Plan = "Teams (Monthly)",
                 Seats = 50,
-                UserCount = 30,
+                OccupiedSeats = 30,
                 Status = OrganizationStatusType.Managed
             },
             new ()
             {
+                OrganizationId = client2Id,
                 OrganizationName = "Client 2",
                 Plan = "Enterprise (Monthly)",
                 Seats = 50,
-                UserCount = 30,
+                OccupiedSeats = 30,
                 Status = OrganizationStatusType.Managed
             }
         };
@@ -228,6 +233,7 @@ public class ProviderEventServiceTests
                 options.InvoiceId == invoice.Id &&
                 options.InvoiceNumber == invoice.Number &&
                 options.ClientName == "Client 1" &&
+                options.ClientId == client1Id &&
                 options.PlanName == "Teams (Monthly)" &&
                 options.AssignedSeats == 50 &&
                 options.UsedSeats == 30 &&
@@ -239,6 +245,7 @@ public class ProviderEventServiceTests
                 options.InvoiceId == invoice.Id &&
                 options.InvoiceNumber == invoice.Number &&
                 options.ClientName == "Client 2" &&
+                options.ClientId == client2Id &&
                 options.PlanName == "Enterprise (Monthly)" &&
                 options.AssignedSeats == 50 &&
                 options.UsedSeats == 30 &&
