@@ -16,6 +16,6 @@ public class PushRegistrationRequestModel
     public DeviceType Type { get; set; }
     [Required]
     public string Identifier { get; set; }
-    [DefaultValue(ApplicationChannel.Production)]
+    [DefaultValue(ApplicationChannel.PasswordManagerProduction)]
     public ApplicationChannel Channel { get; set; }
 }

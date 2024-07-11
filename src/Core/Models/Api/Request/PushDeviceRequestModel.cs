@@ -7,6 +7,6 @@ public class PushDeviceRequestModel
 {
     [Required]
     public string Id { get; set; }
-    [DefaultValue(ApplicationChannel.Production)]
+    [DefaultValue(ApplicationChannel.PasswordManagerProduction)]
     public ApplicationChannel Channel { get; set; }
 }

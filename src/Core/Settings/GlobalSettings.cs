@@ -446,7 +446,7 @@ public class GlobalSettings : IGlobalSettings
         /// 
         /// iOS and Android devices are registered to different hubs based on the channel.
         /// </summary>
-        public ApplicationChannel Channel { get; set; } = ApplicationChannel.Production;
+        public ApplicationChannel Channel { get; set; } = ApplicationChannel.PasswordManagerProduction;
     }
 
     public class NotificationHubPoolSettings

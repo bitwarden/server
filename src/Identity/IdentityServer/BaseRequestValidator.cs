@@ -410,7 +410,7 @@ public abstract class BaseRequestValidator<T> where T : class
         ApplicationChannel channel;
         if (!Enum.TryParse(deviceChannel?.ToString(), out channel))
         {
-            channel = ApplicationChannel.Production;
+            channel = ApplicationChannel.PasswordManagerProduction;
         }
 
         return new Device

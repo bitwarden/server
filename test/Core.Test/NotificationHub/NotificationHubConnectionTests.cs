@@ -71,14 +71,14 @@ public class NotificationHubConnectionTests
         {
             ConnectionString = "connection",
             HubName = "hub",
-            Channel = ApplicationChannel.Production,
+            Channel = ApplicationChannel.PasswordManagerProduction,
             RegistrationStartDate = DateTime.UtcNow.AddDays(1),
             RegistrationEndDate = DateTime.UtcNow.AddDays(2)
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(DateTime.UtcNow, ApplicationChannel.Production);
+        var result = connection.RegistrationEnabled(DateTime.UtcNow, ApplicationChannel.PasswordManagerProduction);
 
         // Assert
         Assert.False(result);
@@ -92,14 +92,14 @@ public class NotificationHubConnectionTests
         {
             ConnectionString = "connection",
             HubName = "hub",
-            Channel = ApplicationChannel.Production,
+            Channel = ApplicationChannel.PasswordManagerProduction,
             RegistrationStartDate = DateTime.UtcNow,
             RegistrationEndDate = DateTime.UtcNow.AddDays(1)
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(DateTime.UtcNow.AddDays(2), ApplicationChannel.Production);
+        var result = connection.RegistrationEnabled(DateTime.UtcNow.AddDays(2), ApplicationChannel.PasswordManagerProduction);
 
         // Assert
         Assert.False(result);
@@ -113,14 +113,14 @@ public class NotificationHubConnectionTests
         {
             ConnectionString = "connection",
             HubName = "hub",
-            Channel = ApplicationChannel.Production,
+            Channel = ApplicationChannel.PasswordManagerProduction,
             RegistrationStartDate = null,
             RegistrationEndDate = DateTime.UtcNow.AddDays(1)
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(DateTime.UtcNow, ApplicationChannel.Production);
+        var result = connection.RegistrationEnabled(DateTime.UtcNow, ApplicationChannel.PasswordManagerProduction);
 
         // Assert
         Assert.False(result);
@@ -134,14 +134,14 @@ public class NotificationHubConnectionTests
         {
             ConnectionString = "connection",
             HubName = "hub",
-            Channel = ApplicationChannel.Production,
+            Channel = ApplicationChannel.PasswordManagerProduction,
             RegistrationStartDate = DateTime.UtcNow,
             RegistrationEndDate = DateTime.UtcNow.AddDays(1)
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(DateTime.UtcNow.AddHours(1), ApplicationChannel.Production);
+        var result = connection.RegistrationEnabled(DateTime.UtcNow.AddHours(1), ApplicationChannel.PasswordManagerProduction);
 
         // Assert
         Assert.True(result);
@@ -155,14 +155,14 @@ public class NotificationHubConnectionTests
         {
             ConnectionString = "connection",
             HubName = "hub",
-            Channel = ApplicationChannel.Production,
+            Channel = ApplicationChannel.PasswordManagerProduction,
             RegistrationStartDate = DateTime.UtcNow.AddDays(1),
             RegistrationEndDate = DateTime.UtcNow.AddDays(2)
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow), ApplicationChannel.Production);
+        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow), ApplicationChannel.PasswordManagerProduction);
 
         // Assert
         Assert.False(result);
@@ -176,14 +176,14 @@ public class NotificationHubConnectionTests
         {
             ConnectionString = "connection",
             HubName = "hub",
-            Channel = ApplicationChannel.Production,
+            Channel = ApplicationChannel.PasswordManagerProduction,
             RegistrationStartDate = DateTime.UtcNow,
             RegistrationEndDate = DateTime.UtcNow.AddDays(1)
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddDays(2)), ApplicationChannel.Production);
+        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddDays(2)), ApplicationChannel.PasswordManagerProduction);
 
         // Assert
         Assert.False(result);
@@ -197,14 +197,14 @@ public class NotificationHubConnectionTests
         {
             ConnectionString = "connection",
             HubName = "hub",
-            Channel = ApplicationChannel.Production,
+            Channel = ApplicationChannel.PasswordManagerProduction,
             RegistrationStartDate = DateTime.UtcNow,
             RegistrationEndDate = DateTime.UtcNow.AddDays(1)
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddHours(1)), ApplicationChannel.Production);
+        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddHours(1)), ApplicationChannel.PasswordManagerProduction);
 
         // Assert
         Assert.True(result);
@@ -218,14 +218,14 @@ public class NotificationHubConnectionTests
         {
             ConnectionString = "connection",
             HubName = "hub",
-            Channel = ApplicationChannel.Production,
+            Channel = ApplicationChannel.PasswordManagerProduction,
             RegistrationStartDate = DateTime.UtcNow,
             RegistrationEndDate = DateTime.UtcNow.AddDays(1)
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddHours(1)), ApplicationChannel.Beta);
+        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddHours(1)), ApplicationChannel.PasswordManagerBeta);
 
         // Assert
         Assert.False(result);

@@ -32,13 +32,13 @@ public class DeviceServiceTests
             UserId = userId,
             PushToken = "testtoken",
             Identifier = "testid",
-            ApplicationChannel = ApplicationChannel.Production,
+            ApplicationChannel = ApplicationChannel.PasswordManagerProduction,
         };
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
         await pushRepo.Received().CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
-            userId.ToString(), "testid", DeviceType.Android, ApplicationChannel.Production);
+            userId.ToString(), "testid", DeviceType.Android, ApplicationChannel.PasswordManagerProduction);
     }
 
     /// <summary>

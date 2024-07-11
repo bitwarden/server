@@ -1,5 +1,5 @@
 ﻿public enum ApplicationChannel
 {
-    Production = 0,
-    Beta = 1,
+    PasswordManagerProduction = 0,
+    PasswordManagerBeta = 1,
 }

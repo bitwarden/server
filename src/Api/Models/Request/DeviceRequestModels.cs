@@ -18,7 +18,7 @@ public class DeviceRequestModel
     public string Identifier { get; set; }
     [StringLength(255)]
     public string PushToken { get; set; }
-    [DefaultValue(ApplicationChannel.Production)]
+    [DefaultValue(ApplicationChannel.PasswordManagerProduction)]
     public ApplicationChannel Channel { get; set; }
 
     public Device ToDevice(Guid? userId = null)
