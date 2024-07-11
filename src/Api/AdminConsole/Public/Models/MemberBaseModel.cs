@@ -48,6 +48,7 @@ public abstract class MemberBaseModel
     /// The member's type (or role) within the organization.
     /// </summary>
     [Required]
+    [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
     /// <summary>
     /// External identifier for reference or linking this member to another system, such as a user directory.
