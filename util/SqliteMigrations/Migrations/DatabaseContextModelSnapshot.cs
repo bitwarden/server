@@ -682,6 +682,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ClientName")
                         .IsRequired()
                         .HasMaxLength(50)
