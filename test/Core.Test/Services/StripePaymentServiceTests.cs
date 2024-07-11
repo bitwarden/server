@@ -725,7 +725,6 @@ public class StripePaymentServiceTests
             AmountDue = 0
         });
         stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
-        featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax).Returns(true);
 
         var upgrade = new OrganizationUpgrade()
         {

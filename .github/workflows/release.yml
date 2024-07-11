@@ -27,7 +27,7 @@ jobs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
     steps:
       - name: Branch check
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        if: ${{ inputs.release_type != 'Dry Run' }}
         run: |
           if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix-rc" ]]; then
             echo "==================================="
@@ -43,7 +43,7 @@ jobs:
         id: version
         uses: bitwarden/gh-actions/release-version-check@main
         with:
-          release-type: ${{ github.event.inputs.release_type }}
+          release-type: ${{ inputs.release_type }}
           project-type: dotnet
           file: Directory.Build.props
 
@@ -61,12 +61,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Admin
-          - name: Api
+          # - name: Admin
+          # - name: Api
           - name: Billing
-          - name: Events
-          - name: Identity
-          - name: Sso
+          # - name: Events
+          # - name: Identity
+          # - name: Sso
     steps:
       - name: Setup
         id: setup
@@ -77,7 +77,7 @@ jobs:
           echo "name_lower=$NAME_LOWER" >> $GITHUB_OUTPUT
 
       - name: Create GitHub deployment for ${{ matrix.name }}
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        if: ${{ inputs.release_type != 'Dry Run' }}
         uses: chrnorm/deployment-action@d42cde7132fcec920de534fffc3be83794335c00 # v2.0.5
         id: deployment
         with:
@@ -88,7 +88,7 @@ jobs:
           description: "Deploy from ${{ needs.setup.outputs.branch-name }} branch"
 
       - name: Download latest release ${{ matrix.name }} asset
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        if: ${{ inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
@@ -97,7 +97,7 @@ jobs:
           artifacts: ${{ matrix.name }}.zip
 
       - name: Dry run - Download latest release ${{ matrix.name }} asset
-        if: ${{ github.event.inputs.release_type == 'Dry Run' }}
+        if: ${{ inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
@@ -144,7 +144,7 @@ jobs:
           slot-name: "staging"
 
       - name: Start staging slot
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        if: ${{ inputs.release_type != 'Dry Run' }}
         env:
           SERVICE: ${{ matrix.name }}
           WEBAPP_NAME: ${{ steps.retrieve-secrets.outputs.webapp-name }}
@@ -157,7 +157,7 @@ jobs:
           az webapp start -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
 
       - name: Update ${{ matrix.name }} deployment status to success
-        if: ${{ github.event.inputs.release_type != 'Dry Run' && success() }}
+        if: ${{ inputs.release_type != 'Dry Run' && success() }}
         uses: chrnorm/deployment-status@2afb7d27101260f4a764219439564d954d10b5b0 # v2.0.1
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
@@ -165,7 +165,7 @@ jobs:
           deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
       - name: Update ${{ matrix.name }} deployment status to failure
-        if: ${{ github.event.inputs.release_type != 'Dry Run' && failure() }}
+        if: ${{ inputs.release_type != 'Dry Run' && failure() }}
         uses: chrnorm/deployment-status@2afb7d27101260f4a764219439564d954d10b5b0 # v2.0.1
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
@@ -202,7 +202,7 @@ jobs:
     steps:
       - name: Print environment
         env:
-          RELEASE_OPTION: ${{ github.event.inputs.release_type }}
+          RELEASE_OPTION: ${{ inputs.release_type }}
         run: |
           whoami
           docker --version
@@ -234,7 +234,7 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
             docker pull $_AZ_REGISTRY/$PROJECT_NAME:latest
           else
             docker pull $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME
@@ -244,7 +244,7 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
             docker tag $_AZ_REGISTRY/$PROJECT_NAME:latest $_AZ_REGISTRY/$PROJECT_NAME:dryrun
           else
             docker tag $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
@@ -255,7 +255,7 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
             docker push $_AZ_REGISTRY/$PROJECT_NAME:dryrun
           else
             docker push $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
@@ -273,7 +273,7 @@ jobs:
       - deploy
     steps:
       - name: Download latest release Docker stubs
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        if: ${{ inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
@@ -286,7 +286,7 @@ jobs:
             swagger.json"
 
       - name: Dry Run - Download latest release Docker stubs
-        if: ${{ github.event.inputs.release_type == 'Dry Run' }}
+        if: ${{ inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
@@ -299,7 +299,7 @@ jobs:
             swagger.json"
 
       - name: Create release
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        if: ${{ inputs.release_type != 'Dry Run' }}
         uses: ncipollo/release-action@6c75be85e571768fa31b40abf38de58ba0397db5 # v1.13.0
         with:
           artifacts: "docker-stub-US.zip,

@@ -1,5 +1,4 @@
 ﻿using Bit.Billing.Constants;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -9,7 +8,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Stripe;
 using Event = Stripe.Event;
-using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -19,38 +17,32 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
     private readonly IStripeEventService _stripeEventService;
     private readonly IUserService _userService;
     private readonly IStripeFacade _stripeFacade;
-    private readonly IFeatureService _featureService;
     private readonly IMailService _mailService;
     private readonly IProviderRepository _providerRepository;
     private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
-    private readonly ITaxRateRepository _taxRateRepository;
 
     public UpcomingInvoiceHandler(
         ILogger<StripeEventProcessor> logger,
         IStripeEventService stripeEventService,
         IUserService userService,
         IStripeFacade stripeFacade,
-        IFeatureService featureService,
         IMailService mailService,
         IProviderRepository providerRepository,
         IValidateSponsorshipCommand validateSponsorshipCommand,
         IOrganizationRepository organizationRepository,
-        IStripeEventUtilityService stripeEventUtilityService,
-        ITaxRateRepository taxRateRepository)
+        IStripeEventUtilityService stripeEventUtilityService)
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
         _userService = userService;
         _stripeFacade = stripeFacade;
-        _featureService = featureService;
         _mailService = mailService;
         _providerRepository = providerRepository;
         _validateSponsorshipCommand = validateSponsorshipCommand;
         _organizationRepository = organizationRepository;
         _stripeEventUtilityService = stripeEventUtilityService;
-        _taxRateRepository = taxRateRepository;
     }
 
     /// <summary>
@@ -75,27 +67,7 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
                 $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
         }
 
-        var pm5766AutomaticTaxIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax);
-        if (pm5766AutomaticTaxIsEnabled)
-        {
-            var customerGetOptions = new CustomerGetOptions();
-            customerGetOptions.AddExpand("tax");
-            var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
-            if (!subscription.AutomaticTax.Enabled &&
-                customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported)
-            {
-                subscription = await _stripeFacade.UpdateSubscription(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        DefaultTaxRates = [],
-                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                    });
-            }
-        }
-
-        var updatedSubscription = pm5766AutomaticTaxIsEnabled
-            ? subscription
-            : await VerifyCorrectTaxRateForChargeAsync(invoice, subscription);
+        var updatedSubscription = await TryEnableAutomaticTaxAsync(subscription);
 
         var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(updatedSubscription.Metadata);
 
@@ -176,39 +148,24 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         }
     }
 
-    private async Task<Stripe.Subscription> VerifyCorrectTaxRateForChargeAsync(Invoice invoice, Stripe.Subscription subscription)
+    private async Task<Subscription> TryEnableAutomaticTaxAsync(Subscription subscription)
     {
-        if (string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) ||
-            string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
+        var customerGetOptions = new CustomerGetOptions { Expand = ["tax"] };
+        var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
+
+        if (subscription.AutomaticTax.Enabled ||
+            customer.Tax?.AutomaticTax != StripeConstants.AutomaticTaxStatus.Supported)
         {
             return subscription;
         }
 
-        var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
-            new TaxRate()
-            {
-                Country = invoice.CustomerAddress.Country,
-                PostalCode = invoice.CustomerAddress.PostalCode
-            }
-        );
-
-        if (!localBitwardenTaxRates.Any())
+        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
-            return subscription;
-        }
+            DefaultTaxRates = [],
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+        };
 
-        var stripeTaxRate = await _stripeFacade.GetTaxRate(localBitwardenTaxRates.First().Id);
-        if (stripeTaxRate == null || subscription.DefaultTaxRates.Any(x => x == stripeTaxRate))
-        {
-            return subscription;
-        }
-
-        subscription.DefaultTaxRates = [stripeTaxRate];
-
-        var subscriptionOptions = new SubscriptionUpdateOptions { DefaultTaxRates = [stripeTaxRate.Id] };
-        subscription = await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionOptions);
-
-        return subscription;
+        return await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionUpdateOptions);
     }
 
     private static bool OrgPlanForInvoiceNotifications(Organization org) => StaticStore.GetPlan(org.PlanType).IsAnnual;
