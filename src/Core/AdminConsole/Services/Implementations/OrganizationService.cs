@@ -1039,11 +1039,6 @@ public class OrganizationService : IOrganizationService
         }
 
         // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        if (organization.FlexibleCollections && invites.Any(i => i.invite.Type is OrganizationUserType.Manager))
-        {
-            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
-        }
-
         if (organization.FlexibleCollections && invites.Any(i => i.invite.AccessAll))
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");

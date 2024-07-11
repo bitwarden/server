@@ -61,11 +61,6 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         // If the organization is using Flexible Collections, prevent use of any deprecated permissions
         var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-        if (organization.FlexibleCollections && user.Type == OrganizationUserType.Manager)
-        {
-            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
-        }
-
         if (organization.FlexibleCollections && user.AccessAll)
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");

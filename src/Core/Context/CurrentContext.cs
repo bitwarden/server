@@ -217,17 +217,6 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey(Claims.OrganizationManager))
-        {
-            organizations.AddRange(claimsDict[Claims.OrganizationManager].Select(c =>
-                new CurrentContextOrganization
-                {
-                    Id = new Guid(c.Value),
-                    Type = OrganizationUserType.Manager,
-                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
-                }));
-        }
-
         if (claimsDict.ContainsKey(Claims.OrganizationCustom))
         {
             organizations.AddRange(claimsDict[Claims.OrganizationCustom].Select(c =>
@@ -272,12 +261,6 @@ public class CurrentContext : ICurrentContext
     public async Task<bool> OrganizationUser(Guid orgId)
     {
         return (Organizations?.Any(o => o.Id == orgId) ?? false) || await OrganizationOwner(orgId);
-    }
-
-    public async Task<bool> OrganizationManager(Guid orgId)
-    {
-        return await OrganizationAdmin(orgId) ||
-               (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Manager) ?? false);
     }
 
     public async Task<bool> OrganizationAdmin(Guid orgId)
