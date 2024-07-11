@@ -761,6 +761,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory]
     [OrganizationInviteCustomize(
+        InviteeUserType = OrganizationUserType.User,
         InvitorUserType = OrganizationUserType.Custom
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
     public async Task InviteUsers_CustomUserWithoutManageUsersConfiguringUser_Throws(Organization organization, OrganizationUserInvite invite,
