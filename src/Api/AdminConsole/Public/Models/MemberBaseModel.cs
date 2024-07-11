@@ -45,8 +45,7 @@ public abstract class MemberBaseModel
     }
 
     /// <summary>
-    /// The member's type (or role) within the organization. If your organization has is using the latest collection enhancements,
-    /// you will not be allowed to assign the Manager role (OrganizationUserType = 3).
+    /// The member's type (or role) within the organization.
     /// </summary>
     [Required]
     public OrganizationUserType? Type { get; set; }

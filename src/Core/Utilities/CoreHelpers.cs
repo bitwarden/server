@@ -700,12 +700,6 @@ public static class CoreHelpers
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationAdmin, org.Id.ToString()));
                         }
                         break;
-                    case Enums.OrganizationUserType.Manager:
-                        foreach (var org in group)
-                        {
-                            claims.Add(new KeyValuePair<string, string>(Claims.OrganizationManager, org.Id.ToString()));
-                        }
-                        break;
                     case Enums.OrganizationUserType.User:
                         foreach (var org in group)
                         {
