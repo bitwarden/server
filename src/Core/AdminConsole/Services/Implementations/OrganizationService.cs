@@ -1438,9 +1438,20 @@ public class OrganizationService : IOrganizationService
 
         var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
-        if (provider is { Enabled: true, Type: ProviderType.Reseller })
+        if (provider is { Enabled: true })
         {
-            return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+            var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+            if (consolidatedBillingEnabled && provider.Type == ProviderType.Msp &&
+                provider.Status == ProviderStatusType.Billable)
+            {
+                return (false, "Seat limit has been reached. Please contact your provider to add more seats.");
+            }
+
+            if (provider.Type == ProviderType.Reseller)
+            {
+                return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+            }
         }
 
         if (organization.Seats.HasValue &&
