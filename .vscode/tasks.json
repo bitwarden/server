@@ -273,9 +273,13 @@
         {
             "id": "databaseProvider",
             "type": "pickString",
-            "default": "sqlServer",
+            "default": "do-not-change",
             "description": "The database to make your provider.",
             "options": [
+                {
+                    "label": "Do not change",
+                    "value": "do-not-change"
+                },
                 {
                     "label": "MS SQL Server",
                     "value": "sqlserver"
