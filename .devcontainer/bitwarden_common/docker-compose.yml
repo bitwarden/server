@@ -11,9 +11,10 @@ services:
   bitwarden_mssql:
     image: mcr.microsoft.com/azure-sql-edge:latest
     restart: unless-stopped
-    env_file:
-      - path: '../../dev/.env'
-        required: false
+    # Can't use `required: false` until the docker host image updates to docker-compose 2.24+ https://github.com/github/codespaces-host-images
+    # env_file:
+    #   - path: ../../dev/.env
+    #     required: false
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
