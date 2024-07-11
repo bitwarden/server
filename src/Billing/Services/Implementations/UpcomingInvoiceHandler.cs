@@ -77,7 +77,18 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         {
             if (_stripeEventUtilityService.IsSponsoredSubscription(updatedSubscription))
             {
-                await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
+                var sponsorshipIsValid =
+                    await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
+                if (!sponsorshipIsValid)
+                {
+                    // If the sponsorship is invalid, then the subscription was updated to use the regular families plan
+                    // price. Given that this is the case, we need the new invoice amount
+                    subscription = await _stripeFacade.GetSubscription(subscription.Id,
+                        new SubscriptionGetOptions { Expand = ["latest_invoice"] });
+
+                    invoice = subscription.LatestInvoice;
+                    invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
+                }
             }
 
             var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
