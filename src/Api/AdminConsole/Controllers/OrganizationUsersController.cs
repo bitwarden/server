@@ -10,6 +10,8 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -20,7 +22,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -46,6 +47,7 @@ public class OrganizationUsersController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
+    private readonly ISsoConfigRepository _ssoConfigRepository;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -63,7 +65,8 @@ public class OrganizationUsersController : Controller
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ISsoConfigRepository ssoConfigRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -81,6 +84,7 @@ public class OrganizationUsersController : Controller
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
+        _ssoConfigRepository = ssoConfigRepository;
     }
 
     [HttpGet("{id}")]
@@ -196,7 +200,6 @@ public class OrganizationUsersController : Controller
         return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, org));
     }
 
-    [RequireFeature(FeatureFlagKeys.BulkDeviceApproval)]
     [HttpPost("account-recovery-details")]
     public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetAccountRecoveryDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
@@ -454,6 +457,13 @@ public class OrganizationUsersController : Controller
         if (user == null)
         {
             throw new UnauthorizedAccessException();
+        }
+
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
+        var isTdeEnrollment = ssoConfig != null && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption;
+        if (!isTdeEnrollment && !string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
+        {
+            throw new BadRequestException("Incorrect password");
         }
 
         var callingUserId = user.Id;

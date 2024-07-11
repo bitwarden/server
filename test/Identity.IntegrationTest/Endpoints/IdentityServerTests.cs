@@ -3,10 +3,10 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -607,7 +607,16 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var organizationUserRepository = _factory.Services.GetService<IOrganizationUserRepository>();
         var policyRepository = _factory.Services.GetService<IPolicyRepository>();
 
-        var organization = new Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled, UsePolicies = true };
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Name = $"Org Name | {organizationId}",
+            Enabled = true,
+            UseSso = ssoPolicyEnabled,
+            Plan = "Enterprise",
+            UsePolicies = true,
+            BillingEmail = $"billing-email+{organizationId}@example.com",
+        };
         await organizationRepository.CreateAsync(organization);
 
         var user = await userRepository.GetByEmailAsync(username);
