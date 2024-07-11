@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -40,11 +41,17 @@ public class CreateProviderCommand : ICreateProviderCommand
 
     public async Task CreateMspAsync(Provider provider, string ownerEmail, int teamsMinimumSeats, int enterpriseMinimumSeats)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
         var owner = await _userRepository.GetByEmailAsync(ownerEmail);
         if (owner == null)
         {
             throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
+        }
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (isConsolidatedBillingEnabled)
+        {
+            provider.Gateway = GatewayType.Stripe;
         }
 
         await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Pending);
@@ -73,7 +80,6 @@ public class CreateProviderCommand : ICreateProviderCommand
 
         await _providerUserRepository.CreateAsync(providerUser);
         await _providerService.SendProviderSetupInviteEmailAsync(provider, owner.Email);
-
     }
 
     public async Task CreateResellerAsync(Provider provider)

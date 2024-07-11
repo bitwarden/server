@@ -169,7 +169,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         Assert.Null(createdProject.DeletedDate);
 
         // Check permissions have been bootstrapped.
-        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(createdProject.Id, currentUserId);
+        var accessPolicies = await _accessPolicyRepository.GetPeoplePoliciesByGrantedProjectIdAsync(createdProject.Id, currentUserId);
         Assert.NotNull(accessPolicies);
         var ap = (UserProjectAccessPolicy)accessPolicies.First();
         Assert.Equal(createdProject.Id, ap.GrantedProjectId);

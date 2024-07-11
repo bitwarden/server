@@ -7,8 +7,8 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -54,9 +54,8 @@ public class OrganizationsController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
-    private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
     private readonly IFeatureService _featureService;
-    private readonly IScaleSeatsCommand _scaleSeatsCommand;
+    private readonly IProviderBillingService _providerBillingService;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -82,9 +81,8 @@ public class OrganizationsController : Controller
         IServiceAccountRepository serviceAccountRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IRemovePaymentMethodCommand removePaymentMethodCommand,
         IFeatureService featureService,
-        IScaleSeatsCommand scaleSeatsCommand)
+        IProviderBillingService providerBillingService)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -109,9 +107,8 @@ public class OrganizationsController : Controller
         _serviceAccountRepository = serviceAccountRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
-        _removePaymentMethodCommand = removePaymentMethodCommand;
         _featureService = featureService;
-        _scaleSeatsCommand = scaleSeatsCommand;
+        _providerBillingService = providerBillingService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -201,15 +198,32 @@ public class OrganizationsController : Controller
         }
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(organization);
+        var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(organization);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
         var secrets = organization.UseSecretsManager ? await _secretRepository.GetSecretsCountByOrganizationIdAsync(id) : -1;
         var projects = organization.UseSecretsManager ? await _projectRepository.GetProjectCountByOrganizationIdAsync(id) : -1;
         var serviceAccounts = organization.UseSecretsManager ? await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(id) : -1;
+
         var smSeats = organization.UseSecretsManager
             ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
             : -1;
-        return View(new OrganizationEditModel(organization, provider, users, ciphers, collections, groups, policies,
-            billingInfo, billingSyncConnection, _globalSettings, secrets, projects, serviceAccounts, smSeats));
+
+        return View(new OrganizationEditModel(
+            organization,
+            provider,
+            users,
+            ciphers,
+            collections,
+            groups,
+            policies,
+            billingInfo,
+            billingHistoryInfo,
+            billingSyncConnection,
+            _globalSettings,
+            secrets,
+            projects,
+            serviceAccounts,
+            smSeats));
     }
 
     [HttpPost]
@@ -256,7 +270,7 @@ public class OrganizationsController : Controller
 
             if (provider.IsBillable())
             {
-                await _scaleSeatsCommand.ScalePasswordManagerSeats(
+                await _providerBillingService.ScaleSeats(
                     provider,
                     organization.PlanType,
                     -organization.Seats ?? 0);
@@ -267,6 +281,35 @@ public class OrganizationsController : Controller
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
 
         return RedirectToAction("Index");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Org_Delete)]
+    public async Task<IActionResult> DeleteInitiation(Guid id, OrganizationInitiateDeleteModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = ModelState.GetErrorMessage();
+        }
+        else
+        {
+            try
+            {
+                var organization = await _organizationRepository.GetByIdAsync(id);
+                if (organization != null)
+                {
+                    await _organizationService.InitiateDeleteAsync(organization, model.AdminEmail);
+                    TempData["Success"] = "The request to initiate deletion of the organization has been sent.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+        }
+
+        return RedirectToAction("Edit", new { id });
     }
 
     public async Task<IActionResult> TriggerBillingSync(Guid id)
@@ -349,8 +392,6 @@ public class OrganizationsController : Controller
             providerOrganization,
             organization);
 
-        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
-
         return Json(null);
     }
     private async Task<Organization> GetOrganization(Guid id, OrganizationEditModel model)
@@ -411,5 +452,4 @@ public class OrganizationsController : Controller
 
         return organization;
     }
-
 }

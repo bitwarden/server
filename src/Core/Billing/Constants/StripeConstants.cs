@@ -16,6 +16,17 @@ public static class StripeConstants
         public const string SendInvoice = "send_invoice";
     }
 
+    public static class CouponIDs
+    {
+        public const string SecretsManagerStandalone = "sm-standalone";
+    }
+
+    public static class PaymentMethodTypes
+    {
+        public const string Card = "card";
+        public const string USBankAccount = "us_bank_account";
+    }
+
     public static class ProrationBehavior
     {
         public const string AlwaysInvoice = "always_invoice";

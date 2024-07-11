@@ -19,13 +19,9 @@ public class FolderRotationValidator : IRotationValidator<IEnumerable<FolderWith
     public async Task<IEnumerable<Folder>> ValidateAsync(User user, IEnumerable<FolderWithIdRequestModel> folders)
     {
         var result = new List<Folder>();
-        if (folders == null || !folders.Any())
-        {
-            return result;
-        }
 
         var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        if (existingFolders == null || !existingFolders.Any())
+        if (existingFolders == null || existingFolders.Count == 0)
         {
             return result;
         }

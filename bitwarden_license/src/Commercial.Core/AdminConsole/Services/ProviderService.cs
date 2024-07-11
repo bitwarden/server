@@ -7,6 +7,8 @@ using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -434,11 +436,15 @@ public class ProviderService : IProviderService
             return;
         }
 
-        var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
-        var extractedPlanType = PlanTypeMappings(organization);
-        if (subscriptionItem != null)
+        if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId,
+                GetStripeSeatPlanId(organization.PlanType));
+            var extractedPlanType = PlanTypeMappings(organization);
+            if (subscriptionItem != null)
+            {
+                await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            }
         }
 
         await _organizationRepository.UpsertAsync(organization);
@@ -518,7 +524,9 @@ public class ProviderService : IProviderService
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
         OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
     {
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && provider.IsBillable();
 
         ThrowOnInvalidPlanType(organizationSignup.Plan, consolidatedBillingEnabled);
 
@@ -551,7 +559,7 @@ public class ProviderService : IProviderService
             ]
             : Array.Empty<CollectionAccessSelection>();
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id,
+        await _organizationService.InviteUsersAsync(organization.Id, user.Id, systemUser: null,
             new (OrganizationUserInvite, string)[]
             {
                 (

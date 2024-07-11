@@ -329,7 +329,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationUser_CreateWithCollections_V2]",
+                $"[{Schema}].[OrganizationUser_CreateWithCollections]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -346,7 +346,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationUser_UpdateWithCollections_V2]",
+                $"[{Schema}].[OrganizationUser_UpdateWithCollections]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -517,6 +517,20 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
                 $"[{Schema}].[{Table}_ReadByUserIdWithPolicyDetails]",
                 new { UserId = userId, PolicyType = policyType },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(
+        Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserResetPasswordDetails>(
+                "[dbo].[OrganizationUser_ReadManyAccountRecoveryDetailsByOrganizationUserIds]",
+                new { OrganizationId = organizationId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();

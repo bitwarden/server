@@ -3,6 +3,7 @@ AS
 SELECT
     OU.[UserId],
     OU.[OrganizationId],
+    OU.[Id] OrganizationUserId,
     O.[Name],
     O.[Enabled],
     O.[PlanType],

@@ -73,7 +73,14 @@ public class OrganizationAuthRequestsController : Controller
         }
     }
 
-    private async Task ValidateAdminRequest(Guid orgId)
+    [HttpPost("")]
+    public async Task UpdateManyAuthRequests(Guid orgId, [FromBody] IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> model)
+    {
+        await ValidateAdminRequest(orgId);
+        await _updateOrganizationAuthRequestCommand.UpdateAsync(orgId, model.Select(x => x.ToOrganizationAuthRequestUpdate()));
+    }
+
+    public async Task ValidateAdminRequest(Guid orgId)
     {
         if (!await _currentContext.ManageResetPassword(orgId))
         {

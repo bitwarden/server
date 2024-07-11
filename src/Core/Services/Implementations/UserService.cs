@@ -14,12 +14,10 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
@@ -27,7 +25,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using File = System.IO.File;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -291,89 +288,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
 
-    public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword,
-        string token, Guid? orgUserId)
+    public async Task<IdentityResult> CreateUserAsync(User user)
     {
-        var tokenValid = false;
-        if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
-        {
-            // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-            var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-                _orgUserInviteTokenDataFactory, token, orgUserId.Value, user.Email);
-
-            tokenValid = newTokenValid ||
-                          CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
-                              user.Email, orgUserId.Value, _globalSettings);
-        }
-
-        if (_globalSettings.DisableUserRegistration && !tokenValid)
-        {
-            throw new BadRequestException("Open registration has been disabled by the system administrator.");
-        }
-
-        if (orgUserId.HasValue)
-        {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
-            if (orgUser != null)
-            {
-                var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
-                    PolicyType.TwoFactorAuthentication);
-                if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
-                {
-                    user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-                    {
-
-                        [TwoFactorProviderType.Email] = new TwoFactorProvider
-                        {
-                            MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                            Enabled = true
-                        }
-                    });
-                    SetTwoFactorProvider(user, TwoFactorProviderType.Email);
-                }
-            }
-        }
-
-        user.ApiKey = CoreHelpers.SecureRandomString(30);
-        var result = await base.CreateAsync(user, masterPassword);
-        if (result == IdentityResult.Success)
-        {
-            if (!string.IsNullOrEmpty(user.ReferenceData))
-            {
-                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
-                if (referenceData.TryGetValue("initiationPath", out var value))
-                {
-                    var initiationPath = value.ToString();
-                    await SendAppropriateWelcomeEmailAsync(user, initiationPath);
-                    if (!string.IsNullOrEmpty(initiationPath))
-                    {
-                        await _referenceEventService.RaiseEventAsync(
-                            new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
-                            {
-                                SignupInitiationPath = initiationPath
-                            });
-
-                        return result;
-                    }
-                }
-            }
-
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
-        }
-
-        return result;
+        return await CreateAsync(user);
     }
 
-    public async Task<IdentityResult> RegisterUserAsync(User user)
+    public async Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash)
     {
-        var result = await base.CreateAsync(user);
-        if (result == IdentityResult.Success)
-        {
-            await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
-        }
-
-        return result;
+        return await CreateAsync(user, masterPasswordHash);
     }
 
     public async Task SendMasterPasswordHintAsync(string email)
@@ -862,39 +784,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
     }
 
-    public async Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-        IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (await CheckPasswordAsync(user, masterPassword))
-        {
-            var now = DateTime.UtcNow;
-            user.RevisionDate = user.AccountRevisionDate = now;
-            user.LastKeyRotationDate = now;
-            user.SecurityStamp = Guid.NewGuid().ToString();
-            user.Key = key;
-            user.PrivateKey = privateKey;
-            if (ciphers.Any() || folders.Any() || sends.Any())
-            {
-                await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders, sends);
-            }
-            else
-            {
-                await _userRepository.ReplaceAsync(user);
-            }
-
-            await _pushService.PushLogOutAsync(user.Id, excludeCurrentContextFromPush: true);
-            return IdentityResult.Success;
-        }
-
-        Logger.LogWarning("Update key failed for user {userId}.", user.Id);
-        return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
-    }
-
     public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string secret)
     {
         if (user == null)
@@ -1337,6 +1226,28 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return IdentityResult.Success;
+    }
+
+    public async Task<bool> IsLegacyUser(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        var user = await FindByIdAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        return IsLegacyUser(user);
+    }
+
+    /// <inheritdoc cref="IsLegacyUser(string)"/>
+    public static bool IsLegacyUser(User user)
+    {
+        return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)

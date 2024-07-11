@@ -6,7 +6,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
-using Duende.IdentityServer.Extensions;
+using Duende.IdentityServer.Services;
 using Microsoft.IdentityModel.Logging;
 using Stripe;
 
@@ -108,7 +108,7 @@ public class Startup
             var uri = new Uri(globalSettings.BaseServiceUri.Sso);
             app.Use(async (ctx, next) =>
             {
-                ctx.SetIdentityServerOrigin($"{uri.Scheme}://{uri.Host}");
+                ctx.RequestServices.GetRequiredService<IServerUrls>().Origin = $"{uri.Scheme}://{uri.Host}";
                 await next();
             });
         }

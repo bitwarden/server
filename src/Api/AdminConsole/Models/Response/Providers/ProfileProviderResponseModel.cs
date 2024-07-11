@@ -21,6 +21,7 @@ public class ProfileProviderResponseModel : ResponseModel
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(provider.Permissions);
         UserId = provider.UserId;
         UseEvents = provider.UseEvents;
+        ProviderStatus = provider.ProviderStatus;
     }
 
     public Guid Id { get; set; }
@@ -33,4 +34,5 @@ public class ProfileProviderResponseModel : ResponseModel
     public Permissions Permissions { get; set; }
     public Guid? UserId { get; set; }
     public bool UseEvents { get; set; }
+    public ProviderStatusType ProviderStatus { get; set; }
 }
