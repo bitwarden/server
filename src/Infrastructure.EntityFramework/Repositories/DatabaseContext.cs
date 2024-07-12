@@ -32,6 +32,7 @@ public class DatabaseContext : DbContext
     public DbSet<GroupSecretAccessPolicy> GroupSecretAccessPolicy { get; set; }
     public DbSet<ServiceAccountSecretAccessPolicy> ServiceAccountSecretAccessPolicy { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
+    public DbSet<Cache> Cache { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
@@ -159,6 +160,20 @@ public class DatabaseContext : DbContext
     // Make sure this is called after configuring all the entities as it iterates through all setup entities.
     private void ConfigureDateTimeUtcQueries(ModelBuilder builder)
     {
+        ValueConverter<DateTime, DateTime> converter;
+        if (Database.IsNpgsql())
+        {
+            converter = new ValueConverter<DateTime, DateTime>(
+                v => v,
+                d => new DateTimeOffset(d).UtcDateTime);
+        }
+        else
+        {
+            converter = new ValueConverter<DateTime, DateTime>(
+                v => v,
+                v => new DateTime(v.Ticks, DateTimeKind.Utc));
+        }
+
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
             if (entityType.IsKeyless)
@@ -169,10 +184,7 @@ public class DatabaseContext : DbContext
             {
                 if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
                 {
-                    property.SetValueConverter(
-                        new ValueConverter<DateTime, DateTime>(
-                            v => v,
-                            v => new DateTime(v.Ticks, DateTimeKind.Utc)));
+                    property.SetValueConverter(converter);
                 }
             }
         }

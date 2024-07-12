@@ -1,10 +1,7 @@
 ﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -23,12 +20,12 @@ public class ProviderBillingController(
     IProviderBillingService providerBillingService,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : Controller
+    ISubscriberService subscriberService) : BaseProviderController(currentContext, featureService, providerRepository)
 {
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
     {
-        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
@@ -42,10 +39,32 @@ public class ProviderBillingController(
         return TypedResults.Ok(response);
     }
 
+    [HttpGet("invoices/{invoiceId}")]
+    public async Task<IResult> GenerateClientInvoiceReportAsync([FromRoute] Guid providerId, string invoiceId)
+    {
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var reportContent = await providerBillingService.GenerateClientInvoiceReport(invoiceId);
+
+        if (reportContent == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        return TypedResults.File(
+            reportContent,
+            "text/csv");
+    }
+
     [HttpGet("payment-information")]
     public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
     {
-        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
@@ -67,7 +86,7 @@ public class ProviderBillingController(
     [HttpGet("payment-method")]
     public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid providerId)
     {
-        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
@@ -91,7 +110,7 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] TokenizedPaymentMethodRequestBody requestBody)
     {
-        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
@@ -119,7 +138,7 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
-        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
@@ -134,7 +153,7 @@ public class ProviderBillingController(
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
-        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
 
         if (provider == null)
         {
@@ -156,7 +175,7 @@ public class ProviderBillingController(
     [HttpGet("tax-information")]
     public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid providerId)
     {
-        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
@@ -180,7 +199,7 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] TaxInformationRequestBody requestBody)
     {
-        var (provider, result) = await GetAuthorizedBillableProviderOrResultAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
@@ -199,32 +218,5 @@ public class ProviderBillingController(
         await subscriberService.UpdateTaxInformation(provider, taxInformation);
 
         return TypedResults.Ok();
-    }
-
-    private async Task<(Provider, IResult)> GetAuthorizedBillableProviderOrResultAsync(Guid providerId)
-    {
-        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
-            return (null, TypedResults.NotFound());
-        }
-
-        var provider = await providerRepository.GetByIdAsync(providerId);
-
-        if (provider == null)
-        {
-            return (null, TypedResults.NotFound());
-        }
-
-        if (!currentContext.ProviderProviderAdmin(providerId))
-        {
-            return (null, TypedResults.Unauthorized());
-        }
-
-        if (!provider.IsBillable())
-        {
-            return (null, TypedResults.Unauthorized());
-        }
-
-        return (provider, null);
     }
 }

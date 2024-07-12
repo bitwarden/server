@@ -53,6 +53,23 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendRegistrationVerificationEmailAsync(string email, string token)
+    {
+        var message = CreateDefaultMessage("Verify Your Email", email);
+        var model = new RegisterVerifyEmail
+        {
+            Token = WebUtility.UrlEncode(token),
+            Email = WebUtility.UrlEncode(email),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "VerifyEmail";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+
     public async Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token)
     {
         var message = CreateDefaultMessage("Delete Your Account", email);

@@ -10,6 +10,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -731,7 +732,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     [Theory]
     [OrganizationCustomize(FlexibleCollections = false)]
     [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.User)]
     public async Task InviteUsers_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
@@ -761,7 +761,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory]
     [OrganizationInviteCustomize(
-        InviteeUserType = OrganizationUserType.Manager,
+        InviteeUserType = OrganizationUserType.User,
         InvitorUserType = OrganizationUserType.Custom
     ), OrganizationCustomize(FlexibleCollections = false), BitAutoData]
     public async Task InviteUsers_CustomUserWithoutManageUsersConfiguringUser_Throws(Organization organization, OrganizationUserInvite invite,
@@ -978,9 +978,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         currentContext.ManageSso(organization.Id).Returns(true);
         currentContext.AccessEventLogs(organization.Id).Returns(true);
         currentContext.AccessImportExport(organization.Id).Returns(true);
-        currentContext.DeleteAssignedCollections(organization.Id).Returns(true);
         currentContext.EditAnyCollection(organization.Id).Returns(true);
-        currentContext.EditAssignedCollections(organization.Id).Returns(true);
         currentContext.ManageResetPassword(organization.Id).Returns(true);
         currentContext.GetOrganization(organization.Id)
             .Returns(new CurrentContextOrganization()
@@ -1182,28 +1180,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                     !update.MaxAutoscaleSmSeatsChanged &&
                     !update.MaxAutoscaleSmSeatsChanged));
         });
-    }
-
-    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task InviteUsers_WithFlexibleCollections_WhenInvitingManager_Throws(Organization organization,
-        OrganizationUserInvite invite, OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
-    {
-        invite.Type = OrganizationUserType.Manager;
-        organization.FlexibleCollections = true;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organization.Id)
-            .Returns(true);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null,
-                new (OrganizationUserInvite, string)[] { (invite, null) }));
-
-        Assert.Contains("manager role has been deprecated", exception.Message.ToLowerInvariant());
     }
 
     [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
@@ -2298,7 +2274,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     public async Task ValidateOrganizationCustomPermissionsEnabledAsync_WithNotCustomType_IsValid(
         OrganizationUserType newType,
         Guid organizationId,
