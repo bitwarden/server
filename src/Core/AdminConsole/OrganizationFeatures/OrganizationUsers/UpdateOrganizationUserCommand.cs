@@ -159,6 +159,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         var invalidCollection = collections.FirstOrDefault(c => c.OrganizationId != originalUser.OrganizationId);
         if (invalidCollection != default)
         {
+            // Use generic error message to avoid enumeration
             throw new BadRequestException($"Invalid collection id {invalidCollection.Id}.");
         }
     }

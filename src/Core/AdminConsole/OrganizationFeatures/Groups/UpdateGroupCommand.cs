@@ -173,6 +173,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         var invalidCollection = collections.FirstOrDefault(c => c.OrganizationId != originalGroup.OrganizationId);
         if (invalidCollection != default)
         {
+            // Use generic error message to avoid enumeration
             throw new BadRequestException($"Invalid collection id {invalidCollection.Id}.");
         }
     }
