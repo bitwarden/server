@@ -103,7 +103,7 @@ public class OrganizationUsersController : Controller
         var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
 
         // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-        response.Type.GetFlexibleCollectionsUserType(response.Permissions);
+        response.Type = response.Type.GetFlexibleCollectionsUserType(response.Permissions);
 
         // Set 'Edit/Delete Assigned Collections' custom permissions to false
         if (response.Permissions is not null)
@@ -139,18 +139,7 @@ public class OrganizationUsersController : Controller
             }
         );
 
-        // I was not sure about automapper being a possible use case here? 
-        // If not I am sure I can likely implement a more elegant conversion solution
-        var responses = new List<OrganizationUserUserDetailsResponseModel>();
-        foreach (var queryResponse in queryResponses)
-        {
-            responses.Add(new OrganizationUserUserDetailsResponseModel(
-                    queryResponse.OrganizationUserUserDetails,
-                    queryResponse.TwoFactorEnabled,
-                    permissions: queryResponse.Permissions
-                )
-            );
-        }
+        var responses = queryResponses.Select(r => new OrganizationUserUserDetailsResponseModel(r.OrganizationUserUserDetails, r.TwoFactorEnabled));
 
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }

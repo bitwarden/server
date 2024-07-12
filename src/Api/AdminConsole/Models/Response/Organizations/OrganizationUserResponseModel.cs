@@ -30,7 +30,7 @@ public class OrganizationUserResponseModel : ResponseModel
     }
 
     public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser,
-        string obj = "organizationUser", Permissions permissions = null)
+        string obj = "organizationUser")
         : base(obj)
     {
         if (organizationUser == null)
@@ -44,8 +44,7 @@ public class OrganizationUserResponseModel : ResponseModel
         Status = organizationUser.Status;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
-        // So the OrganizationUserUserDetailsResponseModel constructor can init already converted permissions
-        Permissions = permissions ?? CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
+        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
         HasMasterPassword = organizationUser.HasMasterPassword;
@@ -87,12 +86,9 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
-    // Since the OrganizationUserUserDetailsQueryResponse object already has the permissions
-    // converted from json. Add it here as an optional param. If included the base method will
-    // use the permissions if not it will conver
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool twoFactorEnabled, string obj = "organizationUserUserDetails", Permissions permissions = null)
-        : base(organizationUser, obj, permissions: permissions)
+        bool twoFactorEnabled, string obj = "organizationUserUserDetails")
+        : base(organizationUser, obj)
     {
         if (organizationUser == null)
         {

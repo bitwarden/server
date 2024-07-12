@@ -11,8 +11,6 @@ public enum OrganizationUserType : byte
     Custom = 4,
 }
 
-// Will be removed in the future. Simple extension method for abstracting that GetFlexibleCollectionsUserType method. 
-// Thought it's mostly a conversion so an extension method is fine. 
 public static class OrganizationUserTypeExtensions
 {
     public static OrganizationUserType GetFlexibleCollectionsUserType(this OrganizationUserType type, Permissions permissions)
