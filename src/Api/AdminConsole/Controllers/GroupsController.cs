@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Models.Request;
+﻿using Api.AdminConsole.Queries;
+using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -34,6 +35,7 @@ public class GroupsController : Controller
     private readonly IFeatureService _featureService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IGroupDetailsQuery _groupDetailsQuery;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -48,7 +50,8 @@ public class GroupsController : Controller
         IUserService userService,
         IFeatureService featureService,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IGroupDetailsQuery groupDetailsQuery)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
@@ -63,6 +66,7 @@ public class GroupsController : Controller
         _featureService = featureService;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
+        _groupDetailsQuery = groupDetailsQuery;
     }
 
     [HttpGet("{id}")]
@@ -80,13 +84,9 @@ public class GroupsController : Controller
     [HttpGet("{id}/details")]
     public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
     {
-        var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
-        if (groupDetails?.Item1 == null || !await _currentContext.ManageGroups(groupDetails.Item1.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
+        var queryResult = await _groupDetailsQuery.GetGroupDetails(new GroupDetailsQueryRequest { OrganizationId = new Guid(orgId), GroupId = new Guid(id) });
+        var detail = queryResult.FirstOrDefault();
+        return new GroupDetailsResponseModel(detail.Group, detail.CollectionAccessSelection);
     }
 
     [HttpGet("")]
@@ -99,8 +99,8 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
-        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
+        var groups = await _groupDetailsQuery.GetGroupDetails(new GroupDetailsQueryRequest { OrganizationId = orgId });
+        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Group, g.CollectionAccessSelection));
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 

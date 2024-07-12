@@ -32,6 +32,8 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
+using Api.AdminConsole.Queries;
+
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -175,6 +177,9 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
+
+        // Queries
+        services.AddScoped<IGroupDetailsQuery, GroupDetailsQuery>();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
