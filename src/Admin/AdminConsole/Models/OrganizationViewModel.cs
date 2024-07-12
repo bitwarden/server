@@ -69,14 +69,4 @@ public class OrganizationViewModel
     public int ServiceAccountsCount { get; set; }
     public int OccupiedSmSeatsCount { get; set; }
     public bool UseSecretsManager => Organization.UseSecretsManager;
-
-    public string GetCollectionManagementSetting(bool collectionManagementSetting)
-    {
-        if (!Organization.FlexibleCollections)
-        {
-            return "N/A";
-        }
-
-        return collectionManagementSetting ? "On" : "Off";
-    }
 }

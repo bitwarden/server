@@ -148,9 +148,7 @@ public class OrganizationService : IOrganizationService
             organization,
             paymentMethodType,
             paymentToken,
-            _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
-                ? taxInfo
-                : null);
+            taxInfo);
         if (updated)
         {
             await ReplaceAndUpdateCacheAsync(organization);
@@ -1032,12 +1030,6 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        // Prevent use of any deprecated permissions
-        if (invites.Any(i => i.invite.Type is OrganizationUserType.Manager))
-        {
-            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
-        }
-
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
 
@@ -1429,9 +1421,20 @@ public class OrganizationService : IOrganizationService
 
         var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
-        if (provider is { Enabled: true, Type: ProviderType.Reseller })
+        if (provider is { Enabled: true })
         {
-            return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+            var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+            if (consolidatedBillingEnabled && provider.Type == ProviderType.Msp &&
+                provider.Status == ProviderStatusType.Billable)
+            {
+                return (false, "Seat limit has been reached. Please contact your provider to add more seats.");
+            }
+
+            if (provider.Type == ProviderType.Reseller)
+            {
+                return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+            }
         }
 
         if (organization.Seats.HasValue &&
@@ -2166,17 +2169,7 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
-        {
-            return false;
-        }
-
         if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
         {
             return false;
         }

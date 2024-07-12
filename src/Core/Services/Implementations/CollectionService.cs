@@ -111,7 +111,6 @@ public class CollectionService : ICollectionService
     public async Task<IEnumerable<Collection>> GetOrganizationCollectionsAsync(Guid organizationId)
     {
         if (
-            !await _currentContext.ViewAssignedCollections(organizationId) &&
             !await _currentContext.ViewAllCollections(organizationId) &&
             !await _currentContext.ManageUsers(organizationId) &&
             !await _currentContext.ManageGroups(organizationId) &&

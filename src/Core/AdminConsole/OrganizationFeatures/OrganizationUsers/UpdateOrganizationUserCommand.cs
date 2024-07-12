@@ -59,12 +59,6 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        // Prevent use of any deprecated permissions
-        if (user.Type == OrganizationUserType.Manager)
-        {
-            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
-        }
-
         if (user.AccessAll)
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
