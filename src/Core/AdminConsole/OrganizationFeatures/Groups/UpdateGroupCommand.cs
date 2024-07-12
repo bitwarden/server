@@ -133,25 +133,12 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 
         if (collectionAccess?.Any() == true)
         {
-            var collections = await _collectionRepository
-                .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
-            if (collections.Count != collectionAccess.Count() ||
-                collections.Any(c => c.OrganizationId != originalGroup.OrganizationId))
-            {
-                throw new BadRequestException(
-                    "A collection does not exist or you do not have permission to grant access to it.");
-            }
+            await ValidateCollectionAccessAsync(originalGroup, collectionAccess);
         }
 
         if (memberAccess?.Any() == true)
         {
-            var organizationUsers = await _organizationUserRepository.GetManyAsync(memberAccess);
-            if (organizationUsers.Count != memberAccess.Count() ||
-                organizationUsers.Any(ou => ou.OrganizationId != originalGroup.OrganizationId))
-            {
-                throw new BadRequestException(
-                    "A member does not exist or you do not have permission to modify their group access.");
-            }
+            await ValidateMemberAccessAsync(originalGroup, memberAccess.ToList());
         }
 
         if (organization.FlexibleCollections)
@@ -166,6 +153,47 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             {
                 throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
             }
+        }
+    }
+
+    private async Task ValidateCollectionAccessAsync(Group originalGroup,
+        ICollection<CollectionAccessSelection> collectionAccess)
+    {
+        var collections = await _collectionRepository
+            .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
+        var collectionIds = collections.Select(c => c.Id);
+
+        var missingCollectionId = collectionAccess
+            .FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
+        if (missingCollectionId != default)
+        {
+            throw new BadRequestException($"Invalid collection id {missingCollectionId}.");
+        }
+
+        var invalidCollection = collections.FirstOrDefault(c => c.OrganizationId != originalGroup.OrganizationId);
+        if (invalidCollection != default)
+        {
+            throw new BadRequestException($"Invalid collection id {invalidCollection.Id}.");
+        }
+    }
+
+    private async Task ValidateMemberAccessAsync(Group originalGroup,
+        ICollection<Guid> memberAccess)
+    {
+        var members = await _organizationUserRepository.GetManyAsync(memberAccess);
+        var memberIds = members.Select(g => g.Id);
+
+        var missingMemberId = memberAccess.FirstOrDefault(gId => !memberIds.Contains(gId));
+        if (missingMemberId != default)
+        {
+            throw new BadRequestException($"Invalid member id {missingMemberId}.");
+        }
+
+        var invalidMember = members.FirstOrDefault(g => g.OrganizationId != originalGroup.OrganizationId);
+        if (invalidMember != default)
+        {
+            // Use generic error message to avoid enumeration
+            throw new BadRequestException($"Invalid member id {invalidMember.Id}.");
         }
     }
 }

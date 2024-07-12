@@ -57,7 +57,7 @@ public class UpdateOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
 
-        Assert.Contains("collection does not exist or you do not have permission to grant access",
+        Assert.Contains("invalid collection id",
             exception.Message.ToLowerInvariant());
     }
 
@@ -82,7 +82,7 @@ public class UpdateOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
 
-        Assert.Contains("collection does not exist or you do not have permission to grant access",
+        Assert.Contains("invalid collection id",
             exception.Message.ToLowerInvariant());
     }
 
@@ -102,7 +102,7 @@ public class UpdateOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess));
 
-        Assert.Contains("group does not exist or you do not have permission to grant access",
+        Assert.Contains("invalid group id",
             exception.Message.ToLowerInvariant());
     }
 
@@ -127,7 +127,7 @@ public class UpdateOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess));
 
-        Assert.Contains("group does not exist or you do not have permission to grant access",
+        Assert.Contains("invalid group id",
             exception.Message.ToLowerInvariant());
     }
 

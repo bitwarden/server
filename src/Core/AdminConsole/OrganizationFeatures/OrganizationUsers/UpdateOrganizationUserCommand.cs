@@ -76,25 +76,12 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         if (collectionAccess?.Any() == true)
         {
-            var collections = await _collectionRepository
-                .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
-            if (collections.Count != collectionAccess.Count() ||
-                collections.Any(c => c.OrganizationId != originalUser.OrganizationId))
-            {
-                throw new BadRequestException(
-                    "A collection does not exist or you do not have permission to grant access to it.");
-            }
+            await ValidateCollectionAccessAsync(originalUser, collectionAccess.ToList());
         }
 
         if (groupAccess?.Any() == true)
         {
-            var groups = await _groupRepository.GetManyByManyIds(groupAccess);
-            if (groups.Count != groupAccess.Count() ||
-                groups.Any(g => g.OrganizationId != originalUser.OrganizationId))
-            {
-                throw new BadRequestException(
-                    "A group does not exist or you do not have permission to grant access to it.");
-            }
+            await ValidateGroupAccessAsync(originalUser, groupAccess.ToList());
         }
 
         if (savingUserId.HasValue)
@@ -153,5 +140,46 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         }
 
         await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
+    }
+
+    private async Task ValidateCollectionAccessAsync(OrganizationUser originalUser,
+        ICollection<CollectionAccessSelection> collectionAccess)
+    {
+        var collections = await _collectionRepository
+            .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
+        var collectionIds = collections.Select(c => c.Id);
+
+        var missingCollectionId = collectionAccess
+            .FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
+        if (missingCollectionId != default)
+        {
+            throw new BadRequestException($"Invalid collection id {missingCollectionId}.");
+        }
+
+        var invalidCollection = collections.FirstOrDefault(c => c.OrganizationId != originalUser.OrganizationId);
+        if (invalidCollection != default)
+        {
+            throw new BadRequestException($"Invalid collection id {invalidCollection.Id}.");
+        }
+    }
+
+    private async Task ValidateGroupAccessAsync(OrganizationUser originalUser,
+        ICollection<Guid> groupAccess)
+    {
+        var groups = await _groupRepository.GetManyByManyIds(groupAccess);
+        var groupIds = groups.Select(g => g.Id);
+
+        var missingGroupId = groupAccess.FirstOrDefault(gId => !groupIds.Contains(gId));
+        if (missingGroupId != default)
+        {
+            throw new BadRequestException($"Invalid group id {missingGroupId}.");
+        }
+
+        var invalidGroup = groups.FirstOrDefault(g => g.OrganizationId != originalUser.OrganizationId);
+        if (invalidGroup != default)
+        {
+            // Use generic error message to avoid enumeration
+            throw new BadRequestException($"Invalid group id {invalidGroup.Id}.");
+        }
     }
 }

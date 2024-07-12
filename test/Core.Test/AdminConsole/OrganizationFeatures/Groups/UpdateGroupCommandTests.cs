@@ -148,7 +148,7 @@ public class UpdateGroupCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
-        Assert.Contains("A collection does not exist or you do not have permission", exception.Message);
+        Assert.Contains("Invalid collection id", exception.Message);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
@@ -172,7 +172,7 @@ public class UpdateGroupCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
-        Assert.Contains("A collection does not exist or you do not have permission", exception.Message);
+        Assert.Contains("Invalid collection id", exception.Message);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
@@ -190,7 +190,7 @@ public class UpdateGroupCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
-        Assert.Contains("A member does not exist or you do not have permission", exception.Message);
+        Assert.Contains("Invalid member id", exception.Message);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
@@ -214,7 +214,7 @@ public class UpdateGroupCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
-        Assert.Contains("A member does not exist or you do not have permission", exception.Message);
+        Assert.Contains("Invalid member id", exception.Message);
     }
 
     private void ArrangeGroup(SutProvider<UpdateGroupCommand> sutProvider, Group group, Group oldGroup)
