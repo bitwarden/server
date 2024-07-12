@@ -64,6 +64,10 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         }
 
         var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
+        if (originalUser == null)
+        {
+            throw new NotFoundException("User not found.");
+        }
 
         if (user.OrganizationId != originalUser.OrganizationId)
         {
