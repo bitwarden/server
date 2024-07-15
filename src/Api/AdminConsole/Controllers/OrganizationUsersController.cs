@@ -230,7 +230,7 @@ public class OrganizationUsersController : Controller
                 .Succeeded;
             if (!authorized)
             {
-                throw new NotFoundException("You are not authorized to grant access to these collections.");
+                throw new NotFoundException();
             }
         }
 

@@ -108,9 +108,7 @@ public class GroupsControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Post(organization.Id, groupRequestModel));
-
-        Assert.Contains("You are not authorized to grant access to these collections.", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Post(organization.Id, groupRequestModel));
 
         await sutProvider.GetDependency<ICreateGroupCommand>().DidNotReceiveWithAnyArgs()
             .CreateGroupAsync(default, default, default, default);
