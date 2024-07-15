@@ -76,6 +76,7 @@ public class ProviderEventService(
                         ProviderId = parsedProviderId,
                         InvoiceId = invoice.Id,
                         InvoiceNumber = invoice.Number,
+                        ClientId = client.OrganizationId,
                         ClientName = client.OrganizationName,
                         PlanName = client.Plan,
                         AssignedSeats = client.Seats ?? 0,

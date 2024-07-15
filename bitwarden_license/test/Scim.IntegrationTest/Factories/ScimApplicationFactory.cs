@@ -201,7 +201,14 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
     {
         return new List<Organization>()
         {
-            new Organization { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
+            new Organization
+            {
+                Id = TestOrganizationId1,
+                Name = "Test Organization 1",
+                BillingEmail = $"billing-email+{TestOrganizationId1}@example.com",
+                UseGroups = true,
+                Plan = "Enterprise",
+            },
         };
     }
 
