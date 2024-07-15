@@ -64,14 +64,9 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         }
 
         var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-        if (originalUser == null)
+        if (originalUser == null || user.OrganizationId != originalUser.OrganizationId)
         {
-            throw new NotFoundException("User not found.");
-        }
-
-        if (user.OrganizationId != originalUser.OrganizationId)
-        {
-            throw new BadRequestException("You cannot change a member's organization id.");
+            throw new NotFoundException();
         }
 
         if (collectionAccess?.Any() == true)
@@ -146,14 +141,14 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             .FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
         if (missingCollectionId != default)
         {
-            throw new BadRequestException($"Invalid collection id {missingCollectionId}.");
+            throw new NotFoundException();
         }
 
         var invalidCollection = collections.FirstOrDefault(c => c.OrganizationId != originalUser.OrganizationId);
         if (invalidCollection != default)
         {
             // Use generic error message to avoid enumeration
-            throw new BadRequestException($"Invalid collection id {invalidCollection.Id}.");
+            throw new NotFoundException();
         }
     }
 
@@ -166,14 +161,14 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         var missingGroupId = groupAccess.FirstOrDefault(gId => !groupIds.Contains(gId));
         if (missingGroupId != default)
         {
-            throw new BadRequestException($"Invalid group id {missingGroupId}.");
+            throw new NotFoundException();
         }
 
         var invalidGroup = groups.FirstOrDefault(g => g.OrganizationId != originalUser.OrganizationId);
         if (invalidGroup != default)
         {
             // Use generic error message to avoid enumeration
-            throw new BadRequestException($"Invalid group id {invalidGroup.Id}.");
+            throw new NotFoundException();
         }
     }
 }

@@ -112,7 +112,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 
         if (organization == null)
         {
-            throw new BadRequestException("Organization not found");
+            throw new NotFoundException();
         }
 
         if (!organization.UseGroups)
@@ -121,14 +121,9 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         }
 
         var originalGroup = await _groupRepository.GetByIdAsync(group.Id);
-        if (originalGroup == null)
+        if (originalGroup == null || originalGroup.OrganizationId != group.OrganizationId)
         {
-            throw new NotFoundException("Group not found.");
-        }
-
-        if (originalGroup.OrganizationId != group.OrganizationId)
-        {
-            throw new BadRequestException("You cannot change a group's organization id.");
+            throw new NotFoundException();
         }
 
         if (collectionAccess?.Any() == true)
@@ -164,14 +159,14 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             .FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
         if (missingCollectionId != default)
         {
-            throw new BadRequestException($"Invalid collection id {missingCollectionId}.");
+            throw new NotFoundException();
         }
 
         var invalidCollection = collections.FirstOrDefault(c => c.OrganizationId != originalGroup.OrganizationId);
         if (invalidCollection != default)
         {
             // Use generic error message to avoid enumeration
-            throw new BadRequestException($"Invalid collection id {invalidCollection.Id}.");
+            throw new NotFoundException();
         }
     }
 
@@ -181,17 +176,17 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         var members = await _organizationUserRepository.GetManyAsync(memberAccess);
         var memberIds = members.Select(g => g.Id);
 
-        var missingMemberId = memberAccess.FirstOrDefault(gId => !memberIds.Contains(gId));
+        var missingMemberId = memberAccess.FirstOrDefault(mId => !memberIds.Contains(mId));
         if (missingMemberId != default)
         {
-            throw new BadRequestException($"Invalid member id {missingMemberId}.");
+            throw new NotFoundException();
         }
 
-        var invalidMember = members.FirstOrDefault(g => g.OrganizationId != originalGroup.OrganizationId);
+        var invalidMember = members.FirstOrDefault(m => m.OrganizationId != originalGroup.OrganizationId);
         if (invalidMember != default)
         {
             // Use generic error message to avoid enumeration
-            throw new BadRequestException($"Invalid member id {invalidMember.Id}.");
+            throw new NotFoundException();
         }
     }
 }

@@ -82,9 +82,7 @@ public class UpdateGroupCommandTests
         ArrangeUsers(sutProvider, group);
         ArrangeCollections(sutProvider, group);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, null, eventSystemUser));
-
-        Assert.Contains("Organization not found", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, null, eventSystemUser));
 
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
@@ -137,8 +135,7 @@ public class UpdateGroupCommandTests
         // Mismatching orgId
         oldGroup.OrganizationId = CoreHelpers.GenerateComb();
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateGroupAsync(group, organization));
-        Assert.Contains("cannot change a group's organization id", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateGroupAsync(group, organization));
     }
 
     [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
@@ -154,9 +151,8 @@ public class UpdateGroupCommandTests
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
                 .Select(guid => new Collection { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
-        Assert.Contains("Invalid collection id", exception.Message);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
@@ -178,9 +174,8 @@ public class UpdateGroupCommandTests
                 return result;
             });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
-        Assert.Contains("Invalid collection id", exception.Message);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
@@ -196,9 +191,8 @@ public class UpdateGroupCommandTests
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
                 .Select(guid => new OrganizationUser { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
-        Assert.Contains("Invalid member id", exception.Message);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
@@ -219,9 +213,8 @@ public class UpdateGroupCommandTests
                 return result;
             });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
-        Assert.Contains("Invalid member id", exception.Message);
     }
 
     private void ArrangeGroup(SutProvider<UpdateGroupCommand> sutProvider, Group group, Group oldGroup)

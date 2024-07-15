@@ -36,9 +36,8 @@ public class UpdateOrganizationUserCommandTests
     {
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(user.Id).Returns(originalUser);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, null));
-        Assert.Contains("cannot change a member's organization id", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
@@ -54,11 +53,8 @@ public class UpdateOrganizationUserCommandTests
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
                 .Select(guid => new Collection { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
-
-        Assert.Contains("invalid collection id",
-            exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
@@ -79,11 +75,8 @@ public class UpdateOrganizationUserCommandTests
                 return result;
             });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
-
-        Assert.Contains("invalid collection id",
-            exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
@@ -99,11 +92,8 @@ public class UpdateOrganizationUserCommandTests
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
                 .Select(guid => new Group { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess));
-
-        Assert.Contains("invalid group id",
-            exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
@@ -124,11 +114,8 @@ public class UpdateOrganizationUserCommandTests
                 return result;
             });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess));
-
-        Assert.Contains("invalid group id",
-            exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]

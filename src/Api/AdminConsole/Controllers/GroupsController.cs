@@ -212,7 +212,7 @@ public class GroupsController : Controller
                     BulkCollectionOperations.ModifyGroupAccess))
                 .Succeeded)
             {
-                throw new BadRequestException("You must have Can Manage permissions to edit a collection's membership");
+                throw new NotFoundException();
             }
         }
 

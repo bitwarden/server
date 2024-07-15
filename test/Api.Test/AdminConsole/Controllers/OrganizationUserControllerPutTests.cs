@@ -232,8 +232,7 @@ public class OrganizationUserControllerPutTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
-        Assert.Contains("You must have Can Manage permission", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
     }
 
     [Theory]
@@ -252,8 +251,7 @@ public class OrganizationUserControllerPutTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
-        Assert.Contains("You must have Can Manage permission", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
     }
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider,

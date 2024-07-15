@@ -257,8 +257,7 @@ public class GroupsControllerPutTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel));
-        Assert.Contains("You must have Can Manage permission", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel));
     }
 
     [Theory]
@@ -278,8 +277,7 @@ public class GroupsControllerPutTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyGroupAccess)))
             .Returns(AuthorizationResult.Failed());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel));
-        Assert.Contains("You must have Can Manage permission", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel));
     }
 
     private void Put_Setup(SutProvider<GroupsController> sutProvider, Organization organization,
