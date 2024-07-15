@@ -29,15 +29,15 @@
     <dd class="col-sm-8 col-lg-9">@Model.User.RevisionDate.ToString()</dd>
 
     <dt class="col-sm-4 col-lg-3">Last Email Address Change</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.LastEmailChangeDate.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.User.LastEmailChangeDate?.ToString() ?? "-")</dd>
 
     <dt class="col-sm-4 col-lg-3">Last KDF Change</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.LastKdfChangeDate.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.User.LastKdfChangeDate?.ToString() ?? "-")</dd>
 
     <dt class="col-sm-4 col-lg-3">Last Key Rotation</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.LastKeyRotationDate.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.User.LastKeyRotationDate?.ToString() ?? "-")</dd>
 
     <dt class="col-sm-4 col-lg-3">Last Password Change</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.LastPasswordChangeDate.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.User.LastPasswordChangeDate?.ToString() ?? "-")</dd>
 
 </dl>
