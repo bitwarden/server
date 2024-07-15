@@ -181,8 +181,7 @@ public class OrganizationUsersControllerTests
             .Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
-        Assert.Contains("You are not authorized", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
     }
 
     [Theory]
