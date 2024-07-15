@@ -110,7 +110,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         // Avoid multiple enumeration
         memberAccess = memberAccess?.ToList();
 
-        if (organization == null)
+        if (organization == null || organization.Id != group.OrganizationId)
         {
             throw new NotFoundException();
         }
@@ -155,9 +155,9 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
         var collectionIds = collections.Select(c => c.Id);
 
-        var missingCollectionId = collectionAccess
+        var missingCollection = collectionAccess
             .FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
-        if (missingCollectionId != default)
+        if (missingCollection != default)
         {
             throw new NotFoundException();
         }

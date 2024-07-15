@@ -137,9 +137,9 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
         var collectionIds = collections.Select(c => c.Id);
 
-        var missingCollectionId = collectionAccess
+        var missingCollection = collectionAccess
             .FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
-        if (missingCollectionId != default)
+        if (missingCollection != default)
         {
             throw new NotFoundException();
         }
