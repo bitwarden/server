@@ -400,7 +400,7 @@ public static class ServiceCollectionExtensions
             .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
             .AddTokenProvider<AuthenticatorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator))
-            .AddTokenProvider<EmailTokenProvider>(
+            .AddTokenProvider<EmailTwoFactorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
@@ -408,7 +408,7 @@ public static class ServiceCollectionExtensions
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Duo))
             .AddTokenProvider<TwoFactorRememberTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))
-            .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider)
+            .AddTokenProvider<EmailTokenProvider>(TokenOptions.DefaultEmailProvider)
             .AddTokenProvider<WebAuthnTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.WebAuthn));
 

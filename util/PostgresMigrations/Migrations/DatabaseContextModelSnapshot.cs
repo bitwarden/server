@@ -33,6 +33,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<string>("BillingEmail")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
@@ -112,6 +113,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("smallint");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
@@ -119,6 +121,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Plan")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
@@ -695,6 +698,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ClientName")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1028,6 +1034,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("character varying(300)");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 

@@ -227,7 +227,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var baseCollectionQuery = new UserCollectionDetailsQuery(userId, useFlexibleCollections).Run(dbContext);
+            var baseCollectionQuery = new UserCollectionDetailsQuery(userId).Run(dbContext);
 
             if (dbContext.Database.IsSqlite())
             {
