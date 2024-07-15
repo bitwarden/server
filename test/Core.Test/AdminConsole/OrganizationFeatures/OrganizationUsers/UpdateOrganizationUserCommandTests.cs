@@ -22,7 +22,7 @@ public class UpdateOrganizationUserCommandTests
 {
     [Theory, BitAutoData]
     public async Task UpdateUserAsync_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
-        ICollection<CollectionAccessSelection> collections, List<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
+        List<CollectionAccessSelection> collections, List<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         user.Id = default(Guid);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -43,7 +43,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory, BitAutoData]
     public async Task UpdateUserAsync_CollectionsBelongToDifferentOrganization_Throws(OrganizationUser user, OrganizationUser originalUser,
-        ICollection<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        List<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization)
     {
         Setup(sutProvider, organization, user, originalUser);
@@ -63,7 +63,7 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory, BitAutoData]
     public async Task UpdateUserAsync_CollectionsDoNotExist_Throws(OrganizationUser user, OrganizationUser originalUser,
-        ICollection<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        List<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
         Organization organization)
     {
         Setup(sutProvider, organization, user, originalUser);
@@ -136,7 +136,7 @@ public class UpdateOrganizationUserCommandTests
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
-        ICollection<CollectionAccessSelection> collections,
+        List<CollectionAccessSelection> collections,
         List<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
@@ -144,6 +144,22 @@ public class UpdateOrganizationUserCommandTests
     {
         Setup(sutProvider, organization, newUserData, oldUserData);
 
+        // Deprecated with Flexible Collections
+        oldUserData.AccessAll = false;
+        newUserData.AccessAll = false;
+
+        // Arrange list of collections to make sure Manage is mutually exclusive
+        for (var i = 0; i < collections.Count; i++)
+        {
+            var cas = collections[i];
+            cas.Manage = i != collections.Count - 1;
+            cas.HidePasswords = i == collections.Count - 1;
+            cas.ReadOnly = i == collections.Count - 1;
+        }
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
         newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -176,16 +192,15 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithFlexibleCollections_WithAccessAll_Throws(
+    public async Task UpdateUserAsync_WithAccessAll_Throws(
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser newUserData,
         [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        ICollection<CollectionAccessSelection> collections,
+        List<CollectionAccessSelection> collections,
         List<Guid> groups,
         SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
-        organization.FlexibleCollections = true;
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = oldUserData.OrganizationId = savingUser.OrganizationId = organization.Id;

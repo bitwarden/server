@@ -52,7 +52,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     /// <param name="groupAccess">The user's updated group access. If set to null, groups are not updated.</param>
     /// <exception cref="BadRequestException"></exception>
     public async Task UpdateUserAsync(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess)
+        List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess)
     {
         // Avoid multiple enumeration
         collectionAccess = collectionAccess?.ToList();
@@ -97,14 +97,12 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-        if (organization.FlexibleCollections && user.AccessAll)
+        if (user.AccessAll)
         {
             throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
         }
 
-        if (organization.FlexibleCollections && collectionAccess?.Any() == true)
+        if (collectionAccess?.Count > 0)
         {
             var invalidAssociations = collectionAccess.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())
@@ -112,7 +110,6 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
                 throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
             }
         }
-        // End Flexible Collections
 
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
         // updating Stripe
@@ -121,17 +118,13 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
+                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
                 var update = new SecretsManagerSubscriptionUpdate(organization, true)
                     .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
 
-        if (user.AccessAll)
-        {
-            // We don't need any collections if we're flagged to have all access.
-            collectionAccess = new List<CollectionAccessSelection>();
-        }
         await _organizationUserRepository.ReplaceAsync(user, collectionAccess);
 
         if (groupAccess != null)

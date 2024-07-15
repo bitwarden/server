@@ -52,7 +52,7 @@ public class OrganizationUserControllerPutTests
                 ou.Id == orgUserId &&
                 ou.Email == orgUserEmail),
             savingUserId,
-            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas =>
+            Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
             model.Groups);
     }
@@ -99,7 +99,7 @@ public class OrganizationUserControllerPutTests
             ou.Id == orgUserId &&
             ou.Email == orgUserEmail),
             savingUserId,
-            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas =>
+            Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
             // Main assertion: groups are not updated (are null)
             null);
@@ -132,7 +132,7 @@ public class OrganizationUserControllerPutTests
             ou.Id == orgUserId &&
             ou.Email == orgUserEmail),
             savingUserId,
-            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas =>
+            Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
             model.Groups);
     }
@@ -206,7 +206,7 @@ public class OrganizationUserControllerPutTests
             ou.Id == orgUserId &&
             ou.Email == orgUserEmail),
             savingUserId,
-            Arg.Is<IEnumerable<CollectionAccessSelection>>(cas =>
+            Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.Select(c => c.Id).SequenceEqual(currentCollectionAccess.Select(c => c.Id)) &&
                 cas.First(c => c.Id == editedCollectionId).Manage == true &&
                 cas.First(c => c.Id == editedCollectionId).ReadOnly == false &&

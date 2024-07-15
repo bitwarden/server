@@ -7,5 +7,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interface
 public interface IUpdateOrganizationUserCommand
 {
     Task UpdateUserAsync(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess);
+        List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess);
 }

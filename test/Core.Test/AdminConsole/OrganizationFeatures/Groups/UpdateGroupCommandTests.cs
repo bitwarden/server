@@ -20,7 +20,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
 [SutProviderCustomize]
 public class UpdateGroupCommandTests
 {
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Group oldGroup,
         Organization organization)
     {
@@ -35,13 +35,22 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_WithCollections_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group,
         Group oldGroup, Organization organization, List<CollectionAccessSelection> collections)
     {
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
         ArrangeCollections(sutProvider, group);
+
+        // Arrange list of collections to make sure Manage is mutually exclusive
+        for (var i = 0; i < collections.Count; i++)
+        {
+            var cas = collections[i];
+            cas.Manage = i != collections.Count - 1;
+            cas.HidePasswords = i == collections.Count - 1;
+            cas.ReadOnly = i == collections.Count - 1;
+        }
 
         await sutProvider.Sut.UpdateGroupAsync(group, organization, collections);
 
@@ -50,7 +59,7 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_WithEventSystemUser_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group,
         Group oldGroup, Organization organization, EventSystemUser eventSystemUser)
     {
@@ -65,7 +74,7 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_WithNullOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider, Group group,
         Group oldGroup, EventSystemUser eventSystemUser)
     {
@@ -81,7 +90,7 @@ public class UpdateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = false, FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
     public async Task UpdateGroup_WithUseGroupsAsFalse_Throws(SutProvider<UpdateGroupCommand> sutProvider,
         Organization organization, Group group, Group oldGroup, EventSystemUser eventSystemUser)
     {
@@ -97,8 +106,8 @@ public class UpdateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
-    public async Task UpdateGroup_WithFlexibleCollections_WithAccessAll_Throws(
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task UpdateGroup_WithAccessAll_Throws(
         SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group, Group oldGroup)
     {
         ArrangeGroup(sutProvider, group, oldGroup);
@@ -106,7 +115,6 @@ public class UpdateGroupCommandTests
         ArrangeCollections(sutProvider, group);
 
         group.AccessAll = true;
-        organization.FlexibleCollections = true;
 
         var exception =
             await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateGroupAsync(group, organization));
@@ -197,7 +205,6 @@ public class UpdateGroupCommandTests
     public async Task UpdateGroup_MemberDoesNotExist_Throws(SutProvider<UpdateGroupCommand> sutProvider,
         Group group, Group oldGroup, Organization organization, IEnumerable<Guid> userAccess)
     {
-        group.AccessAll = false;
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeCollections(sutProvider, group);
 
@@ -219,6 +226,7 @@ public class UpdateGroupCommandTests
 
     private void ArrangeGroup(SutProvider<UpdateGroupCommand> sutProvider, Group group, Group oldGroup)
     {
+        group.AccessAll = false;
         oldGroup.OrganizationId = group.OrganizationId;
         oldGroup.Id = group.Id;
         sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(oldGroup);
