@@ -133,6 +133,7 @@ public static class FeatureFlagKeys
     public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
+    public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string GroupsComponentRefactor = "groups-component-refactor";
     public const string AC2828_ProviderPortalMembersPage = "AC-2828_provider-portal-members-page";
     public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
