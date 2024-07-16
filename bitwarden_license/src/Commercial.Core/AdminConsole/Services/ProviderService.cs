@@ -544,9 +544,9 @@ public class ProviderService : IProviderService
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        // If using Flexible Collections, give the owner Can Manage access over the default collection
+        // Give the owner Can Manage access over the default collection
         // The orgUser is not available when the org is created so we have to do it here as part of the invite
-        var defaultOwnerAccess = organization.FlexibleCollections && defaultCollection != null
+        var defaultOwnerAccess = defaultCollection != null
             ?
             [
                 new CollectionAccessSelection
@@ -566,10 +566,6 @@ public class ProviderService : IProviderService
                     new OrganizationUserInvite
                     {
                         Emails = new[] { clientOwnerEmail },
-
-                        // If using Flexible Collections, AccessAll is deprecated and set to false.
-                        // If not using Flexible Collections, set AccessAll to true (previous behavior)
-                        AccessAll = !organization.FlexibleCollections,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
                         Collections = defaultOwnerAccess,
