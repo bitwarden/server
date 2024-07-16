@@ -43,7 +43,6 @@ public class PostUserCommandTests
                 Arg.Is<OrganizationUserInvite>(i =>
                     i.Emails.Single().Equals(scimUserRequestModel.PrimaryEmail.ToLowerInvariant()) &&
                     i.Type == OrganizationUserType.User &&
-                    !i.AccessAll &&
                     !i.Collections.Any() &&
                     !i.Groups.Any() &&
                     i.AccessSecretsManager), externalId)
@@ -56,7 +55,6 @@ public class PostUserCommandTests
             Arg.Is<OrganizationUserInvite>(i =>
                 i.Emails.Single().Equals(scimUserRequestModel.PrimaryEmail.ToLowerInvariant()) &&
                 i.Type == OrganizationUserType.User &&
-                !i.AccessAll &&
                 !i.Collections.Any() &&
                 !i.Groups.Any() &&
                 i.AccessSecretsManager), externalId);

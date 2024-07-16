@@ -21,6 +21,7 @@ public interface ISecretRepository
     Task RestoreManyByIdAsync(IEnumerable<Guid> ids);
     Task<IEnumerable<Secret>> ImportAsync(IEnumerable<Secret> secrets);
     Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType);
+    Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToSecretsAsync(IEnumerable<Guid> ids, Guid userId, AccessClientType accessType);
     Task EmptyTrash(DateTime nowTime, uint deleteAfterThisNumberOfDays);
     Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId);
     Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
