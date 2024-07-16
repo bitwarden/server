@@ -111,7 +111,6 @@ public class AccountsController : Controller
     {
         var tokenValid = RegistrationEmailVerificationTokenable.ValidateToken(_registrationEmailVerificationTokenDataFactory, model.EmailVerificationToken, model.Email);
 
-
         // Check to see if the user already exists - this is just to catch the unlikely but possible case
         // where a user finishes registration and then clicks the email verification link again.
         var user = await _userRepository.GetByEmailAsync(model.Email);
