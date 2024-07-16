@@ -83,7 +83,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" \
-          /d:sonar.tests=test/ /d:sonar.sources=. /d:sonar.test.inclusions=test/ /d:sonar.exclusions=test/ \
+          /d:sonar.tests=test/,bitwarden_license/test/ \
+          /d:sonar.sources=dev/,perf/,scripts/,src/,bitwarden_license/src/,util/ \
+          /d:sonar.test.inclusions=test/,bitwarden_license/test/ \
+          /d:sonar.exclusions=test/,bitwarden_license/test/ \
           /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
           /d:sonar.host.url="https://sonarcloud.io"
           dotnet build
