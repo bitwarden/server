@@ -230,7 +230,7 @@ public class OrganizationUsersController : Controller
                 .Succeeded;
             if (!authorized)
             {
-                throw new NotFoundException("You are not authorized to grant access to these collections.");
+                throw new NotFoundException();
             }
         }
 
@@ -400,13 +400,15 @@ public class OrganizationUsersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var editingSelf = userId == organizationUser.UserId;
 
+        // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to a group.
-        // In this case we just don't update groups.
+        // No error is thrown for this, we just don't update groups.
         var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
         var groupsToSave = editingSelf && !organizationAbility.AllowAdminAccessToAllCollectionItems
             ? null
             : model.Groups;
 
+        // Authorization check:
         // If admins are not allowed access to all collections, you cannot add yourself to collections.
         // This is not caught by the requirement below that you can ModifyUserAccess and must be checked separately
         var currentAccessIds = currentAccess.Select(c => c.Id).ToHashSet();
@@ -417,9 +419,23 @@ public class OrganizationUsersController : Controller
             throw new BadRequestException("You cannot add yourself to a collection.");
         }
 
+        // Authorization check:
+        // You must have authorization to ModifyUserAccess for all collections being saved
+        var postedCollections = await _collectionRepository
+            .GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
+        foreach (var collection in postedCollections)
+        {
+            if (!(await _authorizationService.AuthorizeAsync(User, collection,
+                    BulkCollectionOperations.ModifyUserAccess))
+                .Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
+
         // The client only sends collections that the saving user has permissions to edit.
-        // On the server side, we need to (1) make sure the user has permissions for these collections, and
-        // (2) concat these with the collections that the user can't edit before saving to the database.
+        // We need to combine these with collections that the user doesn't have permissions for, so that we don't
+        // accidentally overwrite those
         var currentCollections = await _collectionRepository
             .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
 
@@ -431,11 +447,6 @@ public class OrganizationUsersController : Controller
             {
                 readonlyCollectionIds.Add(collection.Id);
             }
-        }
-
-        if (model.Collections.Any(c => readonlyCollectionIds.Contains(c.Id)))
-        {
-            throw new BadRequestException("You must have Can Manage permissions to edit a collection's membership");
         }
 
         var editedCollectionAccess = model.Collections
