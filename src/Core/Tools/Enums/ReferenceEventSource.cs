@@ -10,6 +10,6 @@ public enum ReferenceEventSource
     User,
     [EnumMember(Value = "provider")]
     Provider,
-    [EnumMember(Value = "registrationStart")]
-    RegistrationStart,
+    [EnumMember(Value = "registration")]
+    Registration,
 }
