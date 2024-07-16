@@ -782,15 +782,12 @@ public class CipherService : ICipherService
             {
                 collection.SetNewId();
                 newCollections.Add(collection);
-                if (org.FlexibleCollections)
+                newCollectionUsers.Add(new CollectionUser
                 {
-                    newCollectionUsers.Add(new CollectionUser
-                    {
-                        CollectionId = collection.Id,
-                        OrganizationUserId = importingOrgUser.Id,
-                        Manage = true
-                    });
-                }
+                    CollectionId = collection.Id,
+                    OrganizationUserId = importingOrgUser.Id,
+                    Manage = true
+                });
             }
         }
 

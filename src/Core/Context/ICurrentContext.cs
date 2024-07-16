@@ -36,8 +36,6 @@ public interface ICurrentContext
 
 
     Task<bool> OrganizationUser(Guid orgId);
-    [Obsolete("Manager role is deprecated after Flexible Collections.")]
-    Task<bool> OrganizationManager(Guid orgId);
     Task<bool> OrganizationAdmin(Guid orgId);
     Task<bool> OrganizationOwner(Guid orgId);
     Task<bool> OrganizationCustom(Guid orgId);
