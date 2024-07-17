@@ -28,6 +28,32 @@ LEFT JOIN
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
 
+-- Refresh metadata on sprocs that use the View
+
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadByMinimumRole]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByMinimumRole]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadById]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadById]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadWithCollectionsById]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadWithCollectionsById]';
+END
+GO
+
 -- Sprocs that don't use user-defined types: Give AccessAll a default value so we can remove it from the code
 -- before dropping it permanently from the db
 
