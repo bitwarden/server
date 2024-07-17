@@ -20,6 +20,11 @@ public class OrganizationBillingController(
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
         var metadata = await organizationBillingService.GetMetadata(organizationId);
 
         if (metadata == null)
@@ -35,6 +40,11 @@ public class OrganizationBillingController(
     [HttpGet("history")]
     public async Task<IResult> GetHistoryAsync([FromRoute] Guid organizationId)
     {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)
