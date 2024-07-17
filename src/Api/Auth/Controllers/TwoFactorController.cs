@@ -93,7 +93,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator(
         [FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, false);
         var response = new TwoFactorAuthenticatorResponseModel(user);
         return response;
     }
@@ -121,7 +121,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-yubikey")]
     public async Task<TwoFactorYubiKeyResponseModel> GetYubiKey([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, true, false);
         var response = new TwoFactorYubiKeyResponseModel(user);
         return response;
     }
@@ -147,7 +147,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-duo")]
     public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, true, false);
         var response = new TwoFactorDuoResponseModel(user);
         return response;
     }
@@ -187,7 +187,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorDuoResponseModel> GetOrganizationDuo(string id,
         [FromBody] SecretVerificationRequestModel model)
     {
-        await CheckAsync(model, false);
+        await CheckAsync(model, false, false);
 
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -244,7 +244,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-webauthn")]
     public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, false);
         var response = new TwoFactorWebAuthnResponseModel(user);
         return response;
     }
@@ -253,7 +253,7 @@ public class TwoFactorController : Controller
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, false);
         var reg = await _userService.StartWebAuthnRegistrationAsync(user);
         return reg;
     }
@@ -288,7 +288,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-email")]
     public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, false);
         var response = new TwoFactorEmailResponseModel(user);
         return response;
     }
@@ -433,7 +433,7 @@ public class TwoFactorController : Controller
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
-    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium)
+    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium, bool verify = true)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -441,10 +441,14 @@ public class TwoFactorController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (!await _userService.VerifySecretAsync(user, model.Secret))
+        if (verify)
         {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException(string.Empty, "User verification failed.");
+            }
+
         }
 
         if (premium && !await _userService.CanAccessPremium(user))
