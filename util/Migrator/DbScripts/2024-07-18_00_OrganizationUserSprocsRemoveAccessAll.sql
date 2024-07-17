@@ -27,6 +27,7 @@ LEFT JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+GO
 
 -- Refresh metadata on sprocs that use the View
 
@@ -301,7 +302,26 @@ GO
 -- Create a new version of the user-defined type and the sprocs that use it, and remove AccessAll from the type.
 -- These were already versioned from a previous update, so take the opportunity to drop the version suffix.
 
-CREATE OR ALTER TYPE [dbo].[OrganizationUserType] AS TABLE(
+-- Drop sprocs and then type in correct order if they already exist
+IF OBJECT_ID('[dbo].[OrganizationUser_CreateMany]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_CreateMany];
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUser_UpdateMany]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_UpdateMany];
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserType]') IS NOT NULL
+BEGIN
+    DROP TYPE [dbo].[OrganizationUserType];
+END
+GO
+
+CREATE TYPE [dbo].[OrganizationUserType] AS TABLE(
     [Id] UNIQUEIDENTIFIER,
     [OrganizationId] UNIQUEIDENTIFIER,
     [UserId] UNIQUEIDENTIFIER,
@@ -333,7 +353,7 @@ BEGIN
         [Key],
         [Status],
         [Type],
-        0,  -- AccessAll will be removed shortly
+        [AccessAll],
         [ExternalId],
         [CreationDate],
         [RevisionDate],
@@ -349,7 +369,7 @@ BEGIN
         OU.[Key],
         OU.[Status],
         OU.[Type],
-        OU.[AccessAll],
+        0,  -- AccessAll will be removed shortly
         OU.[ExternalId],
         OU.[CreationDate],
         OU.[RevisionDate],
