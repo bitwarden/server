@@ -58,6 +58,7 @@ public class OrganizationResponseModel : ResponseModel
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         FlexibleCollections = organization.FlexibleCollections;
+        IdpHost = organization.IdpHost;
     }
 
     public Guid Id { get; set; }
@@ -102,6 +103,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool FlexibleCollections { get; set; }
+    public string IdpHost { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

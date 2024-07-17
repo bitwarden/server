@@ -57,4 +57,5 @@ public class OrganizationUserOrganizationDetails
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool FlexibleCollections { get; set; }
+    public string IdpHost { get; set; }
 }

@@ -524,6 +524,25 @@ public class OrganizationsController : Controller
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
     }
 
+    [HttpPut("{id:guid}/idp")]
+    public async Task<OrganizationResponseModel> PutIdp(Guid id, [FromBody] OrganizationIdpRequestModel model)
+    {
+        if (!await _currentContext.OrganizationOwner(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        organization.IdpHost = model.IdpHost;
+        await _organizationService.UpdateAsync(organization);
+        return new OrganizationResponseModel(organization);
+    }
+
     [HttpPut("{id}/collection-management")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)

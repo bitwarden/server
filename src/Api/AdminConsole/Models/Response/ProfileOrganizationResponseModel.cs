@@ -65,6 +65,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         FlexibleCollections = organization.FlexibleCollections;
+        IdpHost = organization.IdpHost;
 
         if (organization.SsoConfig != null)
         {
@@ -158,4 +159,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool FlexibleCollections { get; set; }
+    public string IdpHost { get; set; }
 }

@@ -53,7 +53,8 @@
     @SecretsManagerBeta BIT = 0,
     @LimitCollectionCreationDeletion BIT = 1,
     @AllowAdminAccessToAllCollectionItems BIT = 1,
-    @FlexibleCollections BIT = 0
+    @FlexibleCollections BIT = 0,
+    @IdpHost NVARCHAR(50) = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -114,7 +115,8 @@ BEGIN
         [SecretsManagerBeta],
         [LimitCollectionCreationDeletion],
         [AllowAdminAccessToAllCollectionItems],
-        [FlexibleCollections]
+        [FlexibleCollections],
+        [IdpHost]
     )
     VALUES
     (
@@ -172,6 +174,7 @@ BEGIN
         @SecretsManagerBeta,
         @LimitCollectionCreationDeletion,
         @AllowAdminAccessToAllCollectionItems,
-        @FlexibleCollections
+        @FlexibleCollections,
+        @IdpHost
     )
 END

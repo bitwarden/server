@@ -105,6 +105,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// AC-1714 will remove this flag after all old code has been removed.
     /// </summary>
     public bool FlexibleCollections { get; set; }
+    public string? IdpHost { get; set; }
 
     public void SetNewId()
     {

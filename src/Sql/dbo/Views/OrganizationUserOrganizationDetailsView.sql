@@ -48,7 +48,8 @@ SELECT
     O.[SmServiceAccounts],
     O.[LimitCollectionCreationDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
-    O.[FlexibleCollections]
+    O.[FlexibleCollections],
+    O.[IdpHost]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
