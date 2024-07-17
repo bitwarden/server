@@ -21,12 +21,18 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
         var result = new List<Cipher>();
 
         var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
-        if (existingCiphers == null || existingCiphers.Count == 0)
+        if (existingCiphers == null)
         {
             return result;
         }
 
-        foreach (var existing in existingCiphers)
+        var existingUserCiphers = existingCiphers.Where(c => c.OrganizationId == null);
+        if (existingUserCiphers.Count() == 0)
+        {
+            return result;
+        }
+
+        foreach (var existing in existingUserCiphers)
         {
             var cipher = ciphers.FirstOrDefault(c => c.Id == existing.Id);
             if (cipher == null)
