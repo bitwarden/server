@@ -126,13 +126,14 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
+        var organizationUsers = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
+            ? await _organizationUserRepository.GetManyDetailsWithPremiumAccessByOrganizationAsync(orgId, includeGroups, includeCollections)
+            : await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
         var responseTasks = organizationUsers
             .Select(async o =>
             {
                 var orgUser = new OrganizationUserUserDetailsResponseModel(o,
-                    await _userService.TwoFactorIsEnabledAsync(o));
+                    await _userService.TwoFactorIsEnabledAsync(o, o.HasPremiumAccess == true));
 
                 // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
                 orgUser.Type = GetFlexibleCollectionsUserType(orgUser.Type, orgUser.Permissions);

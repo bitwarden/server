@@ -280,6 +280,71 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsWithPremiumAccessByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUserUserDetailsWithPremiumAccess_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            List<IGrouping<Guid, GroupUser>> userGroups = null;
+            List<IGrouping<Guid, CollectionUser>> userCollections = null;
+
+            var users = results.ToList();
+
+            if (!includeCollections && !includeGroups)
+            {
+                return users;
+            }
+
+            var orgUserIds = users.Select(u => u.Id).ToGuidIdArrayTVP();
+
+            if (includeGroups)
+            {
+                userGroups = (await connection.QueryAsync<GroupUser>(
+                    "[dbo].[GroupUser_ReadByOrganizationUserIds]",
+                    new { OrganizationUserIds = orgUserIds },
+                    commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
+            }
+
+            if (includeCollections)
+            {
+                userCollections = (await connection.QueryAsync<CollectionUser>(
+                    "[dbo].[CollectionUser_ReadByOrganizationUserIds]",
+                    new { OrganizationUserIds = orgUserIds },
+                    commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
+            }
+
+            // Map any queried collections and groups to their respective users
+            foreach (var user in users)
+            {
+                if (userGroups != null)
+                {
+                    user.Groups = userGroups
+                        .FirstOrDefault(u => u.Key == user.Id)?
+                        .Select(ug => ug.GroupId).ToList() ?? new List<Guid>();
+                }
+
+                if (userCollections != null)
+                {
+                    user.Collections = userCollections
+                        .FirstOrDefault(u => u.Key == user.Id)?
+                        .Select(uc => new CollectionAccessSelection
+                        {
+                            Id = uc.CollectionId,
+                            ReadOnly = uc.ReadOnly,
+                            HidePasswords = uc.HidePasswords,
+                            Manage = uc.Manage
+                        }).ToList() ?? new List<CollectionAccessSelection>();
+                }
+            }
+
+            return users;
+        }
+    }
+
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null)
     {
