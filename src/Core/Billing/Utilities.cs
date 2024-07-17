@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Billing.Models;
+using Bit.Core.Entities;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Stripe;
 
 namespace Bit.Core.Billing;
@@ -8,10 +10,10 @@ public static class Utilities
 {
     public const string BraintreeCustomerIdKey = "btCustomerId";
 
-    public static BillingException ContactSupport(
-        string internalMessage = null,
-        Exception innerException = null) => new("Something went wrong with your request. Please contact support.",
-        internalMessage, innerException);
+    public static string BuildBraintreeCustomerId(ISubscriber subscriber) =>
+        subscriber.BraintreeCustomerIdPrefix() +
+        subscriber.Id.ToString("N").ToLower() +
+        CoreHelpers.RandomString(3, upper: false, numeric: false);
 
     public static async Task<SubscriptionSuspensionDTO> GetSuspensionAsync(
         IStripeAdapter stripeAdapter,

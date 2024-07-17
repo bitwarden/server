@@ -60,16 +60,6 @@ public interface ISubscriberService
         StripeInvoiceListOptions invoiceListOptions = null);
 
     /// <summary>
-    /// Retrieves the account credit, a masked representation of the default payment method and the tax information for the
-    /// provided <paramref name="subscriber"/>. This is essentially a consolidated invocation of the <see cref="GetPaymentMethod"/>
-    /// and <see cref="GetTaxInformation"/> methods with a response that includes the customer's <see cref="Stripe.Customer.Balance"/> as account credit in order to cut down on Stripe API calls.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve payment information for.</param>
-    /// <returns>A <see cref="PaymentInformationDTO"/> containing the subscriber's account credit, masked payment method and tax information.</returns>
-    Task<PaymentInformationDTO> GetPaymentInformation(
-        ISubscriber subscriber);
-
-    /// <summary>
     /// Retrieves a masked representation of the subscriber's payment method for presentation to a client.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the masked payment method for.</param>

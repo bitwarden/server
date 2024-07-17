@@ -1,9 +1,9 @@
 ﻿namespace Bit.Core.Billing;
 
 public class BillingException(
-    string clientFriendlyMessage,
-    string internalMessage = null,
-    Exception innerException = null) : Exception(internalMessage, innerException)
+    string responseMessage = null,
+    string message = null,
+    Exception innerException = null) : Exception(message, innerException)
 {
-    public string ClientFriendlyMessage { get; set; } = clientFriendlyMessage;
+    public string ResponseMessage { get; } = responseMessage ?? "Something went wrong with your request. Please contact support.";
 }

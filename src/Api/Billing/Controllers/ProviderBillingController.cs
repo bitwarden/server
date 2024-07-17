@@ -61,28 +61,6 @@ public class ProviderBillingController(
             "text/csv");
     }
 
-    [HttpGet("payment-information")]
-    public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var paymentInformation = await subscriberService.GetPaymentInformation(provider);
-
-        if (paymentInformation == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var response = PaymentInformationResponse.From(paymentInformation);
-
-        return TypedResults.Ok(response);
-    }
-
     [HttpGet("payment-method")]
     public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid providerId)
     {
