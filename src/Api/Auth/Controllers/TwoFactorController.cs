@@ -349,7 +349,7 @@ public class TwoFactorController : Controller
     [HttpPost("email")]
     public async Task<TwoFactorEmailResponseModel> PutEmail([FromBody] UpdateTwoFactorEmailRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, false);
         model.ToUser(user);
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
