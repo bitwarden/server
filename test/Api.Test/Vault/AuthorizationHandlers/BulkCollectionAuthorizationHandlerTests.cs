@@ -1477,7 +1477,6 @@ public class BulkCollectionAuthorizationHandlerTests
     {
         var organizationAbility = new OrganizationAbility();
         organizationAbility.Id = organization.Id;
-        organizationAbility.FlexibleCollections = true;
         organizationAbility.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
         organizationAbility.AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems;
 
