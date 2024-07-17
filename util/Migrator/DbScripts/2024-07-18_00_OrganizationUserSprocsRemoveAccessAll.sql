@@ -315,7 +315,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[OrganizationUserType]') IS NOT NULL
+IF TYPE_ID('[dbo].[OrganizationUserType]') IS NOT NULL
 BEGIN
     DROP TYPE [dbo].[OrganizationUserType];
 END
