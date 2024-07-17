@@ -296,7 +296,7 @@ public class TwoFactorController : Controller
     [HttpPost("send-email")]
     public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, false);
         model.ToUser(user);
         await _userService.SendTwoFactorEmailAsync(user);
     }
@@ -349,7 +349,7 @@ public class TwoFactorController : Controller
     [HttpPost("email")]
     public async Task<TwoFactorEmailResponseModel> PutEmail([FromBody] UpdateTwoFactorEmailRequestModel model)
     {
-        var user = await CheckAsync(model, false, false);
+        var user = await CheckAsync(model, false);
         model.ToUser(user);
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
