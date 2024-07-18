@@ -197,7 +197,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
             var collectionDetails = await results.ReadFirstOrDefaultAsync<CollectionAdminDetails>();
 
-            if (!includeAccessRelationships) return collectionDetails;
+            if (!includeAccessRelationships || collectionDetails == null) return collectionDetails;
 
             collectionDetails.Groups = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
             collectionDetails.Users = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
