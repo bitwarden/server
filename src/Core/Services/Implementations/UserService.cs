@@ -1170,11 +1170,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             if (p.Value?.Enabled ?? false)
             {
-                if (!TwoFactorProvider.RequiresPremium(p.Key))
+                if (hasPremiumAccess == true || !TwoFactorProvider.RequiresPremium(p.Key))
                 {
                     return true;
                 }
-                if (hasPremiumAccess == true || await CanAccessPremium(user))
+                if (await CanAccessPremium(user))
                 {
                     return true;
                 }
