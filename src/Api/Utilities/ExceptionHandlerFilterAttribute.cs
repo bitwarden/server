@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Public.Response;
+using Bit.Core.Billing;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -67,6 +68,11 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         {
             errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 400;
+        }
+        else if (exception is BillingException billingException)
+        {
+            errorMessage = billingException.Response;
+            context.HttpContext.Response.StatusCode = 500;
         }
         else if (exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
         {

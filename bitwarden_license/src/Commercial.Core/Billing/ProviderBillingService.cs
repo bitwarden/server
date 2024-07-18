@@ -185,14 +185,14 @@ public class ProviderBillingService(
                 "Could not find provider ({ID}) when retrieving assigned seat total",
                 providerId);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         if (provider.Type == ProviderType.Reseller)
         {
             logger.LogError("Assigned seats cannot be retrieved for reseller-type provider ({ID})", providerId);
 
-            throw ContactSupport("Consolidated billing does not support reseller-type providers");
+            throw new BillingException();
         }
 
         var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
@@ -248,14 +248,14 @@ public class ProviderBillingService(
         {
             logger.LogError("Non-MSP provider ({ProviderID}) cannot scale their seats", provider.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         if (!planType.SupportsConsolidatedBilling())
         {
             logger.LogError("Cannot scale provider ({ProviderID}) seats for plan type {PlanType} as it does not support consolidated billing", provider.Id, planType.ToString());
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
@@ -266,7 +266,7 @@ public class ProviderBillingService(
         {
             logger.LogError("Cannot scale provider ({ProviderID}) seats for plan type {PlanType} when their matching provider plan is not configured", provider.Id, planType);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var seatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
@@ -302,7 +302,7 @@ public class ProviderBillingService(
             {
                 logger.LogError("Service user for provider ({ProviderID}) cannot scale a provider's seat count over the seat minimum", provider.Id);
 
-                throw ContactSupport();
+                throw new BillingException();
             }
 
             await update(
@@ -345,7 +345,7 @@ public class ProviderBillingService(
         {
             logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var providerDisplayName = provider.DisplayName();
@@ -403,7 +403,7 @@ public class ProviderBillingService(
         {
             logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured plans", provider.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
@@ -415,7 +415,7 @@ public class ProviderBillingService(
         {
             logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Teams plan", provider.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
@@ -433,7 +433,7 @@ public class ProviderBillingService(
         {
             logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Enterprise plan", provider.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
@@ -477,7 +477,7 @@ public class ProviderBillingService(
                 subscription.Id,
                 subscription.Status);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
         {

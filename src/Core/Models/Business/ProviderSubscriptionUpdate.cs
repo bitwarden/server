@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Stripe;
 
@@ -21,7 +22,8 @@ public class ProviderSubscriptionUpdate : SubscriptionUpdate
     {
         if (!planType.SupportsConsolidatedBilling())
         {
-            throw ContactSupport($"Cannot create a {nameof(ProviderSubscriptionUpdate)} for {nameof(PlanType)} that doesn't support consolidated billing");
+            throw new BillingException(
+                message: $"Cannot create a {nameof(ProviderSubscriptionUpdate)} for {nameof(PlanType)} that doesn't support consolidated billing");
         }
 
         var plan = Utilities.StaticStore.GetPlan(planType);

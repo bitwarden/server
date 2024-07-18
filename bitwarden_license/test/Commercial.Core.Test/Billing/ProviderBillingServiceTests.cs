@@ -87,7 +87,7 @@ public class ProviderBillingServiceTests
     {
         organization.PlanType = PlanType.FamiliesAnnually;
 
-        await ThrowsContactSupportAsync(() =>
+        await ThrowsBillingExceptionAsync(() =>
             sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
     }
 
@@ -105,7 +105,7 @@ public class ProviderBillingServiceTests
             new() { Id = Guid.NewGuid(), PlanType = PlanType.TeamsMonthly, ProviderId = provider.Id }
         });
 
-        await ThrowsContactSupportAsync(() =>
+        await ThrowsBillingExceptionAsync(() =>
             sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
     }
 
@@ -247,7 +247,7 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(false);
 
-        await ThrowsContactSupportAsync(() =>
+        await ThrowsBillingExceptionAsync(() =>
             sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
     }
 
@@ -678,7 +678,7 @@ public class ProviderBillingServiceTests
     public async Task GetAssignedSeatTotalForPlanOrThrow_NullProvider_ContactSupport(
         Guid providerId,
         SutProvider<ProviderBillingService> sutProvider)
-        => await ThrowsContactSupportAsync(() =>
+        => await ThrowsBillingExceptionAsync(() =>
             sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly));
 
     [Theory, BitAutoData]
@@ -691,9 +691,8 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).Returns(provider);
 
-        await ThrowsContactSupportAsync(
-            () => sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly),
-            internalMessage: "Consolidated billing does not support reseller-type providers");
+        await ThrowsBillingExceptionAsync(
+            () => sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly));
     }
 
     [Theory, BitAutoData]
@@ -941,7 +940,7 @@ public class ProviderBillingServiceTests
     {
         taxInfo.BillingAddressCountry = null;
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -956,7 +955,7 @@ public class ProviderBillingServiceTests
     {
         taxInfo.BillingAddressCountry = null;
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -1027,7 +1026,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(new List<ProviderPlan>());
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.SetupSubscription(provider));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -1052,7 +1051,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.SetupSubscription(provider));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -1077,7 +1076,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.SetupSubscription(provider));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -1126,7 +1125,7 @@ public class ProviderBillingServiceTests
             .Returns(
                 new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Incomplete });
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.SetupSubscription(provider));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
     }
 
     [Theory, BitAutoData]
