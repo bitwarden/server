@@ -137,7 +137,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
             var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
 
-            hasManageResetPasswordPermission |= organizationUser.Type == OrganizationUserType.Owner || organizationUser.Type == OrganizationUserType.Admin;
+            hasManageResetPasswordPermission |= organizationUser != null && (organizationUser.Type == OrganizationUserType.Owner || organizationUser.Type == OrganizationUserType.Admin);
             // They are only able to be approved by an admin if they have enrolled is reset password
             hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         }
