@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
@@ -24,6 +25,7 @@ public class MembersController : Controller
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IFeatureService _featureService;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -33,7 +35,8 @@ public class MembersController : Controller
         ICurrentContext currentContext,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService,
+        IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -43,6 +46,7 @@ public class MembersController : Controller
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _applicationCacheService = applicationCacheService;
+        _featureService = featureService;
     }
 
     /// <summary>
@@ -102,11 +106,12 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ListResponseModel<MemberResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
-            _currentContext.OrganizationId.Value);
+        var users = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
+            ? await _organizationUserRepository.GetManyDetailsWithPremiumAccessByOrganizationAsync(_currentContext.OrganizationId.Value)
+            : await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value);
         // TODO: Get all CollectionUser associations for the organization and marry them up here for the response.
         var memberResponsesTasks = users.Select(async u => new MemberResponseModel(u,
-            await _userService.TwoFactorIsEnabledAsync(u), null));
+            await _userService.TwoFactorIsEnabledAsync(u, u.HasPremiumAccess), null));
         var memberResponses = await Task.WhenAll(memberResponsesTasks);
         var response = new ListResponseModel<MemberResponseModel>(memberResponses);
         return new JsonResult(response);
