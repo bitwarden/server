@@ -54,7 +54,7 @@
     @LimitCollectionCreationDeletion BIT = 1,
     @AllowAdminAccessToAllCollectionItems BIT = 1,
     @FlexibleCollections BIT = 0,
-    @IdpHost NVARCHAR(50) = null
+    @IdpHost NVARCHAR(100) = null
 AS
 BEGIN
     SET NOCOUNT ON
