@@ -194,6 +194,8 @@ public class IdentityServerSsoTests
             var userRepository = factory.Services.GetRequiredService<IUserRepository>();
             var user = await userRepository.GetByEmailAsync(TestEmail);
 
+            Assert.NotNull(user);
+
             var deviceRepository = factory.Services.GetRequiredService<IDeviceRepository>();
             await deviceRepository.CreateAsync(new Device
             {
@@ -610,7 +612,7 @@ public class IdentityServerSsoTests
     {
         var userRepository = factory.Services.GetRequiredService<IUserRepository>();
         var user = await userRepository.GetByEmailAsync(TestEmail);
-
+        Assert.NotNull(user);
         changeUser(user);
 
         await userRepository.ReplaceAsync(user);

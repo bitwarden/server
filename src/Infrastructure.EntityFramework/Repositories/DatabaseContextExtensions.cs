@@ -1,8 +1,11 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
+﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -11,6 +14,7 @@ public static class DatabaseContextExtensions
     public static async Task UserBumpAccountRevisionDateAsync(this DatabaseContext context, Guid userId)
     {
         var user = await context.Users.FindAsync(userId);
+        Debug.Assert(user is not null);
         user.AccountRevisionDate = DateTime.UtcNow;
     }
 

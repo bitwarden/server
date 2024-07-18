@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 
+#nullable enable
+
 namespace Bit.Core.Repositories;
 
 public interface ICollectionRepository : IRepository<Collection, Guid>
@@ -10,7 +12,7 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// <summary>
     /// Returns a collection and fetches group/user associations for the collection.
     /// </summary>
-    Task<Tuple<Collection, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id);
+    Task<Tuple<Collection?, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id);
 
     /// <summary>
     /// Return all collections that belong to the organization. Does not include any permission details or group/user
@@ -43,7 +45,7 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// This does not perform any authorization checks internally!
     /// Optionally, you can include access relationships for other Groups/Users and the collection.
     /// </summary>
-    Task<CollectionAdminDetails> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships);
+    Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships);
 
     Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);
     Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);

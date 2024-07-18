@@ -2,6 +2,8 @@
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class InstallationRepository : Repository<Installation, Guid>, IInstallationRepository

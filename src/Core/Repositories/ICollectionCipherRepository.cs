@@ -2,6 +2,8 @@
 
 namespace Bit.Core.Repositories;
 
+#nullable enable
+
 public interface ICollectionCipherRepository
 {
     Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId);

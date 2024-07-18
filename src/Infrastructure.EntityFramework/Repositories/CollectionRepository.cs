@@ -6,6 +6,8 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class CollectionRepository : Repository<Core.Entities.Collection, Collection, Guid>, ICollectionRepository
@@ -110,7 +112,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<Tuple<Core.Entities.Collection, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id)
+    public async Task<Tuple<Core.Entities.Collection?, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id)
     {
         var collection = await base.GetByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -139,7 +141,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var users = await userQuery.ToArrayAsync();
             var access = new CollectionAccessDetails { Users = users, Groups = groups };
 
-            return new Tuple<Core.Entities.Collection, CollectionAccessDetails>(collection, access);
+            return new Tuple<Core.Entities.Collection?, CollectionAccessDetails>(collection, access);
         }
     }
 
@@ -392,7 +394,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<CollectionAdminDetails> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId,
+    public async Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId,
         bool includeAccessRelationships)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -400,7 +402,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var dbContext = GetDatabaseContext(scope);
             var query = CollectionAdminDetailsQuery.ByCollectionId(collectionId, userId).Run(dbContext);
 
-            CollectionAdminDetails collectionDetails;
+            CollectionAdminDetails? collectionDetails;
 
             // SQLite does not support the GROUP BY clause
             if (dbContext.Database.IsSqlite())
@@ -474,7 +476,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                   HidePasswords = cg.HidePasswords,
                                   Manage = cg.Manage
                               };
-            collectionDetails.Groups = await groupsQuery.ToListAsync();
+            // TODO-NRE: Probably need to null check and return early
+            collectionDetails!.Groups = await groupsQuery.ToListAsync();
 
             var usersQuery = from cg in dbContext.CollectionUsers
                              where cg.CollectionId.Equals(collectionId)
