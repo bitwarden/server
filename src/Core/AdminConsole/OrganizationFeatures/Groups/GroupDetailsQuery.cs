@@ -1,22 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Requests;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Responses;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 
-namespace Api.AdminConsole.Queries;
-
-public class GroupDetailsQueryRequest
-{
-    public Guid OrganizationId { get; set; }
-    public Guid? GroupId { get; set; }
-}
-
-public class GroupDetailsQueryResponse
-{
-    public Group Group { get; set; }
-    public IEnumerable<CollectionAccessSelection> CollectionAccessSelection { get; set; }
-}
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 
 public class GroupDetailsQuery : IGroupDetailsQuery
 {

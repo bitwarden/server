@@ -109,6 +109,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
+        services.AddScoped<IGroupDetailsQuery, GroupDetailsQuery>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
