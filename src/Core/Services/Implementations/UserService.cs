@@ -1158,7 +1158,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             orgAbility.Enabled);
     }
 
-    public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user, bool hasPremiumAccess = false)
+    public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user, bool? hasPremiumAccess = null)
     {
         var providers = user.GetTwoFactorProviders();
         if (providers == null)
@@ -1174,7 +1174,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 {
                     return true;
                 }
-                if (hasPremiumAccess || await CanAccessPremium(user))
+                if (hasPremiumAccess == true || await CanAccessPremium(user))
                 {
                     return true;
                 }

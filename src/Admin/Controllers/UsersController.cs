@@ -4,7 +4,7 @@ using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Entities;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -61,10 +61,10 @@ public class UsersController : Controller
         }
 
         var skip = (page - 1) * count;
-        var users = await _userRepository.SearchAsync(email, skip, count);
+        var users = await _userRepository.SearchDetailsAsync(email, skip, count);
         return View(new UsersModel
         {
-            Items = users as List<User>,
+            Items = users as List<UserDetails>,
             Email = string.IsNullOrWhiteSpace(email) ? null : email,
             Page = page,
             Count = count,

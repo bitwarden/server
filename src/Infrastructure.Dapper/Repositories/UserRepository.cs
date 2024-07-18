@@ -111,6 +111,21 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public async Task<ICollection<UserDetails>> SearchDetailsAsync(string email, int skip, int take)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<UserDetails>(
+                $"[{Schema}].[UserDetails_Search]",
+                new { Email = email, Skip = skip, Take = take },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 120);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
     public async Task<ICollection<User>> GetManyByPremiumAsync(bool premium)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -292,6 +307,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     private void UnprotectData(User user)
     {
+        return;
         if (user == null)
         {
             return;
