@@ -108,6 +108,10 @@ public class Startup
                 options.SaveTokens = false;
                 options.GetClaimsFromUserInfoEndpoint = true;
 
+                // Some browsers (safari) won't allow Secure cookies to be set on a http connection
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
                 options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
                 {
                     OnRedirectToIdentityProvider = context =>

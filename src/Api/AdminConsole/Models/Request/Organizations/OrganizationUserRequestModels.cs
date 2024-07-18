@@ -14,6 +14,7 @@ public class OrganizationUserInviteRequestModel
     [StrictEmailAddressList]
     public IEnumerable<string> Emails { get; set; }
     [Required]
+    [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
@@ -83,6 +84,7 @@ public class OrganizationUserBulkConfirmRequestModel
 public class OrganizationUserUpdateRequestModel
 {
     [Required]
+    [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
@@ -101,6 +103,7 @@ public class OrganizationUserUpdateRequestModel
 public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
     public string ResetPasswordKey { get; set; }
+    public string MasterPasswordHash { get; set; }
 }
 
 public class OrganizationUserBulkRequestModel

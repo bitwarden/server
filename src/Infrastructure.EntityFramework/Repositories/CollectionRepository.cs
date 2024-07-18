@@ -110,15 +110,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            return (await GetManyByUserIdAsync(userId, useFlexibleCollections)).FirstOrDefault(c => c.Id == id);
-        }
-    }
-
     public async Task<Tuple<Core.Entities.Collection, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id)
     {
         var collection = await base.GetByIdAsync(id);
@@ -152,40 +143,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<Tuple<CollectionDetails, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id, Guid userId,
-        bool useFlexibleCollections)
-    {
-        var collection = await GetByIdAsync(id, userId, useFlexibleCollections);
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var groupQuery = from cg in dbContext.CollectionGroups
-                             where cg.CollectionId.Equals(id)
-                             select new CollectionAccessSelection
-                             {
-                                 Id = cg.GroupId,
-                                 ReadOnly = cg.ReadOnly,
-                                 HidePasswords = cg.HidePasswords,
-                                 Manage = cg.Manage
-                             };
-            var groups = await groupQuery.ToArrayAsync();
-
-            var userQuery = from cg in dbContext.CollectionUsers
-                            where cg.CollectionId.Equals(id)
-                            select new CollectionAccessSelection
-                            {
-                                Id = cg.OrganizationUserId,
-                                ReadOnly = cg.ReadOnly,
-                                HidePasswords = cg.HidePasswords,
-                                Manage = cg.Manage,
-                            };
-            var users = await userQuery.ToArrayAsync();
-            var access = new CollectionAccessDetails { Users = users, Groups = groups };
-
-            return new Tuple<CollectionDetails, CollectionAccessDetails>(collection, access);
-        }
-    }
-
     public async Task<ICollection<Tuple<Core.Entities.Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId)
     {
         var collections = await GetManyByOrganizationIdAsync(organizationId);
@@ -205,52 +162,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
             return collections.Select(collection =>
                 new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
-                    collection,
-                    new CollectionAccessDetails
-                    {
-                        Groups = groups
-                            .FirstOrDefault(g => g.Key == collection.Id)?
-                            .Select(g => new CollectionAccessSelection
-                            {
-                                Id = g.GroupId,
-                                HidePasswords = g.HidePasswords,
-                                ReadOnly = g.ReadOnly,
-                                Manage = g.Manage
-                            }).ToList() ?? new List<CollectionAccessSelection>(),
-                        Users = users
-                            .FirstOrDefault(u => u.Key == collection.Id)?
-                            .Select(c => new CollectionAccessSelection
-                            {
-                                Id = c.OrganizationUserId,
-                                HidePasswords = c.HidePasswords,
-                                ReadOnly = c.ReadOnly,
-                                Manage = c.Manage
-                            }).ToList() ?? new List<CollectionAccessSelection>()
-                    }
-                )
-            ).ToList();
-        }
-    }
-
-    public async Task<ICollection<Tuple<CollectionDetails, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId, bool useFlexibleCollections)
-    {
-        var collections = (await GetManyByUserIdAsync(userId, useFlexibleCollections)).Where(c => c.OrganizationId == organizationId).ToList();
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var groups =
-                from c in collections
-                join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
-                group cg by cg.CollectionId into g
-                select g;
-            var users =
-                from c in collections
-                join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                group cu by cu.CollectionId into u
-                select u;
-
-            return collections.Select(collection =>
-                new Tuple<CollectionDetails, CollectionAccessDetails>(
                     collection,
                     new CollectionAccessDetails
                     {
@@ -316,7 +227,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var baseCollectionQuery = new UserCollectionDetailsQuery(userId, useFlexibleCollections).Run(dbContext);
+            var baseCollectionQuery = new UserCollectionDetailsQuery(userId).Run(dbContext);
 
             if (dbContext.Database.IsSqlite())
             {
