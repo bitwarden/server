@@ -5,6 +5,7 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Models.Business;
+using Stripe;
 
 namespace Bit.Core.Billing.Services;
 
@@ -23,16 +24,6 @@ public interface IProviderBillingService
         Provider provider,
         Organization organization,
         int seats);
-
-    /// <summary>
-    /// Create a Stripe <see cref="Stripe.Customer"/> for the specified <paramref name="provider"/> utilizing the provided <paramref name="taxInfo"/>.
-    /// </summary>
-    /// <param name="provider">The <see cref="Provider"/> to create a Stripe customer for.</param>
-    /// <param name="taxInfo">The <see cref="TaxInfo"/> to use for calculating the customer's automatic tax.</param>
-    /// <returns></returns>
-    Task CreateCustomer(
-        Provider provider,
-        TaxInfo taxInfo);
 
     /// <summary>
     /// Create a Stripe <see cref="Stripe.Customer"/> for the provided client <paramref name="organization"/> utilizing
@@ -88,11 +79,23 @@ public interface IProviderBillingService
         int seatAdjustment);
 
     /// <summary>
-    /// Starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/> given it has an existing Stripe <see cref="Stripe.Customer"/>.
+    /// For use during the provider setup process, this method creates a Stripe <see cref="Stripe.Customer"/> for the specified <paramref name="provider"/> utilizing the provided <paramref name="taxInfo"/>.
+    /// </summary>
+    /// <param name="provider">The <see cref="Provider"/> to create a Stripe customer for.</param>
+    /// <param name="taxInfo">The <see cref="TaxInfo"/> to use for calculating the customer's automatic tax.</param>
+    /// <returns>The newly created <see cref="Stripe.Customer"/> for the <paramref name="provider"/>.</returns>
+    Task<Customer> SetupCustomer(
+        Provider provider,
+        TaxInfo taxInfo);
+
+    /// <summary>
+    /// For use during the provider setup process, this method starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/>.
     /// <see cref="Provider"/> subscriptions will always be started with a <see cref="Stripe.SubscriptionItem"/> for both the <see cref="PlanType.TeamsMonthly"/>
     /// and <see cref="PlanType.EnterpriseMonthly"/> plan, and the quantity for each item will be equal the provider's seat minimum for each respective plan.
     /// </summary>
     /// <param name="provider">The provider to create the <see cref="Stripe.Subscription"/> for.</param>
-    Task StartSubscription(
+    /// <returns>The newly created <see cref="Stripe.Subscription"/> for the <paramref name="provider"/>.</returns>
+    /// <remarks>This method requires the <paramref name="provider"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
+    Task<Subscription> SetupSubscription(
         Provider provider);
 }

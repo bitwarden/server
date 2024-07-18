@@ -14,6 +14,7 @@ using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -67,67 +68,6 @@ public class ProviderBillingService(
         organization.Seats = seats;
 
         await organizationRepository.ReplaceAsync(organization);
-    }
-
-    public async Task CreateCustomer(
-        Provider provider,
-        TaxInfo taxInfo)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(taxInfo);
-
-        if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
-            string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
-        {
-            logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
-
-            throw ContactSupport();
-        }
-
-        var providerDisplayName = provider.DisplayName();
-
-        var customerCreateOptions = new CustomerCreateOptions
-        {
-            Address = new AddressOptions
-            {
-                Country = taxInfo.BillingAddressCountry,
-                PostalCode = taxInfo.BillingAddressPostalCode,
-                Line1 = taxInfo.BillingAddressLine1,
-                Line2 = taxInfo.BillingAddressLine2,
-                City = taxInfo.BillingAddressCity,
-                State = taxInfo.BillingAddressState
-            },
-            Description = provider.DisplayBusinessName(),
-            Email = provider.BillingEmail,
-            InvoiceSettings = new CustomerInvoiceSettingsOptions
-            {
-                CustomFields =
-                [
-                    new CustomerInvoiceSettingsCustomFieldOptions
-                    {
-                        Name = provider.SubscriberType(),
-                        Value = providerDisplayName.Length <= 30
-                            ? providerDisplayName
-                            : providerDisplayName[..30]
-                    }
-                ]
-            },
-            Metadata = new Dictionary<string, string>
-            {
-                { "region", globalSettings.BaseServiceUri.CloudRegion }
-            },
-            TaxIdData = taxInfo.HasTaxId ?
-                [
-                    new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }
-                ]
-                : null
-        };
-
-        var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
-
-        provider.GatewayCustomerId = customer.Id;
-
-        await providerRepository.ReplaceAsync(provider);
     }
 
     public async Task CreateCustomerForClientOrganization(
@@ -393,7 +333,64 @@ public class ProviderBillingService(
         }
     }
 
-    public async Task StartSubscription(
+    public async Task<Customer> SetupCustomer(
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(taxInfo);
+
+        if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
+            string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+        {
+            logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
+
+            throw ContactSupport();
+        }
+
+        var providerDisplayName = provider.DisplayName();
+
+        var customerCreateOptions = new CustomerCreateOptions
+        {
+            Address = new AddressOptions
+            {
+                Country = taxInfo.BillingAddressCountry,
+                PostalCode = taxInfo.BillingAddressPostalCode,
+                Line1 = taxInfo.BillingAddressLine1,
+                Line2 = taxInfo.BillingAddressLine2,
+                City = taxInfo.BillingAddressCity,
+                State = taxInfo.BillingAddressState
+            },
+            Description = provider.DisplayBusinessName(),
+            Email = provider.BillingEmail,
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                CustomFields =
+                [
+                    new CustomerInvoiceSettingsCustomFieldOptions
+                    {
+                        Name = provider.SubscriberType(),
+                        Value = providerDisplayName?.Length <= 30
+                            ? providerDisplayName
+                            : providerDisplayName?[..30]
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "region", globalSettings.BaseServiceUri.CloudRegion }
+            },
+            TaxIdData = taxInfo.HasTaxId ?
+                [
+                    new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }
+                ]
+                : null
+        };
+
+        return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+    }
+
+    public async Task<Subscription> SetupSubscription(
         Provider provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -465,22 +462,27 @@ public class ProviderBillingService(
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
         };
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
-
-        provider.GatewaySubscriptionId = subscription.Id;
-
-        if (subscription.Status == StripeConstants.SubscriptionStatus.Incomplete)
+        try
         {
-            await providerRepository.ReplaceAsync(provider);
+            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
-            logger.LogError("Started incomplete provider ({ProviderID}) subscription ({SubscriptionID})", provider.Id, subscription.Id);
+            if (subscription.Status == StripeConstants.SubscriptionStatus.Active)
+            {
+                return subscription;
+            }
+
+            logger.LogError(
+                "Newly created provider ({ProviderID}) subscription ({SubscriptionID}) has inactive status: {Status}",
+                provider.Id,
+                subscription.Id,
+                subscription.Status);
 
             throw ContactSupport();
         }
-
-        provider.Status = ProviderStatusType.Billable;
-
-        await providerRepository.ReplaceAsync(provider);
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
+        {
+            throw new BadRequestException("Your location wasn't recognized. Please ensure your country and postal code are valid.");
+        }
     }
 
     private Func<int, int, Task> CurrySeatScalingUpdate(
