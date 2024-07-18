@@ -117,7 +117,7 @@ public class TwoFactorDuoResponseModel : ResponseModel
 
     private static string MaskKey(string key)
     {
-        if (string.IsNullOrWhiteSpace(key))
+        if (string.IsNullOrWhiteSpace(key) || key.Length <= 6)
         {
             return key;
         }
