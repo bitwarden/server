@@ -10,7 +10,7 @@ public interface IUserRepository : IRepository<User, Guid>
     Task<IEnumerable<User>> GetManyByEmailsAsync(IEnumerable<string> emails);
     Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId);
     Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email);
-    Task<ICollection<User>> SearchAsync(string email, int skip, int take);
+    Task<ICollection<UserDetails>> SearchAsync(string email, int skip, int take);
     Task<ICollection<UserDetails>> SearchDetailsAsync(string email, int skip, int take);
     Task<ICollection<User>> GetManyByPremiumAsync(bool premium);
     Task<string> GetPublicKeyAsync(Guid id);

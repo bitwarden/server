@@ -96,11 +96,11 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<ICollection<User>> SearchAsync(string email, int skip, int take)
+    public async Task<ICollection<UserDetails>> SearchAsync(string email, int skip, int take)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
-            var results = await connection.QueryAsync<User>(
+            var results = await connection.QueryAsync<UserDetails>(
                 $"[{Schema}].[{Table}_Search]",
                 new { Email = email, Skip = skip, Take = take },
                 commandType: CommandType.StoredProcedure,

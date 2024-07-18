@@ -61,7 +61,9 @@ public class UsersController : Controller
         }
 
         var skip = (page - 1) * count;
-        var users = await _userRepository.SearchDetailsAsync(email, skip, count);
+        var users = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
+            ? await _userRepository.SearchDetailsAsync(email, skip, count)
+            : await _userRepository.SearchAsync(email, skip, count);
         return View(new UsersModel
         {
             Items = users as List<UserDetails>,
