@@ -17,7 +17,7 @@ namespace Bit.MySqlMigrations.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.7")
+                .HasAnnotation("ProductVersion", "8.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -692,9 +692,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("int");
-
-                    b.Property<Guid?>("ClientId")
-                        .HasColumnType("char(36)");
 
                     b.Property<string>("ClientName")
                         .IsRequired()

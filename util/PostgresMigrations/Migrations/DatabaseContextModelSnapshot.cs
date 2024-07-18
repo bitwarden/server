@@ -18,7 +18,7 @@ namespace Bit.PostgresMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
-                .HasAnnotation("ProductVersion", "8.0.7")
+                .HasAnnotation("ProductVersion", "8.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -697,9 +697,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("integer");
-
-                    b.Property<Guid?>("ClientId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("ClientName")
                         .IsRequired()

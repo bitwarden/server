@@ -15,7 +15,7 @@ namespace Bit.SqliteMigrations.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.7");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.6");
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
@@ -682,9 +682,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid?>("ClientId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("ClientName")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -845,7 +842,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("CollectionGroups");
+                    b.ToTable("CollectionGroups", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
@@ -869,7 +866,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationUserId");
 
-                    b.ToTable("CollectionUsers");
+                    b.ToTable("CollectionUsers", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
@@ -1847,7 +1844,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("SecretsId");
 
-                    b.ToTable("ProjectSecret");
+                    b.ToTable("ProjectSecret", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupProjectAccessPolicy", b =>
