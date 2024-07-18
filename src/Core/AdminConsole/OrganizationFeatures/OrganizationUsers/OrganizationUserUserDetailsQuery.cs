@@ -1,32 +1,11 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Responses;
 
-namespace Api.AdminConsole.Queries;
-
-
-public class OrganizationUserUserDetailsQueryRequest
-{
-    public Guid OrganizationId { get; set; }
-    public bool IncludeGroups { get; set; } = false;
-    public bool IncludeCollections { get; set; } = false;
-}
-
-public class OrganizationUserUserDetailsQueryResponse
-{
-    public OrganizationUserUserDetails OrganizationUserUserDetails { get; set; }
-    public bool TwoFactorEnabled { get; set; }
-
-    public OrganizationUserUserDetailsQueryResponse(
-        OrganizationUserUserDetails organizationUserUserDetails,
-        bool twoFactorEnabled
-    )
-    {
-        this.OrganizationUserUserDetails = organizationUserUserDetails;
-        this.TwoFactorEnabled = twoFactorEnabled;
-    }
-}
+namespace Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuery
 {

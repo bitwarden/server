@@ -1,5 +1,4 @@
-﻿using Api.AdminConsole.Queries;
-using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
@@ -23,6 +22,8 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
