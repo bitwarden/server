@@ -188,7 +188,7 @@ public class OrganizationEditModel : OrganizationViewModel
                 { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
             });
 
-    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsV1Enabled)
+    public Organization CreateOrganization(Provider provider)
     {
         BillingEmail = provider.BillingEmail;
 
@@ -197,10 +197,6 @@ public class OrganizationEditModel : OrganizationViewModel
             // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
             // AC-1714 will remove this flag after all old code has been removed.
             FlexibleCollections = true,
-
-            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
-            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
         return ToOrganization(newOrg);
     }
