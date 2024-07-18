@@ -54,7 +54,7 @@
     [LimitCollectionCreationDeletion]   BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion] DEFAULT (1),
     [AllowAdminAccessToAllCollectionItems]   BIT              NOT NULL CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems] DEFAULT (1),
     [FlexibleCollections]           BIT             NOT NULL CONSTRAINT [DF_Organization_FlexibleCollections] DEFAULT (0),
-    [IdpHost]                       NVARCHAR (50)    NULL
+    [IdpHost]                       NVARCHAR (100)    NULL
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
