@@ -4,7 +4,7 @@ BEGIN
     ALTER TABLE
         [dbo].[Organization]
     ADD
-        [IdpHost] NVARCHAR (50) NULL;
+        [IdpHost] NVARCHAR (100) NULL;
 END
 GO
 
@@ -143,7 +143,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @LimitCollectionCreationDeletion BIT = 1,
     @AllowAdminAccessToAllCollectionItems BIT = 1,
     @FlexibleCollections BIT = 0,
-    @IdpHost NVARCHAR(50) = null
+    @IdpHost NVARCHAR(100) = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -326,7 +326,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @LimitCollectionCreationDeletion BIT = 1,
     @AllowAdminAccessToAllCollectionItems BIT = 1,
     @FlexibleCollections BIT = 0,
-    @IdpHost NVARCHAR(50) = null
+    @IdpHost NVARCHAR(100) = null
 AS
 BEGIN
     SET NOCOUNT ON
