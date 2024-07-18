@@ -89,10 +89,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("character varying(50)")
                         .UseCollation("postgresIndetermanisticCollation");
 
-                    b.Property<string>("IdpHost")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");

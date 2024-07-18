@@ -82,10 +82,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("IdpHost")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");

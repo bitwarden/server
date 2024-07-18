@@ -87,10 +87,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
-                    b.Property<string>("IdpHost")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
