@@ -24,6 +24,7 @@ public class PolicyService : IPolicyService
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -33,7 +34,8 @@ public class PolicyService : IPolicyService
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
         IMailService mailService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IFeatureService featureService)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -43,6 +45,7 @@ public class PolicyService : IPolicyService
         _ssoConfigRepository = ssoConfigRepository;
         _mailService = mailService;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
@@ -261,8 +264,9 @@ public class PolicyService : IPolicyService
         var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
         if (!currentPolicy?.Enabled ?? true)
         {
-            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
-                policy.OrganizationId);
+            var orgUsers = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
+                ? await _organizationUserRepository.GetManyDetailsWithPremiumAccessByOrganizationAsync(policy.OrganizationId)
+                : await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
             var removableOrgUsers = orgUsers.Where(ou =>
                 ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
                 ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
@@ -273,7 +277,7 @@ public class PolicyService : IPolicyService
                     // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
                     foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
                     {
-                        if (!await userService.TwoFactorIsEnabledAsync(orgUser))
+                        if (!await userService.TwoFactorIsEnabledAsync(orgUser, orgUser.HasPremiumAccess))
                         {
                             if (!orgUser.HasMasterPassword)
                             {
