@@ -693,6 +693,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("AssignedSeats")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("ClientName")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -853,7 +856,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("CollectionGroups", (string)null);
+                    b.ToTable("CollectionGroups");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
@@ -877,7 +880,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationUserId");
 
-                    b.ToTable("CollectionUsers", (string)null);
+                    b.ToTable("CollectionUsers");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
@@ -1619,7 +1622,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.ToTable("AccessPolicy", (string)null);
 
-                    b.HasDiscriminator().HasValue("AccessPolicy");
+                    b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
 
                     b.UseTphMappingStrategy();
                 });
@@ -1855,7 +1858,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("SecretsId");
 
-                    b.ToTable("ProjectSecret", (string)null);
+                    b.ToTable("ProjectSecret");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupProjectAccessPolicy", b =>
