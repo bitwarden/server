@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240717144153_IdpHost")]
+    [Migration("20240718140028_IdpHost")]
     partial class IdpHost
     {
         /// <inheritdoc />
@@ -93,7 +93,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .UseCollation("postgresIndetermanisticCollation");
 
                     b.Property<string>("IdpHost")
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)

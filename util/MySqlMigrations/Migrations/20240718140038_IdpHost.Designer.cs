@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240717144204_IdpHost")]
+    [Migration("20240718140038_IdpHost")]
     partial class IdpHost
     {
         /// <inheritdoc />
@@ -91,7 +91,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("IdpHost")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
