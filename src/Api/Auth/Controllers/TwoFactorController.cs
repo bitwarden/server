@@ -93,7 +93,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator(
         [FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, false);
         var response = new TwoFactorAuthenticatorResponseModel(user);
         return response;
     }
@@ -103,7 +103,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> PutAuthenticator(
         [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
     {
-        var user = await CheckAsync(model, false, false);
+        var user = await CheckAsync(model, false);
         model.ToUser(user);
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
