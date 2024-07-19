@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Api;
+using Bit.Core.NotificationHub;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
@@ -24,14 +25,14 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
     {
     }
 
-    public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
+    public async Task CreateOrUpdateRegistrationAsync(PushRegistrationData pushData, string deviceId, string userId,
         string identifier, DeviceType type)
     {
         var requestModel = new PushRegistrationRequestModel
         {
             DeviceId = deviceId,
             Identifier = identifier,
-            PushToken = pushToken,
+            PushToken = pushData.Token,
             Type = type,
             UserId = userId
         };

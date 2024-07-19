@@ -37,6 +37,16 @@ public class DeviceRequestModel
     }
 }
 
+public class WebPushAuthRequestModel
+{
+    [Required]
+    public string Endpoint { get; set; }
+    [Required]
+    public string P256dh { get; set; }
+    [Required]
+    public string Auth { get; set; }
+}
+
 public class DeviceTokenRequestModel
 {
     [StringLength(255)]

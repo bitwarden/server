@@ -19,6 +19,22 @@ public class DeviceService : IDeviceService
         _pushRegistrationService = pushRegistrationService;
     }
 
+    public async Task SaveAsync((string Endpoint, string P256dh, string Auth) webPush, Device device)
+    {
+        if (device.Id == default(Guid))
+        {
+            await _deviceRepository.CreateAsync(device);
+        }
+        else
+        {
+            device.RevisionDate = DateTime.UtcNow;
+            await _deviceRepository.ReplaceAsync(device);
+        }
+
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(new NotificationHub.PushRegistrationData(webPush.Endpoint, webPush.P256dh, webPush.Auth), device.Id.ToString(),
+            device.UserId.ToString(), device.Identifier, device.Type);
+    }
+
     public async Task SaveAsync(Device device)
     {
         if (device.Id == default(Guid))
@@ -31,7 +47,7 @@ public class DeviceService : IDeviceService
             await _deviceRepository.ReplaceAsync(device);
         }
 
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(new NotificationHub.PushRegistrationData(device.PushToken), device.Id.ToString(),
             device.UserId.ToString(), device.Identifier, device.Type);
     }
 

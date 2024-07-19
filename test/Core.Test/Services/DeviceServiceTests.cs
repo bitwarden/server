@@ -3,6 +3,7 @@ using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.NotificationHub;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -36,7 +37,7 @@ public class DeviceServiceTests
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
-        await pushRepo.Received().CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
+        await pushRepo.Received().CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(v => v.Token == "testToken"), id.ToString(),
             userId.ToString(), "testid", DeviceType.Android);
     }
 

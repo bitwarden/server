@@ -5,6 +5,7 @@ namespace Bit.Core.Services;
 
 public interface IDeviceService
 {
+    Task SaveAsync((string Endpoint, string P256dh, string Auth) webPush, Device device);
     Task SaveAsync(Device device);
     Task ClearTokenAsync(Device device);
     Task DeleteAsync(Device device);

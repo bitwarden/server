@@ -178,6 +178,19 @@ public class DevicesController : Controller
         await _deviceService.SaveAsync(model.ToDevice(device));
     }
 
+    [HttpPut("identifier/{identifier}/web-push-auth")]
+    [HttpPost("identifier/{identifier}/web-push-auth")]
+    public async Task PutWebPushAuth(string identifier, [FromBody] WebPushAuthRequestModel model)
+    {
+        var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+        if (device == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _deviceService.SaveAsync((model.Endpoint, model.P256dh, model.Auth), device);
+    }
+
     [AllowAnonymous]
     [HttpPut("identifier/{identifier}/clear-token")]
     [HttpPost("identifier/{identifier}/clear-token")]

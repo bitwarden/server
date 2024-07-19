@@ -1,11 +1,17 @@
-﻿using Bit.Core.Settings;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Web;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 
-class NotificationHubConnection
+public class NotificationHubConnection
 {
     public string HubName { get; init; }
     public string ConnectionString { get; init; }
+    public Uri Endpoint => new NotificationHubConnectionStringBuilder(ConnectionString).Endpoint;
+    private string SasKey => new NotificationHubConnectionStringBuilder(ConnectionString).SharedAccessKey;
+    private string SasKeyName => new NotificationHubConnectionStringBuilder(ConnectionString).SharedAccessKeyName;
     public bool EnableSendTracing { get; init; }
     private NotificationHubClient _hubClient;
     /// <summary>
@@ -87,6 +93,34 @@ class NotificationHubConnection
         return RegistrationStartDate <= queryTime;
     }
 
+    public HttpRequestMessage CreateRequest(HttpMethod method, string pathUri, params string[] queryParameters)
+    {
+        var uriBuilder = new UriBuilder(Endpoint)
+        {
+            Scheme = "https",
+            Path = $"{HubName}/{pathUri.TrimStart('/')}",
+            Query = string.Join('&', [.. queryParameters, "api-version=2015-01"]),
+        };
+
+        var result = new HttpRequestMessage(method, uriBuilder.Uri);
+        result.Headers.Add("Authorization", generateSasToken(uriBuilder.Uri));
+        result.Headers.Add("TrackingId", Guid.NewGuid().ToString());
+        return result;
+    }
+
+    private string generateSasToken(Uri uri)
+    {
+        string targetUri = Uri.EscapeDataString(uri.ToString().ToLower()).ToLower();
+        long expires = DateTime.UtcNow.AddMinutes(1).Ticks / TimeSpan.TicksPerSecond;
+        string stringToSign = targetUri + "\n" + expires;
+
+        using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(SasKey)))
+        {
+            var signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign)));
+            return $"SharedAccessSignature sr={targetUri}&sig={HttpUtility.UrlEncode(signature)}&se={expires}&skn={SasKeyName}";
+        }
+    }
+
     private NotificationHubConnection() { }
 
     /// <summary>
@@ -102,8 +136,8 @@ class NotificationHubConnection
             ConnectionString = settings.ConnectionString,
             EnableSendTracing = settings.EnableSendTracing,
             // Comb time is not precise enough for millisecond accuracy
-            RegistrationStartDate = settings.RegistrationStartDate.HasValue ? Truncate(settings.RegistrationStartDate.Value, TimeSpan.FromMilliseconds(10)) : null,
-            RegistrationEndDate = settings.RegistrationEndDate
+            RegistrationStartDate = settings.RegistrationStart.HasValue ? Truncate(settings.RegistrationStart.Value, TimeSpan.FromMilliseconds(10)) : null,
+            RegistrationEndDate = settings.RegistrationEnd
         };
     }
 

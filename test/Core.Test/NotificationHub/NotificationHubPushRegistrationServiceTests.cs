@@ -30,6 +30,7 @@ public class NotificationHubPushRegistrationServiceTests
             _globalSettings,
             _notificationHubPool,
             _serviceProvider,
+            Substitute.For<IHttpClientFactory>(),
             _logger
         );
     }
