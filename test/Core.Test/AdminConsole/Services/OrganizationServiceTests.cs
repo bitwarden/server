@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -1846,15 +1847,17 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await applicationCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
     }
 
-    private void RestoreRevokeUser_Setup(Organization organization, OrganizationUser owner, OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
+    private void RestoreRevokeUser_Setup(Organization organization, OrganizationUser restoringUser,
+        OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider,
+        OrganizationUserType restoringUserType = OrganizationUserType.Owner)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationUser.OrganizationId).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        organizationUserRepository.GetManyByOrganizationAsync(organizationUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
+        organizationUserRepository.GetManyByOrganizationAsync(organizationUser.OrganizationId, restoringUserType)
+            .Returns(new[] { restoringUser });
     }
 
     [Theory, BitAutoData]
@@ -1917,6 +1920,184 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
         await eventService.Received()
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, eventSystemUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_RestoreThemselves_Fails(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
+    {
+        organizationUser.UserId = owner.Id;
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
+        var userService = Substitute.For<IUserService>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+
+        Assert.Contains("you cannot restore yourself", exception.Message.ToLowerInvariant());
+
+        await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+        await eventService.DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task RestoreUser_AdminRestoreOwner_Fails(OrganizationUserType restoringUserType, Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser restoringUser,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
+    {
+        restoringUser.Type = restoringUserType;
+        RestoreRevokeUser_Setup(organization, restoringUser, organizationUser, sutProvider, OrganizationUserType.Admin);
+        var userService = Substitute.For<IUserService>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, restoringUser.Id, userService));
+
+        Assert.Contains("only owners can restore other owners", exception.Message.ToLowerInvariant());
+
+        await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+        await eventService.DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    public async Task RestoreUser_WithStatusOtherThanRevoked_Fails(OrganizationUserStatusType userStatus, Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
+    {
+        organizationUser.Status = userStatus;
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
+        var userService = Substitute.For<IUserService>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+
+        Assert.Contains("already active", exception.Message.ToLowerInvariant());
+
+        await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+        await eventService.DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WithSingleOrgPolicyEnabled_Fails(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser secondOrganizationUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+        secondOrganizationUser.UserId = organizationUser.UserId;
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
+        var userService = Substitute.For<IUserService>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        organizationUserRepository.GetManyByUserAsync(organizationUser.UserId.Value).Returns(new[] { organizationUser, secondOrganizationUser });
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
+            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.SingleOrg } });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+
+        Assert.Contains("you cannot restore this user until " +
+                        "they leave or remove all other organizations.", exception.Message.ToLowerInvariant());
+
+        await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+        await eventService.DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WithOtherOrganizationSingleOrgPolicyEnabled_Fails(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
+        var userService = Substitute.For<IUserService>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
+            .Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+
+        Assert.Contains("you cannot restore this user because they are a member of " +
+                        "another organization which forbids it", exception.Message.ToLowerInvariant());
+
+        await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+        await eventService.DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_With2FAPolicyEnabled_WithoutUser2FAConfigured_Fails(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
+        var userService = Substitute.For<IUserService>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
+        userService.TwoFactorIsEnabledAsync(Arg.Any<ITwoFactorProvidersUser>()).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+
+        Assert.Contains("you cannot restore this user until they enable " +
+                        "two-step login on their user account.", exception.Message.ToLowerInvariant());
+
+        await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+        await eventService.DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_With2FAPolicyEnabled_WithUser2FAConfigured_Success(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
+        var userService = Substitute.For<IUserService>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
+        userService.TwoFactorIsEnabledAsync(Arg.Any<ITwoFactorProvidersUser>()).Returns(true);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService);
+
+        await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
+        await eventService.Received()
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
     }
 
     [Theory, BitAutoData]
