@@ -80,6 +80,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
+    public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
 
     public virtual bool EnableEmailVerification { get; set; }
 
@@ -432,7 +433,7 @@ public class GlobalSettings : IGlobalSettings
         /// If null, registration is disabled.
         /// 
         /// </summary>
-        public DateTime? RegistrationStartDate { get; set; }
+        public DateTime? RegistrationStart { get; set; }
         /// <summary>
         /// The date and time at which registration will be disabled.
         /// 
@@ -440,7 +441,7 @@ public class GlobalSettings : IGlobalSettings
         /// 
         /// If null, hub registration has no yet known expiry.
         /// </summary>
-        public DateTime? RegistrationEndDate { get; set; }
+        public DateTime? RegistrationEnd { get; set; }
     }
 
     public class NotificationHubPoolSettings
@@ -450,7 +451,7 @@ public class GlobalSettings : IGlobalSettings
         /// 
         /// Note that hubs on the same namespace share active device limits, so multiple namespaces should be used to increase capacity.
         /// </summary>
-        public List<NotificationHubSettings> NotificationHubSettings { get; set; } = new();
+        public List<NotificationHubSettings> NotificationHubs { get; set; } = new();
     }
 
     public class YubicoSettings
@@ -587,5 +588,11 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
+    }
+
+    public class WebPushSettings : IWebPushSettings
+    {
+        public string VapidPublicKey { get; set; }
+        public string VapidPrivateKey { get; set; }
     }
 }

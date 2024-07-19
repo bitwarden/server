@@ -18,12 +18,12 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = null,
                         HubName = "hub",
-                        RegistrationStartDate = DateTime.UtcNow,
-                        RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+                        RegistrationStart = DateTime.UtcNow,
+                        RegistrationEnd = DateTime.UtcNow.AddDays(1)
                     }
                 }
             }
@@ -48,12 +48,12 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = "connection",
                         HubName = null,
-                        RegistrationStartDate = DateTime.UtcNow,
-                        RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+                        RegistrationStart = DateTime.UtcNow,
+                        RegistrationEnd = DateTime.UtcNow.AddDays(1)
                     }
                 }
             }
@@ -78,12 +78,12 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = "connection",
                         HubName = "hub",
-                        RegistrationStartDate = null,
-                        RegistrationEndDate = null,
+                        RegistrationStart = null,
+                        RegistrationEnd = null,
                     }
                 }
             }
@@ -106,12 +106,12 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKey=example///example=",
                         HubName = "hub",
-                        RegistrationStartDate = DateTime.UtcNow,
-                        RegistrationEndDate = DateTime.UtcNow.AddDays(1),
+                        RegistrationStart = DateTime.UtcNow,
+                        RegistrationEnd = DateTime.UtcNow.AddDays(1),
                     }
                 }
             }
@@ -134,12 +134,12 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = "connection",
                         HubName = "hub",
-                        RegistrationStartDate = DateTime.UtcNow,
-                        RegistrationEndDate = DateTime.UtcNow.AddDays(1),
+                        RegistrationStart = DateTime.UtcNow,
+                        RegistrationEnd = DateTime.UtcNow.AddDays(1),
                     }
                 }
             }

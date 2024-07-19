@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Api;
+﻿using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -11,14 +12,7 @@ public class ConfigResponseModel : ResponseModel
     public ServerConfigResponseModel Server { get; set; }
     public EnvironmentConfigResponseModel Environment { get; set; }
     public IDictionary<string, object> FeatureStates { get; set; }
-
-    public ConfigResponseModel() : base("config")
-    {
-        Version = AssemblyHelpers.GetVersion();
-        GitHash = AssemblyHelpers.GetGitHash();
-        Environment = new EnvironmentConfigResponseModel();
-        FeatureStates = new Dictionary<string, object>();
-    }
+    public PushSettings Push { get; set; }
 
     public ConfigResponseModel(
         IGlobalSettings globalSettings,
@@ -36,6 +30,7 @@ public class ConfigResponseModel : ResponseModel
             Sso = globalSettings.BaseServiceUri.Sso
         };
         FeatureStates = featureStates;
+        Push = new PushSettings(globalSettings);
     }
 }
 
@@ -53,4 +48,24 @@ public class EnvironmentConfigResponseModel
     public string Identity { get; set; }
     public string Notifications { get; set; }
     public string Sso { get; set; }
+}
+
+public class PushSettings
+{
+    public PushTechnologyType PushTechnology { get; set; }
+    /// <summary>
+    /// Only for use when PushTechnology is WebPush.
+    /// </summary>
+    public string VapidPublicKey { get; set; }
+
+    public PushSettings()
+    {
+    }
+    public PushSettings(IGlobalSettings globalSettings)
+    {
+        VapidPublicKey = globalSettings.WebPush.VapidPublicKey;
+        PushTechnology = globalSettings.WebPush.SupportsWebPush
+            ? PushTechnologyType.WebPush
+            : PushTechnologyType.SignalR;
+    }
 }
