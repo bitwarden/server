@@ -383,6 +383,11 @@ public class CurrentContext : ICurrentContext
         return await EditSubscription(orgId);
     }
 
+    public async Task<bool> AccessMembersTab(Guid orgId)
+    {
+        return await OrganizationAdmin(orgId) || await ManageUsers(orgId) || await ManageResetPassword(orgId);
+    }
+
     public bool ProviderProviderAdmin(Guid providerId)
     {
         return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin) ?? false;
