@@ -11,10 +11,12 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
@@ -145,7 +147,7 @@ public class ProviderBillingControllerTests
 
         var result = await sutProvider.Sut.GetPaymentInformationAsync(providerId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -160,7 +162,7 @@ public class ProviderBillingControllerTests
 
         var result = await sutProvider.Sut.GetPaymentInformationAsync(providerId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -178,7 +180,7 @@ public class ProviderBillingControllerTests
 
         var result = await sutProvider.Sut.GetPaymentInformationAsync(provider.Id);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -199,7 +201,7 @@ public class ProviderBillingControllerTests
 
         var result = await sutProvider.Sut.GetPaymentInformationAsync(provider.Id);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -297,7 +299,7 @@ public class ProviderBillingControllerTests
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -312,7 +314,7 @@ public class ProviderBillingControllerTests
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -330,7 +332,7 @@ public class ProviderBillingControllerTests
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -351,7 +353,7 @@ public class ProviderBillingControllerTests
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -570,4 +572,23 @@ public class ProviderBillingControllerTests
     }
 
     #endregion
+
+    private static void AssertNotFound(IResult result)
+    {
+        Assert.IsType<NotFound<ErrorResponseModel>>(result);
+
+        var response = ((NotFound<ErrorResponseModel>)result).Value;
+
+        Assert.Equal("Resource not found.", response.Message);
+    }
+
+    private static void AssertUnauthorized(IResult result)
+    {
+        Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+
+        var response = (JsonHttpResult<ErrorResponseModel>)result;
+
+        Assert.Equal(StatusCodes.Status401Unauthorized, response.StatusCode);
+        Assert.Equal("Unauthorized.", response.Value.Message);
+    }
 }
