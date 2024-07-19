@@ -334,6 +334,20 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyUserDetailsByUserAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new OrganizationUserUserDetailsWithPremiumAccessViewQuery();
+            var query = from ou in view.Run(dbContext)
+                        where ou.UserId == userId
+                        select ou;
+            var organizationUsers = await query.ToListAsync();
+            return organizationUsers;
+        }
+    }
+
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

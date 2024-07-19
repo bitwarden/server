@@ -215,6 +215,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyUserDetailsByUserAsync(Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUserUserDetails_ReadByUserId]",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using (var connection = new SqlConnection(ConnectionString))

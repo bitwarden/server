@@ -20,6 +20,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -2430,8 +2431,19 @@ public class OrganizationService : IOrganizationService
         var userId = orgUser.UserId.Value;
 
         // Enforce Single Organization Policy of organization user is being restored to
-        var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+        IEnumerable<OrganizationUser> allUserOrgUsers;
+        IEnumerable<OrganizationUserUserDetails> allUserOrgUserDetails = null;
+        bool hasOtherOrgs;
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            allUserOrgUserDetails = await _organizationUserRepository.GetManyUserDetailsByUserAsync(userId);
+            hasOtherOrgs = allUserOrgUserDetails.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+        }
+        else
+        {
+            allUserOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+            hasOtherOrgs = allUserOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+        }
         var singleOrgPoliciesApplyingToRevokedUsers = await _policyService.GetPoliciesApplicableToUserAsync(userId,
             PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
         var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
@@ -2452,8 +2464,18 @@ public class OrganizationService : IOrganizationService
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (!await userService.TwoFactorIsEnabledAsync(user))
+        bool twoFactorIsEnabled;
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            var orgUserDetails = allUserOrgUserDetails.FirstOrDefault(ou => ou.Id == orgUser.Id);
+            twoFactorIsEnabled = await userService.TwoFactorIsEnabledAsync(orgUserDetails, orgUserDetails.HasPremiumAccess);
+        }
+        else
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            twoFactorIsEnabled = await userService.TwoFactorIsEnabledAsync(user);
+        }
+        if (!twoFactorIsEnabled)
         {
             var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
