@@ -268,6 +268,7 @@ public class IdentityServerSsoTests
         var deviceIdentifier = $"test_id_{Guid.NewGuid()}";
 
         var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
+        Assert.NotNull(user);
 
         const string expectedPrivateKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
         const string expectedUserKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
@@ -396,6 +397,7 @@ public class IdentityServerSsoTests
         }, challenge);
 
         var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
+        Assert.NotNull(user);
         var providerRepository = factory.Services.GetRequiredService<IProviderRepository>();
         var provider = await providerRepository.CreateAsync(new Provider
         {
@@ -542,7 +544,7 @@ public class IdentityServerSsoTests
             RequestedScopes = new[] { "api", "offline_access" },
             CodeChallenge = challenge.Sha256(),
             CodeChallengeMethod = "plain", //
-            Subject = null, // Temporarily set it to null
+            Subject = null!, // Temporarily set it to null
         };
 
         factory.SubstituteService<IAuthorizationCodeStore>(service =>
@@ -560,6 +562,7 @@ public class IdentityServerSsoTests
 
         var userRepository = factory.Services.GetRequiredService<IUserRepository>();
         var user = await userRepository.GetByEmailAsync(TestEmail);
+        Assert.NotNull(user);
 
         var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
         var organization = await organizationRepository.CreateAsync(new Organization
