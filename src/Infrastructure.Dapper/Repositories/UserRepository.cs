@@ -307,7 +307,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     private void UnprotectData(User user)
     {
-        return;
         if (user == null)
         {
             return;
