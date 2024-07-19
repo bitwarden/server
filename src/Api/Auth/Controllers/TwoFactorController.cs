@@ -433,7 +433,7 @@ public class TwoFactorController : Controller
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
-    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium, bool verify = true)
+    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium, bool isSetMethod = true)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -441,14 +441,10 @@ public class TwoFactorController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (verify)
+        if (!await _userService.VerifySecretAsync(user, model.Secret, isSetMethod))
         {
-            if (!await _userService.VerifySecretAsync(user, model.Secret))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException(string.Empty, "User verification failed.");
-            }
-
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
         if (premium && !await _userService.CanAccessPremium(user))
