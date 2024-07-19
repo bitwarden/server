@@ -2497,9 +2497,7 @@ public class OrganizationService : IOrganizationService
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
+        if (singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationUserStatus >= OrganizationUserStatusType.Accepted))
         {
             throw new BadRequestException("You cannot restore this user because they are a member of " +
                 "another organization which forbids it");
