@@ -15,19 +15,19 @@ public abstract class BaseProviderController(
     IFeatureService featureService,
     IProviderRepository providerRepository) : Controller
 {
+    protected static NotFound<ErrorResponseModel> NotFoundResponse() =>
+        TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
+
+    protected static JsonHttpResult<ErrorResponseModel> UnauthorizedResponse() =>
+        TypedResults.Json(
+            new ErrorResponseModel("Unauthorized."),
+            statusCode: StatusCodes.Status401Unauthorized);
+
     protected Task<(Provider, IResult)> TryGetBillableProviderForAdminOperation(
         Guid providerId) => TryGetBillableProviderAsync(providerId, currentContext.ProviderProviderAdmin);
 
     protected Task<(Provider, IResult)> TryGetBillableProviderForServiceUserOperation(
         Guid providerId) => TryGetBillableProviderAsync(providerId, currentContext.ProviderUser);
-
-    private static NotFound<ErrorResponseModel> NotFoundResponse() =>
-        TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
-
-    private static JsonHttpResult<ErrorResponseModel> UnauthorizedResponse() =>
-        TypedResults.Json(
-            new ErrorResponseModel("Unauthorized."),
-            statusCode: StatusCodes.Status401Unauthorized);
 
     private async Task<(Provider, IResult)> TryGetBillableProviderAsync(
         Guid providerId,

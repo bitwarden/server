@@ -1,14 +1,12 @@
 ﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Stripe;
 
 namespace Bit.Api.Billing.Controllers;
 
@@ -19,7 +17,6 @@ public class ProviderBillingController(
     IFeatureService featureService,
     IProviderBillingService providerBillingService,
     IProviderRepository providerRepository,
-    IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : BaseProviderController(currentContext, featureService, providerRepository)
 {
     [HttpGet("invoices")]
@@ -61,95 +58,6 @@ public class ProviderBillingController(
             "text/csv");
     }
 
-    [HttpGet("payment-information")]
-    public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var paymentInformation = await subscriberService.GetPaymentInformation(provider);
-
-        if (paymentInformation == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var response = PaymentInformationResponse.From(paymentInformation);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpGet("payment-method")]
-    public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var maskedPaymentMethod = await subscriberService.GetPaymentMethod(provider);
-
-        if (maskedPaymentMethod == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var response = MaskedPaymentMethodResponse.From(maskedPaymentMethod);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpPut("payment-method")]
-    public async Task<IResult> UpdatePaymentMethodAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] TokenizedPaymentMethodRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var tokenizedPaymentMethod = new TokenizedPaymentMethodDTO(
-            requestBody.Type,
-            requestBody.Token);
-
-        await subscriberService.UpdatePaymentMethod(provider, tokenizedPaymentMethod);
-
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
-            new SubscriptionUpdateOptions
-            {
-                CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically
-            });
-
-        return TypedResults.Ok();
-    }
-
-    [HttpPost]
-    [Route("payment-method/verify-bank-account")]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] VerifyBankAccountRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        await subscriberService.VerifyBankAccount(provider, (requestBody.Amount1, requestBody.Amount2));
-
-        return TypedResults.Ok();
-    }
-
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
@@ -168,28 +76,6 @@ public class ProviderBillingController(
         }
 
         var response = ConsolidatedBillingSubscriptionResponse.From(consolidatedBillingSubscription);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpGet("tax-information")]
-    public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var taxInformation = await subscriberService.GetTaxInformation(provider);
-
-        if (taxInformation == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var response = TaxInformationResponse.From(taxInformation);
 
         return TypedResults.Ok(response);
     }

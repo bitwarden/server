@@ -15,7 +15,6 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderClientsController(
     ICurrentContext currentContext,
     IFeatureService featureService,
-    ILogger<ProviderClientsController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
@@ -39,7 +38,7 @@ public class ProviderClientsController(
 
         if (user == null)
         {
-            return TypedResults.Unauthorized();
+            return UnauthorizedResponse();
         }
 
         var organizationSignup = new OrganizationSignup
@@ -62,13 +61,6 @@ public class ProviderClientsController(
             user);
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
-
-        if (clientOrganization == null)
-        {
-            logger.LogError("Newly created client organization ({ID}) could not be found", providerOrganization.OrganizationId);
-
-            return TypedResults.Problem();
-        }
 
         await providerBillingService.ScaleSeats(
             provider,
@@ -103,17 +95,10 @@ public class ProviderClientsController(
 
         if (providerOrganization == null)
         {
-            return TypedResults.NotFound();
+            return NotFoundResponse();
         }
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
-
-        if (clientOrganization == null)
-        {
-            logger.LogError("The client organization ({OrganizationID}) represented by provider organization ({ProviderOrganizationID}) could not be found.", providerOrganization.OrganizationId, providerOrganization.Id);
-
-            return TypedResults.Problem();
-        }
 
         if (clientOrganization.Seats != requestBody.AssignedSeats)
         {
