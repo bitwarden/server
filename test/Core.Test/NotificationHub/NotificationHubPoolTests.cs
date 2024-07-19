@@ -18,7 +18,7 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = null,
                         HubName = "hub",
@@ -48,7 +48,7 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = "connection",
                         HubName = null,
@@ -78,7 +78,7 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = "connection",
                         HubName = "hub",
@@ -106,7 +106,7 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKey=example///example=",
                         HubName = "hub",
@@ -134,7 +134,7 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubSettings = new() {
+                NotificationHubs = new() {
                     new() {
                         ConnectionString = "connection",
                         HubName = "hub",

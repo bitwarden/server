@@ -13,8 +13,8 @@ public class NotificationHubPool : INotificationHubPool
     public NotificationHubPool(ILogger<NotificationHubPool> logger, GlobalSettings globalSettings)
     {
         _logger = logger;
-        _connections = FilterInvalidHubs(globalSettings.NotificationHubPool.NotificationHubSettings);
-        _clients = _connections.Select(c => c.HubClient);
+        _connections = FilterInvalidHubs(globalSettings.NotificationHubPool.NotificationHubs);
+        _clients = _connections.GroupBy(c => c.ConnectionString).Select(g => g.First().HubClient);
     }
 
     private List<NotificationHubConnection> FilterInvalidHubs(IEnumerable<GlobalSettings.NotificationHubSettings> hubs)

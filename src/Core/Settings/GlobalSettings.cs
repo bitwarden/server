@@ -450,7 +450,7 @@ public class GlobalSettings : IGlobalSettings
         /// 
         /// Note that hubs on the same namespace share active device limits, so multiple namespaces should be used to increase capacity.
         /// </summary>
-        public List<NotificationHubSettings> NotificationHubSettings { get; set; } = new();
+        public List<NotificationHubSettings> NotificationHubs { get; set; } = new();
     }
 
     public class YubicoSettings
