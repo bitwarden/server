@@ -1342,7 +1342,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             "otp:" + user.Email, token);
     }
 
-    public async Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = true)
+    public async Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false)
     {
         bool isVerified;
         if (user.HasMasterPassword())
@@ -1357,6 +1357,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         else if (isSettingMFA)
         {
             // this is temporary to allow users to view their MFA settings without invalidating email TOTP
+            // Will be removed with PM-9925
             isVerified = true;
         }
         else
