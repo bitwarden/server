@@ -41,7 +41,7 @@ public class ProviderBillingController(
 
         var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
         {
-           Customer = provider.GatewayCustomerId
+            Customer = provider.GatewayCustomerId
         });
 
         var response = InvoicesResponse.From(invoices);

@@ -9,7 +9,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -23,7 +22,6 @@ using Bit.Core.Utilities;
 using CsvHelper;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using static Bit.Core.Billing.Utilities;
 
 namespace Bit.Commercial.Core.Billing;
 

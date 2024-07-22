@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.BitStripe;
 using Stripe;
 
 namespace Bit.Core.Billing.Services;

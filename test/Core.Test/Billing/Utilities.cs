@@ -1,8 +1,6 @@
 ﻿using Bit.Core.Billing;
 using Xunit;
 
-using static Bit.Core.Billing.Utilities;
-
 namespace Bit.Core.Test.Billing;
 
 public static class Utilities

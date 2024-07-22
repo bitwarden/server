@@ -2,8 +2,6 @@
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
-using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;

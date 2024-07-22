@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Microsoft.Extensions.Logging.Abstractions;
 using Stripe;
 
 namespace Bit.Core.Billing.Extensions;
