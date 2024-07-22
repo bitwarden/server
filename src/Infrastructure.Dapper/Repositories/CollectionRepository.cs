@@ -1,5 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Data;
+﻿using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
