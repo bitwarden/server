@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Microsoft.Extensions.Logging.Abstractions;
 using Stripe;
 
 namespace Bit.Core.Billing.Extensions;
@@ -13,7 +14,9 @@ public static class BillingExtensions
         provider is
         {
             Type: ProviderType.Msp,
-            Status: ProviderStatusType.Billable
+            Status: ProviderStatusType.Billable,
+            GatewayCustomerId: not null,
+            GatewaySubscriptionId: not null
         };
 
     public static bool IsValidClient(this Organization organization)

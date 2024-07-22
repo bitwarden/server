@@ -9,6 +9,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -138,7 +139,9 @@ public class ProviderBillingControllerTests
             }
         };
 
-        sutProvider.GetDependency<ISubscriberService>().GetInvoices(provider).Returns(invoices);
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceListAsync(Arg.Is<StripeInvoiceListOptions>(
+            options =>
+                options.Customer == provider.GatewayCustomerId)).Returns(invoices);
 
         var result = await sutProvider.Sut.GetInvoicesAsync(provider.Id);
 

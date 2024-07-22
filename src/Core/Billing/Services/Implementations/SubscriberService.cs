@@ -177,40 +177,6 @@ public class SubscriberService(
         }
     }
 
-    public async Task<List<Invoice>> GetInvoices(
-        ISubscriber subscriber,
-        StripeInvoiceListOptions invoiceListOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
-        {
-            logger.LogError("Cannot retrieve invoices for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
-
-            return [];
-        }
-
-        try
-        {
-            if (invoiceListOptions == null)
-            {
-                invoiceListOptions = new StripeInvoiceListOptions { Customer = subscriber.GatewayCustomerId };
-            }
-            else
-            {
-                invoiceListOptions.Customer = subscriber.GatewayCustomerId;
-            }
-
-            return await stripeAdapter.InvoiceListAsync(invoiceListOptions);
-        }
-        catch (StripeException exception)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe invoices for subscriber ({SubscriberID}): {Error}", subscriber.Id, exception.Message);
-
-            return [];
-        }
-    }
-
     public async Task<PaymentInformationDTO> GetPaymentInformation(
         ISubscriber subscriber)
     {

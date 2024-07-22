@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,8 @@ public class ProviderBillingController(
     IFeatureService featureService,
     IProviderBillingService providerBillingService,
     IProviderRepository providerRepository,
-    ISubscriberService subscriberService) : BaseProviderController(currentContext, featureService, providerRepository)
+    ISubscriberService subscriberService,
+    IStripeAdapter stripeAdapter) : BaseProviderController(currentContext, featureService, providerRepository)
 {
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
@@ -29,7 +31,10 @@ public class ProviderBillingController(
             return result;
         }
 
-        var invoices = await subscriberService.GetInvoices(provider);
+        var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+        {
+           Customer = provider.GatewayCustomerId
+        });
 
         var response = InvoicesResponse.From(invoices);
 
