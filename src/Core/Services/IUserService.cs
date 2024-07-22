@@ -75,7 +75,7 @@ public interface IUserService
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
-    Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = true);
+    Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
 
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
