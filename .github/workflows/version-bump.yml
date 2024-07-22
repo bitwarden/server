@@ -40,8 +40,6 @@ jobs:
 
       - name: Check out branch
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-        with:
-          ref: main
 
       - name: Check if RC branch exists
         if: ${{ inputs.cut_rc_branch == true }}
