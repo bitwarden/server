@@ -55,4 +55,12 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
         && !string.IsNullOrWhiteSpace(Email);
 
 
+    public static bool ValidateToken(IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> dataProtectorTokenFactory, string token, string userEmail)
+    {
+        return dataProtectorTokenFactory.TryUnprotect(token, out var tokenable)
+               && tokenable.Valid
+               && tokenable.TokenIsValid(userEmail);
+    }
+
+
 }
