@@ -97,12 +97,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
 
     public async Task CreateManyAsync(IEnumerable<IEvent>? entities)
     {
-        if (entities is null)
-        {
-            return;
-        }
-
-        if (!entities.Any())
+        if (entities is null || !entities.Any())
         {
             return;
         }
