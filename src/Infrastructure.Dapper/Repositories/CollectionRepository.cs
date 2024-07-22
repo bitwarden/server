@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Data;
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
@@ -209,7 +210,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
+    public async Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
         obj.SetNewId();
         var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
@@ -226,7 +227,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
+    public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
         var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
 
@@ -314,7 +315,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     public class CollectionWithGroupsAndUsers : Collection
     {
-        public required DataTable Groups { get; set; }
-        public required DataTable Users { get; set; }
+        [DisallowNull]
+        public DataTable? Groups { get; set; }
+        [DisallowNull]
+        public DataTable? Users { get; set; }
     }
 }
