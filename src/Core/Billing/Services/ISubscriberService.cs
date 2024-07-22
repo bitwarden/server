@@ -94,10 +94,10 @@ public interface ISubscriberService
     /// Retrieves the <see cref="subscriber"/>'s tax information using their Stripe <see cref="Stripe.Customer"/>'s <see cref="Stripe.Customer.Address"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the tax information for.</param>
-    /// <returns>A <see cref="TaxInformationDTO"/> representing the <paramref name="subscriber"/>'s tax information.</returns>
+    /// <returns>A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s tax information.</returns>
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
     /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<TaxInformationDTO> GetTaxInformation(
+    Task<TaxInformation> GetTaxInformation(
         ISubscriber subscriber);
 
     /// <summary>
@@ -125,10 +125,10 @@ public interface ISubscriberService
     /// Updates the tax information for the provided <paramref name="subscriber"/>.
     /// </summary>
     /// <param name="subscriber">The <paramref name="subscriber"/> to update the tax information for.</param>
-    /// <param name="taxInformation">A <see cref="TaxInformationDTO"/> representing the <paramref name="subscriber"/>'s updated tax information.</param>
+    /// <param name="taxInformation">A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s updated tax information.</param>
     Task UpdateTaxInformation(
         ISubscriber subscriber,
-        TaxInformationDTO taxInformation);
+        TaxInformation taxInformation);
 
     /// <summary>
     /// Verifies the subscriber's pending bank account using the provided <paramref name="microdeposits"/>.

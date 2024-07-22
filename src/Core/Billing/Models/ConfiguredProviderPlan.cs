@@ -3,7 +3,7 @@ using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Billing.Models;
 
-public record ConfiguredProviderPlanDTO(
+public record ConfiguredProviderPlan(
     Guid Id,
     Guid ProviderId,
     PlanType PlanType,
@@ -11,9 +11,9 @@ public record ConfiguredProviderPlanDTO(
     int PurchasedSeats,
     int AssignedSeats)
 {
-    public static ConfiguredProviderPlanDTO From(ProviderPlan providerPlan) =>
+    public static ConfiguredProviderPlan From(ProviderPlan providerPlan) =>
         providerPlan.IsConfigured()
-            ? new ConfiguredProviderPlanDTO(
+            ? new ConfiguredProviderPlan(
                 providerPlan.Id,
                 providerPlan.ProviderId,
                 providerPlan.PlanType,

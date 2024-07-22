@@ -5,8 +5,11 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Models.Api;
@@ -294,71 +297,89 @@ public class ProviderBillingControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionAsync_NullConsolidatedBillingSubscription_NotFound(
-        Provider provider,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        ConfigureStableServiceUserInputs(provider, sutProvider);
-
-        sutProvider.GetDependency<IProviderBillingService>().GetConsolidatedBillingSubscription(provider).ReturnsNull();
-
-        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
-
-        Assert.IsType<NotFound>(result);
-    }
-
-    [Theory, BitAutoData]
     public async Task GetSubscriptionAsync_Ok(
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
         ConfigureStableServiceUserInputs(provider, sutProvider);
 
-        var configuredProviderPlans = new List<ConfiguredProviderPlanDTO>
-        {
-            new (Guid.NewGuid(), provider.Id, PlanType.TeamsMonthly, 50, 10, 30),
-            new (Guid.NewGuid(), provider.Id , PlanType.EnterpriseMonthly, 100, 0, 90)
-        };
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        var (thisYear, thisMonth, _) = DateTime.UtcNow;
+        var daysInThisMonth = DateTime.DaysInMonth(thisYear, thisMonth);
 
         var subscription = new Subscription
         {
-            Status = "unpaid",
-            CurrentPeriodEnd = new DateTime(2024, 6, 30),
+            CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
+            CurrentPeriodEnd = new DateTime(thisYear, thisMonth, daysInThisMonth),
             Customer = new Customer
             {
-                Balance = 100000,
-                Discount = new Discount
+                Address = new Address
                 {
-                    Coupon = new Coupon
-                    {
-                        PercentOff = 10
-                    }
-                }
+                    Country = "US",
+                    PostalCode = "12345",
+                    Line1 = "123 Example St.",
+                    Line2 = "Unit 1",
+                    City = "Example Town",
+                    State = "NY"
+                },
+                Balance = 100000,
+                Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } },
+                TaxIds = new StripeList<TaxId> { Data = [new TaxId { Value = "123456789" }] }
+            },
+            Status = "unpaid",
+        };
+
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+            options =>
+                options.Expand.Contains("customer.tax_ids") &&
+                options.Expand.Contains("test_clock"))).Returns(subscription);
+
+        var lastMonth = thisMonth - 1;
+        var daysInLastMonth = DateTime.DaysInMonth(thisYear, lastMonth);
+
+        var overdueInvoice = new Invoice
+        {
+            Id = "invoice_id",
+            Status = "open",
+            Created = new DateTime(thisYear, lastMonth, 1),
+            PeriodEnd = new DateTime(thisYear, lastMonth, daysInLastMonth),
+            Attempted = true
+        };
+
+        stripeAdapter.InvoiceSearchAsync(Arg.Is<InvoiceSearchOptions>(
+                options => options.Query == $"subscription:'{subscription.Id}' status:'open'"))
+            .Returns([overdueInvoice]);
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new ()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 50,
+                PurchasedSeats = 10,
+                AllocatedSeats = 60
+            },
+            new ()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 90
             }
         };
 
-        var taxInformation =
-            new TaxInformationDTO("US", "12345", "123456789", "123 Example St.", null, "Example Town", "NY");
-
-        var suspension = new SubscriptionSuspensionDTO(
-            new DateTime(2024, 7, 30),
-            new DateTime(2024, 5, 30),
-            30);
-
-        var consolidatedBillingSubscription = new ConsolidatedBillingSubscriptionDTO(
-            configuredProviderPlans,
-            subscription,
-            taxInformation,
-            suspension);
-
-        sutProvider.GetDependency<IProviderBillingService>().GetConsolidatedBillingSubscription(provider)
-            .Returns(consolidatedBillingSubscription);
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
 
-        Assert.IsType<Ok<ConsolidatedBillingSubscriptionResponse>>(result);
+        Assert.IsType<Ok<ProviderSubscriptionResponse>>(result);
 
-        var response = ((Ok<ConsolidatedBillingSubscriptionResponse>)result).Value;
+        var response = ((Ok<ProviderSubscriptionResponse>)result).Value;
 
         Assert.Equal(subscription.Status, response.Status);
         Assert.Equal(subscription.CurrentPeriodEnd, response.CurrentPeriodEndDate);
@@ -370,7 +391,7 @@ public class ProviderBillingControllerTests
         Assert.NotNull(providerTeamsPlan);
         Assert.Equal(50, providerTeamsPlan.SeatMinimum);
         Assert.Equal(10, providerTeamsPlan.PurchasedSeats);
-        Assert.Equal(30, providerTeamsPlan.AssignedSeats);
+        Assert.Equal(60, providerTeamsPlan.AssignedSeats);
         Assert.Equal(60 * teamsPlan.PasswordManager.ProviderPortalSeatPrice, providerTeamsPlan.Cost);
         Assert.Equal("Monthly", providerTeamsPlan.Cadence);
 
@@ -384,9 +405,21 @@ public class ProviderBillingControllerTests
         Assert.Equal("Monthly", providerEnterprisePlan.Cadence);
 
         Assert.Equal(100000, response.AccountCredit);
-        Assert.Equal(taxInformation, response.TaxInformation);
+
+        var customer = subscription.Customer;
+        Assert.Equal(customer.Address.Country, response.TaxInformation.Country);
+        Assert.Equal(customer.Address.PostalCode, response.TaxInformation.PostalCode);
+        Assert.Equal(customer.TaxIds.First().Value, response.TaxInformation.TaxId);
+        Assert.Equal(customer.Address.Line1, response.TaxInformation.Line1);
+        Assert.Equal(customer.Address.Line2, response.TaxInformation.Line2);
+        Assert.Equal(customer.Address.City, response.TaxInformation.City);
+        Assert.Equal(customer.Address.State, response.TaxInformation.State);
+
         Assert.Null(response.CancelAt);
-        Assert.Equal(suspension, response.Suspension);
+
+        Assert.Equal(overdueInvoice.Created.AddDays(14), response.Suspension.SuspensionDate);
+        Assert.Equal(overdueInvoice.PeriodEnd, response.Suspension.UnpaidPeriodEndDate);
+        Assert.Equal(14, response.Suspension.GracePeriod);
     }
 
     #endregion
@@ -404,7 +437,7 @@ public class ProviderBillingControllerTests
         await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
 
         await sutProvider.GetDependency<ISubscriberService>().Received(1).UpdateTaxInformation(
-            provider, Arg.Is<TaxInformationDTO>(
+            provider, Arg.Is<TaxInformation>(
                 options =>
                     options.Country == requestBody.Country &&
                     options.PostalCode == requestBody.PostalCode &&

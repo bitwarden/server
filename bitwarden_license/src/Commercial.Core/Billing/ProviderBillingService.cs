@@ -203,39 +203,6 @@ public class ProviderBillingService(
             .Sum(providerOrganization => providerOrganization.Seats ?? 0);
     }
 
-    public async Task<ConsolidatedBillingSubscriptionDTO> GetConsolidatedBillingSubscription(
-        Provider provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        var subscription = await subscriberService.GetSubscription(provider, new SubscriptionGetOptions
-        {
-            Expand = ["customer", "test_clock"]
-        });
-
-        if (subscription == null)
-        {
-            return null;
-        }
-
-        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
-
-        var configuredProviderPlans = providerPlans
-            .Where(providerPlan => providerPlan.IsConfigured())
-            .Select(ConfiguredProviderPlanDTO.From)
-            .ToList();
-
-        var taxInformation = await subscriberService.GetTaxInformation(provider);
-
-        var suspension = await GetSuspensionAsync(stripeAdapter, subscription);
-
-        return new ConsolidatedBillingSubscriptionDTO(
-            configuredProviderPlans,
-            subscription,
-            taxInformation,
-            suspension);
-    }
-
     public async Task ScaleSeats(
         Provider provider,
         PlanType planType,

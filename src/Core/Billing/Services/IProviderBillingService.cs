@@ -57,15 +57,6 @@ public interface IProviderBillingService
         PlanType planType);
 
     /// <summary>
-    /// Retrieves the <paramref name="provider"/>'s consolidated billing subscription, which includes their Stripe subscription and configured provider plans.
-    /// </summary>
-    /// <param name="provider">The provider to retrieve the consolidated billing subscription for.</param>
-    /// <returns>A <see cref="ConsolidatedBillingSubscriptionDTO"/> containing the provider's Stripe <see cref="Stripe.Subscription"/> and a list of <see cref="ConfiguredProviderPlanDTO"/>s representing their configured plans.</returns>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<ConsolidatedBillingSubscriptionDTO> GetConsolidatedBillingSubscription(
-        Provider provider);
-
-    /// <summary>
     /// Scales the <paramref name="provider"/>'s seats for the specified <paramref name="planType"/> using the provided <paramref name="seatAdjustment"/>.
     /// This operation may autoscale the provider's Stripe <see cref="Stripe.Subscription"/> depending on the <paramref name="provider"/>'s seat minimum for the
     /// specified <paramref name="planType"/>.

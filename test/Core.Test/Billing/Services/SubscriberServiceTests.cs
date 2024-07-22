@@ -1551,7 +1551,7 @@ public class SubscriberServiceTests
         stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId, Arg.Is<CustomerGetOptions>(
             options => options.Expand.Contains("tax_ids"))).Returns(customer);
 
-        var taxInformation = new TaxInformationDTO(
+        var taxInformation = new TaxInformation(
             "US",
             "12345",
             "123456789",

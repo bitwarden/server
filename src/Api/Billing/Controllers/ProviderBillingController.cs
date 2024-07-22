@@ -2,12 +2,16 @@
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
+
+using static Bit.Core.Billing.Utilities;
 
 namespace Bit.Api.Billing.Controllers;
 
@@ -17,6 +21,7 @@ public class ProviderBillingController(
     ICurrentContext currentContext,
     IFeatureService featureService,
     IProviderBillingService providerBillingService,
+    IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
     ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter) : BaseProviderController(currentContext, featureService, providerRepository)
@@ -73,14 +78,20 @@ public class ProviderBillingController(
             return result;
         }
 
-        var consolidatedBillingSubscription = await providerBillingService.GetConsolidatedBillingSubscription(provider);
+        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = ["customer.tax_ids", "test_clock"] });
 
-        if (consolidatedBillingSubscription == null)
-        {
-            return TypedResults.NotFound();
-        }
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
-        var response = ConsolidatedBillingSubscriptionResponse.From(consolidatedBillingSubscription);
+        var taxInformation = GetTaxInformation(subscription.Customer);
+
+        var subscriptionSuspension = await GetSubscriptionSuspensionAsync(stripeAdapter, subscription);
+
+        var response = ProviderSubscriptionResponse.From(
+            subscription,
+            providerPlans,
+            taxInformation,
+            subscriptionSuspension);
 
         return TypedResults.Ok(response);
     }
@@ -97,7 +108,7 @@ public class ProviderBillingController(
             return result;
         }
 
-        var taxInformation = new TaxInformationDTO(
+        var taxInformation = new TaxInformation(
             requestBody.Country,
             requestBody.PostalCode,
             requestBody.TaxId,

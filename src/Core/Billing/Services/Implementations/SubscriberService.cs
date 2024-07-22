@@ -291,7 +291,7 @@ public class SubscriberService(
         }
     }
 
-    public async Task<TaxInformationDTO> GetTaxInformation(
+    public async Task<TaxInformation> GetTaxInformation(
         ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
@@ -548,7 +548,7 @@ public class SubscriberService(
 
     public async Task UpdateTaxInformation(
         ISubscriber subscriber,
-        TaxInformationDTO taxInformation)
+        TaxInformation taxInformation)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
         ArgumentNullException.ThrowIfNull(taxInformation);
@@ -722,7 +722,7 @@ public class SubscriberService(
         return MaskedPaymentMethodDTO.From(setupIntent);
     }
 
-    private static TaxInformationDTO GetTaxInformationDTOFrom(
+    private static TaxInformation GetTaxInformationDTOFrom(
         Customer customer)
     {
         if (customer.Address == null)
@@ -730,7 +730,7 @@ public class SubscriberService(
             return null;
         }
 
-        return new TaxInformationDTO(
+        return new TaxInformation(
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
