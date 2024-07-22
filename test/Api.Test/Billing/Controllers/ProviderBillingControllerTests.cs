@@ -427,6 +427,25 @@ public class ProviderBillingControllerTests
     #region UpdateTaxInformationAsync
 
     [Theory, BitAutoData]
+    public async Task UpdateTaxInformation_NoCountry_BadRequest(
+        Provider provider,
+        TaxInformationRequestBody requestBody,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableAdminInputs(provider, sutProvider);
+
+        requestBody.Country = null;
+
+        var result = await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
+
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+
+        var response = (BadRequest<ErrorResponseModel>)result;
+
+        Assert.Equal("Country and postal code are required to update your tax information.", response.Value.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateTaxInformation_Ok(
         Provider provider,
         TaxInformationRequestBody requestBody,

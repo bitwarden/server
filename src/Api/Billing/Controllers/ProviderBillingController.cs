@@ -5,6 +5,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -106,6 +107,12 @@ public class ProviderBillingController(
         if (provider == null)
         {
             return result;
+        }
+
+        if (requestBody is not { Country: not null, PostalCode: not null })
+        {
+            return TypedResults.BadRequest(
+                new ErrorResponseModel("Country and postal code are required to update your tax information."));
         }
 
         var taxInformation = new TaxInformation(
