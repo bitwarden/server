@@ -9,11 +9,13 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
@@ -175,6 +177,27 @@ public class ProviderBillingControllerTests
     #endregion
 
     #region GenerateClientInvoiceReportAsync
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReportAsync_NullReportContent_ServerError(
+        Provider provider,
+        string invoiceId,
+        SutProvider<ProviderBillingController> sutProvider)
+    {
+        ConfigureStableAdminInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+            .ReturnsNull();
+
+        var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);
+
+        Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+
+        var response = (JsonHttpResult<ErrorResponseModel>)result;
+
+        Assert.Equal(StatusCodes.Status500InternalServerError, response.StatusCode);
+        Assert.Equal("We had a problem generating your invoice CSV. Please contact support.", response.Value.Message);
+    }
 
     [Theory, BitAutoData]
     public async Task GenerateClientInvoiceReportAsync_Ok(

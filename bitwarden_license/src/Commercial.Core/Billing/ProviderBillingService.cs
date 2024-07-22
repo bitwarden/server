@@ -144,15 +144,14 @@ public class ProviderBillingService(
     public async Task<byte[]> GenerateClientInvoiceReport(
         string invoiceId)
     {
-        if (string.IsNullOrEmpty(invoiceId))
-        {
-            throw new ArgumentNullException(nameof(invoiceId));
-        }
+        ArgumentException.ThrowIfNullOrEmpty(invoiceId);
 
         var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
 
         if (invoiceItems.Count == 0)
         {
+            logger.LogError("No provider invoice item records were found for invoice ({InvoiceID})", invoiceId);
+
             return null;
         }
 

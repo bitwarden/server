@@ -55,7 +55,7 @@ public class ProviderBillingController(
 
         if (reportContent == null)
         {
-            return TypedResults.NotFound();
+            return ServerErrorResponse("We had a problem generating your invoice CSV. Please contact support.");
         }
 
         return TypedResults.File(

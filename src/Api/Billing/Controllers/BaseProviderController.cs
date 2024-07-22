@@ -18,6 +18,11 @@ public abstract class BaseProviderController(
     protected static NotFound<ErrorResponseModel> NotFoundResponse() =>
         TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
 
+    protected static JsonHttpResult<ErrorResponseModel> ServerErrorResponse(string errorMessage) =>
+        TypedResults.Json(
+            new ErrorResponseModel(errorMessage),
+            statusCode: StatusCodes.Status500InternalServerError);
+
     protected static JsonHttpResult<ErrorResponseModel> UnauthorizedResponse() =>
         TypedResults.Json(
             new ErrorResponseModel("Unauthorized."),
