@@ -15,12 +15,13 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderClientsController(
     ICurrentContext currentContext,
     IFeatureService featureService,
+    ILogger<BaseProviderController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IUserService userService) : BaseProviderController(currentContext, featureService, providerRepository)
+    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
 {
     [HttpPost]
     public async Task<IResult> CreateAsync(
@@ -34,7 +35,7 @@ public class ProviderClientsController(
             return result;
         }
 
-        var user = await userService.GetUserByPrincipalAsync(User);
+        var user = await UserService.GetUserByPrincipalAsync(User);
 
         if (user == null)
         {
