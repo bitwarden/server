@@ -1,8 +1,8 @@
 ﻿#nullable enable
 
 using System.Text.Json.Serialization;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 
@@ -242,7 +242,7 @@ public class ReferenceEvent
     /// This value should only be populated when the <see cref="ReferenceEventType"/> is <see cref="ReferenceEventType.Signup"/>. Otherwise,
     /// the value should be <see langword="null" />.
     /// </value>
-    public string SignupInitiationPath { get; set; }
+    public string? SignupInitiationPath { get; set; }
 
     /// <summary>
     /// The upgrade applied to an account. The current plan is listed first,
@@ -253,5 +253,22 @@ public class ReferenceEvent
     /// <see langword="null"/> when the event was not originated by an application,
     /// or when a downgrade occurred.
     /// </value>
-    public string PlanUpgradePath { get; set; }
+    public string? PlanUpgradePath { get; set; }
+
+    /// <summary>
+    /// Used for the <see cref="ReferenceEventType.Signup"/> event to determine if the user has opted in to marketing emails.
+    /// </summary>
+    public bool? ReceiveMarketingEmails { get; set; }
+
+    /// <summary>
+    /// Used for the <see cref="ReferenceEventType.SignupEmailClicked"/> event to indicate if the user
+    /// landed on the registration finish screen with a valid or invalid email verification token.
+    /// </summary>
+    public bool? EmailVerificationTokenValid { get; set; }
+
+    /// <summary>
+    /// Used for the <see cref="ReferenceEventType.SignupEmailClicked"/> event to indicate if the user
+    /// landed on the registration finish screen after re-clicking an already used link.
+    /// </summary>
+    public bool? UserAlreadyExists { get; set; }
 }

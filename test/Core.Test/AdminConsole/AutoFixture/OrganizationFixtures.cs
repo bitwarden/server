@@ -4,6 +4,7 @@ using AutoFixture.Kernel;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -137,6 +138,9 @@ internal class OrganizationInvite : ICustomization
             .With(ou => ou.Permissions, PermissionsBlob));
         fixture.Customize<OrganizationUserInvite>(composer => composer
             .With(oi => oi.Type, InviteeUserType));
+        // Set Manage to false, this ensures it doesn't conflict with the other properties during validation
+        fixture.Customize<CollectionAccessSelection>(composer => composer
+            .With(c => c.Manage, false));
     }
 }
 

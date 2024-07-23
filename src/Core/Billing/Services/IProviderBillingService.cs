@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Services;
@@ -42,6 +43,15 @@ public interface IProviderBillingService
     Task CreateCustomerForClientOrganization(
         Provider provider,
         Organization organization);
+
+    /// <summary>
+    /// Generate a provider's client invoice report in CSV format for the specified <paramref name="invoiceId"/>. Utilizes the <see cref="ProviderInvoiceItem"/>
+    /// records saved for the <paramref name="invoiceId"/> as part of our webhook processing for the <b>"invoice.created"</b> and <b>"invoice.finalized"</b> Stripe events.
+    /// </summary>
+    /// <param name="invoiceId">The ID of the Stripe <see cref="Stripe.Invoice"/> to generate the report for.</param>
+    /// <returns>The provider's client invoice report as a byte array.</returns>
+    Task<byte[]> GenerateClientInvoiceReport(
+        string invoiceId);
 
     /// <summary>
     /// Retrieves the number of seats an MSP has assigned to its client organizations with a specified <paramref name="planType"/>.

@@ -13,6 +13,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -147,9 +148,7 @@ public class OrganizationService : IOrganizationService
             organization,
             paymentMethodType,
             paymentToken,
-            _featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax)
-                ? taxInfo
-                : null);
+            taxInfo);
         if (updated)
         {
             await ReplaceAndUpdateCacheAsync(organization);
@@ -744,10 +743,6 @@ public class OrganizationService : IOrganizationService
                     AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
-
-                    // If using Flexible Collections, AccessAll is deprecated and set to false.
-                    // If not using Flexible Collections, set AccessAll to true (previous behavior)
-                    AccessAll = !organization.FlexibleCollections,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
                 };
@@ -772,9 +767,9 @@ public class OrganizationService : IOrganizationService
                     RevisionDate = organization.CreationDate
                 };
 
-                // If using Flexible Collections, give the owner Can Manage access over the default collection
+                // Give the owner Can Manage access over the default collection
                 List<CollectionAccessSelection> defaultOwnerAccess = null;
-                if (orgUser != null && organization.FlexibleCollections)
+                if (orgUser != null)
                 {
                     defaultOwnerAccess =
                         [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
@@ -966,15 +961,11 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("This method can only be used to invite a single user.");
         }
 
-        // Validate Collection associations if org is using latest collection enhancements
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (organizationAbility?.FlexibleCollections ?? false)
+        // Validate Collection associations
+        var invalidAssociations = invite.Collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+        if (invalidAssociations?.Any() ?? false)
         {
-            var invalidAssociations = invite.Collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-            if (invalidAssociations?.Any() ?? false)
-            {
-                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-            }
+            throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
         }
 
         var results = await InviteUsersAsync(organizationId, invitingUserId, systemUser,
@@ -1039,18 +1030,6 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        // If the organization is using Flexible Collections, prevent use of any deprecated permissions
-        if (organization.FlexibleCollections && invites.Any(i => i.invite.Type is OrganizationUserType.Manager))
-        {
-            throw new BadRequestException("The Manager role has been deprecated by collection enhancements. Use the collection Can Manage permission instead.");
-        }
-
-        if (organization.FlexibleCollections && invites.Any(i => i.invite.AccessAll))
-        {
-            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
-        }
-        // End Flexible Collections
-
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
 
@@ -1093,8 +1072,8 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        var orgUsers = new List<OrganizationUser>();
-        var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
+        var orgUsersWithoutCollections = new List<OrganizationUser>();
+        var orgUsersWithCollections = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
         var orgUserGroups = new List<(OrganizationUser, IEnumerable<Guid>)>();
         var orgUserInvitedCount = 0;
         var exceptions = new List<Exception>();
@@ -1120,7 +1099,6 @@ public class OrganizationService : IOrganizationService
                         Key = null,
                         Type = invite.Type.Value,
                         Status = OrganizationUserStatusType.Invited,
-                        AccessAll = invite.AccessAll,
                         AccessSecretsManager = invite.AccessSecretsManager,
                         ExternalId = externalId,
                         CreationDate = DateTime.UtcNow,
@@ -1132,13 +1110,13 @@ public class OrganizationService : IOrganizationService
                         orgUser.SetPermissions(invite.Permissions ?? new Permissions());
                     }
 
-                    if (!orgUser.AccessAll && invite.Collections.Any())
+                    if (invite.Collections.Any())
                     {
-                        limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
+                        orgUsersWithCollections.Add((orgUser, invite.Collections));
                     }
                     else
                     {
-                        orgUsers.Add(orgUser);
+                        orgUsersWithoutCollections.Add(orgUser);
                     }
 
                     if (invite.Groups != null && invite.Groups.Any())
@@ -1161,10 +1139,14 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
+        var allOrgUsers = orgUsersWithoutCollections
+            .Concat(orgUsersWithCollections.Select(u => u.Item1))
+            .ToList();
+
         try
         {
-            await _organizationUserRepository.CreateManyAsync(orgUsers);
-            foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
+            await _organizationUserRepository.CreateManyAsync(orgUsersWithoutCollections);
+            foreach (var (orgUser, collections) in orgUsersWithCollections)
             {
                 await _organizationUserRepository.CreateAsync(orgUser, collections);
             }
@@ -1186,7 +1168,7 @@ public class OrganizationService : IOrganizationService
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
 
-            await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
+            await SendInvitesAsync(allOrgUsers, organization);
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
@@ -1197,7 +1179,7 @@ public class OrganizationService : IOrganizationService
         catch (Exception e)
         {
             // Revert any added users.
-            var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
+            var invitedOrgUserIds = allOrgUsers.Select(ou => ou.Id);
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
@@ -1226,7 +1208,7 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        return (orgUsers, events);
+        return (allOrgUsers, events);
     }
 
     public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
@@ -1439,9 +1421,20 @@ public class OrganizationService : IOrganizationService
 
         var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
-        if (provider is { Enabled: true, Type: ProviderType.Reseller })
+        if (provider is { Enabled: true })
         {
-            return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+            var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+            if (consolidatedBillingEnabled && provider.Type == ProviderType.Msp &&
+                provider.Status == ProviderStatusType.Billable)
+            {
+                return (false, "Seat limit has been reached. Please contact your provider to add more seats.");
+            }
+
+            if (provider.Type == ProviderType.Reseller)
+            {
+                return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
+            }
         }
 
         if (organization.Seats.HasValue &&
@@ -1806,7 +1799,6 @@ public class OrganizationService : IOrganizationService
                     {
                         Emails = new List<string> { user.Email },
                         Type = OrganizationUserType.User,
-                        AccessAll = false,
                         Collections = new List<CollectionAccessSelection>(),
                         AccessSecretsManager = hasStandaloneSecretsManager
                     };
@@ -2054,9 +2046,9 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
-        if ((plan.Product == ProductType.TeamsStarter &&
+        if ((plan.ProductTier == ProductTierType.TeamsStarter &&
             upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
-            (plan.Product != ProductType.TeamsStarter &&
+            (plan.ProductTier != ProductTierType.TeamsStarter &&
              upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
@@ -2177,17 +2169,7 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
-        {
-            return false;
-        }
-
         if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
         {
             return false;
         }
@@ -2524,10 +2506,6 @@ public class OrganizationService : IOrganizationService
             Key = null,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Invited,
-
-            // If using Flexible Collections, AccessAll is deprecated and set to false.
-            // If not using Flexible Collections, set AccessAll to true (previous behavior)
-            AccessAll = !organization.FlexibleCollections,
         };
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 

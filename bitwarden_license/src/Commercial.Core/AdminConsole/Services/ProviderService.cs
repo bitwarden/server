@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -435,11 +436,15 @@ public class ProviderService : IProviderService
             return;
         }
 
-        var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
-        var extractedPlanType = PlanTypeMappings(organization);
-        if (subscriptionItem != null)
+        if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId,
+                GetStripeSeatPlanId(organization.PlanType));
+            var extractedPlanType = PlanTypeMappings(organization);
+            if (subscriptionItem != null)
+            {
+                await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            }
         }
 
         await _organizationRepository.UpsertAsync(organization);
@@ -539,9 +544,9 @@ public class ProviderService : IProviderService
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        // If using Flexible Collections, give the owner Can Manage access over the default collection
+        // Give the owner Can Manage access over the default collection
         // The orgUser is not available when the org is created so we have to do it here as part of the invite
-        var defaultOwnerAccess = organization.FlexibleCollections && defaultCollection != null
+        var defaultOwnerAccess = defaultCollection != null
             ?
             [
                 new CollectionAccessSelection
@@ -561,10 +566,6 @@ public class ProviderService : IProviderService
                     new OrganizationUserInvite
                     {
                         Emails = new[] { clientOwnerEmail },
-
-                        // If using Flexible Collections, AccessAll is deprecated and set to false.
-                        // If not using Flexible Collections, set AccessAll to true (previous behavior)
-                        AccessAll = !organization.FlexibleCollections,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
                         Collections = defaultOwnerAccess,

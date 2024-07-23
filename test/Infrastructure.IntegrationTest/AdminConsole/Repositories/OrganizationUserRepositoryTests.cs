@@ -176,4 +176,82 @@ public class OrganizationUserRepositoryTests
             r.ResetPasswordKey == "resetpasswordkey2" &&
             r.EncryptedPrivateKey == "privatekey");
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyDetailsByUserAsync_Works(IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            PrivateKey = "privatekey",
+        });
+
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            ResetPasswordKey = "resetpasswordkey1",
+        });
+
+        var responseModel = await organizationUserRepository.GetManyDetailsByUserAsync(user1.Id);
+
+        Assert.NotNull(responseModel);
+        Assert.Single(responseModel);
+        var result = responseModel.Single();
+        Assert.Equal(organization.Id, result.OrganizationId);
+        Assert.Equal(user1.Id, result.UserId);
+        Assert.Equal(orgUser1.Id, result.OrganizationUserId);
+        Assert.Equal(organization.Name, result.Name);
+        Assert.Equal(organization.UsePolicies, result.UsePolicies);
+        Assert.Equal(organization.UseSso, result.UseSso);
+        Assert.Equal(organization.UseKeyConnector, result.UseKeyConnector);
+        Assert.Equal(organization.UseScim, result.UseScim);
+        Assert.Equal(organization.UseGroups, result.UseGroups);
+        Assert.Equal(organization.UseDirectory, result.UseDirectory);
+        Assert.Equal(organization.UseEvents, result.UseEvents);
+        Assert.Equal(organization.UseTotp, result.UseTotp);
+        Assert.Equal(organization.Use2fa, result.Use2fa);
+        Assert.Equal(organization.UseApi, result.UseApi);
+        Assert.Equal(organization.UseResetPassword, result.UseResetPassword);
+        Assert.Equal(organization.UseSecretsManager, result.UseSecretsManager);
+        Assert.Equal(organization.UsePasswordManager, result.UsePasswordManager);
+        Assert.Equal(organization.UsersGetPremium, result.UsersGetPremium);
+        Assert.Equal(organization.UseCustomPermissions, result.UseCustomPermissions);
+        Assert.Equal(organization.SelfHost, result.SelfHost);
+        Assert.Equal(organization.Seats, result.Seats);
+        Assert.Equal(organization.MaxCollections, result.MaxCollections);
+        Assert.Equal(organization.MaxStorageGb, result.MaxStorageGb);
+        Assert.Equal(organization.Identifier, result.Identifier);
+        Assert.Equal(orgUser1.Key, result.Key);
+        Assert.Equal(orgUser1.ResetPasswordKey, result.ResetPasswordKey);
+        Assert.Equal(organization.PublicKey, result.PublicKey);
+        Assert.Equal(organization.PrivateKey, result.PrivateKey);
+        Assert.Equal(orgUser1.Status, result.Status);
+        Assert.Equal(orgUser1.Type, result.Type);
+        Assert.Equal(organization.Enabled, result.Enabled);
+        Assert.Equal(organization.PlanType, result.PlanType);
+        Assert.Equal(orgUser1.Permissions, result.Permissions);
+        Assert.Equal(organization.SmSeats, result.SmSeats);
+        Assert.Equal(organization.SmServiceAccounts, result.SmServiceAccounts);
+        Assert.Equal(organization.LimitCollectionCreationDeletion, result.LimitCollectionCreationDeletion);
+        Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
+        Assert.Equal(organization.FlexibleCollections, result.FlexibleCollections);
+    }
 }

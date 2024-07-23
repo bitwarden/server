@@ -16,6 +16,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NoopRepos = Bit.Core.Repositories.Noop;
 
+#nullable enable
+
 namespace Bit.IntegrationTestCommon.Factories;
 
 public static class FactoryConstants
@@ -32,13 +34,15 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// <remarks>
     /// This will need to be set BEFORE using the <c>Server</c> property
     /// </remarks>
-    public SqliteConnection SqliteConnection { get; set; }
+    public SqliteConnection? SqliteConnection { get; set; }
 
     private readonly List<Action<IServiceCollection>> _configureTestServices = new();
+    private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
+
     private bool _handleSqliteDisposal { get; set; }
 
 
-    public void SubstitueService<TService>(Action<TService> mockService)
+    public void SubstituteService<TService>(Action<TService> mockService)
         where TService : class
     {
         _configureTestServices.Add(services =>
@@ -50,6 +54,50 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             var substitutedService = Substitute.For<TService>();
             mockService(substitutedService);
             services.Add(ServiceDescriptor.Singleton(typeof(TService), substitutedService));
+        });
+    }
+
+    /// <summary>
+    /// Add your own configuration provider to the application.
+    /// </summary>
+    /// <param name="configure">The action adding your own providers.</param>
+    /// <remarks>This needs to be ran BEFORE making any calls through the factory to take effect.</remarks>
+    /// <example>
+    ///   <code lang="C#">
+    ///   factory.UpdateConfiguration(builder =&gt;
+    ///   {
+    ///       builder.AddInMemoryCollection(new Dictionary&lt;string, string?&gt;
+    ///       {
+    ///           { "globalSettings:attachment:connectionString", null},
+    ///           { "globalSettings:events:connectionString", null},
+    ///       })
+    ///   })
+    ///   </code>
+    /// </example>
+    public void UpdateConfiguration(Action<IConfigurationBuilder> configure)
+    {
+        _configureAppConfiguration.Add(configure);
+    }
+
+    /// <summary>
+    /// Updates a single configuration entry for multiple entries at once use <see cref="UpdateConfiguration(Action{IConfigurationBuilder})"/>.
+    /// </summary>
+    /// <param name="key">The fully qualified name of the setting, using <c>:</c> as delimiter between sections.</param>
+    /// <param name="value">The value of the setting.</param>
+    /// <remarks>This needs to be ran BEFORE making any calls through the factory to take effect.</remarks>
+    /// <example>
+    ///   <code lang="C#">
+    ///   factory.UpdateConfiguration("globalSettings:attachment:connectionString", null);
+    ///   </code>
+    /// </example>
+    public void UpdateConfiguration(string key, string? value)
+    {
+        _configureAppConfiguration.Add(builder =>
+        {
+            builder.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { key, value },
+            });
         });
     }
 
@@ -72,7 +120,8 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 .AddJsonFile("appsettings.Development.json");
 
             c.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
-            c.AddInMemoryCollection(new Dictionary<string, string>
+
+            c.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
                 // DbContextOptions to use an in memory database
@@ -90,9 +139,20 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { "globalSettings:storage:connectionString", null},
 
                 // This will force it to use an ephemeral key for IdentityServer
-                { "globalSettings:developmentDirectory", null }
+                { "globalSettings:developmentDirectory", null },
+
+
+                // Email Verification
+                { "globalSettings:enableEmailVerification", "true" },
+                { "globalSettings:launchDarkly:flagValues:email-verification", "true" }
             });
         });
+
+        // Run configured actions after defaults to allow them to take precedence
+        foreach (var configureAppConfiguration in _configureAppConfiguration)
+        {
+            builder.ConfigureAppConfiguration(configureAppConfiguration);
+        }
 
         builder.ConfigureTestServices(services =>
         {
@@ -185,10 +245,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         return scope.ServiceProvider.GetRequiredService<DatabaseContext>();
     }
 
-    public TS GetService<TS>()
+    public TService GetService<TService>()
+        where TService : notnull
     {
         var scope = Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<TS>();
+        return scope.ServiceProvider.GetRequiredService<TService>();
     }
 
     protected override void Dispose(bool disposing)
@@ -196,17 +257,20 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         base.Dispose(disposing);
         if (_handleSqliteDisposal)
         {
-            SqliteConnection.Dispose();
+            SqliteConnection!.Dispose();
         }
     }
 
-    private static void MigrateDbContext<TContext>(IServiceCollection serviceCollection) where TContext : DbContext
+    private void MigrateDbContext<TContext>(IServiceCollection serviceCollection) where TContext : DbContext
     {
         var serviceProvider = serviceCollection.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
         var services = scope.ServiceProvider;
-        var context = services.GetService<TContext>();
-        context.Database.EnsureDeleted();
+        var context = services.GetRequiredService<TContext>();
+        if (_handleSqliteDisposal)
+        {
+            context.Database.EnsureDeleted();
+        }
         context.Database.EnsureCreated();
     }
 }

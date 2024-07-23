@@ -55,25 +55,22 @@ public class CollectionService : ICollectionService
         var groupsList = groups?.ToList();
         var usersList = users?.ToList();
 
-        if (org.FlexibleCollections)
+        // Cannot use Manage with ReadOnly/HidePasswords permissions
+        var invalidAssociations = groupsList?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+        if (invalidAssociations?.Any() ?? false)
         {
-            // Cannot use Manage with ReadOnly/HidePasswords permissions
-            var invalidAssociations = groupsList?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-            if (invalidAssociations?.Any() ?? false)
-            {
-                throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-            }
+            throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+        }
 
-            // If using Flexible Collections V1 - a collection should always have someone with Can Manage permissions
-            if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        // If using Flexible Collections V1 - a collection should always have someone with Can Manage permissions
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        {
+            var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
+            var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
+            if (!groupHasManageAccess && !userHasManageAccess && !org.AllowAdminAccessToAllCollectionItems)
             {
-                var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
-                var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
-                if (!groupHasManageAccess && !userHasManageAccess && !org.AllowAdminAccessToAllCollectionItems)
-                {
-                    throw new BadRequestException(
-                        "At least one member or group must have can manage permission.");
-                }
+                throw new BadRequestException(
+                    "At least one member or group must have can manage permission.");
             }
         }
 
@@ -114,7 +111,6 @@ public class CollectionService : ICollectionService
     public async Task<IEnumerable<Collection>> GetOrganizationCollectionsAsync(Guid organizationId)
     {
         if (
-            !await _currentContext.ViewAssignedCollections(organizationId) &&
             !await _currentContext.ViewAllCollections(organizationId) &&
             !await _currentContext.ManageUsers(organizationId) &&
             !await _currentContext.ManageGroups(organizationId) &&

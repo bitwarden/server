@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -21,11 +22,11 @@ namespace Bit.Api.Test.Billing.Controllers;
 public class OrganizationSponsorshipsControllerTests
 {
     public static IEnumerable<object[]> EnterprisePlanTypes =>
-        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product == ProductType.Enterprise).Select(p => new object[] { p });
+        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).ProductTier == ProductTierType.Enterprise).Select(p => new object[] { p });
     public static IEnumerable<object[]> NonEnterprisePlanTypes =>
-        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product != ProductType.Enterprise).Select(p => new object[] { p });
+        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).ProductTier != ProductTierType.Enterprise).Select(p => new object[] { p });
     public static IEnumerable<object[]> NonFamiliesPlanTypes =>
-        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product != ProductType.Families).Select(p => new object[] { p });
+        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).ProductTier != ProductTierType.Families).Select(p => new object[] { p });
 
     public static IEnumerable<object[]> NonConfirmedOrganizationUsersStatuses =>
         Enum.GetValues<OrganizationUserStatusType>()

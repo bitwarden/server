@@ -483,7 +483,7 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Email:
             case TwoFactorProviderType.YubiKey:
-                if (!(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
+                if (!await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return null;
                 }
@@ -495,15 +495,9 @@ public abstract class BaseRequestValidator<T> where T : class
                     var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = token
+                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
                     };
 
-                    // DUO SDK v4 Update: Duo-Redirect
-                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                    {
-                        // Generate AuthUrl from DUO SDK v4 token provider
-                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
-                    }
                     return duoResponse;
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)
@@ -517,7 +511,9 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else if (type == TwoFactorProviderType.Email)
                 {
-                    return new Dictionary<string, object> { ["Email"] = token };
+                    var twoFactorEmail = (string)provider.MetaData["Email"];
+                    var redactedEmail = CoreHelpers.RedactEmailAddress(twoFactorEmail);
+                    return new Dictionary<string, object> { ["Email"] = redactedEmail };
                 }
                 else if (type == TwoFactorProviderType.YubiKey)
                 {
@@ -531,14 +527,9 @@ public abstract class BaseRequestValidator<T> where T : class
                     var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
+                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
                     };
-                    // DUO SDK v4 Update: DUO-Redirect
-                    if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                    {
-                        // Generate AuthUrl from DUO SDK v4 token provider
-                        duoResponse.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
-                    }
+
                     return duoResponse;
                 }
                 return null;
