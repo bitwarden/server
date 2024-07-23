@@ -34,7 +34,7 @@ public class AccountsController(
             Type = ReferenceEventType.SignupEmailSubmit,
             ClientId = currentContext.ClientId,
             ClientVersion = currentContext.ClientVersion,
-            Source = ReferenceEventSource.RegistrationStart
+            Source = ReferenceEventSource.Registration
         };
         await referenceEventService.RaiseEventAsync(refEvent);
 
