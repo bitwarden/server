@@ -256,7 +256,19 @@ public class ReferenceEvent
     public string? PlanUpgradePath { get; set; }
 
     /// <summary>
-    /// Used for the sign up event to determine if the user has opted in to marketing emails.
+    /// Used for the <see cref="ReferenceEventType.Signup"/> event to determine if the user has opted in to marketing emails.
     /// </summary>
     public bool? ReceiveMarketingEmails { get; set; }
+
+    /// <summary>
+    /// Used for the <see cref="ReferenceEventType.SignupEmailClicked"/> event to indicate if the user
+    /// landed on the registration finish screen with a valid or invalid email verification token.
+    /// </summary>
+    public bool? EmailVerificationTokenValid { get; set; }
+
+    /// <summary>
+    /// Used for the <see cref="ReferenceEventType.SignupEmailClicked"/> event to indicate if the user
+    /// landed on the registration finish screen after re-clicking an already used link.
+    /// </summary>
+    public bool? UserAlreadyExists { get; set; }
 }
