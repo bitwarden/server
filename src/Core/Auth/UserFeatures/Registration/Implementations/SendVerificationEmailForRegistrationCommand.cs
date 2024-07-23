@@ -20,17 +20,21 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
     private readonly GlobalSettings _globalSettings;
     private readonly IMailService _mailService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _tokenDataFactory;
+    private readonly IFeatureService _featureService;
 
     public SendVerificationEmailForRegistrationCommand(
         IUserRepository userRepository,
         GlobalSettings globalSettings,
         IMailService mailService,
-        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory,
+        IFeatureService featureService)
     {
         _userRepository = userRepository;
         _globalSettings = globalSettings;
         _mailService = mailService;
         _tokenDataFactory = tokenDataFactory;
+        _featureService = featureService;
+
     }
 
     public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails)
@@ -44,15 +48,23 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         var user = await _userRepository.GetByEmailAsync(email);
         var userExists = user != null;
 
+        // Delays enabled by default; flag must be enabled to remove the delays.
+        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
+
         if (!_globalSettings.EnableEmailVerification)
         {
 
             if (userExists)
             {
-                // Add delay to prevent timing attacks
-                // Note: sub 140 ms feels responsive to users so we are using 130 ms as it should be long enough
-                // to prevent timing attacks but not too long to be noticeable to the user.
-                await Task.Delay(130);
+
+                if (delaysEnabled)
+                {
+                    // Add delay to prevent timing attacks
+                    // Note: sub 140 ms feels responsive to users so we are using a random value between 100 - 130 ms
+                    // as it should be long enough to prevent timing attacks but not too long to be noticeable to the user.
+                    await Task.Delay(Random.Shared.Next(100, 130));
+                }
+
                 throw new BadRequestException($"Email {email} is already taken");
             }
 
@@ -70,8 +82,11 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             await _mailService.SendRegistrationVerificationEmailAsync(email, token);
         }
 
-        // Add delay to prevent timing attacks
-        await Task.Delay(130);
+        if (delaysEnabled)
+        {
+            // Add random delay between 100ms-130ms to prevent timing attacks
+            await Task.Delay(Random.Shared.Next(100, 130));
+        }
         // User exists but we will return a 200 regardless of whether the email was sent or not; so return null
         return null;
     }

@@ -21,9 +21,9 @@ public class OrganizationTwoFactorDuoResponseModelTests
         // Assert if v4 data Ikey and Skey are set to clientId and clientSecret
         Assert.NotNull(model);
         Assert.Equal("clientId", model.ClientId);
-        Assert.Equal("clientSecret", model.ClientSecret);
+        Assert.Equal("secret************", model.ClientSecret);
         Assert.Equal("clientId", model.IntegrationKey);
-        Assert.Equal("clientSecret", model.SecretKey);
+        Assert.Equal("secret************", model.SecretKey);
     }
 
     [Theory]
@@ -57,9 +57,9 @@ public class OrganizationTwoFactorDuoResponseModelTests
         /// Assert Even if both versions are present priority is given to v4 data
         Assert.NotNull(model);
         Assert.Equal("clientId", model.ClientId);
-        Assert.Equal("clientSecret", model.ClientSecret);
+        Assert.Equal("secret************", model.ClientSecret);
         Assert.Equal("clientId", model.IntegrationKey);
-        Assert.Equal("clientSecret", model.SecretKey);
+        Assert.Equal("secret************", model.SecretKey);
     }
 
     [Theory]
@@ -92,12 +92,14 @@ public class OrganizationTwoFactorDuoResponseModelTests
 
     private string GetTwoFactorOrganizationDuoProvidersJson()
     {
-        return "{\"6\":{\"Enabled\":true,\"MetaData\":{\"SKey\":\"SKey\",\"IKey\":\"IKey\",\"ClientSecret\":\"clientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
+        return
+            "{\"6\":{\"Enabled\":true,\"MetaData\":{\"SKey\":\"SKey\",\"IKey\":\"IKey\",\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
     }
 
     private string GetTwoFactorOrganizationDuoV4ProvidersJson()
     {
-        return "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"clientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
+        return
+            "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
     }
 
     private string GetTwoFactorOrganizationDuoV2ProvidersJson()

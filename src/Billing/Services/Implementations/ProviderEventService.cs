@@ -67,19 +67,20 @@ public class ProviderEventService(
 
                     var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
 
-                    var discountedEnterpriseSeatPrice = enterprisePlan.PasswordManager.SeatPrice * discountedPercentage;
+                    var discountedEnterpriseSeatPrice = enterprisePlan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
 
-                    var discountedTeamsSeatPrice = teamsPlan.PasswordManager.SeatPrice * discountedPercentage;
+                    var discountedTeamsSeatPrice = teamsPlan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
 
                     var invoiceItems = clients.Select(client => new ProviderInvoiceItem
                     {
                         ProviderId = parsedProviderId,
                         InvoiceId = invoice.Id,
                         InvoiceNumber = invoice.Number,
+                        ClientId = client.OrganizationId,
                         ClientName = client.OrganizationName,
                         PlanName = client.Plan,
                         AssignedSeats = client.Seats ?? 0,
-                        UsedSeats = client.UserCount,
+                        UsedSeats = client.OccupiedSeats ?? 0,
                         Total = client.Plan == enterprisePlan.Name
                             ? (client.Seats ?? 0) * discountedEnterpriseSeatPrice
                             : (client.Seats ?? 0) * discountedTeamsSeatPrice

@@ -50,14 +50,11 @@
     <dt class="col-sm-4 col-lg-3">Collections</dt>
     <dd class="col-sm-8 col-lg-9">@Model.CollectionCount</dd>
 
-    <dt class="col-sm-4 col-lg-3">Collection management enhancements</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.Organization.FlexibleCollections ? "On" : "Off")</dd>
-
     <dt class="col-sm-4 col-lg-3">Administrators manage all collections</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.GetCollectionManagementSetting(Model.Organization.AllowAdminAccessToAllCollectionItems))</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.Organization.AllowAdminAccessToAllCollectionItems ? "On" : "Off")</dd>
 
     <dt class="col-sm-4 col-lg-3">Limit collection creation to administrators</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.GetCollectionManagementSetting(Model.Organization.LimitCollectionCreationDeletion))</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionCreationDeletion ? "On" : "Off")</dd>
 </dl>
 
 <h2>Secrets Manager</h2>

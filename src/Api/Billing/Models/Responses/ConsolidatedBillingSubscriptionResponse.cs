@@ -8,11 +8,11 @@ public record ConsolidatedBillingSubscriptionResponse(
     DateTime CurrentPeriodEndDate,
     decimal? DiscountPercentage,
     string CollectionMethod,
-    DateTime? UnpaidPeriodEndDate,
-    int? GracePeriod,
-    DateTime? SuspensionDate,
+    IEnumerable<ProviderPlanResponse> Plans,
+    long AccountCredit,
+    TaxInformationDTO TaxInformation,
     DateTime? CancelAt,
-    IEnumerable<ProviderPlanResponse> Plans)
+    SubscriptionSuspensionDTO Suspension)
 {
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
@@ -20,13 +20,13 @@ public record ConsolidatedBillingSubscriptionResponse(
     public static ConsolidatedBillingSubscriptionResponse From(
         ConsolidatedBillingSubscriptionDTO consolidatedBillingSubscription)
     {
-        var (providerPlans, subscription, suspensionDate, unpaidPeriodEndDate) = consolidatedBillingSubscription;
+        var (providerPlans, subscription, taxInformation, suspension) = consolidatedBillingSubscription;
 
-        var providerPlansDTO = providerPlans
+        var providerPlanResponses = providerPlans
             .Select(providerPlan =>
             {
                 var plan = StaticStore.GetPlan(providerPlan.PlanType);
-                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.SeatPrice;
+                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
                 return new ProviderPlanResponse(
                     plan.Name,
@@ -36,17 +36,17 @@ public record ConsolidatedBillingSubscriptionResponse(
                     cost,
                     cadence);
             });
-        var gracePeriod = subscription.CollectionMethod == "charge_automatically" ? 14 : 30;
+
         return new ConsolidatedBillingSubscriptionResponse(
             subscription.Status,
             subscription.CurrentPeriodEnd,
             subscription.Customer?.Discount?.Coupon?.PercentOff,
             subscription.CollectionMethod,
-            unpaidPeriodEndDate,
-            gracePeriod,
-            suspensionDate,
+            providerPlanResponses,
+            subscription.Customer?.Balance ?? 0,
+            taxInformation,
             subscription.CancelAt,
-            providerPlansDTO);
+            suspension);
     }
 }
 

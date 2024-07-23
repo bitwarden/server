@@ -27,7 +27,9 @@ if ($all -or $postgres -or $mysql -or $sqlite) {
 
 if ($all -or $mssql) {
   function Get-UserSecrets {
-    return dotnet user-secrets list --json --project ../src/Api | ConvertFrom-Json
+    # The dotnet cli command sometimes adds //BEGIN and //END comments to the output, Where-Object removes comments
+    # to ensure a valid json
+    return dotnet user-secrets list --json --project ../src/Api | Where-Object { $_ -notmatch "^//" } | ConvertFrom-Json
   }
 
   if ($selfhost) {

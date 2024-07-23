@@ -135,7 +135,7 @@ public class GroupsController : Controller
                 .Succeeded;
             if (!authorized)
             {
-                throw new NotFoundException("You are not authorized to grant access to these collections.");
+                throw new NotFoundException();
             }
         }
 
@@ -175,13 +175,20 @@ public class GroupsController : Controller
     /// </summary>
     private async Task<GroupResponseModel> Put_vNext(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
-        var (group, currentAccess) = await _groupRepository.GetByIdWithCollectionsAsync(id);
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        if (!await _currentContext.ManageGroups(orgId))
         {
             throw new NotFoundException();
         }
 
-        // Check whether the user is permitted to add themselves to the group
+        var (group, currentAccess) = await _groupRepository.GetByIdWithCollectionsAsync(id);
+        if (group == null || group.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
+
+        // Authorization check:
+        // If admins are not allowed access to all collections, you cannot add yourself to a group.
+        // No error is thrown for this, we just don't update groups.
         var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
         if (!orgAbility.AllowAdminAccessToAllCollectionItems)
         {
@@ -195,9 +202,23 @@ public class GroupsController : Controller
             }
         }
 
+        // Authorization check:
+        // You must have authorization to ModifyUserAccess for all collections being saved
+        var postedCollections = await _collectionRepository
+            .GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
+        foreach (var collection in postedCollections)
+        {
+            if (!(await _authorizationService.AuthorizeAsync(User, collection,
+                    BulkCollectionOperations.ModifyGroupAccess))
+                .Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
+
         // The client only sends collections that the saving user has permissions to edit.
-        // On the server side, we need to (1) confirm this and (2) concat these with the collections that the user
-        // can't edit before saving to the database.
+        // We need to combine these with collections that the user doesn't have permissions for, so that we don't
+        // accidentally overwrite those
         var currentCollections = await _collectionRepository
             .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
 
@@ -209,11 +230,6 @@ public class GroupsController : Controller
             {
                 readonlyCollectionIds.Add(collection.Id);
             }
-        }
-
-        if (model.Collections.Any(c => readonlyCollectionIds.Contains(c.Id)))
-        {
-            throw new BadRequestException("You must have Can Manage permissions to edit a collection's membership");
         }
 
         var editedCollectionAccess = model.Collections
