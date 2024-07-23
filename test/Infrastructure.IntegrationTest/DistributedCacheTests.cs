@@ -1,5 +1,6 @@
 ﻿using Bit.Infrastructure.EntityFramework;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest;

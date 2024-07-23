@@ -24,6 +24,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using CsvHelper;
 using NSubstitute;
 using Stripe;
 using Xunit;
