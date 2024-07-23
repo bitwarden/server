@@ -107,6 +107,7 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
 
 
 CREATE OR ALTER PROCEDURE [dbo].[Group_UpdateWithCollections]
