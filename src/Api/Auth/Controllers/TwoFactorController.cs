@@ -93,7 +93,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator(
         [FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         var response = new TwoFactorAuthenticatorResponseModel(user);
         return response;
     }
@@ -121,7 +121,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-yubikey")]
     public async Task<TwoFactorYubiKeyResponseModel> GetYubiKey([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, true, true);
         var response = new TwoFactorYubiKeyResponseModel(user);
         return response;
     }
@@ -147,7 +147,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-duo")]
     public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, true, true);
         var response = new TwoFactorDuoResponseModel(user);
         return response;
     }
@@ -187,7 +187,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorDuoResponseModel> GetOrganizationDuo(string id,
         [FromBody] SecretVerificationRequestModel model)
     {
-        await CheckAsync(model, false);
+        await CheckAsync(model, false, true);
 
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -244,7 +244,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-webauthn")]
     public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         var response = new TwoFactorWebAuthnResponseModel(user);
         return response;
     }
@@ -253,7 +253,7 @@ public class TwoFactorController : Controller
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         var reg = await _userService.StartWebAuthnRegistrationAsync(user);
         return reg;
     }
@@ -288,7 +288,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-email")]
     public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         var response = new TwoFactorEmailResponseModel(user);
         return response;
     }
@@ -296,7 +296,7 @@ public class TwoFactorController : Controller
     [HttpPost("send-email")]
     public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         model.ToUser(user);
         await _userService.SendTwoFactorEmailAsync(user);
     }
@@ -433,7 +433,8 @@ public class TwoFactorController : Controller
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
-    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium)
+    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium,
+        bool skipVerification = false)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -441,7 +442,7 @@ public class TwoFactorController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (!await _userService.VerifySecretAsync(user, model.Secret))
+        if (!await _userService.VerifySecretAsync(user, model.Secret, skipVerification))
         {
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");
