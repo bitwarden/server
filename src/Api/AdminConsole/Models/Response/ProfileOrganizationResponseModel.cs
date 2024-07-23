@@ -64,7 +64,6 @@ public class ProfileOrganizationResponseModel : ResponseModel
         AccessSecretsManager = organization.AccessSecretsManager;
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        FlexibleCollections = organization.FlexibleCollections;
 
         if (organization.SsoConfig != null)
         {
@@ -73,38 +72,35 @@ public class ProfileOrganizationResponseModel : ResponseModel
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
         }
 
-        if (FlexibleCollections)
+        // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+        if (Type == OrganizationUserType.Custom && Permissions is not null)
         {
-            // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-            if (Type == OrganizationUserType.Custom && Permissions is not null)
-            {
-                if ((Permissions.EditAssignedCollections || Permissions.DeleteAssignedCollections) &&
-                    Permissions is
-                    {
-                        AccessEventLogs: false,
-                        AccessImportExport: false,
-                        AccessReports: false,
-                        CreateNewCollections: false,
-                        EditAnyCollection: false,
-                        DeleteAnyCollection: false,
-                        ManageGroups: false,
-                        ManagePolicies: false,
-                        ManageSso: false,
-                        ManageUsers: false,
-                        ManageResetPassword: false,
-                        ManageScim: false
-                    })
+            if ((Permissions.EditAssignedCollections || Permissions.DeleteAssignedCollections) &&
+                Permissions is
                 {
-                    organization.Type = OrganizationUserType.User;
-                }
-            }
-
-            // Set 'Edit/Delete Assigned Collections' custom permissions to false
-            if (Permissions is not null)
+                    AccessEventLogs: false,
+                    AccessImportExport: false,
+                    AccessReports: false,
+                    CreateNewCollections: false,
+                    EditAnyCollection: false,
+                    DeleteAnyCollection: false,
+                    ManageGroups: false,
+                    ManagePolicies: false,
+                    ManageSso: false,
+                    ManageUsers: false,
+                    ManageResetPassword: false,
+                    ManageScim: false
+                })
             {
-                Permissions.EditAssignedCollections = false;
-                Permissions.DeleteAssignedCollections = false;
+                organization.Type = OrganizationUserType.User;
             }
+        }
+
+        // Set 'Edit/Delete Assigned Collections' custom permissions to false
+        if (Permissions is not null)
+        {
+            Permissions.EditAssignedCollections = false;
+            Permissions.DeleteAssignedCollections = false;
         }
     }
 
@@ -157,5 +153,4 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool AccessSecretsManager { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
-    public bool FlexibleCollections { get; set; }
 }
