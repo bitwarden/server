@@ -238,19 +238,22 @@ public class DevicesController : Controller
 
     [RequireFeature(FeatureFlagKeys.DeviceTrustLogging)]
     [HttpPost("lost-trust")]
-    public async Task PostLostTrust()
+    public void PostLostTrust()
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-
-        if (user == null)
+        var userId = _currentContext.UserId.GetValueOrDefault();
+        if (userId == default)
         {
             throw new UnauthorizedAccessException();
         }
 
-        var device = _currentContext.DeviceIdentifier;
+        var deviceId = _currentContext.DeviceIdentifier;
+        if (deviceId == null)
+        {
+            throw new BadRequestException("Please provide a device identifier");
+        }
 
-        _logger.LogError("User {id} has a device key, but didn't receive decryption keys for device {device}", user.Id,
-            device);
+        _logger.LogError("User {id} has a device key, but didn't receive decryption keys for device {device}", userId,
+            deviceId);
     }
 
 }
