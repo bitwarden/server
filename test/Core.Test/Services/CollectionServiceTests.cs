@@ -196,7 +196,7 @@ public class CollectionServiceTest
         Assert.Equal(collection, result.First());
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -206,6 +206,6 @@ public class CollectionServiceTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId));
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
     }
 }
