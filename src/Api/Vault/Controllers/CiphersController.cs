@@ -46,9 +46,6 @@ public class CiphersController : Controller
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
 
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
-
     public CiphersController(
         ICipherRepository cipherRepository,
         ICollectionCipherRepository collectionCipherRepository,
@@ -126,7 +123,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var hasOrgs = _currentContext.Organizations?.Any() ?? false;
         // TODO: Use hasOrgs proper for cipher listing here?
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: true || hasOrgs);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true || hasOrgs);
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
         if (hasOrgs)
         {
@@ -550,7 +547,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var editableCollections = (await _collectionRepository.GetManyByUserIdAsync(userId, true))
+        var editableCollections = (await _collectionRepository.GetManyByUserIdAsync(userId))
             .Where(c => c.OrganizationId == organizationId && !c.ReadOnly)
             .ToDictionary(c => c.Id);
 
@@ -922,7 +919,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: false);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
         var shareCiphers = new List<(Cipher, DateTime?)>();

@@ -120,16 +120,12 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
+    public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Collection_ReadByUserId_V2]"
-            : $"[{Schema}].[Collection_ReadByUserId]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionDetails>(
-                sprocName,
+                $"[{Schema}].[Collection_ReadByUserId]",
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
