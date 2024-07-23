@@ -1318,7 +1318,10 @@ public class OrganizationService : IOrganizationService
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, IUserService userService)
     {
-        var result = await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
+        var result = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
+            ? await ConfirmUsersAsync_vNext(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
+                confirmingUserId, userService)
+            : await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
             confirmingUserId, userService);
 
         if (!result.Any())
@@ -1382,6 +1385,75 @@ public class OrganizationService : IOrganizationService
                 }
 
                 await CheckPolicies(organizationId, user, orgUsers, userService);
+                orgUser.Status = OrganizationUserStatusType.Confirmed;
+                orgUser.Key = keys[orgUser.Id];
+                orgUser.Email = null;
+
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+                await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
+                succeededUsers.Add(orgUser);
+                result.Add(Tuple.Create(orgUser, ""));
+            }
+            catch (BadRequestException e)
+            {
+                result.Add(Tuple.Create(orgUser, e.Message));
+            }
+        }
+
+        await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
+
+        return result;
+    }
+
+    public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync_vNext(Guid organizationId, Dictionary<Guid, string> keys,
+        Guid confirmingUserId, IUserService userService)
+    {
+        var selectedOrganizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
+        var validSelectedOrganizationUsers = selectedOrganizationUsers
+            .Where(u => u.Status == OrganizationUserStatusType.Accepted && u.OrganizationId == organizationId && u.UserId != null)
+            .ToList();
+
+        if (!validSelectedOrganizationUsers.Any())
+        {
+            return new List<Tuple<OrganizationUser, string>>();
+        }
+
+        var validSelectedUserIds = validSelectedOrganizationUsers.Select(u => u.UserId.Value).ToList();
+
+        var organization = await GetOrgById(organizationId);
+        var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
+        var users = await _userRepository.GetManyDetailsAsync(validSelectedUserIds);
+
+        var keyedFilteredUsers = validSelectedOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
+        var keyedOrganizationUsers = allUsersOrgs.GroupBy(u => u.UserId.Value)
+            .ToDictionary(u => u.Key, u => u.ToList());
+
+        var succeededUsers = new List<OrganizationUser>();
+        var result = new List<Tuple<OrganizationUser, string>>();
+
+        foreach (var user in users)
+        {
+            if (!keyedFilteredUsers.ContainsKey(user.Id))
+            {
+                continue;
+            }
+            var orgUser = keyedFilteredUsers[user.Id];
+            var orgUsers = keyedOrganizationUsers.GetValueOrDefault(user.Id, new List<OrganizationUser>());
+            try
+            {
+                if (organization.PlanType == PlanType.Free && (orgUser.Type == OrganizationUserType.Admin
+                    || orgUser.Type == OrganizationUserType.Owner))
+                {
+                    // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
+                    var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
+                    if (adminCount > 0)
+                    {
+                        throw new BadRequestException("User can only be an admin of one free organization.");
+                    }
+                }
+
+                await CheckPolicies_vNext(organizationId, user, orgUsers, userService);
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
@@ -1492,6 +1564,32 @@ public class OrganizationService : IOrganizationService
         // Enforce Two Factor Authentication Policy for this organization
         var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)).Any(p => p.OrganizationId == organizationId);
         if (orgRequiresTwoFactor && !await userService.TwoFactorIsEnabledAsync(user))
+        {
+            throw new BadRequestException("User does not have two-step login enabled.");
+        }
+
+        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
+        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
+        var otherSingleOrgPolicies =
+            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
+        // Enforce Single Organization Policy for this organization
+        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
+        {
+            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
+        }
+        // Enforce Single Organization Policy of other organizations user is a member of
+        if (otherSingleOrgPolicies.Any())
+        {
+            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+        }
+    }
+
+    private async Task CheckPolicies_vNext(Guid organizationId, UserDetails user,
+        ICollection<OrganizationUser> userOrgs, IUserService userService)
+    {
+        // Enforce Two Factor Authentication Policy for this organization
+        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)).Any(p => p.OrganizationId == organizationId);
+        if (orgRequiresTwoFactor && !await userService.TwoFactorIsEnabledAsync(user, user.HasPremiumAccess))
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }

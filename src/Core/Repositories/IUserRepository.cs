@@ -18,6 +18,7 @@ public interface IUserRepository : IRepository<User, Guid>
     Task UpdateStorageAsync(Guid id);
     Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate);
     Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids);
+    Task<IEnumerable<UserDetails>> GetManyDetailsAsync(IEnumerable<Guid> ids);
     /// <summary>
     /// Sets a new user key and updates all encrypted data.
     /// <para>Warning: Any user key encrypted data not included will be lost.</para>

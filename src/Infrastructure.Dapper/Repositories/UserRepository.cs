@@ -272,6 +272,20 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public async Task<IEnumerable<UserDetails>> GetManyDetailsAsync(IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<UserDetails>(
+                $"[{Schema}].[UserDetails_ReadByIds]",
+                new { Ids = ids.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
     {
         if (user == null)
