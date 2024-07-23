@@ -2406,7 +2406,14 @@ public class OrganizationService : IOrganizationService
                     throw new BadRequestException("Only owners can restore other owners.");
                 }
 
-                await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
+                if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+                {
+                    await CheckPoliciesBeforeRestoreAsync_vNext(organizationUser, userService);
+                }
+                else
+                {
+                    await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
+                }
 
                 var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
