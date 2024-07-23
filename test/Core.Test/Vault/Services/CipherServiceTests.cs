@@ -35,7 +35,6 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider)
     {
         organization.MaxCollections = null;
-        organization.FlexibleCollections = true;
         importingOrganizationUser.OrganizationId = organization.Id;
 
         foreach (var collection in collections)
