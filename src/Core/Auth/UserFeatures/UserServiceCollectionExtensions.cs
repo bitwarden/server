@@ -37,6 +37,7 @@ public static class UserServiceCollectionExtensions
     private static void AddUserRegistrationCommands(this IServiceCollection services)
     {
         services.AddScoped<ISendVerificationEmailForRegistrationCommand, SendVerificationEmailForRegistrationCommand>();
+        services.AddScoped<IRegisterUserCommand, RegisterUserCommand>();
     }
 
     private static void AddWebAuthnLoginCommands(this IServiceCollection services)

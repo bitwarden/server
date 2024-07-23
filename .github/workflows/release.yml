@@ -27,7 +27,7 @@ jobs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
     steps:
       - name: Branch check
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        if: ${{ inputs.release_type != 'Dry Run' }}
         run: |
           if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix-rc" ]]; then
             echo "==================================="
@@ -37,13 +37,13 @@ jobs:
           fi
 
       - name: Check out repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Check release version
         id: version
         uses: bitwarden/gh-actions/release-version-check@main
         with:
-          release-type: ${{ github.event.inputs.release_type }}
+          release-type: ${{ inputs.release_type }}
           project-type: dotnet
           file: Directory.Build.props
 
@@ -52,125 +52,6 @@ jobs:
         run: |
           BRANCH_NAME=$(basename ${{ github.ref }})
           echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-22.04
-    needs: setup
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Admin
-          - name: Api
-          - name: Billing
-          - name: Events
-          - name: Identity
-          - name: Sso
-    steps:
-      - name: Setup
-        id: setup
-        run: |
-          NAME_LOWER=$(echo "${{ matrix.name }}" | awk '{print tolower($0)}')
-          echo "Matrix name: ${{ matrix.name }}"
-          echo "NAME_LOWER: $NAME_LOWER"
-          echo "name_lower=$NAME_LOWER" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub deployment for ${{ matrix.name }}
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: chrnorm/deployment-action@d42cde7132fcec920de534fffc3be83794335c00 # v2.0.5
-        id: deployment
-        with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          initial-status: "in_progress"
-          environment: "Production Cloud"
-          task: "deploy"
-          description: "Deploy from ${{ needs.setup.outputs.branch-name }} branch"
-
-      - name: Download latest release ${{ matrix.name }} asset
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@main
-        with:
-          workflow: build.yml
-          workflow_conclusion: success
-          branch: ${{ needs.setup.outputs.branch-name }}
-          artifacts: ${{ matrix.name }}.zip
-
-      - name: Dry run - Download latest release ${{ matrix.name }} asset
-        if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@main
-        with:
-          workflow: build.yml
-          workflow_conclusion: success
-          branch: main
-          artifacts: ${{ matrix.name }}.zip
-
-      - name: Log in to Azure - CI subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        env:
-          VAULT_NAME: "bitwarden-ci"
-        run: |
-          webapp_name=$(
-            az keyvault secret show --vault-name $VAULT_NAME \
-              --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name \
-              --query value --output tsv
-          )
-          publish_profile=$(
-            az keyvault secret show --vault-name $VAULT_NAME \
-              --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-publish-profile \
-              --query value --output tsv
-          )
-          echo "::add-mask::$webapp_name"
-          echo "webapp-name=$webapp_name" >> $GITHUB_OUTPUT
-          echo "::add-mask::$publish_profile"
-          echo "publish-profile=$publish_profile" >> $GITHUB_OUTPUT
-
-      - name: Log in to Azure
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Deploy app
-        uses: azure/webapps-deploy@4bca689e4c7129e55923ea9c45401b22dc6aa96f # v2.2.11
-        with:
-          app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
-          publish-profile: ${{ steps.retrieve-secrets.outputs.publish-profile }}
-          package: ./${{ matrix.name }}.zip
-          slot-name: "staging"
-
-      - name: Start staging slot
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        env:
-          SERVICE: ${{ matrix.name }}
-          WEBAPP_NAME: ${{ steps.retrieve-secrets.outputs.webapp-name }}
-        run: |
-          if [[ "$SERVICE" = "Api" ]] || [[ "$SERVICE" = "Identity" ]]; then
-            RESOURCE_GROUP=bitwardenappservices
-          else
-            RESOURCE_GROUP=bitwarden
-          fi
-          az webapp start -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
-
-      - name: Update ${{ matrix.name }} deployment status to success
-        if: ${{ github.event.inputs.release_type != 'Dry Run' && success() }}
-        uses: chrnorm/deployment-status@2afb7d27101260f4a764219439564d954d10b5b0 # v2.0.1
-        with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          state: "success"
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
-
-      - name: Update ${{ matrix.name }} deployment status to failure
-        if: ${{ github.event.inputs.release_type != 'Dry Run' && failure() }}
-        uses: chrnorm/deployment-status@2afb7d27101260f4a764219439564d954d10b5b0 # v2.0.1
-        with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          state: "failure"
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
   release-docker:
     name: Build Docker images
@@ -202,7 +83,7 @@ jobs:
     steps:
       - name: Print environment
         env:
-          RELEASE_OPTION: ${{ github.event.inputs.release_type }}
+          RELEASE_OPTION: ${{ inputs.release_type }}
         run: |
           whoami
           docker --version
@@ -211,7 +92,7 @@ jobs:
           echo "Github Release Option: $RELEASE_OPTION"
 
       - name: Check out repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Set up project name
         id: setup
@@ -223,7 +104,7 @@ jobs:
 
       ########## ACR PROD ##########
       - name: Log in to Azure - production subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
+        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
@@ -234,7 +115,7 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
             docker pull $_AZ_REGISTRY/$PROJECT_NAME:latest
           else
             docker pull $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME
@@ -244,7 +125,7 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
             docker tag $_AZ_REGISTRY/$PROJECT_NAME:latest $_AZ_REGISTRY/$PROJECT_NAME:dryrun
           else
             docker tag $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
@@ -255,7 +136,7 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
             docker push $_AZ_REGISTRY/$PROJECT_NAME:dryrun
           else
             docker push $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
@@ -273,7 +154,7 @@ jobs:
       - deploy
     steps:
       - name: Download latest release Docker stubs
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        if: ${{ inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
@@ -286,7 +167,7 @@ jobs:
             swagger.json"
 
       - name: Dry Run - Download latest release Docker stubs
-        if: ${{ github.event.inputs.release_type == 'Dry Run' }}
+        if: ${{ inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
@@ -299,8 +180,8 @@ jobs:
             swagger.json"
 
       - name: Create release
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: ncipollo/release-action@6c75be85e571768fa31b40abf38de58ba0397db5 # v1.13.0
+        if: ${{ inputs.release_type != 'Dry Run' }}
+        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5 # v1.14.0
         with:
           artifacts: "docker-stub-US.zip,
             docker-stub-US-sha256.txt,
