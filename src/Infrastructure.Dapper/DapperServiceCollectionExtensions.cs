@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
@@ -52,6 +53,8 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
+        services
+            .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
 
         if (selfHosted)
         {
