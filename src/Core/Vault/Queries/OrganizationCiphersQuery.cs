@@ -32,7 +32,7 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: true, withOrganizations: true);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true);
         var orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId).ToList();
         var orgCipherIds = orgCiphers.Select(c => c.Id);
 

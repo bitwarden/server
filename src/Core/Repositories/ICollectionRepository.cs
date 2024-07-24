@@ -29,7 +29,7 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// Return all collections a user has access to across all of the organization they're a member of. Includes permission
     /// details for each collection.
     /// </summary>
-    Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections);
+    Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);
 
     /// <summary>
     /// Returns all collections for an organization, including permission info for the specified user.
