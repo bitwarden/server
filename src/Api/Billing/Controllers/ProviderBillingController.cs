@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
@@ -17,6 +18,7 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderBillingController(
     ICurrentContext currentContext,
     IFeatureService featureService,
+    IMigrateProviderCommand migrateProviderCommand,
     IProviderBillingService providerBillingService,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
@@ -59,6 +61,14 @@ public class ProviderBillingController(
         return TypedResults.File(
             reportContent,
             "text/csv");
+    }
+
+    [HttpPost("migrate")]
+    public async Task<IResult> MigrateAsync([FromRoute] Guid providerId)
+    {
+        await migrateProviderCommand.MigrateProvider(providerId);
+
+        return TypedResults.Ok();
     }
 
     [HttpGet("payment-information")]

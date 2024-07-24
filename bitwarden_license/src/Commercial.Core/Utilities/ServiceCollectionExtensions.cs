@@ -3,6 +3,7 @@ using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Billing;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,5 +17,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICreateProviderCommand, CreateProviderCommand>();
         services.AddScoped<IRemoveOrganizationFromProviderCommand, RemoveOrganizationFromProviderCommand>();
         services.AddTransient<IProviderBillingService, ProviderBillingService>();
+        services.AddTransient<IMigrateProviderCommand, MigrateProviderCommand>();
     }
 }
