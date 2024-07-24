@@ -14,7 +14,7 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
                $"?token={Token}" +
                $"&email={Email}" +
                $"&fromEmail=true" +
-               $"&productTier={ProductTier}" +
+               $"&productTier={(int)ProductTier}" +
                $"&product={string.Join(",", Product.Select(p => (int)p))}";
     }
 
