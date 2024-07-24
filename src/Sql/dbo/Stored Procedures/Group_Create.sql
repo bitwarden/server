@@ -2,7 +2,7 @@
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(100),
-    @AccessAll BIT,
+    @AccessAll BIT = 0,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
