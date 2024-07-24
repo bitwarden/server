@@ -299,47 +299,11 @@ END
 GO
 
 -- Sprocs that do use user-defined types:
--- Create a new version of the user-defined type and the sprocs that use it, and remove AccessAll from the type.
+-- Create a new version of the sproc without using the type, and update that.
 -- These were already versioned from a previous update, so take the opportunity to drop the version suffix.
 
--- Drop sprocs and then type in correct order if they already exist
-IF OBJECT_ID('[dbo].[OrganizationUser_CreateMany]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUser_CreateMany];
-END
-GO
-
-IF OBJECT_ID('[dbo].[OrganizationUser_UpdateMany]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUser_UpdateMany];
-END
-GO
-
-IF TYPE_ID('[dbo].[OrganizationUserType]') IS NOT NULL
-BEGIN
-    DROP TYPE [dbo].[OrganizationUserType];
-END
-GO
-
-CREATE TYPE [dbo].[OrganizationUserType] AS TABLE(
-    [Id] UNIQUEIDENTIFIER,
-    [OrganizationId] UNIQUEIDENTIFIER,
-    [UserId] UNIQUEIDENTIFIER,
-    [Email] NVARCHAR(256),
-    [Key] VARCHAR(MAX),
-    [Status] SMALLINT,
-    [Type] TINYINT,
-    [ExternalId] NVARCHAR(300),
-    [CreationDate] DATETIME2(7),
-    [RevisionDate] DATETIME2(7),
-    [Permissions] NVARCHAR(MAX),
-    [ResetPasswordKey] VARCHAR(MAX),
-    [AccessSecretsManager] BIT
-)
-GO
-
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_CreateMany]
-    @OrganizationUsersInput [dbo].[OrganizationUserType] READONLY
+    @jsonData NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -362,32 +326,97 @@ BEGIN
         [AccessSecretsManager]
         )
     SELECT
-        OU.[Id],
-        OU.[OrganizationId],
-        OU.[UserId],
-        OU.[Email],
-        OU.[Key],
-        OU.[Status],
-        OU.[Type],
+        OUI.[Id],
+        OUI.[OrganizationId],
+        OUI.[UserId],
+        OUI.[Email],
+        OUI.[Key],
+        OUI.[Status],
+        OUI.[Type],
         0,  -- AccessAll will be removed shortly
-        OU.[ExternalId],
-        OU.[CreationDate],
-        OU.[RevisionDate],
-        OU.[Permissions],
-        OU.[ResetPasswordKey],
-        OU.[AccessSecretsManager]
+        OUI.[ExternalId],
+        OUI.[CreationDate],
+        OUI.[RevisionDate],
+        OUI.[Permissions],
+        OUI.[ResetPasswordKey],
+        OUI.[AccessSecretsManager]
     FROM
-        @OrganizationUsersInput OU
+        OPENJSON(@jsonData)
+        WITH (
+            [Id] UNIQUEIDENTIFIER '$.Id',
+            [OrganizationId] UNIQUEIDENTIFIER '$.OrganizationId',
+            [UserId] UNIQUEIDENTIFIER '$.UserId',
+            [Email] NVARCHAR(256) '$.Email',
+            [Key] VARCHAR(MAX) '$.Key',
+            [Status] SMALLINT '$.Status',
+            [Type] TINYINT '$.Type',
+            [ExternalId] NVARCHAR(300) '$.ExternalId',
+            [CreationDate] DATETIME2(7) '$.CreationDate',
+            [RevisionDate] DATETIME2(7) '$.RevisionDate',
+            [Permissions] NVARCHAR (MAX) '$.Permissions',
+            [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
+            [AccessSecretsManager] BIT '$.AccessSecretsManager'
+        ) OUI
 END
 GO
 
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateMany]
-    @OrganizationUsersInput [dbo].[OrganizationUserType] READONLY
+CREATE OR UPDATE PROCEDURE [dbo].[OrganizationUser_UpdateMany]
+    @jsonData NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
 
+    -- Parse the JSON string
+    DECLARE @OrganizationUserInput AS TABLE (
+        [Id] UNIQUEIDENTIFIER,
+        [OrganizationId] UNIQUEIDENTIFIER,
+        [UserId] UNIQUEIDENTIFIER,
+        [Email] NVARCHAR(256),
+        [Key] VARCHAR(MAX),
+        [Status] SMALLINT,
+        [Type] TINYINT,
+        [ExternalId] NVARCHAR(300),
+        [CreationDate] DATETIME2(7),
+        [RevisionDate] DATETIME2(7),
+        [Permissions] NVARCHAR(MAX),
+        [ResetPasswordKey] VARCHAR(MAX),
+        [AccessSecretsManager] BIT
+    )
+
+    INSERT INTO @OrganizationUserInput
+    SELECT
+        [Id],
+        [OrganizationId],
+        [UserId],
+        [Email],
+        [Key],
+        [Status],
+        [Type],
+        [ExternalId],
+        [CreationDate],
+        [RevisionDate],
+        [Permissions],
+        [ResetPasswordKey],
+        [AccessSecretsManager]
+    FROM OPENJSON(@jsonData)
+    WITH (
+        [Id] UNIQUEIDENTIFIER '$.Id',
+        [OrganizationId] UNIQUEIDENTIFIER '$.OrganizationId',
+        [UserId] UNIQUEIDENTIFIER '$.UserId',
+        [Email] NVARCHAR(256) '$.Email',
+        [Key] VARCHAR(MAX) '$.Key',
+        [Status] SMALLINT '$.Status',
+        [Type] TINYINT '$.Type',
+        [ExternalId] NVARCHAR(300) '$.ExternalId',
+        [CreationDate] DATETIME2(7) '$.CreationDate',
+        [RevisionDate] DATETIME2(7) '$.RevisionDate',
+        [Permissions] NVARCHAR (MAX) '$.Permissions',
+        [ResetPasswordKey] VARCHAR (MAX) '$.ResetPasswordKey',
+        [AccessSecretsManager] BIT '$.AccessSecretsManager'
+    )
+
+    -- Perform the update
     UPDATE
         OU
     SET
@@ -407,12 +436,13 @@ BEGIN
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
-        @OrganizationUsersInput OUI ON OU.Id = OUI.Id
+        @OrganizationUserInput OUI ON OU.Id = OUI.Id
 
+    -- Bump account revision dates
     EXEC [dbo].[User_BumpManyAccountRevisionDates]
     (
-        SELECT UserId
-        FROM @OrganizationUsersInput
+        SELECT [UserId]
+        FROM @OrganizationUserInput
     )
 END
 GO
