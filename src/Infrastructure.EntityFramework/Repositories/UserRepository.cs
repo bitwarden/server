@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
@@ -14,7 +16,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     { }
 
-    public async Task<Core.Entities.User> GetByEmailAsync(string email)
+    public async Task<Core.Entities.User?> GetByEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -36,7 +38,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<DataModel.UserKdfInformation> GetKdfInformationByEmailAsync(string email)
+    public async Task<DataModel.UserKdfInformation?> GetKdfInformationByEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -89,7 +91,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<string> GetPublicKeyAsync(Guid id)
+    public async Task<string?> GetPublicKeyAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -130,7 +132,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<Core.Entities.User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+    public async Task<Core.Entities.User?> GetBySsoUserAsync(string externalId, Guid? organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
