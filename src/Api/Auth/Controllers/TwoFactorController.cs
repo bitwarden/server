@@ -47,6 +47,7 @@ public class TwoFactorController : Controller
         ICurrentContext currentContext,
         IVerifyAuthRequestCommand verifyAuthRequestCommand,
         IFeatureService featureService,
+        IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> TwoFactorAuthenticatorDataProtector,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
     {
         _userService = userService;
@@ -57,6 +58,7 @@ public class TwoFactorController : Controller
         _currentContext = currentContext;
         _verifyAuthRequestCommand = verifyAuthRequestCommand;
         _featureService = featureService;
+        _TwoFactorAuthenticatorDataProtector = TwoFactorAuthenticatorDataProtector;
         _tokenDataFactory = tokenDataFactory;
     }
 

@@ -6,7 +6,7 @@ namespace Bit.Core.Auth.Models.Business.Tokenables;
 
 public class TwoFactorAuthenticatorUserVerificationTokenable : ExpiringTokenable
 {
-    private static readonly TimeSpan _tokenLifetime = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan _tokenLifetime = TimeSpan.FromMinutes(30);
 
     public const string ClearTextPrefix = "TwoFactorAuthenticatorUserVerification";
     public const string DataProtectorPurpose = "TwoFactorAuthenticatorUserVerificationTokenDataProtector";
