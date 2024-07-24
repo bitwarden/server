@@ -77,14 +77,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true)
+    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
     {
         string sprocName = null;
         if (withOrganizations)
         {
-            sprocName = useFlexibleCollections
-                ? $"[{Schema}].[CipherDetails_ReadByUserId_V2]"
-                : $"[{Schema}].[CipherDetails_ReadByUserId]";
+            sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]";
         }
         else
         {

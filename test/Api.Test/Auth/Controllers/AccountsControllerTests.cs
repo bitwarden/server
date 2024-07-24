@@ -12,6 +12,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Billing.Services;
@@ -44,6 +45,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+    private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
     private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
@@ -72,6 +74,7 @@ public class AccountsControllerTests : IDisposable
         _policyService = Substitute.For<IPolicyService>();
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
+        _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _subscriberService = Substitute.For<ISubscriberService>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
@@ -97,6 +100,7 @@ public class AccountsControllerTests : IDisposable
             _userService,
             _policyService,
             _setInitialMasterPasswordCommand,
+            _tdeOffboardingPasswordCommand,
             _rotateUserKeyCommand,
             _featureService,
             _subscriberService,
