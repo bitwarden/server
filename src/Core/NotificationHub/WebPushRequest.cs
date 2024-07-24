@@ -38,17 +38,7 @@ public class WebPushRequest
         request.Headers.Add("Authorization", VapidAuthHeader(Subscription.Endpoint, VapidPrivateKey, VapidPublicKey));
         if (Content != null)
         {
-            if (Content.Subscription == null)
-            {
-                Content.Subscription = Subscription;
-            }
-            request.Content = Content.ToHttpContent();
-            request.Headers.Add("Encryption", $"salt={Content.Salt}");
-            request.Headers.Add("Crypto-Key", $"dh={Content.SenderPublicKey}; p256ecdsa={VapidPublicKey}");
-        }
-        else
-        {
-            request.Headers.Add("Crypto-Key", $"p256ecdsa={VapidPublicKey}");
+            request.Content = Content.ToHttpContent(Subscription);
         }
 
         return request;
