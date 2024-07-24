@@ -2,6 +2,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -20,10 +21,6 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     private readonly IServiceProvider _serviceProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<NotificationHubPushRegistrationService> _logger;
-    private readonly JsonSerializerOptions _webPushRestSerializerOptions = new JsonSerializerOptions
-    {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
@@ -185,14 +182,59 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             platform = "browser",
             tags = installation.Tags,
             templates = installation.Templates
-        }, _webPushRestSerializerOptions);
+        }, new JsonSerializerOptions
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
 
         var client = _httpClientFactory.CreateClient("NotificationHub");
         var request = ConnectionFor(GetComb(installation.InstallationId)).CreateRequest(HttpMethod.Put, $"installations/{installation.InstallationId}");
         request.Content = new StringContent(content, Encoding.UTF8, "application/json");
         var response = await client.SendAsync(request);
+        _logger.LogInformation("Web push registration response: {StatusCode}", response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        _logger.LogInformation("Web push registration response for {InstallationId}: ({StatusCode}) {Body}", installation.InstallationId, response.StatusCode, body);
+        _logger.LogInformation("full response: {Response}", body);
+
+        request = ConnectionFor(GetComb(installation.InstallationId)).CreateRequest(HttpMethod.Get, $"installations/{installation.InstallationId}");
+        response = await client.SendAsync(request);
+        body = await response.Content.ReadAsStringAsync();
+
+        // temp: REad back the installation to verify it was created correctly.
+        request = ConnectionFor(GetComb(installation.InstallationId)).CreateRequest(HttpMethod.Post, $"messages/", "direct");
+        request.Headers.Add("ServiceBusNotification-Format", "browser");
+        request.Headers.Add("ServiceBusNotification-DeviceHandle", endpoint);
+        request.Headers.Add("ServiceBusNotification-Tags", "(template:payload)");
+        content = JsonSerializer.Serialize(new
+        {
+            type = PushType.SyncCiphers,
+            payload = new UserPushNotification
+            {
+                UserId = Guid.NewGuid(),
+                Date = DateTime.UtcNow
+            }
+        });
+        request.Content = new StringContent(content, Encoding.UTF8, "application/json");
+        response = await client.SendAsync(request);
+        body = await response.Content.ReadAsStringAsync();
+        _logger.LogInformation("full response: {Response}", body);
+
+        // // temp: read PNS Feedback for installation
+        // request = ConnectionFor(GetComb(installation.InstallationId)).CreateRequest(HttpMethod.Get, $"feedbackcontainer");
+        // // request.Content.Headers.Add("Content-Type", "application/xml;type=entry;charset=utf-8");
+        // response = await client.SendAsync(request);
+        // body = await response.Content.ReadAsStringAsync();
+        // _logger.LogInformation("full response: {Response}", body);
+
+        // temp: attempt to sent a notification directly through PNS
+        var webRequest = new WebPushRequest(new RecipientWebPushSubscription(endpoint, p256dh, auth), _globalSettings.WebPush.VapidPrivateKey, _globalSettings.WebPush.VapidPublicKey)
+        {
+            Content = new WebPushContent(Encoding.UTF8.GetBytes("this is the content"))
+        };
+        request = webRequest.ToHttpRequestMessage();
+        request.Headers.Add("TTL", "60");
+        response = await client.SendAsync(request);
+        body = await response.Content.ReadAsStringAsync();
+        _logger.LogInformation("full response: {Response}", body);
     }
 
     private KeyValuePair<string, InstallationTemplate> BuildInstallationTemplate(string templateId, string templateBody,
@@ -216,6 +258,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
 
         return new KeyValuePair<string, InstallationTemplate>(fullTemplateId, template);
+        // installation.Templates.Add(fullTemplateId, template);
     }
 
     public async Task DeleteRegistrationAsync(string deviceId)
