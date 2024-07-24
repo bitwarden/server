@@ -1636,6 +1636,64 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData]
+    public async Task ConfirmUser_vNext_TwoFactorPolicy_NotEnabled_Throws(Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, UserDetails user,
+        OrganizationUser orgUserAnotherOrg,
+        [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
+        string key, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var policyService = sutProvider.GetDependency<IPolicyService>();
+        var userService = Substitute.For<IUserService>();
+
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
+        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+        organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
+        organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user });
+        twoFactorPolicy.OrganizationId = org.Id;
+        policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
+        userService.TwoFactorIsEnabledAsync(user, user.HasPremiumAccess).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
+        Assert.Contains("User does not have two-step login enabled.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUser_vNext_TwoFactorPolicy_Enabled_Success(Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, UserDetails user,
+        [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
+        string key, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var policyService = sutProvider.GetDependency<IPolicyService>();
+        var userService = Substitute.For<IUserService>();
+
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = user.Id;
+        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+        organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user });
+        twoFactorPolicy.OrganizationId = org.Id;
+        policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
+        userService.TwoFactorIsEnabledAsync(user, user.HasPremiumAccess).Returns(true);
+
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
+    }
+
+    [Theory, BitAutoData]
     public async Task ConfirmUsers_Success(Organization org,
         OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -1675,6 +1733,51 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         var keys = orgUsers.ToDictionary(ou => ou.Id, _ => key);
         var result = await sutProvider.Sut.ConfirmUsersAsync(confirmingUser.OrganizationId, keys, confirmingUser.Id, userService);
+        Assert.Contains("", result[0].Item2);
+        Assert.Contains("User does not have two-step login enabled.", result[1].Item2);
+        Assert.Contains("Cannot confirm this member to the organization until they leave or remove all other organizations.", result[2].Item2);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUsers_vNext_Success(Organization org,
+        OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser2,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser3,
+        OrganizationUser anotherOrgUser, UserDetails user1, UserDetails user2, UserDetails user3,
+        [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
+        [OrganizationUserPolicyDetails(PolicyType.SingleOrg)] OrganizationUserPolicyDetails singleOrgPolicy,
+        string key, SutProvider<OrganizationService> sutProvider)
+    {
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var policyService = sutProvider.GetDependency<IPolicyService>();
+        var userService = Substitute.For<IUserService>();
+
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser1.OrganizationId = orgUser2.OrganizationId = orgUser3.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser1.UserId = user1.Id;
+        orgUser2.UserId = user2.Id;
+        orgUser3.UserId = user3.Id;
+        anotherOrgUser.UserId = user3.Id;
+        var orgUsers = new[] { orgUser1, orgUser2, orgUser3 };
+        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(orgUsers);
+        organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
+        twoFactorPolicy.OrganizationId = org.Id;
+        policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
+        userService.TwoFactorIsEnabledAsync(user1, user1.HasPremiumAccess).Returns(true);
+        userService.TwoFactorIsEnabledAsync(user2, user2.HasPremiumAccess).Returns(false);
+        userService.TwoFactorIsEnabledAsync(user3, user3.HasPremiumAccess).Returns(true);
+        singleOrgPolicy.OrganizationId = org.Id;
+        policyService.GetPoliciesApplicableToUserAsync(user3.Id, PolicyType.SingleOrg)
+            .Returns(new[] { singleOrgPolicy });
+        organizationUserRepository.GetManyByManyUsersAsync(default)
+            .ReturnsForAnyArgs(new[] { orgUser1, orgUser2, orgUser3, anotherOrgUser });
+
+        var keys = orgUsers.ToDictionary(ou => ou.Id, _ => key);
+        var result = await sutProvider.Sut.ConfirmUsersAsync_vNext(confirmingUser.OrganizationId, keys, confirmingUser.Id, userService);
         Assert.Contains("", result[0].Item2);
         Assert.Contains("User does not have two-step login enabled.", result[1].Item2);
         Assert.Contains("Cannot confirm this member to the organization until they leave or remove all other organizations.", result[2].Item2);
