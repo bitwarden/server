@@ -14,7 +14,7 @@ public static class DatabaseContextExtensions
     public static async Task UserBumpAccountRevisionDateAsync(this DatabaseContext context, Guid userId)
     {
         var user = await context.Users.FindAsync(userId);
-        Debug.Assert(user is not null);
+        Debug.Assert(user is not null, "The user id is expected to be validated as a true-in database user before making this call.");
         user.AccountRevisionDate = DateTime.UtcNow;
     }
 
