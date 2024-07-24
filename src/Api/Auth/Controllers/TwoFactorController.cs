@@ -3,6 +3,7 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -33,6 +34,8 @@ public class TwoFactorController : Controller
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
     private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _TwoFactorAuthenticatorDataProtector;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
 
     public TwoFactorController(
@@ -43,6 +46,7 @@ public class TwoFactorController : Controller
         UserManager<User> userManager,
         ICurrentContext currentContext,
         IVerifyAuthRequestCommand verifyAuthRequestCommand,
+        IFeatureService featureService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
     {
         _userService = userService;
@@ -52,6 +56,7 @@ public class TwoFactorController : Controller
         _userManager = userManager;
         _currentContext = currentContext;
         _verifyAuthRequestCommand = verifyAuthRequestCommand;
+        _featureService = featureService;
         _tokenDataFactory = tokenDataFactory;
     }
 
@@ -95,6 +100,11 @@ public class TwoFactorController : Controller
     {
         var user = await CheckAsync(model, false, true);
         var response = new TwoFactorAuthenticatorResponseModel(user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken))
+        {
+            var tokenable = new TwoFactorAuthenticatorUserVerificationTokenable(user, response.Key);
+            response.UserVerificationToken = _TwoFactorAuthenticatorDataProtector.Protect(tokenable);
+        }
         return response;
     }
 
@@ -103,8 +113,20 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> PutAuthenticator(
         [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
     {
-        var user = await CheckAsync(model, false);
-        model.ToUser(user);
+        User user;
+        if (_featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken))
+        {
+            user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
+            _TwoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
+            if (!decryptedToken.TokenIsValid(user, model.Key))
+            {
+                throw new BadRequestException("UserVerificationToken", "Invalid token.");
+            }
+        }
+        else
+        {
+            user = await CheckAsync(model, false);
+        }
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
@@ -116,6 +138,22 @@ public class TwoFactorController : Controller
         await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
         var response = new TwoFactorAuthenticatorResponseModel(user);
         return response;
+    }
+
+    [RequireFeature(FeatureFlagKeys.AuthenticatorTwoFactorToken)]
+    [HttpDelete("authenticator")]
+    public async Task<TwoFactorProviderResponseModel> DisableAuthenticator(
+    [FromBody] TwoFactorAuthenticatorDisableRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        _TwoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
+        if (!decryptedToken.TokenIsValid(user, model.Key))
+        {
+            throw new BadRequestException("UserVerificationToken", "Invalid token.");
+        }
+
+        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
+        return new TwoFactorProviderResponseModel(model.Type.Value, user);
     }
 
     [HttpPost("get-yubikey")]
