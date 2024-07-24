@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Repositories;
-
 #nullable enable
+
+namespace Bit.Core.Repositories;
 
 public interface ICollectionCipherRepository
 {
