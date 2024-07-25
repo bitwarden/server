@@ -120,24 +120,34 @@ public class TwoFactorController : Controller
         User user;
         if (_TwoFactorAuthenticatorTokenFeatureFlagEnabled)
         {
+
             user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
+
+            // verify access code first so the user verification token isn't consumed if the user puts in the wrong code
+            if (!await _userManager.VerifyTwoFactorTokenAsync(user,
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("Token", "Invalid token.");
+            }
+
             _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
             if (!decryptedToken.TokenIsValid(user, model.Key))
             {
-                throw new BadRequestException("UserVerificationToken", "Invalid token.");
+                throw new BadRequestException("UserVerificationToken", "User verification failed");
             }
         }
         else
         {
             user = await CheckAsync(model, false);
-            model.ToUser(user); // populates user obj with proper metadata for VerifyTwoFactorTokenAsync on ln 136
-        }
+            model.ToUser(user); // populates user obj with proper metadata for VerifyTwoFactorTokenAsync
 
-        if (!await _userManager.VerifyTwoFactorTokenAsync(user,
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException("Token", "Invalid token.");
+            if (!await _userManager.VerifyTwoFactorTokenAsync(user,
+                    CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("Token", "Invalid token.");
+            }
         }
 
         await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Authenticator);
@@ -154,7 +164,7 @@ public class TwoFactorController : Controller
         _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
         if (!decryptedToken.TokenIsValid(user, model.Key))
         {
-            throw new BadRequestException("UserVerificationToken", "Invalid token.");
+            throw new BadRequestException("UserVerificationToken", "User verification failed");
         }
 
         await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
