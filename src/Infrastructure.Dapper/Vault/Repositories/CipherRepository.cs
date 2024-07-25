@@ -77,14 +77,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true)
+    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
     {
         string sprocName = null;
         if (withOrganizations)
         {
-            sprocName = useFlexibleCollections
-                ? $"[{Schema}].[CipherDetails_ReadByUserId_V2]"
-                : $"[{Schema}].[CipherDetails_ReadByUserId]";
+            sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]";
         }
         else
         {
@@ -752,6 +750,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         collectionsTable.Columns.Add(creationDateColumn);
         var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
         collectionsTable.Columns.Add(revisionDateColumn);
+        var externalIdColumn = new DataColumn(nameof(c.ExternalId), c.ExternalId.GetType());
+        collectionsTable.Columns.Add(externalIdColumn);
 
         foreach (DataColumn col in collectionsTable.Columns)
         {
@@ -771,6 +771,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[nameColumn] = collection.Name;
             row[creationDateColumn] = collection.CreationDate;
             row[revisionDateColumn] = collection.RevisionDate;
+            row[externalIdColumn] = collection.ExternalId;
 
             collectionsTable.Rows.Add(row);
         }

@@ -4,13 +4,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework;
 
 public class EntityFrameworkCache : IDistributedCache
 {
 #if DEBUG
     // Used for debugging in tests
-    public Task scanTask;
+    public Task? scanTask;
 #endif
     private static readonly TimeSpan _defaultSlidingExpiration = TimeSpan.FromMinutes(20);
     private static readonly TimeSpan _expiredItemsDeletionInterval = TimeSpan.FromMinutes(30);
@@ -22,14 +24,14 @@ public class EntityFrameworkCache : IDistributedCache
 
     public EntityFrameworkCache(
         IServiceScopeFactory serviceScopeFactory,
-        TimeProvider timeProvider = null)
+        TimeProvider? timeProvider = null)
     {
         _deleteExpiredCachedItemsDelegate = DeleteExpiredCacheItems;
         _serviceScopeFactory = serviceScopeFactory;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public byte[] Get(string key)
+    public byte[]? Get(string key)
     {
         ArgumentNullException.ThrowIfNull(key);
 
@@ -53,7 +55,7 @@ public class EntityFrameworkCache : IDistributedCache
         return cache?.Value;
     }
 
-    public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
+    public async Task<byte[]?> GetAsync(string key, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(key);
         token.ThrowIfCancellationRequested();
@@ -181,7 +183,7 @@ public class EntityFrameworkCache : IDistributedCache
         ScanForExpiredItemsIfRequired();
     }
 
-    private Cache SetCache(Cache cache, string key, byte[] value, DistributedCacheEntryOptions options)
+    private Cache SetCache(Cache? cache, string key, byte[] value, DistributedCacheEntryOptions options)
     {
         var utcNow = _timeProvider.GetUtcNow().DateTime;
 
