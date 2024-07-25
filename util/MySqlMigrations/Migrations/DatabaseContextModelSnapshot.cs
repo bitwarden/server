@@ -777,6 +777,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<byte[]>("Value")
+                        .IsRequired()
                         .HasColumnType("longblob");
 
                     b.HasKey("Id")

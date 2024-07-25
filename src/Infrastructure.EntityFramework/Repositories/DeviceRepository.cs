@@ -4,6 +4,8 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, IDeviceRepository
@@ -24,7 +26,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         }
     }
 
-    public async Task<Core.Entities.Device> GetByIdAsync(Guid id, Guid userId)
+    public async Task<Core.Entities.Device?> GetByIdAsync(Guid id, Guid userId)
     {
         var device = await base.GetByIdAsync(id);
         if (device == null || device.UserId != userId)
@@ -35,7 +37,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         return Mapper.Map<Core.Entities.Device>(device);
     }
 
-    public async Task<Core.Entities.Device> GetByIdentifierAsync(string identifier)
+    public async Task<Core.Entities.Device?> GetByIdentifierAsync(string identifier)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -46,7 +48,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         }
     }
 
-    public async Task<Core.Entities.Device> GetByIdentifierAsync(string identifier, Guid userId)
+    public async Task<Core.Entities.Device?> GetByIdentifierAsync(string identifier, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

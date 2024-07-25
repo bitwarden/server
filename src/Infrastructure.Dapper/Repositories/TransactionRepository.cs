@@ -6,6 +6,8 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class TransactionRepository : Repository<Transaction, Guid>, ITransactionRepository
@@ -55,7 +57,7 @@ public class TransactionRepository : Repository<Transaction, Guid>, ITransaction
         return results.ToList();
     }
 
-    public async Task<Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
+    public async Task<Transaction?> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
     {
         // maybe come back to this
         using (var connection = new SqlConnection(ConnectionString))

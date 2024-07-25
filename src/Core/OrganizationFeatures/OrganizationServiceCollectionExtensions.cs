@@ -156,4 +156,3 @@ public static class OrganizationServiceCollectionExtensions
         );
     }
 }
-

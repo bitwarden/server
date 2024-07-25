@@ -4,6 +4,8 @@ using Bit.Core.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
@@ -11,7 +13,7 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
     where T : class, ITableObject<TId>
 {
     public Repository(string connectionString, string readOnlyConnectionString,
-        string schema = null, string table = null)
+        string? schema = null, string? table = null)
         : base(connectionString, readOnlyConnectionString)
     {
         if (!string.IsNullOrWhiteSpace(table))
@@ -28,7 +30,7 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
     protected string Schema { get; private set; } = "dbo";
     protected string Table { get; private set; } = typeof(T).Name;
 
-    public virtual async Task<T> GetByIdAsync(TId id)
+    public virtual async Task<T?> GetByIdAsync(TId id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

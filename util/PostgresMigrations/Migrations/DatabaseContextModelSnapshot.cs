@@ -782,6 +782,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<byte[]>("Value")
+                        .IsRequired()
                         .HasColumnType("bytea");
 
                     b.HasKey("Id")

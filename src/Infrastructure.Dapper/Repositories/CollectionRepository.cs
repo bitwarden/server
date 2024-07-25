@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
@@ -6,6 +7,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
+
+#nullable enable
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -32,7 +35,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<Tuple<Collection, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id)
+    public async Task<Tuple<Collection?, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -46,7 +49,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             var users = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
             var access = new CollectionAccessDetails { Groups = groups, Users = users };
 
-            return new Tuple<Collection, CollectionAccessDetails>(collection, access);
+            return new Tuple<Collection?, CollectionAccessDetails>(collection, access);
         }
     }
 
@@ -182,7 +185,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<CollectionAdminDetails> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships)
+    public async Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -195,17 +198,18 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
             if (!includeAccessRelationships || collectionDetails == null) return collectionDetails;
 
-            collectionDetails.Groups = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
+            // TODO-NRE: collectionDetails should be checked for null and probably return early
+            collectionDetails!.Groups = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
             collectionDetails.Users = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
 
             return collectionDetails;
         }
     }
 
-    public async Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
+    public async Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
         obj.SetNewId();
-        var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj));
+        var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
 
         objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
         objWithGroupsAndUsers.Users = users != null ? users.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
@@ -219,9 +223,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
+    public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
-        var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj));
+        var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
 
         objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
         objWithGroupsAndUsers.Users = users != null ? users.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
@@ -307,7 +311,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     public class CollectionWithGroupsAndUsers : Collection
     {
-        public DataTable Groups { get; set; }
-        public DataTable Users { get; set; }
+        [DisallowNull]
+        public DataTable? Groups { get; set; }
+        [DisallowNull]
+        public DataTable? Users { get; set; }
     }
 }
