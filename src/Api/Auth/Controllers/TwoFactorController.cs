@@ -37,6 +37,7 @@ public class TwoFactorController : Controller
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
+    private readonly bool _TwoFactorAuthenticatorTokenFeatureFlagEnabled;
 
     public TwoFactorController(
         IUserService userService,
@@ -60,6 +61,7 @@ public class TwoFactorController : Controller
         _featureService = featureService;
         _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
+        _TwoFactorAuthenticatorTokenFeatureFlagEnabled = _featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken);
     }
 
     [HttpGet("")]
@@ -100,9 +102,9 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator(
         [FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false, true);
+        var user = _TwoFactorAuthenticatorTokenFeatureFlagEnabled ? await CheckAsync(model, false) : await CheckAsync(model, false, true);
         var response = new TwoFactorAuthenticatorResponseModel(user);
-        if (_featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken))
+        if (_TwoFactorAuthenticatorTokenFeatureFlagEnabled)
         {
             var tokenable = new TwoFactorAuthenticatorUserVerificationTokenable(user, response.Key);
             response.UserVerificationToken = _twoFactorAuthenticatorDataProtector.Protect(tokenable);
@@ -116,7 +118,7 @@ public class TwoFactorController : Controller
         [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
     {
         User user;
-        if (_featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken))
+        if (_TwoFactorAuthenticatorTokenFeatureFlagEnabled)
         {
             user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
             _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
