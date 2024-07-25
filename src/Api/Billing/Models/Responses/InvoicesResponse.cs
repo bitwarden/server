@@ -13,18 +13,20 @@ public record InvoicesResponse(
 }
 
 public record InvoiceDTO(
+    string Id,
     DateTime Date,
     string Number,
     decimal Total,
     string Status,
-    string Url,
-    string PdfUrl)
+    DateTime? DueDate,
+    string Url)
 {
     public static InvoiceDTO From(Invoice invoice) => new(
+        invoice.Id,
         invoice.Created,
         invoice.Number,
         invoice.Total / 100M,
         invoice.Status,
-        invoice.HostedInvoiceUrl,
-        invoice.InvoicePdf);
+        invoice.DueDate,
+        invoice.HostedInvoiceUrl);
 }

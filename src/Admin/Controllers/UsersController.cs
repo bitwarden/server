@@ -2,8 +2,6 @@
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,28 +21,19 @@ public class UsersController : Controller
     private readonly IPaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
-    private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
-
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     public UsersController(
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
         IPaymentService paymentService,
         GlobalSettings globalSettings,
-        IAccessControlService accessControlService,
-        ICurrentContext currentContext,
-        IFeatureService featureService)
+        IAccessControlService accessControlService)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
         _paymentService = paymentService;
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
-        _currentContext = currentContext;
-        _featureService = featureService;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -80,7 +69,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         return View(new UserViewModel(user, ciphers));
     }
 
@@ -93,9 +82,10 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(user);
-        return View(new UserEditModel(user, ciphers, billingInfo, _globalSettings));
+        var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
+        return View(new UserEditModel(user, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
     }
 
     [HttpPost]

@@ -1,5 +1,7 @@
 ﻿namespace Bit.Core.Entities;
 
+#nullable enable
+
 public class CollectionUser
 {
     public Guid CollectionId { get; set; }

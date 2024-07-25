@@ -1,8 +1,9 @@
 ﻿using System.Collections.Immutable;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Models.StaticStore.Plans;
 
 namespace Bit.Core.Utilities;
 
@@ -142,11 +143,11 @@ public static class StaticStore
             new SponsoredPlan
             {
                 PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-                SponsoredProductType = ProductType.Families,
-                SponsoringProductType = ProductType.Enterprise,
+                SponsoredProductTierType = ProductTierType.Families,
+                SponsoringProductTierType = ProductTierType.Enterprise,
                 StripePlanId = "2021-family-for-enterprise-annually",
                 UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPlan(org.PlanType).Product == ProductType.Enterprise,
+                    GetPlan(org.PlanType).ProductTier == ProductTierType.Enterprise,
             }
         };
 

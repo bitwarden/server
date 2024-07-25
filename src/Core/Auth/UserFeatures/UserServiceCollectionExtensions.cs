@@ -1,5 +1,8 @@
 ﻿
 
+using Bit.Core.Auth.UserFeatures.Registration;
+using Bit.Core.Auth.UserFeatures.Registration.Implementations;
+using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
@@ -18,7 +21,9 @@ public static class UserServiceCollectionExtensions
     {
         services.AddScoped<IUserService, UserService>();
         services.AddUserPasswordCommands();
+        services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
+        services.AddTdeOffboardingPasswordCommands();
     }
 
     public static void AddUserKeyCommands(this IServiceCollection services, IGlobalSettings globalSettings)
@@ -29,6 +34,17 @@ public static class UserServiceCollectionExtensions
     private static void AddUserPasswordCommands(this IServiceCollection services)
     {
         services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
+    }
+
+    private static void AddTdeOffboardingPasswordCommands(this IServiceCollection services)
+    {
+        services.AddScoped<ITdeOffboardingPasswordCommand, TdeOffboardingPasswordCommand>();
+    }
+
+    private static void AddUserRegistrationCommands(this IServiceCollection services)
+    {
+        services.AddScoped<ISendVerificationEmailForRegistrationCommand, SendVerificationEmailForRegistrationCommand>();
+        services.AddScoped<IRegisterUserCommand, RegisterUserCommand>();
     }
 
     private static void AddWebAuthnLoginCommands(this IServiceCollection services)

@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -636,8 +637,7 @@ public class ProviderServiceTests
                 t.First().Item1.Emails.Count() == 1 &&
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
                 t.First().Item1.Type == OrganizationUserType.Owner &&
-                t.First().Item1.AccessAll &&
-                !t.First().Item1.Collections.Any() &&
+                t.First().Item1.Collections.Count() == 1 &&
                 t.First().Item2 == null));
     }
 
@@ -716,13 +716,12 @@ public class ProviderServiceTests
                         t.First().Item1.Emails.Count() == 1 &&
                         t.First().Item1.Emails.First() == clientOwnerEmail &&
                         t.First().Item1.Type == OrganizationUserType.Owner &&
-                        t.First().Item1.AccessAll &&
-                        !t.First().Item1.Collections.Any() &&
+                        t.First().Item1.Collections.Count() == 1 &&
                         t.First().Item2 == null));
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task CreateOrganizationAsync_WithFlexibleCollections_SetsAccessAllToFalse
+    [Theory, OrganizationCustomize, BitAutoData]
+    public async Task CreateOrganizationAsync_SetsAccessAllToFalse
         (Provider provider, OrganizationSignup organizationSignup, Organization organization, string clientOwnerEmail,
             User user, SutProvider<ProviderService> sutProvider, Collection defaultCollection)
     {
@@ -746,7 +745,6 @@ public class ProviderServiceTests
                 t.First().Item1.Emails.Count() == 1 &&
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
                 t.First().Item1.Type == OrganizationUserType.Owner &&
-                t.First().Item1.AccessAll == false &&
                 t.First().Item1.Collections.Single().Id == defaultCollection.Id &&
                 !t.First().Item1.Collections.Single().HidePasswords &&
                 !t.First().Item1.Collections.Single().ReadOnly &&

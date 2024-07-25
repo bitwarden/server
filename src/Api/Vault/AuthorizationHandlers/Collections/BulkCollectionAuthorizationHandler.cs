@@ -272,7 +272,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         if (_managedCollectionsIds == null)
         {
             var allUserCollections = await _collectionRepository
-                .GetManyByUserIdAsync(_currentContext.UserId!.Value, useFlexibleCollections: true);
+                .GetManyByUserIdAsync(_currentContext.UserId!.Value);
 
             var managedCollectionIds = allUserCollections
                 .Where(c => c.Manage)

@@ -107,7 +107,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -115,8 +115,8 @@ public class SyncControllerTests
         policyRepository.GetManyByUserIdAsync(user.Id).Returns(policies);
 
         // Returns for methods only called if we have enabled orgs
-        collectionRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
+        collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
@@ -197,7 +197,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -271,7 +271,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -279,8 +279,8 @@ public class SyncControllerTests
         policyRepository.GetManyByUserIdAsync(user.Id).Returns(policies);
 
         // Returns for methods only called if we have enabled orgs
-        collectionRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
+        collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
@@ -306,8 +306,8 @@ public class SyncControllerTests
 
             if (matchedProviderUserOrgDetails != null)
             {
-                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).Product;
-                Assert.Equal(providerOrgProductType, profProviderOrg.PlanProductType);
+                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).ProductTier;
+                Assert.Equal(providerOrgProductType, profProviderOrg.ProductTierType);
             }
         }
     }
@@ -333,7 +333,7 @@ public class SyncControllerTests
             .GetManyByUserIdAsync(default);
 
         await cipherRepository.ReceivedWithAnyArgs(1)
-            .GetManyByUserIdAsync(default, useFlexibleCollections: default);
+            .GetManyByUserIdAsync(default);
 
         await sendRepository.ReceivedWithAnyArgs(1)
             .GetManyByUserIdAsync(default);
@@ -342,17 +342,17 @@ public class SyncControllerTests
         if (hasEnabledOrgs)
         {
             await collectionRepository.ReceivedWithAnyArgs(1)
-                .GetManyByUserIdAsync(default, default);
+                .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(1)
-                .GetManyByUserIdAsync(default, default);
+                .GetManyByUserIdAsync(default);
         }
         else
         {
             // all disabled orgs
             await collectionRepository.ReceivedWithAnyArgs(0)
-                .GetManyByUserIdAsync(default, default);
+                .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(0)
-                .GetManyByUserIdAsync(default, default);
+                .GetManyByUserIdAsync(default);
         }
 
         await userService.ReceivedWithAnyArgs(1)
