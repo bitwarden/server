@@ -35,8 +35,8 @@ public class TwoFactorController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
     private readonly IFeatureService _featureService;
-    private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _TwoFactorAuthenticatorDataProtector;
-    private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
+    private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
+    private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
 
     public TwoFactorController(
         IUserService userService,
@@ -47,8 +47,8 @@ public class TwoFactorController : Controller
         ICurrentContext currentContext,
         IVerifyAuthRequestCommand verifyAuthRequestCommand,
         IFeatureService featureService,
-        IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> TwoFactorAuthenticatorDataProtector,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -58,8 +58,8 @@ public class TwoFactorController : Controller
         _currentContext = currentContext;
         _verifyAuthRequestCommand = verifyAuthRequestCommand;
         _featureService = featureService;
-        _TwoFactorAuthenticatorDataProtector = TwoFactorAuthenticatorDataProtector;
-        _tokenDataFactory = tokenDataFactory;
+        _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
+        _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
     }
 
     [HttpGet("")]
@@ -105,7 +105,7 @@ public class TwoFactorController : Controller
         if (_featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken))
         {
             var tokenable = new TwoFactorAuthenticatorUserVerificationTokenable(user, response.Key);
-            response.UserVerificationToken = _TwoFactorAuthenticatorDataProtector.Protect(tokenable);
+            response.UserVerificationToken = _twoFactorAuthenticatorDataProtector.Protect(tokenable);
         }
         return response;
     }
@@ -119,7 +119,7 @@ public class TwoFactorController : Controller
         if (_featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken))
         {
             user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
-            _TwoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
+            _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
             if (!decryptedToken.TokenIsValid(user, model.Key))
             {
                 throw new BadRequestException("UserVerificationToken", "Invalid token.");
@@ -128,6 +128,7 @@ public class TwoFactorController : Controller
         else
         {
             user = await CheckAsync(model, false);
+            model.ToUser(user); // populates user obj with proper metadata for VerifyTwoFactorTokenAsync on ln 134
         }
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
@@ -148,7 +149,7 @@ public class TwoFactorController : Controller
     [FromBody] TwoFactorAuthenticatorDisableRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        _TwoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
+        _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
         if (!decryptedToken.TokenIsValid(user, model.Key))
         {
             throw new BadRequestException("UserVerificationToken", "Invalid token.");
@@ -517,7 +518,7 @@ public class TwoFactorController : Controller
 
     private bool ValidateSsoEmail2FaToken(string ssoEmail2FaSessionToken, User user)
     {
-        return _tokenDataFactory.TryUnprotect(ssoEmail2FaSessionToken, out var decryptedToken) &&
+        return _ssoEmailTwoFactorSessionDataProtector.TryUnprotect(ssoEmail2FaSessionToken, out var decryptedToken) &&
                decryptedToken.Valid && decryptedToken.TokenIsValid(user);
     }
 
