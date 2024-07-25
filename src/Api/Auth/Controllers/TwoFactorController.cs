@@ -130,7 +130,7 @@ public class TwoFactorController : Controller
         else
         {
             user = await CheckAsync(model, false);
-            model.ToUser(user); // populates user obj with proper metadata for VerifyTwoFactorTokenAsync on ln 134
+            model.ToUser(user); // populates user obj with proper metadata for VerifyTwoFactorTokenAsync on ln 136
         }
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
