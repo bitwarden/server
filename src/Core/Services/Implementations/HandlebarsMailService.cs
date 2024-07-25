@@ -8,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
+using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using HandlebarsDotNet;
@@ -392,6 +393,20 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "LicenseExpired", model);
         message.Category = "LicenseExpired";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> emails, string organizationName, string requestingUserName, string emailContent)
+    {
+        var message = CreateDefaultMessage("Access Requested for Secrets Manager", emails);
+        var model = new RequestSecretsManagerAccessViewModel
+        {
+            OrgName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            UserNameRequestingAccess = CoreHelpers.SanitizeForEmail(requestingUserName, false),
+            EmailContent = CoreHelpers.SanitizeForEmail(emailContent, false),
+        };
+        await AddMessageContentAsync(message, "SecretsManagerAccessRequest", model);
+        message.Category = "SecretsManagerAccessRequest";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
