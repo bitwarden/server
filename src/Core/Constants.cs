@@ -130,6 +130,7 @@ public static class FeatureFlagKeys
     public const string AC2828_ProviderPortalMembersPage = "AC-2828_provider-portal-members-page";
     public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
+    public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
 
     public static List<string> GetAllKeys()
     {
