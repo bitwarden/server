@@ -4,6 +4,8 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class TaxRateRepository : Repository<Core.Entities.TaxRate, TaxRate, string>, ITaxRateRepository
@@ -17,9 +19,9 @@ public class TaxRateRepository : Repository<Core.Entities.TaxRate, TaxRate, stri
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entity = await dbContext.FindAsync<Core.Entities.TaxRate>(model);
-            entity.Active = false;
-            await dbContext.SaveChangesAsync();
+            await dbContext.TaxRates
+                .Where(tr => tr.Id == model.Id)
+                .ExecuteUpdateAsync(property => property.SetProperty(tr => tr.Active, false));
         }
     }
 
