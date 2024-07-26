@@ -350,16 +350,11 @@ public class OrganizationLicense : ILicense
                         organization.SmServiceAccounts == SmServiceAccounts;
             }
 
-            // Restore validity check when Flexible Collections are enabled for cloud and self-host
-            // https://bitwarden.atlassian.net/browse/AC-1875
-            // if (valid && Version >= 14)
-            // {
-            //     valid = organization.LimitCollectionCreationDeletion == LimitCollectionCreationDeletion;
-            // }
-            // if (valid && Version >= 15)
-            // {
-            //     valid = organization.AllowAdminAccessToAllCollectionItems == AllowAdminAccessToAllCollectionItems;
-            // }
+            /*
+             * Version 14 added LimitCollectionCreationDeletion and Version 15 added AllowAdminAccessToAllCollectionItems,
+             * however these are just user settings and it is not worth failing validation if they mismatch.
+             * They are intentionally excluded.
+             */
 
             return valid;
         }

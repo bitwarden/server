@@ -41,14 +41,10 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
-
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -127,7 +123,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var hasOrgs = _currentContext.Organizations?.Any() ?? false;
         // TODO: Use hasOrgs proper for cipher listing here?
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: true || hasOrgs);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true || hasOrgs);
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
         if (hasOrgs)
         {
@@ -199,7 +195,6 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
@@ -224,7 +219,6 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
 
-        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         if (cipher == null || !cipher.OrganizationId.HasValue ||
@@ -553,7 +547,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var editableCollections = (await _collectionRepository.GetManyByUserIdAsync(userId, true))
+        var editableCollections = (await _collectionRepository.GetManyByUserIdAsync(userId))
             .Where(c => c.OrganizationId == organizationId && !c.ReadOnly)
             .ToDictionary(c => c.Id);
 
@@ -590,7 +584,6 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
@@ -926,7 +919,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: false);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
         var shareCiphers = new List<(Cipher, DateTime?)>();
@@ -939,7 +932,6 @@ public class CiphersController : Controller
 
             var existingCipher = ciphersDict[cipher.Id.Value];
 
-            ValidateClientVersionForItemLevelEncryptionSupport(existingCipher);
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
             shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
@@ -993,8 +985,6 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
-
-        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
 
         if (request.FileSize > CipherService.MAX_FILE_SIZE)
         {
@@ -1210,14 +1200,6 @@ public class CiphersController : Controller
         if (!Request?.ContentType.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
-        }
-    }
-
-    private void ValidateClientVersionForItemLevelEncryptionSupport(Cipher cipher)
-    {
-        if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
-        {
-            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
         }
     }
 

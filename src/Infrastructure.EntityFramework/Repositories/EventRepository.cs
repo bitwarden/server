@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Cipher = Bit.Core.Vault.Entities.Cipher;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEventRepository
@@ -28,7 +30,7 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
 
     public async Task CreateManyAsync(IEnumerable<IEvent> entities)
     {
-        if (!entities?.Any() ?? true)
+        if (entities is null || !entities.Any())
         {
             return;
         }

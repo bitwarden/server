@@ -95,8 +95,9 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             return;
         }
 
-        var ssoConfigurationData = _ssoConfig.GetData();
-        if (ssoConfigurationData is not { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
+        var isTdeActive = _ssoConfig.GetData() is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption };
+        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted() && !isTdeActive;
+        if (!isTdeActive && !isTdeOffboarding)
         {
             return;
         }
@@ -144,6 +145,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             hasAdminApproval,
             hasLoginApprovingDevice,
             hasManageResetPasswordPermission,
+            isTdeOffboarding,
             encryptedPrivateKey,
             encryptedUserKey);
     }

@@ -5,6 +5,8 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepository
