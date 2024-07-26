@@ -105,6 +105,19 @@ public class SendVerificationEmailForRegistrationCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenOpenRegistrationDisabled_ThrowsBadRequestException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string email, string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = true;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Run(email, name, receiveMarketingEmails));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenIsExistingUserAndEnableEmailVerificationFalse_ThrowsBadRequestException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
         string email, string name, bool receiveMarketingEmails)
     {
