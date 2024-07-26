@@ -194,10 +194,6 @@ public class OrganizationEditModel : OrganizationViewModel
 
         var newOrg = new Organization
         {
-            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
-            // AC-1714 will remove this flag after all old code has been removed.
-            FlexibleCollections = true,
-
             // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
             // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
             AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled

@@ -68,7 +68,6 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         SmServiceAccounts = o.SmServiceAccounts,
                         LimitCollectionCreationDeletion = o.LimitCollectionCreationDeletion,
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
-                        FlexibleCollections = o.FlexibleCollections
                     };
         return query;
     }

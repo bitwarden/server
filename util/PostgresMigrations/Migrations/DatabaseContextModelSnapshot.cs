@@ -70,9 +70,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("FlexibleCollections")
-                        .HasColumnType("boolean");
-
                     b.Property<byte?>("Gateway")
                         .HasColumnType("smallint");
 

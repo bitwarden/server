@@ -69,9 +69,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<bool>("FlexibleCollections")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<byte?>("Gateway")
                         .HasColumnType("tinyint unsigned");
 
