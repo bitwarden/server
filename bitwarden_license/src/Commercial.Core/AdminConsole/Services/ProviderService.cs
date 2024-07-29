@@ -101,9 +101,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (!consolidatedBillingEnabled)
+        if (!_featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
         {
             provider.Status = ProviderStatusType.Created;
             await _providerRepository.UpsertAsync(provider);
@@ -114,17 +112,11 @@ public class ProviderService : IProviderService
             {
                 throw new BadRequestException("Both address and postal code are required to set up your provider.");
             }
-
             var customer = await _providerBillingService.SetupCustomer(provider, taxInfo);
-
             provider.GatewayCustomerId = customer.Id;
-
             var subscription = await _providerBillingService.SetupSubscription(provider);
-
             provider.GatewaySubscriptionId = subscription.Id;
-
             provider.Status = ProviderStatusType.Billable;
-
             await _providerRepository.UpsertAsync(provider);
         }
 
