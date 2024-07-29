@@ -442,15 +442,14 @@ public class OrganizationService : IOrganizationService
 
         var organization = new Organization
         {
-            // Pre-generate the org id so that we can save it with the Stripe subscription..
+            // Pre-generate the org id so that we can save it with the Stripe subscription.
             Id = CoreHelpers.GenerateComb(),
             Name = signup.Name,
             BillingEmail = signup.BillingEmail,
             PlanType = plan!.Type,
             Seats = signup.AdditionalSeats,
             MaxCollections = plan.PasswordManager.MaxCollections,
-            // Extra storage not available for purchase with Consolidated Billing.
-            MaxStorageGb = 0,
+            MaxStorageGb = 1,
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
