@@ -4,6 +4,8 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 
+#nullable enable
+
 namespace Bit.Core.Repositories.TableStorage;
 
 public class EventRepository : IEventRepository
@@ -78,9 +80,9 @@ public class EventRepository : IEventRepository
         await CreateEventAsync(entity);
     }
 
-    public async Task CreateManyAsync(IEnumerable<IEvent> e)
+    public async Task CreateManyAsync(IEnumerable<IEvent>? e)
     {
-        if (!e?.Any() ?? true)
+        if (e is null || !e.Any())
         {
             return;
         }
@@ -91,7 +93,7 @@ public class EventRepository : IEventRepository
             return;
         }
 
-        var entities = e.Where(ev => ev is EventTableEntity).Select(ev => ev as EventTableEntity);
+        var entities = e.OfType<EventTableEntity>();
         var entityGroups = entities.GroupBy(ent => ent.PartitionKey);
         foreach (var group in entityGroups)
         {
@@ -134,7 +136,7 @@ public class EventRepository : IEventRepository
         var result = new PagedResult<IEvent>();
         var query = _tableClient.QueryAsync<AzureEvent>(filter, pageOptions.PageSize);
 
-        await using (var enumerator = query.AsPages(pageOptions?.ContinuationToken,
+        await using (var enumerator = query.AsPages(pageOptions.ContinuationToken,
             pageOptions.PageSize).GetAsyncEnumerator())
         {
             await enumerator.MoveNextAsync();

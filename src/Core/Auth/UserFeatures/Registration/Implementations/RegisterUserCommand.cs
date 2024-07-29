@@ -37,6 +37,8 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IUserService _userService;
     private readonly IMailService _mailService;
 
+    private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
+
     public RegisterUserCommand(
         IGlobalSettings globalSettings,
         IOrganizationUserRepository organizationUserRepository,
@@ -124,8 +126,6 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private void ValidateOrgInviteToken(string orgInviteToken, Guid? orgUserId, User user)
     {
-        const string disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
-
         var orgInviteTokenProvided = !string.IsNullOrWhiteSpace(orgInviteToken);
 
         if (orgInviteTokenProvided && orgUserId.HasValue)
@@ -140,7 +140,7 @@ public class RegisterUserCommand : IRegisterUserCommand
 
             if (_globalSettings.DisableUserRegistration)
             {
-                throw new BadRequestException(disabledUserRegistrationExceptionMsg);
+                throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
             }
 
             throw new BadRequestException("Organization invite token is invalid.");
@@ -152,7 +152,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         // as you can't register without them.
         if (_globalSettings.DisableUserRegistration)
         {
-            throw new BadRequestException(disabledUserRegistrationExceptionMsg);
+            throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
         }
 
         // Open registration is allowed
@@ -233,6 +233,14 @@ public class RegisterUserCommand : IRegisterUserCommand
     public async Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash,
         string emailVerificationToken)
     {
+        // We validate open registration on send of initial email and here b/c a user could technically start the
+        // account creation process while open registration is enabled and then finish it after it has been
+        // disabled by the self hosted admin.
+        if (_globalSettings.DisableUserRegistration)
+        {
+            throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
+        }
+
         var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
 
         user.EmailVerified = true;

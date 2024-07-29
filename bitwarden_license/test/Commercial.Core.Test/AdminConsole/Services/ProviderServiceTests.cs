@@ -659,7 +659,7 @@ public class ProviderServiceTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize, BitAutoData]
     public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
         Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
     {
@@ -687,7 +687,7 @@ public class ProviderServiceTests
                 t.First().Item2 == null));
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize, BitAutoData]
     public async Task CreateOrganizationAsync_ConsolidatedBillingEnabled_InvalidPlanType_ThrowsBadRequestException(
         Provider provider,
         OrganizationSignup organizationSignup,
@@ -716,7 +716,7 @@ public class ProviderServiceTests
         await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateAsync(default);
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize, BitAutoData]
     public async Task CreateOrganizationAsync_ConsolidatedBillingEnabled_InvokeSignupClientAsync(
         Provider provider,
         OrganizationSignup organizationSignup,
