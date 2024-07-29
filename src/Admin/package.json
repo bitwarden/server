@@ -11,7 +11,7 @@
     "bootstrap": "4.6.2",
     "del": "6.1.1",
     "font-awesome": "4.7.0",
-    "gulp": "4.0.2",
+    "gulp": "5.0.0",
     "gulp-sass": "5.1.0",
     "jquery": "3.7.1",
     "merge-stream": "2.0.0",
