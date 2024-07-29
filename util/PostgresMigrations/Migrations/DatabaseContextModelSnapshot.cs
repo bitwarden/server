@@ -18,7 +18,7 @@ namespace Bit.PostgresMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
-                .HasAnnotation("ProductVersion", "8.0.6")
+                .HasAnnotation("ProductVersion", "8.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -69,9 +69,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("FlexibleCollections")
-                        .HasColumnType("boolean");
 
                     b.Property<byte?>("Gateway")
                         .HasColumnType("smallint");
@@ -785,6 +782,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<byte[]>("Value")
+                        .IsRequired()
                         .HasColumnType("bytea");
 
                     b.HasKey("Id")
@@ -1629,7 +1627,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.ToTable("AccessPolicy", (string)null);
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+                    b.HasDiscriminator().HasValue("AccessPolicy");
 
                     b.UseTphMappingStrategy();
                 });

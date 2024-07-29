@@ -123,7 +123,7 @@ public class UpdateGroupCommandTests
     }
 
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_GroupBelongsToDifferentOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider,
         Group group, Group oldGroup, Organization organization)
     {
@@ -138,7 +138,7 @@ public class UpdateGroupCommandTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateGroupAsync(group, organization));
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_CollectionsBelongsToDifferentOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider,
         Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
     {
@@ -155,7 +155,7 @@ public class UpdateGroupCommandTests
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_CollectionsDoNotExist_Throws(SutProvider<UpdateGroupCommand> sutProvider,
         Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
     {
@@ -178,7 +178,7 @@ public class UpdateGroupCommandTests
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_MemberBelongsToDifferentOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider,
         Group group, Group oldGroup, Organization organization, IEnumerable<Guid> userAccess)
     {
@@ -195,7 +195,7 @@ public class UpdateGroupCommandTests
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
     }
 
-    [Theory, OrganizationCustomize(UseGroups = true, FlexibleCollections = true), BitAutoData]
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_MemberDoesNotExist_Throws(SutProvider<UpdateGroupCommand> sutProvider,
         Group group, Group oldGroup, Organization organization, IEnumerable<Guid> userAccess)
     {
