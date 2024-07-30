@@ -27,7 +27,6 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     public string ResetPasswordKey { get; set; }
     public bool UsesKeyConnector { get; set; }
     public bool HasMasterPassword { get; set; }
-    public bool? HasPremiumAccess { get; set; }
 
     public ICollection<Guid> Groups { get; set; } = new List<Guid>();
     public ICollection<CollectionAccessSelection> Collections { get; set; } = new List<CollectionAccessSelection>();

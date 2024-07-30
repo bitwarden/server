@@ -1424,6 +1424,7 @@ public class OrganizationService : IOrganizationService
         var organization = await GetOrgById(organizationId);
         var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
         var users = await _userRepository.GetManyDetailsAsync(validSelectedUserIds);
+        var usersTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(validSelectedUserIds);
 
         var keyedFilteredUsers = validSelectedOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
         var keyedOrganizationUsers = allUsersOrgs.GroupBy(u => u.UserId.Value)
@@ -1453,7 +1454,8 @@ public class OrganizationService : IOrganizationService
                     }
                 }
 
-                await CheckPolicies_vNext(organizationId, user, orgUsers, userService);
+                var twoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
+                await CheckPolicies_vNext(organizationId, user, orgUsers, twoFactorEnabled);
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
@@ -1585,11 +1587,12 @@ public class OrganizationService : IOrganizationService
     }
 
     private async Task CheckPolicies_vNext(Guid organizationId, UserDetails user,
-        ICollection<OrganizationUser> userOrgs, IUserService userService)
+        ICollection<OrganizationUser> userOrgs, bool twoFactorEnabled)
     {
         // Enforce Two Factor Authentication Policy for this organization
-        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)).Any(p => p.OrganizationId == organizationId);
-        if (orgRequiresTwoFactor && !await userService.TwoFactorIsEnabledAsync(user, user.HasPremiumAccess))
+        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
+            .Any(p => p.OrganizationId == organizationId);
+        if (orgRequiresTwoFactor && !twoFactorEnabled)
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }
@@ -2446,7 +2449,14 @@ public class OrganizationService : IOrganizationService
 
         if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
         {
-            await CheckPoliciesBeforeRestoreAsync_vNext(organizationUser, userService);
+            var userTwoFactorIsEnabled = false;
+            // Only check Two Factor Authentication status if the user is linked to a user account
+            if (organizationUser.UserId.HasValue)
+            {
+                userTwoFactorIsEnabled = (await userService.TwoFactorIsEnabledAsync(new[] { organizationUser.UserId.Value })).FirstOrDefault().twoFactorIsEnabled;
+            }
+
+            await CheckPoliciesBeforeRestoreAsync_vNext(organizationUser, userTwoFactorIsEnabled);
         }
         else
         {
@@ -2483,6 +2493,14 @@ public class OrganizationService : IOrganizationService
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
+        // Query Two Factor Authentication status for all users in the organization
+        // This is an optimization to avoid querying the Two Factor Authentication status for each user individually
+        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> organizationUsersTwoFactorEnabled = null;
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            organizationUsersTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(filteredUsers.Select(ou => ou.UserId.Value));
+        }
+
         var result = new List<Tuple<OrganizationUser, string>>();
 
         foreach (var organizationUser in filteredUsers)
@@ -2506,7 +2524,8 @@ public class OrganizationService : IOrganizationService
 
                 if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
                 {
-                    await CheckPoliciesBeforeRestoreAsync_vNext(organizationUser, userService);
+                    var twoFactorIsEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value).twoFactorIsEnabled;
+                    await CheckPoliciesBeforeRestoreAsync_vNext(organizationUser, twoFactorIsEnabled);
                 }
                 else
                 {
@@ -2577,7 +2596,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task CheckPoliciesBeforeRestoreAsync_vNext(OrganizationUser orgUser, IUserService userService)
+    private async Task CheckPoliciesBeforeRestoreAsync_vNext(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
     {
         // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
         // The user will be subject to the same checks when they try to accept the invite
@@ -2589,8 +2608,8 @@ public class OrganizationService : IOrganizationService
         var userId = orgUser.UserId.Value;
 
         // Enforce Single Organization Policy of organization user is being restored to
-        var allUserOrgUserDetails = await _organizationUserRepository.GetManyUserDetailsByUserAsync(userId);
-        var hasOtherOrgs = allUserOrgUserDetails.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+        var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
         var singleOrgPoliciesApplyingToRevokedUsers = await _policyService.GetPoliciesApplicableToUserAsync(userId,
             PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
         var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
@@ -2602,16 +2621,16 @@ public class OrganizationService : IOrganizationService
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
-        if (singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationUserStatus >= OrganizationUserStatusType.Accepted))
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId,
+            PolicyType.SingleOrg);
+        if (anySingleOrgPolicies)
         {
             throw new BadRequestException("You cannot restore this user because they are a member of " +
                 "another organization which forbids it");
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
-        var orgUserDetails = allUserOrgUserDetails.FirstOrDefault(ou => ou.Id == orgUser.Id);
-        var twoFactorIsEnabled = await userService.TwoFactorIsEnabledAsync(orgUserDetails, orgUserDetails.HasPremiumAccess);
-        if (!twoFactorIsEnabled)
+        if (!userHasTwoFactorEnabled)
         {
             var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);

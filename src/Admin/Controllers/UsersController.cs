@@ -4,7 +4,7 @@ using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Models.Data;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -25,6 +25,7 @@ public class UsersController : Controller
     private readonly IAccessControlService _accessControlService;
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
+    private readonly IUserService _userService;
 
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
@@ -36,7 +37,8 @@ public class UsersController : Controller
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
         ICurrentContext currentContext,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IUserService userService)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -45,6 +47,7 @@ public class UsersController : Controller
         _accessControlService = accessControlService;
         _currentContext = currentContext;
         _featureService = featureService;
+        _userService = userService;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -61,12 +64,16 @@ public class UsersController : Controller
         }
 
         var skip = (page - 1) * count;
-        var users = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
-            ? await _userRepository.SearchDetailsAsync(email, skip, count)
-            : await _userRepository.SearchAsync(email, skip, count);
+        var users = await _userRepository.SearchAsync(email, skip, count);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            TempData["UsersTwoFactorIsEnabled"] = await _userService.TwoFactorIsEnabledAsync(users.Select(u => u.Id));
+        }
+
         return View(new UsersModel
         {
-            Items = users as List<UserDetails>,
+            Items = users as List<User>,
             Email = string.IsNullOrWhiteSpace(email) ? null : email,
             Page = page,
             Count = count,

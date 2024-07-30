@@ -25,6 +25,7 @@ public class PolicyService : IPolicyService
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
+    private readonly IUserRepository _userRepository;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -35,7 +36,8 @@ public class PolicyService : IPolicyService
         ISsoConfigRepository ssoConfigRepository,
         IMailService mailService,
         GlobalSettings globalSettings,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IUserRepository userRepository)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -46,6 +48,7 @@ public class PolicyService : IPolicyService
         _mailService = mailService;
         _globalSettings = globalSettings;
         _featureService = featureService;
+        _userRepository = userRepository;
     }
 
     public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
@@ -81,6 +84,12 @@ public class PolicyService : IPolicyService
         if (!policy.Enabled)
         {
             await SetPolicyConfiguration(policy);
+            return;
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            await EnablePolicy_vNext(policy, org, userService, organizationService, savingUserId);
             return;
         }
 
@@ -264,9 +273,7 @@ public class PolicyService : IPolicyService
         var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
         if (!currentPolicy?.Enabled ?? true)
         {
-            var orgUsers = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
-                ? await _organizationUserRepository.GetManyDetailsWithPremiumAccessByOrganizationAsync(policy.OrganizationId)
-                : await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
+            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
             var removableOrgUsers = orgUsers.Where(ou =>
                 ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
                 ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
@@ -277,7 +284,64 @@ public class PolicyService : IPolicyService
                     // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
                     foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
                     {
-                        if (!await userService.TwoFactorIsEnabledAsync(orgUser, orgUser.HasPremiumAccess))
+                        if (!await userService.TwoFactorIsEnabledAsync(orgUser))
+                        {
+                            if (!orgUser.HasMasterPassword)
+                            {
+                                throw new BadRequestException(
+                                    "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
+                            }
+
+                            await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                savingUserId);
+                            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                                org.DisplayName(), orgUser.Email);
+                        }
+                    }
+                    break;
+                case PolicyType.SingleOrg:
+                    var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
+                            removableOrgUsers.Select(ou => ou.UserId.Value));
+                    foreach (var orgUser in removableOrgUsers)
+                    {
+                        if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
+                                    && ou.OrganizationId != org.Id
+                                    && ou.Status != OrganizationUserStatusType.Invited))
+                        {
+                            await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                savingUserId);
+                            await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
+                                org.DisplayName(), orgUser.Email);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        await SetPolicyConfiguration(policy);
+    }
+
+    private async Task EnablePolicy_vNext(Policy policy, Organization org, IUserService userService, IOrganizationService organizationService, Guid? savingUserId)
+    {
+        var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
+        if (!currentPolicy?.Enabled ?? true)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
+            var organizationUsersTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(orgUsers);
+            var removableOrgUsers = orgUsers.Where(ou =>
+                ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
+                ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
+                ou.UserId != savingUserId);
+            switch (policy.Type)
+            {
+                case PolicyType.TwoFactorAuthentication:
+                    // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
+                    foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
+                    {
+                        var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == orgUser.Id).twoFactorIsEnabled;
+                        if (!userTwoFactorEnabled)
                         {
                             if (!orgUser.HasMasterPassword)
                             {

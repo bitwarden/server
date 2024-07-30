@@ -1659,7 +1659,8 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        userService.TwoFactorIsEnabledAsync(user, user.HasPremiumAccess).Returns(false);
+        userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, false) });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
@@ -1688,7 +1689,8 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        userService.TwoFactorIsEnabledAsync(user, user.HasPremiumAccess).Returns(true);
+        userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, true) });
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
     }
@@ -1767,9 +1769,13 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        userService.TwoFactorIsEnabledAsync(user1, user1.HasPremiumAccess).Returns(true);
-        userService.TwoFactorIsEnabledAsync(user2, user2.HasPremiumAccess).Returns(false);
-        userService.TwoFactorIsEnabledAsync(user3, user3.HasPremiumAccess).Returns(true);
+        userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user2.Id) && ids.Contains(user3.Id)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>()
+            {
+                (user1.Id, true),
+                (user2.Id, false),
+                (user3.Id, true)
+            });
         singleOrgPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user3.Id, PolicyType.SingleOrg)
             .Returns(new[] { singleOrgPolicy });
@@ -1961,15 +1967,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository.GetManyByOrganizationAsync(organizationUser.OrganizationId, restoringUserType)
             .Returns(new[] { restoringUser });
-        organizationUserRepository.GetManyUserDetailsByUserAsync(organizationUser.UserId.Value).Returns(new[]
-        {
-            new OrganizationUserUserDetails
-            {
-                Id = organizationUser.Id,
-                OrganizationId = organizationUser.OrganizationId,
-                HasPremiumAccess = true
-            }
-        });
     }
 
     [Theory, BitAutoData]
@@ -2165,15 +2162,17 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         SutProvider<OrganizationService> sutProvider)
     {
-        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+        organizationUser.Email = null;
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
+
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
+
         userService.TwoFactorIsEnabledAsync(Arg.Any<ITwoFactorProvidersUser>()).Returns(false);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -2229,21 +2228,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
-        organizationUserRepository.GetManyUserDetailsByUserAsync(organizationUser.UserId.Value).Returns(new[]
-        {
-            new OrganizationUserUserDetails
-            {
-                Id = organizationUser.Id,
-                OrganizationId = organizationUser.OrganizationId,
-                HasPremiumAccess = true
-            },
-            new OrganizationUserUserDetails
-            {
-                Id = secondOrganizationUser.Id,
-                OrganizationId = secondOrganizationUser.OrganizationId,
-                HasPremiumAccess = true
-            }
-        });
+        organizationUserRepository.GetManyByUserAsync(organizationUser.UserId.Value).Returns(new[] { organizationUser, secondOrganizationUser });
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
             .Returns(new[]
@@ -2279,12 +2264,13 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
+        userService
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
+
         sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[]
-            {
-                new OrganizationUserPolicyDetails { OrganizationId = secondOrganizationUser.OrganizationId, PolicyType = PolicyType.SingleOrg, OrganizationUserStatus = OrganizationUserStatusType.Accepted },
-            });
+            .AnyPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
+            .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
@@ -2306,16 +2292,15 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
 
-        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+        organizationUser.Email = null;
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
+
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
-
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
-        userService.TwoFactorIsEnabledAsync(Arg.Any<ITwoFactorProvidersUser>(), Arg.Any<bool?>()).Returns(false);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
@@ -2346,7 +2331,10 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
-        userService.TwoFactorIsEnabledAsync(Arg.Any<ITwoFactorProvidersUser>(), Arg.Any<bool?>()).Returns(true);
+
+        userService
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
 
         await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService);
 

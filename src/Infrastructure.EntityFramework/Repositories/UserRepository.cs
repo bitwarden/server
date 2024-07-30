@@ -52,7 +52,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<ICollection<DataModel.UserDetails>> SearchAsync(string email, int skip, int take)
+    public async Task<ICollection<Core.Entities.User>> SearchAsync(string email, int skip, int take)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -75,7 +75,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                     .Skip(skip).Take(take)
                     .ToListAsync();
             }
-            return Mapper.Map<List<DataModel.UserDetails>>(users);
+            return Mapper.Map<List<Core.Entities.User>>(users);
         }
     }
 

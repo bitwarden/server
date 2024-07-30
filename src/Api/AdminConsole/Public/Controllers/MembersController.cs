@@ -6,6 +6,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -106,12 +107,18 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ListResponseModel<MemberResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var users = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
-            ? await _organizationUserRepository.GetManyDetailsWithPremiumAccessByOrganizationAsync(_currentContext.OrganizationId.Value)
-            : await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value);
+        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value);
         // TODO: Get all CollectionUser associations for the organization and marry them up here for the response.
-        var memberResponsesTasks = users.Select(async u => new MemberResponseModel(u,
-            await _userService.TwoFactorIsEnabledAsync(u, u.HasPremiumAccess), null));
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            return await List_vNext(organizationUserUserDetails);
+        }
+
+        var memberResponsesTasks = organizationUserUserDetails.Select(async u =>
+        {
+            return new MemberResponseModel(u, await _userService.TwoFactorIsEnabledAsync(u), null);
+        });
         var memberResponses = await Task.WhenAll(memberResponsesTasks);
         var response = new ListResponseModel<MemberResponseModel>(memberResponses);
         return new JsonResult(response);
@@ -239,5 +246,16 @@ public class MembersController : Controller
         }
         await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
         return new OkResult();
+    }
+
+    private async Task<JsonResult> List_vNext(ICollection<OrganizationUserUserDetails> organizationUserUserDetails)
+    {
+        var orgUsersTwoFactorIsEnabled = await _userService.TwoFactorIsEnabledAsync(organizationUserUserDetails);
+        var memberResponses = organizationUserUserDetails.Select(u =>
+        {
+            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, null);
+        });
+        var response = new ListResponseModel<MemberResponseModel>(memberResponses);
+        return new JsonResult(response);
     }
 }
