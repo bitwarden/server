@@ -18,8 +18,4 @@
     <ProjectReference Include="..\..\..\src\SharedWeb\SharedWeb.csproj" />
   </ItemGroup>
 
-  <Target Name="NodePreCompileTarget" BeforeTargets="Build">
-    <Exec Command="npm run build"/>
-  </Target>
-
 </Project>

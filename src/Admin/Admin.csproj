@@ -24,7 +24,4 @@
     </When>
   </Choose>
 
-  <Target Name="NodePreCompileTarget" BeforeTargets="Build">
-    <Exec Command="npm run build"/>
-  </Target>
 </Project>
