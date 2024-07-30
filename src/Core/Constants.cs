@@ -132,6 +132,7 @@ public static class FeatureFlagKeys
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string EnableUpgradePasswordManagerSub = "AC-2708-upgrade-password-manager-sub";
+    public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
 
     public static List<string> GetAllKeys()
     {
