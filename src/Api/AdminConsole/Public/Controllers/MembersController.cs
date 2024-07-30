@@ -26,6 +26,8 @@ public class MembersController : Controller
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IPaymentService _paymentService;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly IFeatureService _featureService;
 
     public MembersController(
@@ -37,6 +39,8 @@ public class MembersController : Controller
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IApplicationCacheService applicationCacheService,
+        IPaymentService paymentService,
+        IOrganizationRepository organizationRepository,
         IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
@@ -47,6 +51,8 @@ public class MembersController : Controller
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _applicationCacheService = applicationCacheService;
+        _paymentService = paymentService;
+        _organizationRepository = organizationRepository;
         _featureService = featureService;
     }
 
@@ -136,7 +142,18 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
     {
+        var hasStandaloneSecretsManager = false;
+
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId!.Value);
+
+        if (organization != null)
+        {
+            hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+        }
+
         var invite = model.ToOrganizationUserInvite();
+
+        invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
         var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
             systemUser: null, invite, model.ExternalId);

@@ -214,13 +214,13 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(userId, false)
+            .GetManyByUserIdAsync(userId)
             .Returns(collections);
 
         var result = await sutProvider.Sut.Get(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdAsync(organization.Id);
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId, false);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
 
         Assert.Single(result.Data);
         Assert.All(result.Data, c => Assert.Equal(organization.Id, c.OrganizationId));

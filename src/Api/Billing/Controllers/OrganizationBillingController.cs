@@ -20,7 +20,7 @@ public class OrganizationBillingController(
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
-        if (!await currentContext.ViewBillingHistory(organizationId))
+        if (!await currentContext.AccessMembersTab(organizationId))
         {
             return TypedResults.Unauthorized();
         }

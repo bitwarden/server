@@ -27,9 +27,6 @@ public class UsersController : Controller
     private readonly IFeatureService _featureService;
     private readonly IUserService _userService;
 
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
-
     public UsersController(
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
@@ -89,7 +86,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         return View(new UserViewModel(user, ciphers));
     }
 
@@ -102,7 +99,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         return View(new UserEditModel(user, ciphers, billingInfo, billingHistoryInfo, _globalSettings));

@@ -23,9 +23,6 @@ public class GroupsControllerTests
     [BitAutoData]
     public async Task Post_Success(Organization organization, GroupCreateUpdateRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
-        // Organization has migrated
-        organization.FlexibleCollections = true;
-
         // Contains at least one can manage
         groupRequestModel.Collections.First().Manage = true;
 
@@ -50,9 +47,6 @@ public class GroupsControllerTests
     [BitAutoData]
     public async Task Put_Success(Organization organization, Group group, GroupCreateUpdateRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
-        // Organization has migrated
-        organization.FlexibleCollections = true;
-
         // Contains at least one can manage
         groupRequestModel.Collections.First().Manage = true;
 

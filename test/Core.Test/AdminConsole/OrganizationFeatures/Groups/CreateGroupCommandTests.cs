@@ -109,7 +109,6 @@ public class CreateGroupCommandTests
         SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group)
     {
         group.AccessAll = true;
-        organization.FlexibleCollections = true;
 
         var exception =
             await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateGroupAsync(group, organization));

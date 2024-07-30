@@ -367,4 +367,18 @@ public class RegisterUserCommandTests
 
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken)
+    {
+        // Arrange
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration = true;
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken));
+        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+
+    }
+
 }
