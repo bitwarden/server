@@ -191,10 +191,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return true;
         }
 
-        // If V1 is enabled, Owners and Admins can update any collection only if permitted by collection management settings
+        // Owners and Admins can update any collection only if permitted by collection management settings
         var organizationAbility = await GetOrganizationAbilityAsync(org);
-        var allowAdminAccessToAllCollectionItems = !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
-                                                   organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+        var allowAdminAccessToAllCollectionItems = organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
         if (allowAdminAccessToAllCollectionItems && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             return true;
@@ -245,8 +244,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         // If AllowAdminAccessToAllCollectionItems is true, Owners and Admins can delete any collection, regardless of LimitCollectionCreationDeletion setting
         var organizationAbility = await GetOrganizationAbilityAsync(org);
-        var allowAdminAccessToAllCollectionItems = !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
-                                                   organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+        var allowAdminAccessToAllCollectionItems = organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
         if (allowAdminAccessToAllCollectionItems && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             return true;
@@ -326,8 +324,6 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> AllowAdminAccessToAllCollectionItems(CurrentContextOrganization? org)
     {
-        var organizationAbility = await GetOrganizationAbilityAsync(org);
-        return !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
-            organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+        return await GetOrganizationAbilityAsync(org) is { AllowAdminAccessToAllCollectionItems: true };
     }
 }
