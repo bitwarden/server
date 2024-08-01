@@ -210,50 +210,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             var dbContext = GetDatabaseContext(scope);
             var users = dbContext.Users.Where(x => ids.Contains(x.Id));
-            return await users.Select(e => new DataModel.UserDetails
+            return await users.Select(e => new DataModel.UserDetails(e)
             {
-                Id = e.Id,
-                Name = e.Name,
-                Email = e.Email,
-                EmailVerified = e.EmailVerified,
-                MasterPassword = e.MasterPassword,
-                MasterPasswordHint = e.MasterPasswordHint,
-                Culture = e.Culture,
-                SecurityStamp = e.SecurityStamp,
-                TwoFactorProviders = e.TwoFactorProviders,
-                TwoFactorRecoveryCode = e.TwoFactorRecoveryCode,
-                EquivalentDomains = e.EquivalentDomains,
-                ExcludedGlobalEquivalentDomains = e.ExcludedGlobalEquivalentDomains,
-                AccountRevisionDate = e.AccountRevisionDate,
-                Key = e.Key,
-                PublicKey = e.PublicKey,
-                PrivateKey = e.PrivateKey,
-                Premium = e.Premium,
-                PremiumExpirationDate = e.PremiumExpirationDate,
-                RenewalReminderDate = e.RenewalReminderDate,
-                Storage = e.Storage,
-                MaxStorageGb = e.MaxStorageGb,
-                Gateway = e.Gateway,
-                GatewayCustomerId = e.GatewayCustomerId,
-                GatewaySubscriptionId = e.GatewaySubscriptionId,
-                ReferenceData = e.ReferenceData,
-                LicenseKey = e.LicenseKey,
-                ApiKey = e.ApiKey,
-                Kdf = e.Kdf,
-                KdfIterations = e.KdfIterations,
-                KdfMemory = e.KdfMemory,
-                KdfParallelism = e.KdfParallelism,
-                CreationDate = e.CreationDate,
-                RevisionDate = e.RevisionDate,
-                ForcePasswordReset = e.ForcePasswordReset,
-                UsesKeyConnector = e.UsesKeyConnector,
-                FailedLoginCount = e.FailedLoginCount,
-                LastFailedLoginDate = e.LastFailedLoginDate,
-                AvatarColor = e.AvatarColor,
-                LastPasswordChangeDate = e.LastPasswordChangeDate,
-                LastKdfChangeDate = e.LastKdfChangeDate,
-                LastKeyRotationDate = e.LastKeyRotationDate,
-                LastEmailChangeDate = e.LastEmailChangeDate,
                 HasPremiumAccess = e.Premium || dbContext.OrganizationUsers
                     .Any(ou => ou.UserId == e.Id &&
                                dbContext.Organizations
