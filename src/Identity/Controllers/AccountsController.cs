@@ -31,8 +31,7 @@ namespace Bit.Identity.Controllers;
 [ExceptionHandlerFilter]
 public class AccountsController : Controller
 {
-    private readonly ICurrentContext _currentContext;
-    private readonly ILogger<AccountsController> _logger;
+    private readonly ICurrentContext _currentContext;   
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly ICaptchaValidationService _captchaValidationService;
@@ -44,8 +43,7 @@ public class AccountsController : Controller
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
     public AccountsController(
-        ICurrentContext currentContext,
-        ILogger<AccountsController> logger,
+        ICurrentContext currentContext,        
         IUserRepository userRepository,
         IRegisterUserCommand registerUserCommand,
         ICaptchaValidationService captchaValidationService,
@@ -57,8 +55,7 @@ public class AccountsController : Controller
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory
         )
     {
-        _currentContext = currentContext;
-        _logger = logger;
+        _currentContext = currentContext;        
         _userRepository = userRepository;
         _registerUserCommand = registerUserCommand;
         _captchaValidationService = captchaValidationService;

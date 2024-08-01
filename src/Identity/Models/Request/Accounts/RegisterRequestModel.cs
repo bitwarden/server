@@ -41,25 +41,13 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
             Kdf = Kdf.GetValueOrDefault(KdfType.PBKDF2_SHA256),
-            KdfIterations = KdfIterations.GetValueOrDefault(AuthConstants.PBKDF2_ITERATIONS.Default),
+            KdfIterations = KdfIterations ?? AuthConstants.PBKDF2_ITERATIONS.Default,
             KdfMemory = KdfMemory,
-            KdfParallelism = KdfParallelism
+            KdfParallelism = KdfParallelism,
+            ReferenceData = ReferenceData != null ? JsonSerializer.Serialize(ReferenceData)  : null,
+            Key = Key
         };
-
-        if (ReferenceData != null)
-        {
-            user.ReferenceData = JsonSerializer.Serialize(ReferenceData);
-        }
-
-        if (Key != null)
-        {
-            user.Key = Key;
-        }
-
-        if (Keys != null)
-        {
-            Keys.ToUser(user);
-        }
+        Keys?.ToUser(user);        
 
         return user;
     }

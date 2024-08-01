@@ -82,11 +82,9 @@ public class PayPalIPNTransactionModel
         IsAccountCredit = custom.Contains("account_credit:1");
     }
 
-    private static string Extract(IReadOnlyDictionary<string, string> data, string key)
-    {
-        var success = data.TryGetValue(key, out var value);
-        return success ? value : null;
-    }
+    private static string Extract(IReadOnlyDictionary<string, string> data, string key) =>
+        data.TryGetValue(key, out var value) ? value : null;
+    
 
     private static DateTime ToUTCDateTime(string input)
     {
