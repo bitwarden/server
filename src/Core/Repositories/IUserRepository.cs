@@ -29,7 +29,6 @@ public interface IUserRepository : IRepository<User, Guid>
     /// </summary>
     /// <param name="user">The user to update</param>
     /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
-    [Obsolete("Intended for future improvements to key rotation. Do not use.")]
     Task UpdateUserKeyAndEncryptedDataAsync(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
 }
