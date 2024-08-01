@@ -1,43 +1,48 @@
-﻿using Bit.Core.Billing.Models;
+﻿using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Models;
 using Bit.Core.Utilities;
+using Stripe;
 
 namespace Bit.Api.Billing.Models.Responses;
 
-public record ConsolidatedBillingSubscriptionResponse(
+public record ProviderSubscriptionResponse(
     string Status,
     DateTime CurrentPeriodEndDate,
     decimal? DiscountPercentage,
     string CollectionMethod,
     IEnumerable<ProviderPlanResponse> Plans,
     long AccountCredit,
-    TaxInformationDTO TaxInformation,
+    TaxInformation TaxInformation,
     DateTime? CancelAt,
-    SubscriptionSuspensionDTO Suspension)
+    SubscriptionSuspension Suspension)
 {
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
 
-    public static ConsolidatedBillingSubscriptionResponse From(
-        ConsolidatedBillingSubscriptionDTO consolidatedBillingSubscription)
+    public static ProviderSubscriptionResponse From(
+        Subscription subscription,
+        ICollection<ProviderPlan> providerPlans,
+        TaxInformation taxInformation,
+        SubscriptionSuspension subscriptionSuspension)
     {
-        var (providerPlans, subscription, taxInformation, suspension) = consolidatedBillingSubscription;
-
         var providerPlanResponses = providerPlans
-            .Select(providerPlan =>
+            .Where(providerPlan => providerPlan.IsConfigured())
+            .Select(ConfiguredProviderPlan.From)
+            .Select(configuredProviderPlan =>
             {
-                var plan = StaticStore.GetPlan(providerPlan.PlanType);
-                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
+                var plan = StaticStore.GetPlan(configuredProviderPlan.PlanType);
+                var cost = (configuredProviderPlan.SeatMinimum + configuredProviderPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
                 return new ProviderPlanResponse(
                     plan.Name,
-                    providerPlan.SeatMinimum,
-                    providerPlan.PurchasedSeats,
-                    providerPlan.AssignedSeats,
+                    configuredProviderPlan.SeatMinimum,
+                    configuredProviderPlan.PurchasedSeats,
+                    configuredProviderPlan.AssignedSeats,
                     cost,
                     cadence);
             });
 
-        return new ConsolidatedBillingSubscriptionResponse(
+        return new ProviderSubscriptionResponse(
             subscription.Status,
             subscription.CurrentPeriodEnd,
             subscription.Customer?.Discount?.Coupon?.PercentOff,
@@ -46,7 +51,7 @@ public record ConsolidatedBillingSubscriptionResponse(
             subscription.Customer?.Balance ?? 0,
             taxInformation,
             subscription.CancelAt,
-            suspension);
+            subscriptionSuspension);
     }
 }
 

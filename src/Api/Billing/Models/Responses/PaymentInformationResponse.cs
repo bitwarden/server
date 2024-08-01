@@ -5,7 +5,7 @@ namespace Bit.Api.Billing.Models.Responses;
 public record PaymentInformationResponse(
     long AccountCredit,
     MaskedPaymentMethodDTO PaymentMethod,
-    TaxInformationDTO TaxInformation)
+    TaxInformation TaxInformation)
 {
     public static PaymentInformationResponse From(PaymentInformationDTO paymentInformation) =>
         new(
