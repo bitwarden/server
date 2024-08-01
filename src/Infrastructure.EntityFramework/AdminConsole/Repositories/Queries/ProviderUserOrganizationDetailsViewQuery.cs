@@ -46,7 +46,6 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             PlanType = x.o.PlanType,
             LimitCollectionCreationDeletion = x.o.LimitCollectionCreationDeletion,
             AllowAdminAccessToAllCollectionItems = x.o.AllowAdminAccessToAllCollectionItems,
-            FlexibleCollections = x.o.FlexibleCollections
         });
     }
 }

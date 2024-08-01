@@ -6,6 +6,8 @@ using LinqToDB;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class TransactionRepository : Repository<Core.Entities.Transaction, Transaction, Guid>, ITransactionRepository
@@ -14,7 +16,7 @@ public class TransactionRepository : Repository<Core.Entities.Transaction, Trans
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Transactions)
     { }
 
-    public async Task<Core.Entities.Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
+    public async Task<Core.Entities.Transaction?> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

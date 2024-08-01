@@ -442,15 +442,14 @@ public class OrganizationService : IOrganizationService
 
         var organization = new Organization
         {
-            // Pre-generate the org id so that we can save it with the Stripe subscription..
+            // Pre-generate the org id so that we can save it with the Stripe subscription.
             Id = CoreHelpers.GenerateComb(),
             Name = signup.Name,
             BillingEmail = signup.BillingEmail,
             PlanType = plan!.Type,
             Seats = signup.AdditionalSeats,
             MaxCollections = plan.PasswordManager.MaxCollections,
-            // Extra storage not available for purchase with Consolidated Billing.
-            MaxStorageGb = 0,
+            MaxStorageGb = 1,
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
@@ -477,10 +476,6 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = true,
             // Secrets Manager not available for purchase with Consolidated Billing.
             UseSecretsManager = false,
-
-            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
-            // AC-1714 will remove this flag after all old code has been removed.
-            FlexibleCollections = true,
 
             // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
             // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
@@ -567,10 +562,6 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
-
-            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
-            // AC-1714 will remove this flag after all old code has been removed.
-            FlexibleCollections = true,
 
             // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
             // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
@@ -696,10 +687,6 @@ public class OrganizationService : IOrganizationService
             SmServiceAccounts = license.SmServiceAccounts,
             LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion,
             AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems,
-
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = true,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -2554,13 +2541,9 @@ public class OrganizationService : IOrganizationService
 
         if (!string.IsNullOrWhiteSpace(collectionName))
         {
-            // If using Flexible Collections, give the owner Can Manage access over the default collection
-            List<CollectionAccessSelection> defaultOwnerAccess = null;
-            if (org.FlexibleCollections)
-            {
-                defaultOwnerAccess =
-                    [new CollectionAccessSelection { Id = organizationUserId, HidePasswords = false, ReadOnly = false, Manage = true }];
-            }
+            // give the owner Can Manage access over the default collection
+            List<CollectionAccessSelection> defaultOwnerAccess =
+                [new CollectionAccessSelection { Id = organizationUserId, HidePasswords = false, ReadOnly = false, Manage = true }];
 
             var defaultCollection = new Collection
             {

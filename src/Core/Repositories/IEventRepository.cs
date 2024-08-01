@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Models.Data;
 using Bit.Core.Vault.Entities;
 
+#nullable enable
+
 namespace Bit.Core.Repositories;
 
 public interface IEventRepository

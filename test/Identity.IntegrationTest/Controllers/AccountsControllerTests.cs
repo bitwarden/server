@@ -62,6 +62,28 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
     }
 
+    [Theory, BitAutoData]
+    public async Task PostRegisterSendEmailVerification_DisabledOpenRegistration_ThrowsBadRequestException(string name, bool receiveMarketingEmails)
+    {
+
+        // Localize substitutions to this test.
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
+
+        var email = $"test+register+{name}@email.com";
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails
+        };
+
+        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+    }
+
+
     [Theory]
     [BitAutoData(true)]
     [BitAutoData(false)]
@@ -198,6 +220,38 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
 
+
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_OpenRegistrationDisabled_ThrowsBadRequestException([Required] string name, string emailVerificationToken,
+       [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
+       [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
+    {
+        // Localize substitutions to this test.
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
+
+        var email = $"test+register+{name}@email.com";
+
+        // Now we call the finish registration endpoint with the email verification token
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = emailVerificationToken,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism
+        };
+
+        var postRegisterFinishHttpContext = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, postRegisterFinishHttpContext.Response.StatusCode);
+    }
+
     [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithOrgInviteToken_Succeeds(
          [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
@@ -266,6 +320,43 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
         Assert.Equal(kdfMemory, user.KdfMemory);
         Assert.Equal(kdfParallelism, user.KdfParallelism);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterVerificationEmailClicked_Success(
+        [Required, StringLength(20)] string name,
+        string emailVerificationToken)
+    {
+        // Arrange
+        // Localize substitutions to this test.
+        var localFactory = new IdentityApplicationFactory();
+
+        var email = $"test+register+{name}@email.com";
+        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email);
+
+        localFactory.SubstituteService<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>(emailVerificationTokenDataProtectorFactory =>
+        {
+            emailVerificationTokenDataProtectorFactory.TryUnprotect(Arg.Is(emailVerificationToken), out Arg.Any<RegistrationEmailVerificationTokenable>())
+                .Returns(callInfo =>
+                {
+                    callInfo[1] = registrationEmailVerificationTokenable;
+                    return true;
+                });
+        });
+
+        var requestModel = new RegisterVerificationEmailClickedRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken
+        };
+
+        // Act
+        var httpContext = await localFactory.PostRegisterVerificationEmailClicked(requestModel);
+
+        var body = await httpContext.ReadBodyAsStringAsync();
+
+        // Assert
+        Assert.Equal(StatusCodes.Status200OK, httpContext.Response.StatusCode);
     }
 
     private async Task<User> CreateUserAsync(string email, string name, IdentityApplicationFactory factory = null)

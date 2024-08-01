@@ -1,4 +1,4 @@
-﻿@import "webfonts.css";
+﻿@import "webfonts.scss";
 
 $primary: #175DDC;
 $primary-accent: #1252A3;
@@ -17,7 +17,7 @@ $h4-font-size: 1rem;
 $h5-font-size: 1rem;
 $h6-font-size: 1rem;
 
-@import "../node_modules/bootstrap/scss/bootstrap.scss";
+@import "bootstrap/scss/bootstrap.scss";
 
 h1 {
     border-bottom: 1px solid $border-color;

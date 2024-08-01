@@ -10,10 +10,7 @@ public class TwoFactorAuthenticatorResponseModel : ResponseModel
     public TwoFactorAuthenticatorResponseModel(User user)
         : base("twoFactorAuthenticator")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
         if (provider?.MetaData?.ContainsKey("Key") ?? false)
@@ -31,4 +28,5 @@ public class TwoFactorAuthenticatorResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public string Key { get; set; }
+    public string UserVerificationToken { get; set; }
 }

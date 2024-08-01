@@ -23,7 +23,7 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(false);
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
@@ -35,7 +35,7 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadataDTO)null);
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
@@ -48,7 +48,7 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
             .Returns(new OrganizationMetadataDTO(true));
 
