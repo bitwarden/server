@@ -26,33 +26,12 @@ public class GroupsControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async Task Post_PreFCv1_Success(Organization organization, GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
-
-        var response = await sutProvider.Sut.Post(organization.Id, groupRequestModel);
-
-        await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
-        await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
-            Arg.Is<Group>(g =>
-                g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
-            organization,
-            Arg.Any<ICollection<CollectionAccessSelection>>(),
-            Arg.Any<IEnumerable<Guid>>());
-        Assert.Equal(groupRequestModel.Name, response.Name);
-        Assert.Equal(organization.Id, response.OrganizationId);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task Post_AuthorizedToGiveAccessToCollections_Success(Organization organization,
         GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
-        // Enable FC and v1
+        // Enable FC
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
             new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
@@ -93,10 +72,9 @@ public class GroupsControllerTests
     [BitAutoData]
     public async Task Post_NotAuthorizedToGiveAccessToCollections_Throws(Organization organization, GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
-        // Enable FC and v1
+        // Enable FC
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
             new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
