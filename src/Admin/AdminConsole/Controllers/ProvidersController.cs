@@ -13,6 +13,7 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -40,6 +41,7 @@ public class ProvidersController : Controller
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
+    private readonly IProviderBillingService _providerBillingService;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
@@ -57,6 +59,7 @@ public class ProvidersController : Controller
         ICreateProviderCommand createProviderCommand,
         IFeatureService featureService,
         IProviderPlanRepository providerPlanRepository,
+        IProviderBillingService providerBillingService,
         IWebHostEnvironment webHostEnvironment)
     {
         _organizationRepository = organizationRepository;
@@ -71,6 +74,7 @@ public class ProvidersController : Controller
         _createProviderCommand = createProviderCommand;
         _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
+        _providerBillingService = providerBillingService;
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -223,19 +227,10 @@ public class ProvidersController : Controller
         }
         else
         {
-            foreach (var providerPlan in providerPlans)
-            {
-                if (providerPlan.PlanType == PlanType.EnterpriseMonthly)
-                {
-                    providerPlan.SeatMinimum = model.EnterpriseMonthlySeatMinimum;
-                }
-                else if (providerPlan.PlanType == PlanType.TeamsMonthly)
-                {
-                    providerPlan.SeatMinimum = model.TeamsMonthlySeatMinimum;
-                }
-
-                await _providerPlanRepository.ReplaceAsync(providerPlan);
-            }
+            await _providerBillingService.UpdateSeatMinimums(
+                provider,
+                model.EnterpriseMonthlySeatMinimum,
+                model.TeamsMonthlySeatMinimum);
         }
 
         return RedirectToAction("Edit", new { id });
