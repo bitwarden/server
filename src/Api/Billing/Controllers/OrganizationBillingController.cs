@@ -15,7 +15,8 @@ public class OrganizationBillingController(
     ICurrentContext currentContext,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
-    IPaymentService paymentService) : Controller
+    IPaymentService paymentService,
+    IPaymentHistoryService paymentHistoryService) : Controller
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
@@ -55,6 +56,35 @@ public class OrganizationBillingController(
         var billingInfo = await paymentService.GetBillingHistoryAsync(organization);
 
         return TypedResults.Ok(billingInfo);
+    }
+
+    [HttpGet("invoices")]
+    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid organizationId, [FromRoute] string startAfter = null)
+    {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var invoices = await paymentHistoryService.GetInvoiceHistoryAsync(
+            organization,
+            20,
+            startAfter);
+
+        return TypedResults.Ok(invoices);
+    }
+
+    [HttpGet("transactions")]
+    public Task<IResult> GetTransactionsAsync([FromRoute] Guid organizationId, [FromRoute] string startAfter = null)
+    {
+        throw new NotImplementedException();
     }
 
     [HttpGet]
