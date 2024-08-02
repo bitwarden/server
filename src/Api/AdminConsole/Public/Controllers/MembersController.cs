@@ -5,6 +5,7 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -29,6 +30,7 @@ public class MembersController : Controller
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IFeatureService _featureService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -41,7 +43,8 @@ public class MembersController : Controller
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
         IOrganizationRepository organizationRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -54,6 +57,7 @@ public class MembersController : Controller
         _paymentService = paymentService;
         _organizationRepository = organizationRepository;
         _featureService = featureService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     /// <summary>
@@ -267,7 +271,7 @@ public class MembersController : Controller
 
     private async Task<JsonResult> List_vNext(ICollection<OrganizationUserUserDetails> organizationUserUserDetails)
     {
-        var orgUsersTwoFactorIsEnabled = await _userService.TwoFactorIsEnabledAsync(organizationUserUserDetails);
+        var orgUsersTwoFactorIsEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUserUserDetails);
         var memberResponses = organizationUserUserDetails.Select(u =>
         {
             return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, null);

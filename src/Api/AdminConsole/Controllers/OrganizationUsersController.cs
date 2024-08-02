@@ -10,9 +10,9 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -49,7 +49,7 @@ public class OrganizationUsersController : Controller
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
-    private readonly IPolicyService _policyService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -69,7 +69,7 @@ public class OrganizationUsersController : Controller
         IApplicationCacheService applicationCacheService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IPolicyService policyService)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -88,7 +88,7 @@ public class OrganizationUsersController : Controller
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
         _ssoConfigRepository = ssoConfigRepository;
-        _policyService = policyService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     [HttpGet("{id}")]
@@ -341,8 +341,7 @@ public class OrganizationUsersController : Controller
 
         var userId = _userService.GetProperUserId(User);
         var results = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
-            ? await _organizationService.ConfirmUsersAsync_vNext(orgGuidId, model.ToDictionary(), userId.Value,
-                _userService)
+            ? await _organizationService.ConfirmUsersAsync_vNext(orgGuidId, model.ToDictionary(), userId.Value)
             : await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value,
             _userService);
 
@@ -697,7 +696,7 @@ public class OrganizationUsersController : Controller
         bool includeGroups = false, bool includeCollections = false)
     {
         var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
-        var organizationUsersTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(organizationUsers);
+        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
         var responseTasks = organizationUsers
             .Select(async o =>
             {

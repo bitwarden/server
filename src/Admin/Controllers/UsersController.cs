@@ -3,6 +3,7 @@ using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -25,7 +26,7 @@ public class UsersController : Controller
     private readonly IAccessControlService _accessControlService;
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
-    private readonly IUserService _userService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public UsersController(
         IUserRepository userRepository,
@@ -35,7 +36,7 @@ public class UsersController : Controller
         IAccessControlService accessControlService,
         ICurrentContext currentContext,
         IFeatureService featureService,
-        IUserService userService)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -44,7 +45,7 @@ public class UsersController : Controller
         _accessControlService = accessControlService;
         _currentContext = currentContext;
         _featureService = featureService;
-        _userService = userService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -65,7 +66,7 @@ public class UsersController : Controller
 
         if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
         {
-            TempData["UsersTwoFactorIsEnabled"] = await _userService.TwoFactorIsEnabledAsync(users.Select(u => u.Id));
+            TempData["UsersTwoFactorIsEnabled"] = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id));
         }
 
         return View(new UsersModel

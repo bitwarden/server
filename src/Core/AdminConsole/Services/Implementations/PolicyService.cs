@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -25,7 +26,7 @@ public class PolicyService : IPolicyService
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
-    private readonly IUserRepository _userRepository;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -37,7 +38,7 @@ public class PolicyService : IPolicyService
         IMailService mailService,
         GlobalSettings globalSettings,
         IFeatureService featureService,
-        IUserRepository userRepository)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -48,7 +49,7 @@ public class PolicyService : IPolicyService
         _mailService = mailService;
         _globalSettings = globalSettings;
         _featureService = featureService;
-        _userRepository = userRepository;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
@@ -89,7 +90,7 @@ public class PolicyService : IPolicyService
 
         if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
         {
-            await EnablePolicy_vNext(policy, org, userService, organizationService, savingUserId);
+            await EnablePolicy_vNext(policy, org, organizationService, savingUserId);
             return;
         }
 
@@ -323,13 +324,13 @@ public class PolicyService : IPolicyService
         await SetPolicyConfiguration(policy);
     }
 
-    private async Task EnablePolicy_vNext(Policy policy, Organization org, IUserService userService, IOrganizationService organizationService, Guid? savingUserId)
+    private async Task EnablePolicy_vNext(Policy policy, Organization org, IOrganizationService organizationService, Guid? savingUserId)
     {
         var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
         if (!currentPolicy?.Enabled ?? true)
         {
             var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
-            var organizationUsersTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(orgUsers);
+            var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
             var removableOrgUsers = orgUsers.Where(ou =>
                 ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
                 ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&

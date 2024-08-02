@@ -7,6 +7,8 @@ namespace Bit.Core.Models.Data;
 /// </summary>
 public class UserWithCalculatedPremium : User
 {
+    public UserWithCalculatedPremium() { }
+
     public UserWithCalculatedPremium(User user)
     {
         Id = user.Id;

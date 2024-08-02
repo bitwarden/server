@@ -11,6 +11,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -1645,6 +1646,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var policyService = sutProvider.GetDependency<IPolicyService>();
         var userService = Substitute.For<IUserService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
@@ -1655,7 +1657,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
+        twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, false) });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -1676,6 +1678,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var policyService = sutProvider.GetDependency<IPolicyService>();
         var userService = Substitute.For<IUserService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
@@ -1685,7 +1688,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
+        twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, true) });
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
@@ -1752,6 +1755,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var policyService = sutProvider.GetDependency<IPolicyService>();
         var userService = Substitute.For<IUserService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser1.OrganizationId = orgUser2.OrganizationId = orgUser3.OrganizationId = confirmingUser.OrganizationId = org.Id;
@@ -1765,7 +1769,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user2.Id) && ids.Contains(user3.Id)))
+        twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user2.Id) && ids.Contains(user3.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>()
             {
                 (user1.Id, true),
@@ -1779,7 +1783,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .ReturnsForAnyArgs(new[] { orgUser1, orgUser2, orgUser3, anotherOrgUser });
 
         var keys = orgUsers.ToDictionary(ou => ou.Id, _ => key);
-        var result = await sutProvider.Sut.ConfirmUsersAsync_vNext(confirmingUser.OrganizationId, keys, confirmingUser.Id, userService);
+        var result = await sutProvider.Sut.ConfirmUsersAsync_vNext(confirmingUser.OrganizationId, keys, confirmingUser.Id);
         Assert.Contains("", result[0].Item2);
         Assert.Contains("User does not have two-step login enabled.", result[1].Item2);
         Assert.Contains("Cannot confirm this member to the organization until they leave or remove all other organizations.", result[2].Item2);
@@ -2259,8 +2263,9 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
 
-        userService
+        twoFactorIsEnabledQuery
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
 
@@ -2323,12 +2328,13 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
 
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
-        userService
+        twoFactorIsEnabledQuery
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
 

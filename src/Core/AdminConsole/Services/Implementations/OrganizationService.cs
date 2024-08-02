@@ -13,6 +13,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -67,6 +68,7 @@ public class OrganizationService : IOrganizationService
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -99,7 +101,8 @@ public class OrganizationService : IOrganizationService
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -132,6 +135,7 @@ public class OrganizationService : IOrganizationService
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1307,7 +1311,7 @@ public class OrganizationService : IOrganizationService
     {
         var result = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
             ? await ConfirmUsersAsync_vNext(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
-                confirmingUserId, userService)
+                confirmingUserId)
             : await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
             confirmingUserId, userService);
 
@@ -1394,7 +1398,7 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync_vNext(Guid organizationId, Dictionary<Guid, string> keys,
-        Guid confirmingUserId, IUserService userService)
+        Guid confirmingUserId)
     {
         var selectedOrganizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
         var validSelectedOrganizationUsers = selectedOrganizationUsers
@@ -1411,7 +1415,7 @@ public class OrganizationService : IOrganizationService
         var organization = await GetOrgById(organizationId);
         var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
         var users = await _userRepository.GetManyWithCalculatedPremiumAsync(validSelectedUserIds);
-        var usersTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(validSelectedUserIds);
+        var usersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(validSelectedUserIds);
 
         var keyedFilteredUsers = validSelectedOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
         var keyedOrganizationUsers = allUsersOrgs.GroupBy(u => u.UserId.Value)
@@ -2440,7 +2444,7 @@ public class OrganizationService : IOrganizationService
             // Only check Two Factor Authentication status if the user is linked to a user account
             if (organizationUser.UserId.HasValue)
             {
-                userTwoFactorIsEnabled = (await userService.TwoFactorIsEnabledAsync(new[] { organizationUser.UserId.Value })).FirstOrDefault().twoFactorIsEnabled;
+                userTwoFactorIsEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(new[] { organizationUser.UserId.Value })).FirstOrDefault().twoFactorIsEnabled;
             }
 
             await CheckPoliciesBeforeRestoreAsync_vNext(organizationUser, userTwoFactorIsEnabled);
@@ -2485,7 +2489,7 @@ public class OrganizationService : IOrganizationService
         IEnumerable<(Guid userId, bool twoFactorIsEnabled)> organizationUsersTwoFactorEnabled = null;
         if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
         {
-            organizationUsersTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(filteredUsers.Select(ou => ou.UserId.Value));
+            organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(filteredUsers.Select(ou => ou.UserId.Value));
         }
 
         var result = new List<Tuple<OrganizationUser, string>>();
