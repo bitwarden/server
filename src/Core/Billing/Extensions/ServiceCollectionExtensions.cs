@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Caches.Implementations;
+using Bit.Core.Billing.Migration;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 
@@ -14,5 +15,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IOrganizationBillingService, OrganizationBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
+        services.AddProviderMigration();
     }
 }
