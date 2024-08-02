@@ -12,6 +12,7 @@ public class CipherSSHKeyModel
         PrivateKey = data.PrivateKey;
         PublicKey = data.PublicKey;
         KeyAlgorithm = data.KeyAlgorithm;
+        KeyFingerprint = data.KeyFingerprint;
     }
 
     [EncryptedString]
@@ -23,4 +24,7 @@ public class CipherSSHKeyModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string KeyAlgorithm { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string KeyFingerprint { get; set; }
 }

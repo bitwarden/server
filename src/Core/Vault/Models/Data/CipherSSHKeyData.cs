@@ -7,4 +7,5 @@ public class CipherSSHKeyData : CipherData
     public string PrivateKey { get; set; }
     public string PublicKey { get; set; }
     public string KeyAlgorithm { get; set; }
+    public string KeyFingerprint { get; set; }
 }
