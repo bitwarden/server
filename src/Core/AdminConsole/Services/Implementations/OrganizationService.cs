@@ -1410,7 +1410,7 @@ public class OrganizationService : IOrganizationService
 
         var organization = await GetOrgById(organizationId);
         var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
-        var users = await _userRepository.GetManyDetailsAsync(validSelectedUserIds);
+        var users = await _userRepository.GetManyWithCalculatedPremiumAsync(validSelectedUserIds);
         var usersTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(validSelectedUserIds);
 
         var keyedFilteredUsers = validSelectedOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
@@ -1573,7 +1573,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task CheckPolicies_vNext(Guid organizationId, UserDetails user,
+    private async Task CheckPolicies_vNext(Guid organizationId, UserWithCalculatedPremium user,
         ICollection<OrganizationUser> userOrgs, bool twoFactorEnabled)
     {
         // Enforce Two Factor Authentication Policy for this organization

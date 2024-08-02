@@ -255,12 +255,12 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<IEnumerable<UserDetails>> GetManyDetailsAsync(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
-            var results = await connection.QueryAsync<UserDetails>(
-                $"[{Schema}].[UserDetails_ReadByIds]",
+            var results = await connection.QueryAsync<UserWithCalculatedPremium>(
+                $"[{Schema}].[{Table}_ReadByIdsWithCalculatedPremium]",
                 new { Ids = ids.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
 

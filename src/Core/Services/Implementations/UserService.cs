@@ -1371,7 +1371,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds)
     {
-        var userDetails = await _userRepository.GetManyDetailsAsync(userIds.ToList());
+        var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync(userIds.ToList());
         var result = new List<(Guid userId, bool hasTwoFactor)>();
 
         foreach (var userDetail in userDetails)

@@ -1633,7 +1633,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory, BitAutoData]
     public async Task ConfirmUser_vNext_TwoFactorPolicy_NotEnabled_Throws(Organization org, OrganizationUser confirmingUser,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, UserDetails user,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, UserWithCalculatedPremium user,
         OrganizationUser orgUserAnotherOrg,
         [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
         string key, SutProvider<OrganizationService> sutProvider)
@@ -1652,7 +1652,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
         organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
-        userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user });
+        userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
         userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
@@ -1665,7 +1665,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory, BitAutoData]
     public async Task ConfirmUser_vNext_TwoFactorPolicy_Enabled_Success(Organization org, OrganizationUser confirmingUser,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, UserDetails user,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, UserWithCalculatedPremium user,
         [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
         string key, SutProvider<OrganizationService> sutProvider)
     {
@@ -1682,7 +1682,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         orgUser.UserId = user.Id;
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
-        userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user });
+        userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
         userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
@@ -1742,7 +1742,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser2,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser3,
-        OrganizationUser anotherOrgUser, UserDetails user1, UserDetails user2, UserDetails user3,
+        OrganizationUser anotherOrgUser, UserWithCalculatedPremium user1, UserWithCalculatedPremium user2, UserWithCalculatedPremium user3,
         [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
         [OrganizationUserPolicyDetails(PolicyType.SingleOrg)] OrganizationUserPolicyDetails singleOrgPolicy,
         string key, SutProvider<OrganizationService> sutProvider)
@@ -1762,7 +1762,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var orgUsers = new[] { orgUser1, orgUser2, orgUser3 };
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(orgUsers);
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
-        userRepository.GetManyDetailsAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
+        userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
         userService.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user2.Id) && ids.Contains(user3.Id)))

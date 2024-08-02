@@ -3,11 +3,11 @@
 namespace Bit.Core.Models.Data;
 
 /// <summary>
-/// Represents a user with additional details.
+/// Represents a user with an additional property indicating if the user has premium access.
 /// </summary>
-public class UserDetails : User
+public class UserWithCalculatedPremium : User
 {
-    public UserDetails(User user)
+    public UserWithCalculatedPremium(User user)
     {
         Id = user.Id;
         Name = user.Name;

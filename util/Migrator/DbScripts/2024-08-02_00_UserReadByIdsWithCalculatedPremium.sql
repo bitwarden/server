@@ -1,13 +1,13 @@
-﻿CREATE PROCEDURE [dbo].[UserDetails_ReadByIds]
+CREATE OR ALTER PROCEDURE [dbo].[User_ReadByIdsWithCalculatedPremium]
     @Ids AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
 
     IF (SELECT COUNT(1) FROM @Ids) < 1
-        BEGIN
-            RETURN(-1)
-        END
+    BEGIN
+        RETURN(-1)
+    END
 
     SELECT
         U.*,
@@ -16,10 +16,10 @@ BEGIN
                 OR EXISTS (
                     SELECT 1
                     FROM [dbo].[OrganizationUser] OU
-                        JOIN [dbo].[Organization] O ON OU.[OrganizationId] = O.[Id]
-                        WHERE OU.[UserId] = U.[Id]
-                          AND O.[UsersGetPremium] = 1
-                          AND O.[Enabled] = 1
+                            JOIN [dbo].[Organization] O ON OU.[OrganizationId] = O.[Id]
+                            WHERE OU.[UserId] = U.[Id]
+                              AND O.[UsersGetPremium] = 1
+                              AND O.[Enabled] = 1
                 )
                 THEN 1
             ELSE 0
