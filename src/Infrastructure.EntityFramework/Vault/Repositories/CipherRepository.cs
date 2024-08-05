@@ -544,32 +544,10 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
         else
         {
-            availableCollectionsQuery = from c in context.Collections
-                                        join o in context.Organizations
-                                            on c.OrganizationId equals o.Id
-                                        join ou in context.OrganizationUsers
-                                            on new { OrganizationId = o.Id, UserId = userId } equals
-                                            new { ou.OrganizationId, ou.UserId }
-                                        join cu in context.CollectionUsers
-                                            on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
-                                            new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
-                                        from cu in cu_g.DefaultIfEmpty()
-                                        join gu in context.GroupUsers
-                                            on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                                            new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
-                                        from gu in gu_g.DefaultIfEmpty()
-                                        join g in context.Groups
-                                            on gu.GroupId equals g.Id into g_g
-                                        from g in g_g.DefaultIfEmpty()
-                                        join cg in context.CollectionGroups
-                                            on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
-                                            new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
-                                        from cg in cg_g.DefaultIfEmpty()
-                                        where o.Id == organizationId &&
-                                            o.Enabled &&
-                                            ou.Status == OrganizationUserStatusType.Confirmed &&
-                                            (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
-                                        select c.Id;
+            availableCollectionsQuery =
+                new CollectionsReadByOrganizationIdUserIdQuery(organizationId.Value, userId.Value)
+                    .Run(context)
+                    .Select(c => c.Id);
         }
 
         var availableCollections = await availableCollectionsQuery.ToListAsync();

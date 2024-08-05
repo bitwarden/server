@@ -136,11 +136,6 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             await ValidateMemberAccessAsync(originalGroup, memberAccess.ToList());
         }
 
-        if (group.AccessAll)
-        {
-            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
-        }
-
         var invalidAssociations = collectionAccess?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
         if (invalidAssociations?.Any() ?? false)
         {
