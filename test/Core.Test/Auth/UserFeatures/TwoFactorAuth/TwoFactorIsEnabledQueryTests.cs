@@ -122,7 +122,7 @@ public class TwoFactorIsEnabledQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task TwoFactorIsEnabledQuery_WithNoTwoFactorProvidersConfigured_ReturnsAllTwoFactorDisabled(
+    public async Task TwoFactorIsEnabledQuery_WithNullTwoFactorProviders_ReturnsAllTwoFactorDisabled(
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         List<UserWithCalculatedPremium> usersWithCalculatedPremium)
     {
@@ -131,7 +131,7 @@ public class TwoFactorIsEnabledQueryTests
 
         foreach (var user in usersWithCalculatedPremium)
         {
-            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>()); // No two-factor providers configured
+            user.TwoFactorProviders = null; // No two-factor providers configured
         }
 
         sutProvider.GetDependency<IUserRepository>()
