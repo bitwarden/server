@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -145,5 +146,32 @@ public class TwoFactorIsEnabledQueryTests
         {
             Assert.Contains(result, res => res.userId == userDetail.Id && res.twoFactorIsEnabled == false);
         }
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task TwoFactorIsEnabledQuery_WithNoUserIds_ReturnsAllTwoFactorDisabled(
+        SutProvider<TwoFactorIsEnabledQuery> sutProvider,
+        List<OrganizationUserUserDetails> users)
+    {
+        // Arrange
+        foreach (var user in users)
+        {
+            user.UserId = null;
+        }
+
+        // Act
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(users);
+
+        // Assert
+        foreach (var user in users)
+        {
+            Assert.Contains(result, res => res.user.Equals(user) && res.twoFactorIsEnabled == false);
+        }
+
+        // No UserIds were supplied so no calls to the UserRepository should have been made
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyWithCalculatedPremiumAsync(default);
     }
 }

@@ -15,8 +15,13 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 
     public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds)
     {
-        var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync(userIds.ToList());
         var result = new List<(Guid userId, bool hasTwoFactor)>();
+        if (userIds == null || !userIds.Any())
+        {
+            return result;
+        }
+
+        var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync(userIds.ToList());
 
         foreach (var userDetail in userDetails)
         {
@@ -65,5 +70,35 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         }
 
         return result;
+    }
+
+    public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
+    {
+        var providers = user.GetTwoFactorProviders();
+        if (providers == null)
+        {
+            return false;
+        }
+
+        foreach (var p in providers)
+        {
+            if (p.Value?.Enabled ?? false)
+            {
+                if (!TwoFactorProvider.RequiresPremium(p.Key))
+                {
+                    return true;
+                }
+                if (user.GetPremium())
+                {
+                    return true;
+                }
+
+                var result = await TwoFactorIsEnabledAsync(new List<ITwoFactorProvidersUser> { user });
+
+                // Since we're checking for a single user, return the result directly
+                return result.FirstOrDefault().twoFactorIsEnabled;
+            }
+        }
+        return false;
     }
 }
