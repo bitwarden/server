@@ -25,17 +25,20 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 
         foreach (var userDetail in userDetails)
         {
+            var hasTwoFactor = false;
             var providers = userDetail.GetTwoFactorProviders();
+            if (providers != null)
+            {
+                // Get all enabled providers
+                var enabledProviderKeys = from provider in providers
+                                          where provider.Value?.Enabled ?? false
+                                          select provider.Key;
 
-            // Get all enabled providers
-            var enabledProviderKeys = from provider in providers
-                                      where provider.Value?.Enabled ?? false
-                                      select provider.Key;
-
-            // Find the first provider that is enabled and passes the premium check
-            var hasTwoFactor = enabledProviderKeys
-                .Select(type => userDetail.HasPremiumAccess || !TwoFactorProvider.RequiresPremium(type))
-                .FirstOrDefault();
+                // Find the first provider that is enabled and passes the premium check
+                hasTwoFactor = enabledProviderKeys
+                    .Select(type => userDetail.HasPremiumAccess || !TwoFactorProvider.RequiresPremium(type))
+                    .FirstOrDefault();
+            }
 
             result.Add((userDetail.Id, hasTwoFactor));
         }
