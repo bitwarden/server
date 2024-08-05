@@ -14,8 +14,13 @@ namespace Bit.Core.Test.Auth.UserFeatures.TwoFactorAuth;
 public class TwoFactorIsEnabledQueryTests
 {
     [Theory]
-    [BitAutoData]
-    public async Task TwoFactorIsEnabledQuery_ReturnsAllTwoFactorEnabled(
+    [BitAutoData(TwoFactorProviderType.Authenticator)]
+    [BitAutoData(TwoFactorProviderType.Email)]
+    [BitAutoData(TwoFactorProviderType.Remember)]
+    [BitAutoData(TwoFactorProviderType.OrganizationDuo)]
+    [BitAutoData(TwoFactorProviderType.WebAuthn)]
+    public async Task TwoFactorIsEnabledQuery_WithProviderTypeNotRequiringPremium_ReturnsAllTwoFactorEnabled(
+        TwoFactorProviderType freeProviderType,
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         List<UserWithCalculatedPremium> usersWithCalculatedPremium)
     {
@@ -23,7 +28,7 @@ public class TwoFactorIsEnabledQueryTests
         var userIds = usersWithCalculatedPremium.Select(u => u.Id).ToList();
         var twoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
-            { TwoFactorProviderType.Email, new TwoFactorProvider { Enabled = true } } // Does not require premium
+            { freeProviderType, new TwoFactorProvider { Enabled = true } } // Does not require premium
         };
 
         foreach (var user in usersWithCalculatedPremium)
@@ -79,8 +84,10 @@ public class TwoFactorIsEnabledQueryTests
     }
 
     [Theory]
-    [BitAutoData]
+    [BitAutoData(TwoFactorProviderType.Duo)]
+    [BitAutoData(TwoFactorProviderType.YubiKey)]
     public async Task TwoFactorIsEnabledQuery_WithProviderTypeRequiringPremium_ReturnsMixedResults(
+        TwoFactorProviderType premiumProviderType,
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         List<UserWithCalculatedPremium> usersWithCalculatedPremium)
     {
@@ -89,7 +96,7 @@ public class TwoFactorIsEnabledQueryTests
         var twoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             { TwoFactorProviderType.Email, new TwoFactorProvider { Enabled = false } },
-            { TwoFactorProviderType.Duo, new TwoFactorProvider { Enabled = true } } // Requires Premium
+            { premiumProviderType, new TwoFactorProvider { Enabled = true } }
         };
 
         foreach (var user in usersWithCalculatedPremium)
