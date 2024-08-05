@@ -77,31 +77,47 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 
     public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
     {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
+        var userId = user.GetUserId();
+        if (!userId.HasValue)
         {
             return false;
         }
 
-        foreach (var p in providers)
+        var providers = user.GetTwoFactorProviders();
+        if (providers == null || !providers.Any())
         {
-            if (p.Value?.Enabled ?? false)
+            return false;
+        }
+
+        // Get all enabled providers
+        var enabledProviderKeys = providers
+            .Where(provider => provider.Value?.Enabled ?? false)
+            .Select(provider => provider.Key);
+
+        if (!enabledProviderKeys.Any())
+        {
+            return false;
+        }
+
+        // Determine if any enabled provider passes the premium check
+        var hasTwoFactor = enabledProviderKeys
+            .Select(type => user.GetPremium() || !TwoFactorProvider.RequiresPremium(type))
+            .FirstOrDefault();
+
+        // If no enabled provider passes the check, check the repository for organization premium access
+        if (!hasTwoFactor)
+        {
+            var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync(new List<Guid> { userId.Value });
+            var userDetail = userDetails.FirstOrDefault();
+
+            if (userDetail != null)
             {
-                if (!TwoFactorProvider.RequiresPremium(p.Key))
-                {
-                    return true;
-                }
-                if (user.GetPremium())
-                {
-                    return true;
-                }
-
-                var result = await TwoFactorIsEnabledAsync(new List<ITwoFactorProvidersUser> { user });
-
-                // Since we're checking for a single user, return the result directly
-                return result.FirstOrDefault().twoFactorIsEnabled;
+                hasTwoFactor = enabledProviderKeys
+                    .Select(type => userDetail.HasPremiumAccess || !TwoFactorProvider.RequiresPremium(type))
+                    .FirstOrDefault();
             }
         }
-        return false;
+
+        return hasTwoFactor;
     }
 }
