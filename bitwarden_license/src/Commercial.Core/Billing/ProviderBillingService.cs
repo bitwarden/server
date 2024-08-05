@@ -449,6 +449,119 @@ public class ProviderBillingService(
         }
     }
 
+    public async Task UpdateSeatMinimums(
+        Provider provider,
+        int enterpriseSeatMinimum,
+        int teamsSeatMinimum)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        if (enterpriseSeatMinimum < 0 || teamsSeatMinimum < 0)
+        {
+            throw new BadRequestException("Provider seat minimums must be at least 0.");
+        }
+
+        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId);
+
+        var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
+
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+
+        var enterpriseProviderPlan =
+            providerPlans.Single(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
+
+        if (enterpriseProviderPlan.SeatMinimum != enterpriseSeatMinimum)
+        {
+            var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager
+                .StripeProviderPortalSeatPlanId;
+
+            var enterpriseSubscriptionItem = subscription.Items.First(item => item.Price.Id == enterprisePriceId);
+
+            if (enterpriseProviderPlan.PurchasedSeats == 0)
+            {
+                subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                {
+                    Id = enterpriseSubscriptionItem.Id,
+                    Price = enterprisePriceId,
+                    Quantity = enterpriseSeatMinimum
+                });
+            }
+            else
+            {
+                var totalEnterpriseSeats = enterpriseProviderPlan.SeatMinimum + enterpriseProviderPlan.PurchasedSeats;
+
+                if (enterpriseSeatMinimum <= totalEnterpriseSeats)
+                {
+                    enterpriseProviderPlan.PurchasedSeats = totalEnterpriseSeats - enterpriseSeatMinimum;
+                }
+                else
+                {
+                    enterpriseProviderPlan.PurchasedSeats = 0;
+                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                    {
+                        Id = enterpriseSubscriptionItem.Id,
+                        Price = enterprisePriceId,
+                        Quantity = enterpriseSeatMinimum
+                    });
+                }
+            }
+
+            enterpriseProviderPlan.SeatMinimum = enterpriseSeatMinimum;
+
+            await providerPlanRepository.ReplaceAsync(enterpriseProviderPlan);
+        }
+
+        var teamsProviderPlan =
+            providerPlans.Single(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
+
+        if (teamsProviderPlan.SeatMinimum != teamsSeatMinimum)
+        {
+            var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager
+                .StripeProviderPortalSeatPlanId;
+
+            var teamsSubscriptionItem = subscription.Items.First(item => item.Price.Id == teamsPriceId);
+
+            if (teamsProviderPlan.PurchasedSeats == 0)
+            {
+                subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                {
+                    Id = teamsSubscriptionItem.Id,
+                    Price = teamsPriceId,
+                    Quantity = teamsSeatMinimum
+                });
+            }
+            else
+            {
+                var totalTeamsSeats = teamsProviderPlan.SeatMinimum + teamsProviderPlan.PurchasedSeats;
+
+                if (teamsSeatMinimum <= totalTeamsSeats)
+                {
+                    teamsProviderPlan.PurchasedSeats = totalTeamsSeats - teamsSeatMinimum;
+                }
+                else
+                {
+                    teamsProviderPlan.PurchasedSeats = 0;
+                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                    {
+                        Id = teamsSubscriptionItem.Id,
+                        Price = teamsPriceId,
+                        Quantity = teamsSeatMinimum
+                    });
+                }
+            }
+
+            teamsProviderPlan.SeatMinimum = teamsSeatMinimum;
+
+            await providerPlanRepository.ReplaceAsync(teamsProviderPlan);
+        }
+
+        if (subscriptionItemOptionsList.Count > 0)
+        {
+            await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+                new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
+        }
+    }
+
     private Func<int, int, Task> CurrySeatScalingUpdate(
         Provider provider,
         ProviderPlan providerPlan,
