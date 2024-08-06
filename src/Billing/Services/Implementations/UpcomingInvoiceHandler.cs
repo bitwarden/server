@@ -147,7 +147,7 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         {
             var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
 
-            if (invoice.NextPaymentAttempt.HasValue)
+            if (invoice.NextPaymentAttempt.HasValue && invoice.AmountDue > 0)
             {
                 await _mailService.SendInvoiceUpcoming(
                     validEmails,
