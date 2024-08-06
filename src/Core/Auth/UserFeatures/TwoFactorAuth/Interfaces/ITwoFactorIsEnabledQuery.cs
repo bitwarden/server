@@ -14,7 +14,6 @@ public interface ITwoFactorIsEnabledQuery
     /// </summary>
     /// <param name="users">The list of users to check.</param>
     /// <typeparam name="T">The type of user in the list. Must implement <see cref="ITwoFactorProvidersUser"/>.</typeparam>
-    /// <returns></returns>
     Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync<T>(IEnumerable<T> users) where T : ITwoFactorProvidersUser;
     /// <summary>
     /// Returns whether two factor is enabled for the user.
