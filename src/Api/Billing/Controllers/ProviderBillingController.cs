@@ -1,14 +1,18 @@
 ﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Models.Api;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
+
+using static Bit.Core.Billing.Utilities;
 
 namespace Bit.Api.Billing.Controllers;
 
@@ -17,10 +21,13 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderBillingController(
     ICurrentContext currentContext,
     IFeatureService featureService,
+    ILogger<BaseProviderController> logger,
     IProviderBillingService providerBillingService,
+    IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
+    ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : BaseProviderController(currentContext, featureService, providerRepository)
+    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
 {
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
@@ -32,7 +39,10 @@ public class ProviderBillingController(
             return result;
         }
 
-        var invoices = await subscriberService.GetInvoices(provider);
+        var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+        {
+            Customer = provider.GatewayCustomerId
+        });
 
         var response = InvoicesResponse.From(invoices);
 
@@ -53,101 +63,12 @@ public class ProviderBillingController(
 
         if (reportContent == null)
         {
-            return TypedResults.NotFound();
+            return ServerErrorResponse("We had a problem generating your invoice CSV. Please contact support.");
         }
 
         return TypedResults.File(
             reportContent,
             "text/csv");
-    }
-
-    [HttpGet("payment-information")]
-    public async Task<IResult> GetPaymentInformationAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var paymentInformation = await subscriberService.GetPaymentInformation(provider);
-
-        if (paymentInformation == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var response = PaymentInformationResponse.From(paymentInformation);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpGet("payment-method")]
-    public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var maskedPaymentMethod = await subscriberService.GetPaymentMethod(provider);
-
-        if (maskedPaymentMethod == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var response = MaskedPaymentMethodResponse.From(maskedPaymentMethod);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpPut("payment-method")]
-    public async Task<IResult> UpdatePaymentMethodAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] TokenizedPaymentMethodRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var tokenizedPaymentMethod = new TokenizedPaymentMethodDTO(
-            requestBody.Type,
-            requestBody.Token);
-
-        await subscriberService.UpdatePaymentMethod(provider, tokenizedPaymentMethod);
-
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
-            new SubscriptionUpdateOptions
-            {
-                CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically
-            });
-
-        return TypedResults.Ok();
-    }
-
-    [HttpPost]
-    [Route("payment-method/verify-bank-account")]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] VerifyBankAccountRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        await subscriberService.VerifyBankAccount(provider, (requestBody.Amount1, requestBody.Amount2));
-
-        return TypedResults.Ok();
     }
 
     [HttpGet("subscription")]
@@ -160,36 +81,20 @@ public class ProviderBillingController(
             return result;
         }
 
-        var consolidatedBillingSubscription = await providerBillingService.GetConsolidatedBillingSubscription(provider);
+        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = ["customer.tax_ids", "test_clock"] });
 
-        if (consolidatedBillingSubscription == null)
-        {
-            return TypedResults.NotFound();
-        }
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
-        var response = ConsolidatedBillingSubscriptionResponse.From(consolidatedBillingSubscription);
+        var taxInformation = GetTaxInformation(subscription.Customer);
 
-        return TypedResults.Ok(response);
-    }
+        var subscriptionSuspension = await GetSubscriptionSuspensionAsync(stripeAdapter, subscription);
 
-    [HttpGet("tax-information")]
-    public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var taxInformation = await subscriberService.GetTaxInformation(provider);
-
-        if (taxInformation == null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var response = TaxInformationResponse.From(taxInformation);
+        var response = ProviderSubscriptionResponse.From(
+            subscription,
+            providerPlans,
+            taxInformation,
+            subscriptionSuspension);
 
         return TypedResults.Ok(response);
     }
@@ -206,7 +111,13 @@ public class ProviderBillingController(
             return result;
         }
 
-        var taxInformation = new TaxInformationDTO(
+        if (requestBody is not { Country: not null, PostalCode: not null })
+        {
+            return TypedResults.BadRequest(
+                new ErrorResponseModel("Country and postal code are required to update your tax information."));
+        }
+
+        var taxInformation = new TaxInformation(
             requestBody.Country,
             requestBody.PostalCode,
             requestBody.TaxId,

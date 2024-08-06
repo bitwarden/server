@@ -3,4 +3,4 @@
 public record PaymentInformationDTO(
     long AccountCredit,
     MaskedPaymentMethodDTO PaymentMethod,
-    TaxInformationDTO TaxInformation);
+    TaxInformation TaxInformation);

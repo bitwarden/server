@@ -16,6 +16,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Billing.TrialInitiation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -99,6 +100,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICipherService, CipherService>();
         services.AddUserServices(globalSettings);
+        services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();
