@@ -134,6 +134,7 @@ public static class FeatureFlagKeys
     public const string EnableUpgradePasswordManagerSub = "AC-2708-upgrade-password-manager-sub";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
+    public const string GenerateCardFillScriptRefactor = "generate-card-fill-script-refactor";
 
     public static List<string> GetAllKeys()
     {
