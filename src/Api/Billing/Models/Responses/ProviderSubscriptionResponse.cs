@@ -11,7 +11,7 @@ public record ProviderSubscriptionResponse(
     decimal? DiscountPercentage,
     string CollectionMethod,
     IEnumerable<ProviderPlanResponse> Plans,
-    long AccountCredit,
+    decimal AccountCredit,
     TaxInformation TaxInformation,
     DateTime? CancelAt,
     SubscriptionSuspension Suspension)
@@ -42,13 +42,15 @@ public record ProviderSubscriptionResponse(
                     cadence);
             });
 
+        var accountCredit = Convert.ToDecimal(subscription.Customer?.Balance) * -1 / 100;
+
         return new ProviderSubscriptionResponse(
             subscription.Status,
             subscription.CurrentPeriodEnd,
             subscription.Customer?.Discount?.Coupon?.PercentOff,
             subscription.CollectionMethod,
             providerPlanResponses,
-            subscription.Customer?.Balance ?? 0,
+            accountCredit,
             taxInformation,
             subscription.CancelAt,
             subscriptionSuspension);

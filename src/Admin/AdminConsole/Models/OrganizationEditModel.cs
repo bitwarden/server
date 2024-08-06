@@ -244,17 +244,10 @@ public class OrganizationEditModel : OrganizationViewModel
                 return plan;
             });
 
-    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsV1Enabled)
+    public Organization CreateOrganization(Provider provider)
     {
         BillingEmail = provider.BillingEmail;
-
-        var newOrg = new Organization
-        {
-            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
-            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
-        };
-        return ToOrganization(newOrg);
+        return ToOrganization(new Organization());
     }
 
     public Organization ToOrganization(Organization existingOrganization)

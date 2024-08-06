@@ -3,6 +3,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.Utilities;
@@ -127,6 +128,40 @@ public class UserDecryptionOptionsBuilderTests
         _currentContext.ManageResetPassword(organization.Id).Returns(true);
 
         var result = await _builder.WithSso(ssoConfig).BuildAsync();
+
+        Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenIsOwnerInvite_ShouldReturnHasManageResetPasswordPermissionTrue(
+        SsoConfig ssoConfig,
+        SsoConfigurationData configurationData,
+        OrganizationUser organizationUser,
+        User user)
+    {
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        organizationUser.Type = OrganizationUserType.Owner;
+        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
+
+        Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenIsAdminInvite_ShouldReturnHasManageResetPasswordPermissionTrue(
+        SsoConfig ssoConfig,
+        SsoConfigurationData configurationData,
+        OrganizationUser organizationUser,
+        User user)
+    {
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        organizationUser.Type = OrganizationUserType.Admin;
+        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
     }
