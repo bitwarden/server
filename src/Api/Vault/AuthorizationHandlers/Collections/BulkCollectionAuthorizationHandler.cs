@@ -191,8 +191,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
 
         // Owners and Admins can update any collection only if permitted by collection management settings
-        var organizationAbility = await GetOrganizationAbilityAsync(org);
-        if (await AllowAdminAccessToAllCollectionItems(orgAbility: organizationAbility) && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        if (await AllowAdminAccessToAllCollectionItems(org) && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             return true;
         }
@@ -241,8 +240,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
 
         // If AllowAdminAccessToAllCollectionItems is true, Owners and Admins can delete any collection, regardless of LimitCollectionCreationDeletion setting
-        var organizationAbility = await GetOrganizationAbilityAsync(org);
-        if (await AllowAdminAccessToAllCollectionItems(orgAbility: organizationAbility) && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        if (await AllowAdminAccessToAllCollectionItems(org) && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             return true;
         }
@@ -250,6 +248,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // If LimitCollectionCreationDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
         // Ensure acting user has manage permissions for all collections being deleted
         // If LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
+        var organizationAbility = await GetOrganizationAbilityAsync(org);
         var canDeleteManagedCollections = organizationAbility is { LimitCollectionCreationDeletion: false } ||
                                           org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
         if (canDeleteManagedCollections && await CanManageCollectionsAsync(resources, org))
@@ -319,8 +318,8 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         return await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
     }
 
-    private async Task<bool> AllowAdminAccessToAllCollectionItems(CurrentContextOrganization? org = null, OrganizationAbility? orgAbility = null)
+    private async Task<bool> AllowAdminAccessToAllCollectionItems(CurrentContextOrganization? org)
     {
-        return (orgAbility ?? await GetOrganizationAbilityAsync(org)) is { AllowAdminAccessToAllCollectionItems: true };
+        return await GetOrganizationAbilityAsync(org) is { AllowAdminAccessToAllCollectionItems: true };
     }
 }
