@@ -153,7 +153,7 @@ public class ReportsController : Controller
             report.TotalItemCount = report.AccessDetails.SelectMany(x => x.CipherIds).Distinct().Count();
 
             report.CollectionsCount = report.AccessDetails.Select(x => x.CollectionId).Distinct().Count();
-            report.GroupCount = report.AccessDetails.Select(x => x.GroupId).Distinct().Count();
+            report.GroupsCount = report.AccessDetails.Select(x => x.GroupId).Distinct().Count();
             memberAccessReport.Add(report);
         }
         return memberAccessReport;
