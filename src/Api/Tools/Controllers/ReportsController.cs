@@ -12,25 +12,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Tools.Controllers;
 
-public class CipherCounts
-{
-    public Guid CollectionId { get; set; }
-    public int ItemCount { get; set; }
-}
-
-public class ReportCollectionDetails
-{
-    public Guid CollectionId { get; set; }
-    public Guid? UserId { get; set; }
-    public Guid? GroupId { get; set; }
-    public string GroupName { get; set; }
-    public string CollectionName { get; set; }
-    public bool ReadOnly { get; set; }
-    public bool HidePasswords { get; set; }
-    public bool Manage { get; set; }
-    public IEnumerable<Guid> CipherIds { get; set; }
-}
-
 [Route("reports")]
 [Authorize("Application")]
 public class ReportsController : Controller
@@ -40,7 +21,6 @@ public class ReportsController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
 
     public ReportsController(
@@ -58,7 +38,6 @@ public class ReportsController : Controller
         _collectionRepository = collectionRepository;
         _currentContext = currentContext;
         _organizationCiphersQuery = organizationCiphersQuery;
-        _organizationUserRepository = organizationUserRepository;
         _applicationCacheService = applicationCacheService;
     }
 
