@@ -14,6 +14,7 @@
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
     var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
     var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
+    var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin ||
                         canGenerateLicense || canManageTaxRates || canManageStripeSubscriptions;
@@ -105,6 +106,12 @@
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="StripeSubscriptions">
                                                 Manage Stripe Subscriptions
+                                            </a>
+                                        }
+                                        @if (canMigrateProviders)
+                                        {
+                                            <a class="dropdown-item" asp-controller="MigrateProviders" asp-action="index">
+                                                Migrate Providers
                                             </a>
                                         }
                                     </div>

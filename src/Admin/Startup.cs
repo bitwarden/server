@@ -88,6 +88,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddScoped<IAccessControlService, AccessControlService>();
+        services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
 
 #if OSS
@@ -108,6 +109,7 @@ public class Startup
          {
              o.ViewLocationFormats.Add("/Auth/Views/{1}/{0}.cshtml");
              o.ViewLocationFormats.Add("/AdminConsole/Views/{1}/{0}.cshtml");
+             o.ViewLocationFormats.Add("/Billing/Views/{1}/{0}.cshtml");
          });
 
         // Jobs service
