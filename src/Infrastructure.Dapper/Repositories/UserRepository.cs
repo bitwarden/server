@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
@@ -261,7 +262,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             var results = await connection.QueryAsync<UserWithCalculatedPremium>(
                 $"[{Schema}].[{Table}_ReadByIdsWithCalculatedPremium]",
-                new { Ids = ids.ToGuidIdArrayTVP() },
+                new { Ids = JsonSerializer.Serialize(ids) },
                 commandType: CommandType.StoredProcedure);
 
             UnprotectData(results);

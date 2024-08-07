@@ -1,14 +1,24 @@
 ﻿CREATE PROCEDURE [dbo].[User_ReadByIdsWithCalculatedPremium]
-    @Ids AS [dbo].[GuidIdArray] READONLY
+    @Ids NVARCHAR(MAX)
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    IF (SELECT COUNT(1) FROM @Ids) < 1
-        BEGIN
-            RETURN(-1)
-        END
+    -- Declare a table variable to hold the parsed JSON data
+    DECLARE @ParsedIds TABLE (Id UNIQUEIDENTIFIER);
 
+    -- Parse the JSON input into the table variable
+    INSERT INTO @ParsedIds (Id)
+    SELECT value
+    FROM OPENJSON(@Ids);
+
+    -- Check if the input table is empty
+    IF (SELECT COUNT(1) FROM @ParsedIds) < 1
+    BEGIN
+        RETURN(-1);
+    END
+
+    -- Main query to fetch user details and calculate premium access
     SELECT
         U.*,
         CASE
@@ -16,10 +26,10 @@ BEGIN
                 OR EXISTS (
                     SELECT 1
                     FROM [dbo].[OrganizationUser] OU
-                        JOIN [dbo].[Organization] O ON OU.[OrganizationId] = O.[Id]
-                        WHERE OU.[UserId] = U.[Id]
-                          AND O.[UsersGetPremium] = 1
-                          AND O.[Enabled] = 1
+                    JOIN [dbo].[Organization] O ON OU.[OrganizationId] = O.[Id]
+                    WHERE OU.[UserId] = U.[Id]
+                        AND O.[UsersGetPremium] = 1
+                        AND O.[Enabled] = 1
                 )
                 THEN 1
             ELSE 0
@@ -27,5 +37,5 @@ BEGIN
     FROM
         [dbo].[UserView] U
     WHERE
-        U.[Id] IN (SELECT [Id] FROM @Ids)
-END
+        U.[Id] IN (SELECT [Id] FROM @ParsedIds);
+END;
