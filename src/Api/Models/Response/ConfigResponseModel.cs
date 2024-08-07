@@ -33,7 +33,8 @@ public class ConfigResponseModel : ResponseModel
             Api = globalSettings.BaseServiceUri.Api,
             Identity = globalSettings.BaseServiceUri.Identity,
             Notifications = globalSettings.BaseServiceUri.Notifications,
-            Sso = globalSettings.BaseServiceUri.Sso
+            Sso = globalSettings.BaseServiceUri.Sso,
+            DisableUserRegistration = globalSettings.DisableUserRegistration
         };
         FeatureStates = featureStates;
     }
@@ -53,4 +54,5 @@ public class EnvironmentConfigResponseModel
     public string Identity { get; set; }
     public string Notifications { get; set; }
     public string Sso { get; set; }
+    public bool DisableUserRegistration { get; set;}
 }
