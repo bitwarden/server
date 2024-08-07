@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Queries;
@@ -31,7 +32,7 @@ public class ReportCollectionDetails
 }
 
 [Route("reports")]
-[Authorize("Organization")]
+[Authorize("Application")]
 public class ReportsController : Controller
 {
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
@@ -64,6 +65,11 @@ public class ReportsController : Controller
     [HttpGet("member-access/{orgId}")]
     public async Task<IEnumerable<MemberAccessReportModel>> GetMemberAccessReport(Guid orgId)
     {
+        if (!await _currentContext.AccessReports(orgId))
+        {
+            throw new NotFoundException();
+        }
+
         var orgUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
             new OrganizationUserUserDetailsQueryRequest
             {
@@ -72,8 +78,12 @@ public class ReportsController : Controller
                 IncludeGroups = true
             });
 
+        // _collectionRepository.GetManyByOrganizationIdWithAccessAsync contains only the group id. 
+        // Create a dictionary to lookup the group names later. 
         var orgGroups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
         var groupNameDictionary = orgGroups.ToDictionary(x => x.Id, x => x.Name);
+
+        // Contains the collections for the organization and the groups/users and permissions
         var orgCollectionsWithAccess = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
         var orgItems = await _organizationCiphersQuery.GetAllOrganizationCiphers(orgId);
 
@@ -83,6 +93,7 @@ public class ReportsController : Controller
         var accessDetails = new List<MemberAccessReportAccessDetails>();
         foreach (var tCollect in orgCollectionsWithAccess)
         {
+            // All collections assigned to groups and their permissions 
             var collectionItems = orgItems.Where(x => x.CollectionIds.Contains(tCollect.Item1.Id)).Select(x => x.Id);
             if (tCollect.Item2.Groups.Count() > 0)
             {
@@ -102,6 +113,7 @@ public class ReportsController : Controller
                 accessDetails.AddRange(groupDetails);
             }
 
+            // All collections assigned to users and their permissions
             if (tCollect.Item2.Users.Count() > 0)
             {
                 var userCollectionDetails = tCollect.Item2.Users.Select(x =>
