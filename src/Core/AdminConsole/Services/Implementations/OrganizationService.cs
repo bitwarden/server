@@ -441,9 +441,6 @@ public class OrganizationService : IOrganizationService
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
 
-        var flexibleCollectionsV1Enabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription.
@@ -480,10 +477,6 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = true,
             // Secrets Manager not available for purchase with Consolidated Billing.
             UseSecretsManager = false,
-
-            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
-            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
 
         var returnValue = await SignUpAsync(organization, default, signup.OwnerKey, signup.CollectionName, false);
@@ -526,9 +519,6 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var flexibleCollectionsV1IsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription..
@@ -565,11 +555,7 @@ public class OrganizationService : IOrganizationService
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
-            UseSecretsManager = signup.UseSecretsManager,
-
-            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
-            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
+            UseSecretsManager = signup.UseSecretsManager
         };
 
         if (signup.UseSecretsManager)
