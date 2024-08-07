@@ -31,7 +31,7 @@ public class ReportCollectionDetails
 }
 
 [Route("reports")]
-[Authorize("Application")]
+[Authorize("Organization")]
 public class ReportsController : Controller
 {
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
