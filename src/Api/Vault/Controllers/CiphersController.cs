@@ -375,8 +375,7 @@ public class CiphersController : Controller
         if (org is
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.AccessImportExport: true } or
-        { Permissions.EditAnyCollection: true } or
-        { Permissions.AccessReports: true })
+        { Permissions.EditAnyCollection: true })
         {
             return true;
         }
