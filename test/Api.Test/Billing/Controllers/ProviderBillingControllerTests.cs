@@ -323,7 +323,7 @@ public class ProviderBillingControllerTests
                     City = "Example Town",
                     State = "NY"
                 },
-                Balance = 100000,
+                Balance = -100000,
                 Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } },
                 TaxIds = new StripeList<TaxId> { Data = [new TaxId { Value = "123456789" }] }
             },
@@ -404,7 +404,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(100 * enterprisePlan.PasswordManager.ProviderPortalSeatPrice, providerEnterprisePlan.Cost);
         Assert.Equal("Monthly", providerEnterprisePlan.Cadence);
 
-        Assert.Equal(100000, response.AccountCredit);
+        Assert.Equal(1000.00M, response.AccountCredit);
 
         var customer = subscription.Customer;
         Assert.Equal(customer.Address.Country, response.TaxInformation.Country);
