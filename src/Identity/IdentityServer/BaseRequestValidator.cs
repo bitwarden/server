@@ -101,7 +101,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        var isBot = (validatorContext.CaptchaResponse?.IsBot ?? false);
+        var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
         if (isBot)
         {
             _logger.LogInformation(Constants.BypassFiltersEventId,
@@ -610,7 +610,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (ValidateFailedAuthEmailConditions(unknownDevice, user))
         {
-            if (twoFactorInvalid)
+            if (twoFactorInvalid) //Todo need test path for here
             {
                 await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
             }
@@ -621,6 +621,13 @@ public abstract class BaseRequestValidator<T> where T : class
         }
     }
 
+    /// <summary>
+    /// checks to see if a user is trying to log into a new device 
+    /// and has reached the maximum number of failed login attempts.
+    /// </summary>
+    /// <param name="unknownDevice">boolean</param>
+    /// <param name="user">current user</param>
+    /// <returns></returns>
     private bool ValidateFailedAuthEmailConditions(bool unknownDevice, User user)
     {
         var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;

@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -10,11 +11,10 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Identity.IdentityServer;
+using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using NSubstitute.Routing.Handlers;
-using Xunit.Sdk;
 
 namespace Bit.Identity.Test.Wrappers;
 
@@ -22,11 +22,17 @@ public class BaseRequestValidationContextFake
 {
     public ValidatedTokenRequest ValidatedTokenRequest;
     public CustomValidatorRequestContext CustomValidatorRequestContext;
+    public GrantValidationResult GrantResult;
+    public string? IpAddress { get; set; }
 
-    public BaseRequestValidationContextFake(ValidatedTokenRequest tokenRequest, CustomValidatorRequestContext customValidatorRequestContext)
+    public BaseRequestValidationContextFake(
+        ValidatedTokenRequest tokenRequest, 
+        CustomValidatorRequestContext customValidatorRequestContext,
+        GrantValidationResult grantResult)
     {
         ValidatedTokenRequest = tokenRequest;
         CustomValidatorRequestContext = customValidatorRequestContext;
+        GrantResult = grantResult;
     }
 }
 
@@ -38,6 +44,12 @@ interface IBaseRequestValidatorTestWrapper
 public class BaseRequestValidatorTestWrapper : BaseRequestValidator<BaseRequestValidationContextFake>,
 IBaseRequestValidatorTestWrapper
 {
+
+    /*
+    * Some of the logic trees call `ValidateContextAsync`. Since this is a test wrapper, we set the return value
+    * of ValidateContextAsync() to whatever we need for the specific test case.
+    */
+    public bool isValid {get;set;}
     public BaseRequestValidatorTestWrapper(
         UserManager<User> userManager,
         IDeviceRepository deviceRepository,
@@ -84,48 +96,58 @@ IBaseRequestValidatorTestWrapper
     }
 
     public async Task ValidateAsync(
-        BaseRequestValidationContextFake context) =>
-        await ValidateAsync(context, context.ValidatedTokenRequest, context.CustomValidatorRequestContext);
-
-    #region Fight me
-    // override
-    public void SetTestTwoFactorResult(
-        BaseRequestValidationContextFake context, Dictionary<string, object> customResponse) =>
-        SetTwoFactorResult(context, customResponse);
-    // override
-    public void SetTestSsoResult(
-        BaseRequestValidationContextFake context, Dictionary<string, object> customResponse) =>
-        SetSsoResult(context, customResponse);
-    // override
-    public void SetTestSuccessResult(
-        BaseRequestValidationContextFake context, User user, List<Claim> claims, Dictionary<string, object> customResponse) =>
-        SetSuccessResult(context, user, claims, customResponse);
-    // override
-    public void SetTestErrorResult(
-        BaseRequestValidationContextFake context, Dictionary<string, object> customResponse) =>
-        SetErrorResult(context, customResponse);
-    // override
-    public ClaimsPrincipal GetTestSubject(
-        BaseRequestValidationContextFake context) => GetSubject(context);
-    // override
-    public async Task<bool> ValidateTestContextAsync(
-        BaseRequestValidationContextFake context, CustomValidatorRequestContext validatorContext)
+        BaseRequestValidationContextFake context)
     {
-        return await Task.FromResult(true);
+        await ValidateAsync(context, context.ValidatedTokenRequest, context.CustomValidatorRequestContext);
     }
 
-    // Junk?!?
+    public async Task<Tuple<bool, Organization>> TestRequiresTwoFactorAsync(
+        User user,
+        ValidatedTokenRequest context)
+    {
+        return await RequiresTwoFactorAsync(user, context);
+    }
+
     protected override ClaimsPrincipal GetSubject(
-        BaseRequestValidationContextFake context) => throw new NotImplementedException();
+        BaseRequestValidationContextFake context)
+    {
+        return context.ValidatedTokenRequest.Subject ?? new ClaimsPrincipal();
+    }
+
     protected override void SetErrorResult(
-        BaseRequestValidationContextFake context, Dictionary<string, object> customResponse) => throw new NotImplementedException();
+        BaseRequestValidationContextFake context,
+        Dictionary<string, object> customResponse)
+    {
+        context.GrantResult = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+    }
+
     protected override void SetSsoResult(
-        BaseRequestValidationContextFake context, Dictionary<string, object> customResponse) => throw new NotImplementedException();
+        BaseRequestValidationContextFake context,
+        Dictionary<string, object> customResponse)
+    {
+            context.GrantResult = new GrantValidationResult(
+                TokenRequestErrors.InvalidGrant, "Sso authentication required.", customResponse);
+    }
+
     protected override Task SetSuccessResult(
-        BaseRequestValidationContextFake context, User user, List<Claim> claims, Dictionary<string, object> customResponse) => throw new NotImplementedException();
+        BaseRequestValidationContextFake context,
+        User user,
+        List<Claim> claims,
+        Dictionary<string, object> customResponse)
+    {
+        context.GrantResult = new GrantValidationResult(customResponse: customResponse);
+        return Task.CompletedTask;
+    }
+
     protected override void SetTwoFactorResult(
-        BaseRequestValidationContextFake context, Dictionary<string, object> customResponse) => throw new NotImplementedException();
+        BaseRequestValidationContextFake context,
+        Dictionary<string, object> customResponse)
+    {}
+
     protected override Task<bool> ValidateContextAsync(
-        BaseRequestValidationContextFake context, CustomValidatorRequestContext validatorContext) => Task.FromResult(true);
-    #endregion
+        BaseRequestValidationContextFake context,
+        CustomValidatorRequestContext validatorContext)
+    {
+        return Task.FromResult(isValid);
+    }
 }
