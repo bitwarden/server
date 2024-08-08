@@ -135,6 +135,7 @@ public static class FeatureFlagKeys
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
+    public const string MembersTwoFAQueryOptimization = "ac-1698-members-two-fa-query-optimization";
 
     public static List<string> GetAllKeys()
     {
