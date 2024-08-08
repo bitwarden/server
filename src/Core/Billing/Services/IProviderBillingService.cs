@@ -88,4 +88,9 @@ public interface IProviderBillingService
     /// <remarks>This method requires the <paramref name="provider"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
     Task<Subscription> SetupSubscription(
         Provider provider);
+
+    Task UpdateSeatMinimums(
+        Provider provider,
+        int enterpriseSeatMinimum,
+        int teamsSeatMinimum);
 }
