@@ -187,11 +187,11 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [BitAutoData(false)]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
     public async Task CanEditCiphersAsAdminAsync_Providers(
-        bool fcV1Enabled, bool restrictProviders, Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
+        bool restrictProviders, Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
     )
     {
         cipher.OrganizationId = organization.Id;
@@ -210,11 +210,10 @@ public class CiphersControllerTests
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = false
         });
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(fcV1Enabled);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(restrictProviders);
 
-        // Non V1 FC or non restricted providers should succeed
-        if (!fcV1Enabled || !restrictProviders)
+        // Non restricted providers should succeed
+        if (!restrictProviders)
         {
             await sutProvider.Sut.DeleteAdmin(cipher.Id.ToString());
             await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
@@ -227,13 +226,6 @@ public class CiphersControllerTests
                 .DeleteAsync(default, default);
         }
 
-        if (fcV1Enabled)
-        {
-            await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(organization.Id);
-        }
-        else
-        {
-            await sutProvider.GetDependency<ICurrentContext>().Received().EditAnyCollection(organization.Id);
-        }
+        await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(organization.Id);
     }
 }

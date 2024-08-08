@@ -5,7 +5,6 @@ using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -229,8 +228,8 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        // Flexible Collections - check the user has permission to grant access to the collections for the new user
-        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) && model.Collections?.Any() == true)
+        // Check the user has permission to grant access to the collections for the new user
+        if (model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
@@ -366,35 +365,6 @@ public class OrganizationUsersController : Controller
     [HttpPut("{id}")]
     [HttpPost("{id}")]
     public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
-    {
-        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
-        {
-            // Use new Flexible Collections v1 logic
-            await Put_vNext(orgId, id, model);
-            return;
-        }
-
-        // Pre-Flexible Collections v1 code follows
-        if (!await _currentContext.ManageUsers(orgId))
-        {
-            throw new NotFoundException();
-        }
-
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (organizationUser == null || organizationUser.OrganizationId != orgId)
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User);
-        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-            model.Collections.Select(c => c.ToSelectionReadOnly()).ToList(), model.Groups);
-    }
-
-    /// <summary>
-    /// Put logic for Flexible Collections v1
-    /// </summary>
-    private async Task Put_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
