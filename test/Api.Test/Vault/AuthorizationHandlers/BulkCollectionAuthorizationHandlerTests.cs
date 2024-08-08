@@ -537,44 +537,6 @@ public class BulkCollectionAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanUpdateCollection_WhenAdminOrOwner_WithoutV1Enabled_Success(
-        OrganizationUserType userType,
-        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
-        ICollection<Collection> collections,
-        CurrentContextOrganization organization)
-    {
-        organization.Type = userType;
-        organization.Permissions = new Permissions();
-
-        var operationsToTest = new[]
-        {
-            BulkCollectionOperations.Update,
-            BulkCollectionOperations.ModifyUserAccess,
-            BulkCollectionOperations.ModifyGroupAccess,
-        };
-
-        foreach (var op in operationsToTest)
-        {
-            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-
-            var context = new AuthorizationHandlerContext(
-                new[] { op },
-                new ClaimsPrincipal(),
-                collections);
-
-            await sutProvider.Sut.HandleAsync(context);
-
-            Assert.True(context.HasSucceeded);
-
-            // Recreate the SUT to reset the mocks/dependencies between tests
-            sutProvider.Recreate();
-        }
-    }
-
-    [Theory, CollectionCustomization]
-    [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Owner)]
     public async Task CanUpdateCollection_WhenAdminOrOwner_WithV1Enabled_PermittedByCollectionManagementSettings_Success(
         OrganizationUserType userType,
         Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
@@ -828,32 +790,6 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanUpdateUsers_WithManageUsersCustomPermission_V1Disabled_Success(
-        SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
-        CurrentContextOrganization organization, Guid actingUserId)
-    {
-        organization.Type = OrganizationUserType.Custom;
-        organization.Permissions = new Permissions
-        {
-            ManageUsers = true
-        };
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)
-            .Returns(false);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ModifyUserAccess },
-            new ClaimsPrincipal(),
-            collections);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
     public async Task CanUpdateUsers_WithManageUsersCustomPermission_AllowAdminAccessIsTrue_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
         CurrentContextOrganization organization, Guid actingUserId)
@@ -907,32 +843,6 @@ public class BulkCollectionAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.False(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanUpdateGroups_WithManageGroupsCustomPermission_V1Disabled_Success(
-        SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
-        CurrentContextOrganization organization, Guid actingUserId)
-    {
-        organization.Type = OrganizationUserType.Custom;
-        organization.Permissions = new Permissions
-        {
-            ManageGroups = true
-        };
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)
-            .Returns(false);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ModifyGroupAccess },
-            new ClaimsPrincipal(),
-            collections);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -1041,34 +951,6 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
-    }
-
-    [Theory, CollectionCustomization]
-    [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanDeleteAsync_WhenAdminOrOwner_V1FlagDisabled_Success(
-        OrganizationUserType userType,
-        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
-        ICollection<Collection> collections,
-        CurrentContextOrganization organization)
-    {
-        organization.Type = userType;
-        organization.Permissions = new Permissions();
-
-        ArrangeOrganizationAbility(sutProvider, organization, true, false);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.Delete },
-            new ClaimsPrincipal(),
-            collections);
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
 
