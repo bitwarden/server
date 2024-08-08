@@ -82,7 +82,7 @@ public class HandlebarsMailService : IMailService
         var model = new TrialInitiationVerifyEmail
         {
             Token = WebUtility.UrlEncode(token),
-            Email = email,
+            Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,

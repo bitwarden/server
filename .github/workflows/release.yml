@@ -149,9 +149,7 @@ jobs:
   release:
     name: Create GitHub release
     runs-on: ubuntu-22.04
-    needs:
-      - setup
-      - deploy
+    needs: setup
     steps:
       - name: Download latest release Docker stubs
         if: ${{ inputs.release_type != 'Dry Run' }}

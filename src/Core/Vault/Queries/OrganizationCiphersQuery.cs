@@ -1,6 +1,4 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
+﻿using Bit.Core.Repositories;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
@@ -10,15 +8,11 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
 {
     private readonly ICipherRepository _cipherRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
-    private readonly IFeatureService _featureService;
 
-    private bool FlexibleCollectionsV1Enabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-
-    public OrganizationCiphersQuery(ICipherRepository cipherRepository, ICollectionCipherRepository collectionCipherRepository, IFeatureService featureService)
+    public OrganizationCiphersQuery(ICipherRepository cipherRepository, ICollectionCipherRepository collectionCipherRepository)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
-        _featureService = featureService;
     }
 
     /// <summary>
@@ -26,12 +20,6 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     /// </summary>
     public async Task<IEnumerable<CipherDetailsWithCollections>> GetOrganizationCiphersForUser(Guid organizationId, Guid userId)
     {
-        if (!FlexibleCollectionsV1Enabled)
-        {
-            // Flexible collections is OFF, should not be using this query
-            throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
-        }
-
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true);
         var orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId).ToList();
         var orgCipherIds = orgCiphers.Select(c => c.Id);
@@ -50,12 +38,6 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     /// <param name="organizationId"></param>
     public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>> GetAllOrganizationCiphers(Guid organizationId)
     {
-        if (!FlexibleCollectionsV1Enabled)
-        {
-            // Flexible collections is OFF, should not be using this query
-            throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
-        }
-
         var orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);
         var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
         var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
@@ -68,12 +50,6 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     /// </summary>
     public async Task<IEnumerable<CipherOrganizationDetails>> GetUnassignedOrganizationCiphers(Guid organizationId)
     {
-        if (!FlexibleCollectionsV1Enabled)
-        {
-            // Flexible collections is OFF, should not be using this query
-            throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
-        }
-
         return await _cipherRepository.GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organizationId);
     }
 }

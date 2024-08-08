@@ -295,11 +295,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
             Name = _mockEncryptedString,
         });
 
-        var mockEncryptedString2 =
-            "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
-        var request = new ProjectCreateRequestModel { Name = mockEncryptedString2 };
-
-        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}", request);
+        var response = await _client.GetAsync($"/projects/{project.Id}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

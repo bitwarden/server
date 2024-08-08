@@ -79,8 +79,13 @@
         document.getElementById('@(nameof(Model.UseTotp))').checked = plan.hasTotp;
         document.getElementById('@(nameof(Model.UsersGetPremium))').checked = plan.usersGetPremium;
 
-        document.getElementById('@(nameof(Model.MaxStorageGb))').value = plan.passwordManager.baseStorageGb || 1;
-        document.getElementById('@(nameof(Model.Seats))').value = plan.passwordManager.baseSeats || 1;
+        document.getElementById('@(nameof(Model.MaxStorageGb))').value =
+            document.getElementById('@(nameof(Model.MaxStorageGb))').value ||
+            plan.passwordManager.baseStorageGb ||
+            1;
+        document.getElementById('@(nameof(Model.Seats))').value = document.getElementById('@(nameof(Model.Seats))').value ||
+            plan.passwordManager.baseSeats ||
+            1;
     }
 
     function unlinkProvider(id) {
