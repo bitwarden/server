@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Billing.Models;
 
-public record SubscriptionSuspensionDTO(
+public record SubscriptionSuspension(
     DateTime SuspensionDate,
     DateTime UnpaidPeriodEndDate,
     int GracePeriod);

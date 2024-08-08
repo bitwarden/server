@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Billing.Models;
 
-public record TaxInformationDTO(
+public record TaxInformation(
     string Country,
     string PostalCode,
     string TaxId,

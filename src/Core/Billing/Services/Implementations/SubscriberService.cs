@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -37,7 +36,7 @@ public class SubscriberService(
         {
             logger.LogWarning("Cannot cancel subscription ({ID}) that's already inactive", subscription.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var metadata = new Dictionary<string, string>
@@ -148,7 +147,7 @@ public class SubscriberService(
         {
             logger.LogError("Cannot retrieve customer for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         try
@@ -163,48 +162,16 @@ public class SubscriberService(
             logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
                 subscriber.GatewayCustomerId, subscriber.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
-        catch (StripeException exception)
+        catch (StripeException stripeException)
         {
             logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewayCustomerId, subscriber.Id, exception.Message);
+                subscriber.GatewayCustomerId, subscriber.Id, stripeException.Message);
 
-            throw ContactSupport("An error occurred while trying to retrieve a Stripe Customer", exception);
-        }
-    }
-
-    public async Task<List<Invoice>> GetInvoices(
-        ISubscriber subscriber,
-        StripeInvoiceListOptions invoiceListOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
-        {
-            logger.LogError("Cannot retrieve invoices for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
-
-            return [];
-        }
-
-        try
-        {
-            if (invoiceListOptions == null)
-            {
-                invoiceListOptions = new StripeInvoiceListOptions { Customer = subscriber.GatewayCustomerId };
-            }
-            else
-            {
-                invoiceListOptions.Customer = subscriber.GatewayCustomerId;
-            }
-
-            return await stripeAdapter.InvoiceListAsync(invoiceListOptions);
-        }
-        catch (StripeException exception)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe invoices for subscriber ({SubscriberID}): {Error}", subscriber.Id, exception.Message);
-
-            return [];
+            throw new BillingException(
+                message: "An error occurred while trying to retrieve a Stripe customer",
+                innerException: stripeException);
         }
     }
 
@@ -294,7 +261,7 @@ public class SubscriberService(
         {
             logger.LogError("Cannot retrieve subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         try
@@ -309,18 +276,20 @@ public class SubscriberService(
             logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})",
                 subscriber.GatewaySubscriptionId, subscriber.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
-        catch (StripeException exception)
+        catch (StripeException stripeException)
         {
             logger.LogError("An error occurred while trying to retrieve Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewaySubscriptionId, subscriber.Id, exception.Message);
+                subscriber.GatewaySubscriptionId, subscriber.Id, stripeException.Message);
 
-            throw ContactSupport("An error occurred while trying to retrieve a Stripe Subscription", exception);
+            throw new BillingException(
+                message: "An error occurred while trying to retrieve a Stripe subscription",
+                innerException: stripeException);
         }
     }
 
-    public async Task<TaxInformationDTO> GetTaxInformation(
+    public async Task<TaxInformation> GetTaxInformation(
         ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
@@ -337,7 +306,7 @@ public class SubscriberService(
 
         if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
         {
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var stripeCustomer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
@@ -353,7 +322,7 @@ public class SubscriberService(
             {
                 logger.LogError("Failed to retrieve Braintree customer ({ID}) when removing payment method", braintreeCustomerId);
 
-                throw ContactSupport();
+                throw new BillingException();
             }
 
             if (braintreeCustomer.DefaultPaymentMethod != null)
@@ -369,7 +338,7 @@ public class SubscriberService(
                     logger.LogError("Failed to update payment method for Braintree customer ({ID}) | Message: {Message}",
                         braintreeCustomerId, updateCustomerResult.Message);
 
-                    throw ContactSupport();
+                    throw new BillingException();
                 }
 
                 var deletePaymentMethodResult = await braintreeGateway.PaymentMethod.DeleteAsync(existingDefaultPaymentMethod.Token);
@@ -384,7 +353,7 @@ public class SubscriberService(
                         "Failed to delete Braintree payment method for Customer ({ID}), re-linked payment method. Message: {Message}",
                         braintreeCustomerId, deletePaymentMethodResult.Message);
 
-                    throw ContactSupport();
+                    throw new BillingException();
                 }
             }
             else
@@ -437,7 +406,7 @@ public class SubscriberService(
         {
             logger.LogError("Updated payment method for ({SubscriberID}) must contain a token", subscriber.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
@@ -462,7 +431,7 @@ public class SubscriberService(
                     {
                         logger.LogError("There were more than 1 setup intents for subscriber's ({SubscriberID}) updated payment method", subscriber.Id);
 
-                        throw ContactSupport();
+                        throw new BillingException();
                     }
 
                     var matchingSetupIntent = setupIntentsForUpdatedPaymentMethod.First();
@@ -551,7 +520,7 @@ public class SubscriberService(
                             {
                                 logger.LogError("Failed to retrieve Braintree customer ({BraintreeCustomerId}) when updating payment method for subscriber ({SubscriberID})", braintreeCustomerId, subscriber.Id);
 
-                                throw ContactSupport();
+                                throw new BillingException();
                             }
 
                             await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, token);
@@ -570,14 +539,14 @@ public class SubscriberService(
                 {
                     logger.LogError("Cannot update subscriber's ({SubscriberID}) payment method to type ({PaymentMethodType}) as it is not supported", subscriber.Id, type.ToString());
 
-                    throw ContactSupport();
+                    throw new BillingException();
                 }
         }
     }
 
     public async Task UpdateTaxInformation(
         ISubscriber subscriber,
-        TaxInformationDTO taxInformation)
+        TaxInformation taxInformation)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
         ArgumentNullException.ThrowIfNull(taxInformation);
@@ -635,7 +604,7 @@ public class SubscriberService(
         {
             logger.LogError("No setup intent ID exists to verify for subscriber with ID ({SubscriberID})", subscriber.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var (amount1, amount2) = microdeposits;
@@ -706,7 +675,7 @@ public class SubscriberService(
 
         logger.LogError("Failed to create Braintree customer for subscriber ({ID})", subscriber.Id);
 
-        throw ContactSupport();
+        throw new BillingException();
     }
 
     private async Task<MaskedPaymentMethodDTO> GetMaskedPaymentMethodDTOAsync(
@@ -751,7 +720,7 @@ public class SubscriberService(
         return MaskedPaymentMethodDTO.From(setupIntent);
     }
 
-    private static TaxInformationDTO GetTaxInformationDTOFrom(
+    private static TaxInformation GetTaxInformationDTOFrom(
         Customer customer)
     {
         if (customer.Address == null)
@@ -759,7 +728,7 @@ public class SubscriberService(
             return null;
         }
 
-        return new TaxInformationDTO(
+        return new TaxInformation(
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
@@ -825,7 +794,7 @@ public class SubscriberService(
         {
             logger.LogError("Failed to replace payment method for Braintree customer ({ID}) - Creation of new payment method failed | Error: {Error}", customer.Id, createPaymentMethodResult.Message);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var updateCustomerResult = await braintreeGateway.Customer.UpdateAsync(
@@ -839,7 +808,7 @@ public class SubscriberService(
 
             await braintreeGateway.PaymentMethod.DeleteAsync(createPaymentMethodResult.Target.Token);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         if (existingDefaultPaymentMethod != null)
