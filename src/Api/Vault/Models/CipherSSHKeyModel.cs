@@ -19,7 +19,7 @@ public class CipherSSHKeyModel
     [EncryptedStringLength(5000)]
     public string PrivateKey { get; set; }
     [EncryptedString]
-    [EncryptedStringLength(1000)]
+    [EncryptedStringLength(5000)]
     public string PublicKey { get; set; }
     [EncryptedString]
     [EncryptedStringLength(1000)]
