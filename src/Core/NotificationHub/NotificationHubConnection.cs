@@ -84,7 +84,7 @@ class NotificationHubConnection
             return false;
         }
 
-        return RegistrationStartDate <= queryTime;
+        return RegistrationStartDate < queryTime;
     }
 
     private NotificationHubConnection() { }

@@ -110,7 +110,7 @@ public class NotificationHubPoolTests
                     new() {
                         ConnectionString = "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKey=example///example=",
                         HubName = "hub",
-                        RegistrationStartDate = DateTime.UtcNow,
+                        RegistrationStartDate = DateTime.UtcNow.AddMinutes(-1),
                         RegistrationEndDate = DateTime.UtcNow.AddDays(1),
                     }
                 }
