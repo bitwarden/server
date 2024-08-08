@@ -1,0 +1,38 @@
+﻿-- Migrate Custom users who only have 'editAssignedCollections' and/or 'deleteAssignedCollections' custom permissions to the User type.
+UPDATE "OrganizationUser"
+SET
+    "Type" = 2,
+    "Permissions" = NULL
+WHERE
+    "Type" = 4
+    AND jsonb_typeof("Permissions"::jsonb) = 'object'
+    AND (
+        COALESCE(("Permissions"::jsonb)->>'editAssignedCollections', 'false') = 'true'
+        OR COALESCE(("Permissions"::jsonb)->>'deleteAssignedCollections', 'false') = 'true'
+    )
+    AND COALESCE(("Permissions"::jsonb)->>'accessEventLogs', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'accessImportExport', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'accessReports', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'createNewCollections', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'editAnyCollection', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'deleteAnyCollection', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'manageGroups', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'managePolicies', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'manageSso', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'manageUsers', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'manageResetPassword', 'true') = 'false'
+    AND COALESCE(("Permissions"::jsonb)->>'manageScim', 'true') = 'false';
+
+-- Remove 'editAssignedCollections' and 'deleteAssignedCollections' properties from Permissions
+UPDATE "OrganizationUser"
+SET
+    "Permissions" = "Permissions"::jsonb - 'editAssignedCollections' - 'deleteAssignedCollections'
+WHERE
+    "Permissions" IS NOT NULL
+    AND (
+        SELECT
+            CASE
+                WHEN jsonb_typeof("Permissions"::jsonb) = 'object' THEN TRUE
+                ELSE FALSE
+            END
+    );
