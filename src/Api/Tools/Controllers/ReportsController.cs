@@ -67,8 +67,6 @@ public class ReportsController : Controller
         var orgItems = await _organizationCiphersQuery.GetAllOrganizationCiphers(orgId);
 
         // Take the collections/groups and create the access details items
-        var collectionAccessDetails = new List<MemberAccessReportAccessDetails>();
-        var groupAccessDetails = new List<MemberAccessReportAccessDetails>();
         var accessDetails = new List<MemberAccessReportAccessDetails>();
         foreach (var tCollect in orgCollectionsWithAccess)
         {
@@ -135,7 +133,7 @@ public class ReportsController : Controller
 
             if (user.OrganizationUserUserDetails.Collections.Any())
             {
-                var userCollections = accessDetails.Where(x => user.OrganizationUserUserDetails.Collections.Any(y => x.CollectionId == y.Id));
+                var userCollections = accessDetails.Where(x => user.OrganizationUserUserDetails.Collections.Any(y => x.CollectionId == y.Id && x.UserGuid == user.OrganizationUserUserDetails.Id));
                 userAccessDetails.AddRange(userCollections);
             }
             report.AccessDetails = userAccessDetails;
@@ -144,7 +142,7 @@ public class ReportsController : Controller
             report.TotalItemCount = report.AccessDetails.SelectMany(x => x.CipherIds).Distinct().Count();
 
             report.CollectionsCount = report.AccessDetails.Select(x => x.CollectionId).Distinct().Count();
-            report.GroupsCount = report.AccessDetails.Select(x => x.GroupId).Distinct().Count();
+            report.GroupsCount = report.AccessDetails.Select(x => x.GroupId).Where(y => y.HasValue).Distinct().Count();
             memberAccessReport.Add(report);
         }
         return memberAccessReport;
