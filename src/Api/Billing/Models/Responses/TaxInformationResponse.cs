@@ -11,7 +11,7 @@ public record TaxInformationResponse(
     string City,
     string State)
 {
-    public static TaxInformationResponse From(TaxInformationDTO taxInformation)
+    public static TaxInformationResponse From(TaxInformation taxInformation)
         => new(
             taxInformation.Country,
             taxInformation.PostalCode,

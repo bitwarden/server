@@ -39,22 +39,28 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
         ReceiveMarketingEmails = receiveMarketingEmails;
     }
 
-    public bool TokenIsValid(string email, string name = default, bool receiveMarketingEmails = default)
+    public bool TokenIsValid(string email)
     {
         if (Email == default || email == default)
         {
             return false;
         }
 
-        // Note: string.Equals handles nulls without throwing an exception
-        return string.Equals(Name, name, StringComparison.InvariantCultureIgnoreCase) &&
-               Email.Equals(email, StringComparison.InvariantCultureIgnoreCase) &&
-               ReceiveMarketingEmails == receiveMarketingEmails;
+        return Email.Equals(email, StringComparison.InvariantCultureIgnoreCase);
     }
 
     // Validates deserialized
     protected override bool TokenIsValid() =>
         Identifier == TokenIdentifier
         && !string.IsNullOrWhiteSpace(Email);
+
+
+    public static bool ValidateToken(IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> dataProtectorTokenFactory, string token, string userEmail)
+    {
+        return dataProtectorTokenFactory.TryUnprotect(token, out var tokenable)
+               && tokenable.Valid
+               && tokenable.TokenIsValid(userEmail);
+    }
+
 
 }

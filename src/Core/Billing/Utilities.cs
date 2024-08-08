@@ -8,12 +8,7 @@ public static class Utilities
 {
     public const string BraintreeCustomerIdKey = "btCustomerId";
 
-    public static BillingException ContactSupport(
-        string internalMessage = null,
-        Exception innerException = null) => new("Something went wrong with your request. Please contact support.",
-        internalMessage, innerException);
-
-    public static async Task<SubscriptionSuspensionDTO> GetSuspensionAsync(
+    public static async Task<SubscriptionSuspension> GetSubscriptionSuspensionAsync(
         IStripeAdapter stripeAdapter,
         Subscription subscription)
     {
@@ -49,7 +44,7 @@ public static class Utilities
 
                     const int gracePeriod = 14;
 
-                    return new SubscriptionSuspensionDTO(
+                    return new SubscriptionSuspension(
                         firstOverdueInvoice.Created.AddDays(gracePeriod),
                         firstOverdueInvoice.PeriodEnd,
                         gracePeriod);
@@ -67,12 +62,29 @@ public static class Utilities
 
                     const int gracePeriod = 30;
 
-                    return new SubscriptionSuspensionDTO(
+                    return new SubscriptionSuspension(
                         firstOverdueInvoice.DueDate.Value.AddDays(gracePeriod),
                         firstOverdueInvoice.PeriodEnd,
                         gracePeriod);
                 }
             default: return null;
         }
+    }
+
+    public static TaxInformation GetTaxInformation(Customer customer)
+    {
+        if (customer.Address == null)
+        {
+            return null;
+        }
+
+        return new TaxInformation(
+            customer.Address.Country,
+            customer.Address.PostalCode,
+            customer.TaxIds?.FirstOrDefault()?.Value,
+            customer.Address.Line1,
+            customer.Address.Line2,
+            customer.Address.City,
+            customer.Address.State);
     }
 }

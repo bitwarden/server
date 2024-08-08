@@ -10,39 +10,41 @@ using Bit.Core.Models.Business;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.AdminConsole.Entities;
 
 public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable, IReferenceable
 {
-    private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
+    private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
     public Guid Id { get; set; }
     [MaxLength(50)]
-    public string Identifier { get; set; }
+    public string? Identifier { get; set; }
     /// <summary>
     /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
     /// </summary>
     [MaxLength(50)]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     /// <summary>
     /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
     /// </summary>
     [MaxLength(50)]
-    public string BusinessName { get; set; }
+    public string? BusinessName { get; set; }
     [MaxLength(50)]
-    public string BusinessAddress1 { get; set; }
+    public string? BusinessAddress1 { get; set; }
     [MaxLength(50)]
-    public string BusinessAddress2 { get; set; }
+    public string? BusinessAddress2 { get; set; }
     [MaxLength(50)]
-    public string BusinessAddress3 { get; set; }
+    public string? BusinessAddress3 { get; set; }
     [MaxLength(2)]
-    public string BusinessCountry { get; set; }
+    public string? BusinessCountry { get; set; }
     [MaxLength(30)]
-    public string BusinessTaxNumber { get; set; }
+    public string? BusinessTaxNumber { get; set; }
     [MaxLength(256)]
-    public string BillingEmail { get; set; }
+    public string BillingEmail { get; set; } = null!;
     [MaxLength(50)]
-    public string Plan { get; set; }
+    public string Plan { get; set; } = null!;
     public PlanType PlanType { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
@@ -65,16 +67,16 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public short? MaxStorageGb { get; set; }
     public GatewayType? Gateway { get; set; }
     [MaxLength(50)]
-    public string GatewayCustomerId { get; set; }
+    public string? GatewayCustomerId { get; set; }
     [MaxLength(50)]
-    public string GatewaySubscriptionId { get; set; }
-    public string ReferenceData { get; set; }
+    public string? GatewaySubscriptionId { get; set; }
+    public string? ReferenceData { get; set; }
     public bool Enabled { get; set; } = true;
     [MaxLength(100)]
-    public string LicenseKey { get; set; }
-    public string PublicKey { get; set; }
-    public string PrivateKey { get; set; }
-    public string TwoFactorProviders { get; set; }
+    public string? LicenseKey { get; set; }
+    public string? PublicKey { get; set; }
+    public string? PrivateKey { get; set; }
+    public string? TwoFactorProviders { get; set; }
     public DateTime? ExpirationDate { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
@@ -97,12 +99,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// If set to false, users generally need collection-level permissions to read/write a collection or its items.
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
-    /// <summary>
-    /// This is an organization-level feature flag (not controlled via LaunchDarkly) to onboard organizations to the
-    /// Flexible Collections MVP changes. This has been fully released and must always be set to TRUE for all organizations.
-    /// AC-1714 will remove this flag after all old code has been removed.
-    /// </summary>
-    public bool FlexibleCollections { get; set; }
 
     public void SetNewId()
     {
@@ -123,22 +119,22 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// <summary>
     /// Returns the business name of the organization, HTML decoded ready for display.
     /// </summary>
-    public string DisplayBusinessName()
+    public string? DisplayBusinessName()
     {
         return WebUtility.HtmlDecode(BusinessName);
     }
 
-    public string BillingEmailAddress()
+    public string? BillingEmailAddress()
     {
         return BillingEmail?.ToLowerInvariant()?.Trim();
     }
 
-    public string BillingName()
+    public string? BillingName()
     {
         return DisplayBusinessName();
     }
 
-    public string SubscriberName()
+    public string? SubscriberName()
     {
         return DisplayName();
     }
@@ -198,7 +194,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         return maxStorageBytes - Storage.Value;
     }
 
-    public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
+    public Dictionary<TwoFactorProviderType, TwoFactorProvider>? GetTwoFactorProviders()
     {
         if (string.IsNullOrWhiteSpace(TwoFactorProviders))
         {
@@ -257,7 +253,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         return providers.Any(p => (p.Value?.Enabled ?? false) && Use2fa);
     }
 
-    public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
+    public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
         if (providers == null || !providers.ContainsKey(provider))
@@ -273,7 +269,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         // The following properties are intentionally excluded from being updated:
         // - Id - self-hosted org will have its own unique Guid
         // - MaxStorageGb - not enforced for self-hosted because we're not providing the storage
-        // - FlexibleCollections - the self-hosted organization must do its own data migration to set this property, it cannot be updated from cloud
 
         Name = license.Name;
         BusinessName = license.BusinessName;

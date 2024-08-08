@@ -5,6 +5,8 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
@@ -17,7 +19,7 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<Device> GetByIdAsync(Guid id, Guid userId)
+    public async Task<Device?> GetByIdAsync(Guid id, Guid userId)
     {
         var device = await GetByIdAsync(id);
         if (device == null || device.UserId != userId)
@@ -28,7 +30,7 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         return device;
     }
 
-    public async Task<Device> GetByIdentifierAsync(string identifier)
+    public async Task<Device?> GetByIdentifierAsync(string identifier)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -44,7 +46,7 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
-    public async Task<Device> GetByIdentifierAsync(string identifier, Guid userId)
+    public async Task<Device?> GetByIdentifierAsync(string identifier, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

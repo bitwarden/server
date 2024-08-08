@@ -45,7 +45,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<ICipherRepository>()
-            .GetByIdAsync(cipherId, userId, Arg.Any<bool>())
+            .GetByIdAsync(cipherId, userId)
             .Returns(Task.FromResult(cipherDetails));
 
         var result = await sutProvider.Sut.PutPartial(cipherId, new CipherPartialRequestModel { Favorite = isFavorite, FolderId = folderId.ToString() });
@@ -60,7 +60,7 @@ public class CiphersControllerTests
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(Guid.NewGuid()).Returns(false);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsNull();
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsNull();
 
         var requestAction = async () => await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -72,9 +72,9 @@ public class CiphersControllerTests
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
-        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
         var cipherService = sutProvider.GetDependency<ICipherService>();
 
         await sutProvider.Sut.PutCollections_vNext(id, model);
@@ -87,9 +87,9 @@ public class CiphersControllerTests
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
-        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
 
         var result = await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -102,9 +102,9 @@ public class CiphersControllerTests
     {
         SetupUserAndOrgMocks(id, userId, sutProvider);
         var cipherDetails = CreateCipherDetailsMock(id, userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId, true).ReturnsForAnyArgs(cipherDetails, [(CipherDetails)null]);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails, [(CipherDetails)null]);
 
-        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
 
         var result = await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -116,7 +116,7 @@ public class CiphersControllerTests
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns(new List<CollectionCipher>());
     }
 
     private CipherDetails CreateCipherDetailsMock(Guid id, Guid userId)
@@ -187,11 +187,11 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [BitAutoData(false)]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
     public async Task CanEditCiphersAsAdminAsync_Providers(
-        bool fcV1Enabled, bool restrictProviders, Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
+        bool restrictProviders, Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
     )
     {
         cipher.OrganizationId = organization.Id;
@@ -210,11 +210,10 @@ public class CiphersControllerTests
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = false
         });
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(fcV1Enabled);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(restrictProviders);
 
-        // Non V1 FC or non restricted providers should succeed
-        if (!fcV1Enabled || !restrictProviders)
+        // Non restricted providers should succeed
+        if (!restrictProviders)
         {
             await sutProvider.Sut.DeleteAdmin(cipher.Id.ToString());
             await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
@@ -227,13 +226,6 @@ public class CiphersControllerTests
                 .DeleteAsync(default, default);
         }
 
-        if (fcV1Enabled)
-        {
-            await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(organization.Id);
-        }
-        else
-        {
-            await sutProvider.GetDependency<ICurrentContext>().Received().EditAnyCollection(organization.Id);
-        }
+        await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(organization.Id);
     }
 }

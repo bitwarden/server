@@ -7,6 +7,8 @@ using Bit.Core.Vault.Entities;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class EventRepository : Repository<Event, Guid>, IEventRepository
@@ -23,7 +25,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByUserId]",
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 ["@UserId"] = userId
             }, startDate, endDate, pageOptions);
@@ -33,7 +35,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationId]",
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 ["@OrganizationId"] = organizationId
             }, startDate, endDate, pageOptions);
@@ -43,7 +45,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationIdActingUserId]",
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 ["@OrganizationId"] = organizationId,
                 ["@ActingUserId"] = actingUserId
@@ -54,7 +56,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByProviderId]",
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 ["@ProviderId"] = providerId
             }, startDate, endDate, pageOptions);
@@ -64,7 +66,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByProviderIdActingUserId]",
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 ["@ProviderId"] = providerId,
                 ["@ActingUserId"] = actingUserId
@@ -75,7 +77,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByCipherId]",
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 ["@OrganizationId"] = cipher.OrganizationId,
                 ["@UserId"] = cipher.UserId,
@@ -93,9 +95,9 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         await base.CreateAsync(ev);
     }
 
-    public async Task CreateManyAsync(IEnumerable<IEvent> entities)
+    public async Task CreateManyAsync(IEnumerable<IEvent>? entities)
     {
-        if (!entities?.Any() ?? true)
+        if (entities is null || !entities.Any())
         {
             return;
         }
@@ -112,7 +114,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null))
             {
                 bulkCopy.DestinationTableName = "[dbo].[Event]";
-                var dataTable = BuildEventsTable(bulkCopy, entities.Select(e => e is Event ? e as Event : new Event(e)));
+                var dataTable = BuildEventsTable(bulkCopy, entities.Select(e => e is Event @event ? @event : new Event(e)));
                 await bulkCopy.WriteToServerAsync(dataTable);
             }
         }
@@ -123,7 +125,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationIdServiceAccountId]",
-            new Dictionary<string, object>
+            new Dictionary<string, object?>
             {
                 ["@OrganizationId"] = organizationId,
                 ["@ServiceAccountId"] = serviceAccountId
@@ -131,7 +133,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
     }
 
     private async Task<PagedResult<IEvent>> GetManyAsync(string sprocName,
-        IDictionary<string, object> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        IDictionary<string, object?> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         DateTime? beforeDate = null;
         if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&

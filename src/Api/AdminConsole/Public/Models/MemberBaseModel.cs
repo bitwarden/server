@@ -45,10 +45,10 @@ public abstract class MemberBaseModel
     }
 
     /// <summary>
-    /// The member's type (or role) within the organization. If your organization has is using the latest collection enhancements,
-    /// you will not be allowed to assign the Manager role (OrganizationUserType = 3).
+    /// The member's type (or role) within the organization.
     /// </summary>
     [Required]
+    [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
     /// <summary>
     /// External identifier for reference or linking this member to another system, such as a user directory.
