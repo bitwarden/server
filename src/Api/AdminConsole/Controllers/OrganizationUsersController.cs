@@ -12,6 +12,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -48,6 +49,7 @@ public class OrganizationUsersController : Controller
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -66,7 +68,8 @@ public class OrganizationUsersController : Controller
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
         IFeatureService featureService,
-        ISsoConfigRepository ssoConfigRepository)
+        ISsoConfigRepository ssoConfigRepository,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -85,6 +88,7 @@ public class OrganizationUsersController : Controller
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
         _ssoConfigRepository = ssoConfigRepository;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     [HttpGet("{id}")]
@@ -126,8 +130,12 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            return await Get_vNext(orgId, includeGroups, includeCollections);
+        }
+
+        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
         var responseTasks = organizationUsers
             .Select(async o =>
             {
@@ -332,7 +340,9 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var results = await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value,
+        var results = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
+            ? await _organizationService.ConfirmUsersAsync_vNext(orgGuidId, model.ToDictionary(), userId.Value)
+            : await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value,
             _userService);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
@@ -680,5 +690,33 @@ public class OrganizationUsersController : Controller
         }
 
         return type;
+    }
+
+    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get_vNext(Guid orgId,
+        bool includeGroups = false, bool includeCollections = false)
+    {
+        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
+        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
+        var responseTasks = organizationUsers
+            .Select(async o =>
+            {
+                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
+                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
+
+                // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+                orgUser.Type = GetFlexibleCollectionsUserType(orgUser.Type, orgUser.Permissions);
+
+                // Set 'Edit/Delete Assigned Collections' custom permissions to false
+                if (orgUser.Permissions is not null)
+                {
+                    orgUser.Permissions.EditAssignedCollections = false;
+                    orgUser.Permissions.DeleteAssignedCollections = false;
+                }
+
+                return orgUser;
+            });
+        var responses = await Task.WhenAll(responseTasks);
+
+        return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
 }
