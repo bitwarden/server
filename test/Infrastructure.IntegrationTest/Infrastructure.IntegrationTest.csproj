@@ -27,6 +27,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Infrastructure.Dapper\Infrastructure.Dapper.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
+    <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />
+    <ProjectReference Include="..\..\util\MySqlMigrations\MySqlMigrations.csproj" />
+    <ProjectReference Include="..\..\util\PostgresMigrations\PostgresMigrations.csproj" />
+    <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
   </ItemGroup>
 
 </Project>
