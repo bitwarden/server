@@ -253,4 +253,57 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.LimitCollectionCreationDeletion, result.LimitCollectionCreationDeletion);
         Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
     }
+
+    [DatabaseTheory, DatabaseData(MigrationName = "FinalFlexibleCollectionsDataMigrations")]
+    public async Task RunMigration_WithEditAssignedCollectionsUser_Works(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IMigrationTester migrationTester)
+    {
+        var editAssignedCollectionsPermissionJson =
+            "{\"accessEventLogs\":false,\"accessImportExport\":false,\"accessReports\":false,\"createNewCollections\""
+            + ":false,\"editAnyCollection\":false,\"deleteAnyCollection\":false,\"editAssignedCollections\":true,\""
+            + "deleteAssignedCollections\":false,\"manageGroups\":false,\"managePolicies\":false,\"manageSso\":false,\""
+            + "manageUsers\":false,\"manageResetPassword\":false,\"manageScim\":false}";
+
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            PrivateKey = "privatekey",
+        });
+
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            ResetPasswordKey = "resetpasswordkey1",
+            Type = OrganizationUserType.Custom,
+            Permissions = editAssignedCollectionsPermissionJson
+        });
+
+        // run data migration
+        migrationTester.ApplyMigration();
+
+        // Assert that the user was migrated to a User type with null permissions
+        var migratedOrgUser1 = await organizationUserRepository.GetByIdAsync(orgUser1.Id);
+        Assert.Equal(orgUser1.Id, migratedOrgUser1.Id);
+        Assert.Equal(OrganizationUserType.User, migratedOrgUser1.Type);
+        Assert.Null(migratedOrgUser1.Permissions);
+    }
 }
