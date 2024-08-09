@@ -78,8 +78,8 @@ public class DataTableBuilder<T>
         // we need to look past the Convert expression
         // i => (System.Object?)i.Id
         if (
-            columnExpression.Body is UnaryExpression 
-            { 
+            columnExpression.Body is UnaryExpression
+            {
                 NodeType: ExpressionType.Convert,
                 Operand: MemberExpression { Member: PropertyInfo valuePropertyInfo },
             }
