@@ -1,0 +1,111 @@
+using System.Data;
+
+namespace Bit.Infrastructure.Dapper.Test;
+
+public class DataTableBuilderTests
+{
+    public class TestItem
+    {
+        // Normal value type
+        public int Id { get; set; }
+        // Normal reference type
+        public string? Name { get; set; }
+        // Nullable value type
+        public DateTime? DeletedDate { get; set; }
+        public object? ObjectProp { get; set; }
+
+        public int Method()
+        {
+            throw new NotImplementedException();
+        }
+    }
+    [Fact]
+    public void DataTableBuilder_Works()
+    {
+        var dtb = new DataTableBuilder<TestItem>(
+            [
+                i => i.Id,
+                i => i.Name,
+                i => i.DeletedDate,
+                i => i.ObjectProp,
+            ]
+        );
+
+        var table = dtb.Build(
+            [
+                new TestItem { Id = 4, Name = "Test", DeletedDate = new DateTime(2024, 8, 8), ObjectProp = 1 },
+                new TestItem { Id = int.MaxValue, Name = null, DeletedDate = null, ObjectProp = "Hi" },
+            ]
+        );
+
+        Assert.Collection(
+            table.Columns.Cast<DataColumn>(),
+            column =>
+            {
+                Assert.Equal("Id", column.ColumnName);
+                Assert.Equal(typeof(int), column.DataType);
+            },
+            column =>
+            {
+                Assert.Equal("Name", column.ColumnName);
+                Assert.Equal(typeof(string), column.DataType);
+            },
+            column =>
+            {
+                Assert.Equal("DeletedDate", column.ColumnName);
+                // Checking that it will unwrap the `Nullable<T>`
+                Assert.Equal(typeof(DateTime), column.DataType);
+            },
+            column =>
+            {
+                Assert.Equal("ObjectProp", column.ColumnName);
+                Assert.Equal(typeof(object), column.DataType);
+            }
+        );
+
+
+        Assert.Collection(
+            table.Rows.Cast<DataRow>(),
+            row =>
+            {
+                Assert.Collection(
+                    row.ItemArray,
+                    item => Assert.Equal(4, item),
+                    item => Assert.Equal("Test", item),
+                    item => Assert.Equal(new DateTime(2024, 8, 8), item),
+                    item => Assert.Equal(1, item)
+                );
+            },
+            row =>
+            {
+                Assert.Collection(
+                    row.ItemArray,
+                    item => Assert.Equal(int.MaxValue, item),
+                    item => Assert.Equal(DBNull.Value, item),
+                    item => Assert.Equal(DBNull.Value, item),
+                    item => Assert.Equal("Hi", item)
+                );
+            }
+        );
+    }
+
+    [Fact]
+    public void DataTableBuilder_ThrowsOnInvalidExpression()
+    {
+        var argException = Assert.Throws<ArgumentException>(() => new DataTableBuilder<TestItem>([i => i.Method()]));
+        Assert.Equal(
+            "Could not determine the property info from the given expression 'i => Convert(i.Method(), Object)'.",
+            argException.Message
+        );
+    }
+
+    [Fact]
+    public void DataTableBuilder_ThrowsOnRepeatExpression()
+    {
+        var argException = Assert.Throws<ArgumentException>(() => new DataTableBuilder<TestItem>([i => i.Id, i => i.Id]));
+        Assert.Equal(
+            "Property with name 'Id' was already added, properties can only be added once.",
+            argException.Message
+        );
+    }
+}
