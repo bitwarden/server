@@ -22,6 +22,7 @@ public static class Constants
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
+    public const string SSHKeyCipherMinimumVersion = "2024.7.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
