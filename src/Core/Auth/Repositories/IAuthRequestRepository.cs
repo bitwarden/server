@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 
+#nullable enable
+
 namespace Bit.Core.Repositories;
 
 public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>

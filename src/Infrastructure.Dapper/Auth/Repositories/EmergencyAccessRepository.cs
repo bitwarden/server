@@ -9,6 +9,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEmergencyAccessRepository
@@ -60,7 +62,7 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
         }
     }
 
-    public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
