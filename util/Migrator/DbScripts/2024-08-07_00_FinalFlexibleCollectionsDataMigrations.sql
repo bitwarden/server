@@ -1,4 +1,5 @@
--- Migrate Custom users who only have 'editAssignedCollections' and/or 'deleteAssignedCollections' custom permissions to the User type.
+-- Migrate Custom users who only have 'editAssignedCollections' and/or 'deleteAssignedCollections'
+-- custom permissions to the User type.
 UPDATE [dbo].[OrganizationUser]
 SET
     [Type] = 2,
@@ -6,22 +7,40 @@ SET
 WHERE
     [Type] = 4
     AND ISJSON([Permissions]) = 1
-    AND (
-        JSON_VALUE([Permissions], '$.editAssignedCollections') = 'true'
-        OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') = 'true'
-    )
-    AND JSON_VALUE([Permissions], '$.accessEventLogs') = 'false'
-    AND JSON_VALUE([Permissions], '$.accessImportExport') = 'false'
-    AND JSON_VALUE([Permissions], '$.accessReports') = 'false'
-    AND JSON_VALUE([Permissions], '$.createNewCollections') = 'false'
-    AND JSON_VALUE([Permissions], '$.editAnyCollection') = 'false'
-    AND JSON_VALUE([Permissions], '$.deleteAnyCollection') = 'false'
-    AND JSON_VALUE([Permissions], '$.manageGroups') = 'false'
-    AND JSON_VALUE([Permissions], '$.managePolicies') = 'false'
-    AND JSON_VALUE([Permissions], '$.manageSso') = 'false'
-    AND JSON_VALUE([Permissions], '$.manageUsers') = 'false'
-    AND JSON_VALUE([Permissions], '$.manageResetPassword') = 'false'
-    AND JSON_VALUE([Permissions], '$.manageScim') = 'false';
+    AND EXISTS (
+        SELECT 1
+        FROM OPENJSON([Permissions])
+        WITH (
+            editAssignedCollections bit '$.editAssignedCollections',
+            deleteAssignedCollections bit '$.deleteAssignedCollections',
+            accessEventLogs bit '$.accessEventLogs',
+            accessImportExport bit '$.accessImportExport',
+            accessReports bit '$.accessReports',
+            createNewCollections bit '$.createNewCollections',
+            editAnyCollection bit '$.editAnyCollection',
+            deleteAnyCollection bit '$.deleteAnyCollection',
+            manageGroups bit '$.manageGroups',
+            managePolicies bit '$.managePolicies',
+            manageSso bit '$.manageSso',
+            manageUsers bit '$.manageUsers',
+            manageResetPassword bit '$.manageResetPassword',
+            manageScim bit '$.manageScim'
+        ) AS PermissionsJson
+        WHERE
+            (PermissionsJson.editAssignedCollections = 1 OR PermissionsJson.deleteAssignedCollections = 1)
+            AND PermissionsJson.accessEventLogs = 0
+            AND PermissionsJson.accessImportExport = 0
+            AND PermissionsJson.accessReports = 0
+            AND PermissionsJson.createNewCollections = 0
+            AND PermissionsJson.editAnyCollection = 0
+            AND PermissionsJson.deleteAnyCollection = 0
+            AND PermissionsJson.manageGroups = 0
+            AND PermissionsJson.managePolicies = 0
+            AND PermissionsJson.manageSso = 0
+            AND PermissionsJson.manageUsers = 0
+            AND PermissionsJson.manageResetPassword = 0
+            AND PermissionsJson.manageScim = 0
+    );
 
 -- Remove 'editAssignedCollections' and 'deleteAssignedCollections' properties from Permissions
 UPDATE [dbo].[OrganizationUser]
@@ -37,7 +56,14 @@ SET
     )
 WHERE
     ISJSON([Permissions]) = 1
-    AND (
-        JSON_VALUE([Permissions], '$.editAssignedCollections') IS NOT NULL
-        OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') IS NOT NULL
+    AND EXISTS (
+        SELECT 1
+        FROM OPENJSON([Permissions])
+        WITH (
+            editAssignedCollections bit '$.editAssignedCollections',
+            deleteAssignedCollections bit '$.deleteAssignedCollections'
+        ) AS PermissionsJson
+        WHERE
+            PermissionsJson.editAssignedCollections IS NOT NULL
+            OR PermissionsJson.deleteAssignedCollections IS NOT NULL
     );
