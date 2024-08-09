@@ -1,6 +1,8 @@
 ﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
@@ -8,6 +10,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -291,7 +294,7 @@ public class BaseRequestValidatorTests
         await _eventService.LogUserEventAsync(
             context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
         await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
-        
+
         Assert.False(context.GrantResult.IsError);
     }
 
@@ -354,35 +357,8 @@ public class BaseRequestValidatorTests
                     , errorResponse.Message);
     }
 
-     [Theory, BitAutoData]
-    public async Task RequiresTwoFactorAsync_UserHasTwoFactor_ShouldReturnTrue(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
-        var user = context.CustomValidatorRequestContext.User;
-        user.TwoFactorProviders = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
-        _userManager.SupportsUserTwoFactor.Returns(true);
-
-        // mock GetTwoFactorEnabledAsync -> true
-        // _userManager.GetTwoFactorEnabledAsync(user).Returns(Task.FromResult(true));
-        // mock GetValidTwoFactorProvidersAsync -> user.TwoFactorProviders?
-        // _userManager.GetValidTwoFactorProvidersAsync(user).Returns([user.TwoFactorProviders]);
-
-        // Act
-        var result = await _sut.TestRequiresTwoFactorAsync(user, context.ValidatedTokenRequest);
-
-        // Assert
-        Assert.True(result.Item1);
-    }
-
-
     [Theory, BitAutoData]
-    public async Task RequiresTwoFactorAsync_ClientCredentialsGratType_ShouldReturnFalse(
+    public async Task RequiresTwoFactorAsync_ClientCredentialsGrantType_ShouldReturnFalse(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
@@ -401,6 +377,63 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.False(result.Item1);
         Assert.Null(result.Item2);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RequiresTwoFactorAsync_IndividualHasTwoFactor_ShouldReturnTrue(
+       [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+       CustomValidatorRequestContext requestContext,
+       GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        var user = context.CustomValidatorRequestContext.User;
+        user.TwoFactorProviders = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
+        _userService
+            .TwoFactorProviderIsEnabledAsync(Arg.Any<TwoFactorProviderType>(), user)
+            .Returns(true);
+
+        // mock GetTwoFactorEnabledAsync -> true
+        // _userManager.GetTwoFactorEnabledAsync(user).Returns(Task.FromResult(true));
+        // mock GetValidTwoFactorProvidersAsync -> user.TwoFactorProviders?
+        // _userManager.GetValidTwoFactorProvidersAsync(user).Returns([user.TwoFactorProviders]);
+
+        // Act
+        var result = await _sut.TestRequiresTwoFactorAsync(user, context.ValidatedTokenRequest);
+
+        // Assert
+        Assert.True(result.Item1);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RequiresTwoFactorAsync_OrganizationHasTwoFactor_ShouldReturnTrue(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        var user = context.CustomValidatorRequestContext.User;
+        user.TwoFactorProviders = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2FARequired@email.com"}}}""";
+        _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id)
+                       .Returns([new CurrentContextOrganization()]);
+        _organizationRepository.GetManyByUserIdAsync(user.Id)
+                               .Returns([new Organization() { }]);
+
+        // mock GetTwoFactorEnabledAsync -> true
+        // _userManager.GetTwoFactorEnabledAsync(user).Returns(Task.FromResult(true));
+        // mock GetValidTwoFactorProvidersAsync -> user.TwoFactorProviders?
+        // _userManager.GetValidTwoFactorProvidersAsync(user).Returns([user.TwoFactorProviders]);
+
+        // Act
+        var result = await _sut.TestRequiresTwoFactorAsync(user, context.ValidatedTokenRequest);
+
+        // Assert
+        Assert.True(result.Item1);
     }
 
     private BaseRequestValidationContextFake CreateContext(
