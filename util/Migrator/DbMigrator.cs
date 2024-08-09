@@ -26,6 +26,7 @@ public class DbMigrator
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         bool repeatable = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
+        string scriptName = null,
         bool dryRun = false,
         CancellationToken cancellationToken = default)
     {
@@ -39,7 +40,7 @@ public class DbMigrator
                     PrepareDatabase(cancellationToken);
                 }
 
-                var success = MigrateDatabase(enableLogging, repeatable, folderName, dryRun, cancellationToken);
+                var success = MigrateDatabase(enableLogging, repeatable, folderName, scriptName, dryRun, cancellationToken);
                 return success;
             }
             catch (SqlException ex)
@@ -107,6 +108,7 @@ public class DbMigrator
     private bool MigrateDatabase(bool enableLogging = true,
         bool repeatable = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
+        string scriptName = null,
         bool dryRun = false,
         CancellationToken cancellationToken = default)
     {
@@ -120,7 +122,7 @@ public class DbMigrator
         var builder = DeployChanges.To
             .SqlDatabase(_connectionString)
             .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
+                s => s.Contains($".{folderName}.") && !s.Contains(".Archive.") && (string.IsNullOrWhiteSpace(scriptName) || s.EndsWith($"{scriptName}.sql")))
             .WithTransaction()
             .WithExecutionTimeout(new TimeSpan(0, 5, 0));
 
