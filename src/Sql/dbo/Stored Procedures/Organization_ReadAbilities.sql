@@ -22,8 +22,7 @@ BEGIN
         [UsePolicies],
         [Enabled],
         [LimitCollectionCreationDeletion],
-        [AllowAdminAccessToAllCollectionItems],
-        [FlexibleCollections]
+        [AllowAdminAccessToAllCollectionItems]
     FROM
         [dbo].[Organization]
 END
