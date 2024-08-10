@@ -108,7 +108,6 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
-    public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EnableConsolidatedBilling = "enable-consolidated-billing";
