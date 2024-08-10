@@ -690,15 +690,23 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    private async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
+    private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
         var existingCollectionGroups = await dbContext.CollectionGroups
             .Where(cg => cg.CollectionId == collection.Id)
             .ToDictionaryAsync(cg => cg.GroupId);
-        
+
         foreach (var group in groups)
         {
-            if (!existingCollectionGroups.TryGetValue(group.Id, out var existingCollectionGroup))
+            if (existingCollectionGroups.TryGetValue(group.Id, out var existingCollectionGroup))
+            {
+                // It already exists, update it
+                existingCollectionGroup.HidePasswords = group.HidePasswords;
+                existingCollectionGroup.ReadOnly = group.ReadOnly;
+                existingCollectionGroup.Manage = group.Manage;
+                dbContext.CollectionGroups.Update(existingCollectionGroup);
+            }
+            else
             {
                 // This is a brand new entry, add it
                 dbContext.CollectionGroups.Add(new CollectionGroup
@@ -709,20 +717,13 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     ReadOnly = group.ReadOnly,
                     Manage = group.Manage,
                 });
-                continue;
             }
-
-            // It already exists, update it
-            existingCollectionGroup.HidePasswords = group.HidePasswords;
-            existingCollectionGroup.ReadOnly = group.ReadOnly;
-            existingCollectionGroup.Manage = group.Manage;
-            dbContext.CollectionGroups.Update(existingCollectionGroup);
         }
 
         var requestedGroupIds = groups.Select(g => g.Id).ToArray();
         var toDelete = existingCollectionGroups.Values.Where(cg => !requestedGroupIds.Contains(cg.GroupId));
         dbContext.CollectionGroups.RemoveRange(toDelete);
-        await dbContext.SaveChangesAsync();
+        // SaveChangesAsync is expected to be called outside this method
     }
 
     private static async Task ReplaceCollectionUsersAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> users)
@@ -730,10 +731,18 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         var existingCollectionUsers = await dbContext.CollectionUsers
             .Where(cu => cu.CollectionId == collection.Id)
             .ToDictionaryAsync(cu => cu.OrganizationUserId);
-        
+
         foreach (var user in users)
         {
-            if (!existingCollectionUsers.TryGetValue(user.Id, out var existingCollectionUser))
+            if (existingCollectionUsers.TryGetValue(user.Id, out var existingCollectionUser))
+            {
+                // This is an existing entry, update it.
+                existingCollectionUser.HidePasswords = user.HidePasswords;
+                existingCollectionUser.ReadOnly = user.ReadOnly;
+                existingCollectionUser.Manage = user.Manage;
+                dbContext.CollectionUsers.Update(existingCollectionUser);
+            }
+            else
             {
                 // This is a brand new entry, add it
                 dbContext.CollectionUsers.Add(new CollectionUser
@@ -744,19 +753,12 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     ReadOnly = user.ReadOnly,
                     Manage = user.Manage,
                 });
-                continue;
             }
-
-            // This is an existing entry, update it.
-            existingCollectionUser.HidePasswords = user.HidePasswords;
-            existingCollectionUser.ReadOnly = user.ReadOnly;
-            existingCollectionUser.Manage = user.Manage;
-            dbContext.CollectionUsers.Update(existingCollectionUser);
         }
 
         var requestedUserIds = users.Select(u => u.Id).ToArray();
         var toDelete = existingCollectionUsers.Values.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId));
         dbContext.CollectionUsers.RemoveRange(toDelete);
-        await dbContext.SaveChangesAsync();
+        // SaveChangesAsync is expected to be called outside this method
     }
 }

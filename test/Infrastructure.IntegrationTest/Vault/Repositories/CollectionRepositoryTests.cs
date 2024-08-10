@@ -546,7 +546,7 @@ public class CollectionRepositoryTests
 
         collection.Name = "Updated Collection Name";
 
-        await collectionRepository.ReplaceAsync(collection, 
+        await collectionRepository.ReplaceAsync(collection,
             [
                 // Should delete group1
                 new CollectionAccessSelection { Id = group2.Id, Manage = true, HidePasswords = true, ReadOnly = false, },
