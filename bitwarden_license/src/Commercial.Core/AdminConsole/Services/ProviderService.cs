@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -45,6 +46,7 @@ public class ProviderService : IProviderService
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IProviderBillingService _providerBillingService;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -53,7 +55,7 @@ public class ProviderService : IProviderService
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
         ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -71,9 +73,10 @@ public class ProviderService : IProviderService
         _featureService = featureService;
         _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
         _applicationCacheService = applicationCacheService;
+        _providerBillingService = providerBillingService;
     }
 
-    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
+    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
         if (owner == null)
@@ -98,8 +101,24 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        provider.Status = ProviderStatusType.Created;
-        await _providerRepository.UpsertAsync(provider);
+        if (!_featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        {
+            provider.Status = ProviderStatusType.Created;
+            await _providerRepository.UpsertAsync(provider);
+        }
+        else
+        {
+            if (taxInfo == null || string.IsNullOrEmpty(taxInfo.BillingAddressCountry) || string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+            {
+                throw new BadRequestException("Both address and postal code are required to set up your provider.");
+            }
+            var customer = await _providerBillingService.SetupCustomer(provider, taxInfo);
+            provider.GatewayCustomerId = customer.Id;
+            var subscription = await _providerBillingService.SetupSubscription(provider);
+            provider.GatewaySubscriptionId = subscription.Id;
+            provider.Status = ProviderStatusType.Billable;
+            await _providerRepository.UpsertAsync(provider);
+        }
 
         providerUser.Key = key;
         await _providerUserRepository.ReplaceAsync(providerUser);
@@ -544,9 +563,9 @@ public class ProviderService : IProviderService
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        // If using Flexible Collections, give the owner Can Manage access over the default collection
+        // Give the owner Can Manage access over the default collection
         // The orgUser is not available when the org is created so we have to do it here as part of the invite
-        var defaultOwnerAccess = organization.FlexibleCollections && defaultCollection != null
+        var defaultOwnerAccess = defaultCollection != null
             ?
             [
                 new CollectionAccessSelection
@@ -566,10 +585,6 @@ public class ProviderService : IProviderService
                     new OrganizationUserInvite
                     {
                         Emails = new[] { clientOwnerEmail },
-
-                        // If using Flexible Collections, AccessAll is deprecated and set to false.
-                        // If not using Flexible Collections, set AccessAll to true (previous behavior)
-                        AccessAll = !organization.FlexibleCollections,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
                         Collections = defaultOwnerAccess,

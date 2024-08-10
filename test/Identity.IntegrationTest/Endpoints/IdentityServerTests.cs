@@ -145,7 +145,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersTrue_Success(OrganizationUserType organizationUserType, Guid organizationId, string deviceId, int generatedUsername)
     {
@@ -173,7 +172,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersFalse_Success(OrganizationUserType organizationUserType, Guid organizationId, string deviceId, int generatedUsername)
     {
@@ -201,7 +199,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersTrue_Throw(OrganizationUserType organizationUserType, Guid organizationId, string deviceId, int generatedUsername)
     {
@@ -253,7 +250,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
     [Theory]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task TokenEndpoint_GrantTypePassword_WithNonOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Throws(OrganizationUserType organizationUserType, Guid organizationId, string deviceId, int generatedUsername)
     {

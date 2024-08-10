@@ -21,6 +21,12 @@ public static class StripeConstants
         public const string SecretsManagerStandalone = "sm-standalone";
     }
 
+    public static class ErrorCodes
+    {
+        public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";
+        public const string TaxIdInvalid = "tax_id_invalid";
+    }
+
     public static class PaymentMethodTypes
     {
         public const string Card = "card";

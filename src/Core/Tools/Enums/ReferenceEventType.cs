@@ -6,6 +6,8 @@ public enum ReferenceEventType
 {
     [EnumMember(Value = "signup-email-submit")]
     SignupEmailSubmit,
+    [EnumMember(Value = "signup-email-clicked")]
+    SignupEmailClicked,
     [EnumMember(Value = "signup")]
     Signup,
     [EnumMember(Value = "upgrade-plan")]

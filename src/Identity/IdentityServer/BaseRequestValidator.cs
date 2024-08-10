@@ -511,7 +511,9 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else if (type == TwoFactorProviderType.Email)
                 {
-                    return new Dictionary<string, object> { ["Email"] = token };
+                    var twoFactorEmail = (string)provider.MetaData["Email"];
+                    var redactedEmail = CoreHelpers.RedactEmailAddress(twoFactorEmail);
+                    return new Dictionary<string, object> { ["Email"] = redactedEmail };
                 }
                 else if (type == TwoFactorProviderType.YubiKey)
                 {

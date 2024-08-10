@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -191,11 +190,8 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return true;
         }
 
-        // If V1 is enabled, Owners and Admins can update any collection only if permitted by collection management settings
-        var organizationAbility = await GetOrganizationAbilityAsync(org);
-        var allowAdminAccessToAllCollectionItems = !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
-                                                   organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
-        if (allowAdminAccessToAllCollectionItems && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        // Owners and Admins can update any collection only if permitted by collection management settings
+        if (await AllowAdminAccessToAllCollectionItems(org) && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             return true;
         }
@@ -244,10 +240,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
 
         // If AllowAdminAccessToAllCollectionItems is true, Owners and Admins can delete any collection, regardless of LimitCollectionCreationDeletion setting
-        var organizationAbility = await GetOrganizationAbilityAsync(org);
-        var allowAdminAccessToAllCollectionItems = !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
-                                                   organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
-        if (allowAdminAccessToAllCollectionItems && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        if (await AllowAdminAccessToAllCollectionItems(org) && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             return true;
         }
@@ -255,6 +248,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // If LimitCollectionCreationDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
         // Ensure acting user has manage permissions for all collections being deleted
         // If LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
+        var organizationAbility = await GetOrganizationAbilityAsync(org);
         var canDeleteManagedCollections = organizationAbility is { LimitCollectionCreationDeletion: false } ||
                                           org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
         if (canDeleteManagedCollections && await CanManageCollectionsAsync(resources, org))
@@ -272,7 +266,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         if (_managedCollectionsIds == null)
         {
             var allUserCollections = await _collectionRepository
-                .GetManyByUserIdAsync(_currentContext.UserId!.Value, useFlexibleCollections: true);
+                .GetManyByUserIdAsync(_currentContext.UserId!.Value);
 
             var managedCollectionIds = allUserCollections
                 .Where(c => c.Manage)
@@ -326,8 +320,6 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> AllowAdminAccessToAllCollectionItems(CurrentContextOrganization? org)
     {
-        var organizationAbility = await GetOrganizationAbilityAsync(org);
-        return !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) ||
-            organizationAbility is { AllowAdminAccessToAllCollectionItems: true };
+        return await GetOrganizationAbilityAsync(org) is { AllowAdminAccessToAllCollectionItems: true };
     }
 }
