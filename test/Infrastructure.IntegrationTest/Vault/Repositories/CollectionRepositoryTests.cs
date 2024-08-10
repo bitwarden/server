@@ -463,4 +463,86 @@ public class CollectionRepositoryTests
             Assert.False(c3.Unmanaged);
         });
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_Works(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = "billing@email.com"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection Name",
+            OrganizationId = organization.Id,
+        });
+
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            Name = "Test Group",
+            OrganizationId = organization.Id,
+        });
+
+        collection.Name = "Updated Collection Name";
+
+        await collectionRepository.ReplaceAsync(collection, 
+            [ 
+                new CollectionAccessSelection { Id = group.Id, Manage = true, HidePasswords = true, ReadOnly = false, },
+            ],
+            [
+                new CollectionAccessSelection { Id = orgUser.Id, Manage = false, HidePasswords = false, ReadOnly = true },
+            ]
+        );
+
+        // Assert it
+        var info = await collectionRepository.GetByIdWithPermissionsAsync(collection.Id, user.Id, true);
+
+        Assert.NotNull(info);
+
+        Assert.Equal("Updated Collection Name", info.Name);
+
+        Assert.Collection(
+            info.Groups,
+            g =>
+            {
+                Assert.True(g.Manage);
+                Assert.True(g.HidePasswords);
+                Assert.False(g.ReadOnly);
+            }
+        );
+
+        Assert.Collection(
+            info.Users,
+            u => 
+            { 
+                Assert.False(u.Manage);
+                Assert.False(u.HidePasswords);
+                Assert.True(u.ReadOnly);
+            }
+        );
+    }
 }
