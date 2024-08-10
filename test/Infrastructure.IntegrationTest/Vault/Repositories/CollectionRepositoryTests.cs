@@ -488,33 +488,76 @@ public class CollectionRepositoryTests
             BillingEmail = "billing@email.com"
         });
 
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             OrganizationId = organization.Id,
             UserId = user.Id,
             Status = OrganizationUserStatusType.Confirmed,
         });
 
-        var collection = await collectionRepository.CreateAsync(new Collection
+        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
-            Name = "Test Collection Name",
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        var orgUser3 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        var group1 = await groupRepository.CreateAsync(new Group
+        {
+            Name = "Test Group #1",
             OrganizationId = organization.Id,
         });
 
-        var group = await groupRepository.CreateAsync(new Group
+        var group2 = await groupRepository.CreateAsync(new Group
         {
-            Name = "Test Group",
+            Name = "Test Group #2",
             OrganizationId = organization.Id,
         });
+
+        var group3 = await groupRepository.CreateAsync(new Group
+        {
+            Name = "Test Group #3",
+            OrganizationId = organization.Id,
+        });
+
+        var collection = new Collection
+        {
+            Name = "Test Collection Name",
+            OrganizationId = organization.Id,
+        };
+
+        await collectionRepository.CreateAsync(collection,
+            [
+                new CollectionAccessSelection { Id = group1.Id, Manage = true, HidePasswords = true, ReadOnly = false, },
+                new CollectionAccessSelection { Id = group2.Id, Manage = false, HidePasswords = false, ReadOnly = true, },
+            ],
+            [
+                new CollectionAccessSelection { Id = orgUser1.Id, Manage = true, HidePasswords = false, ReadOnly = true },
+                new CollectionAccessSelection { Id = orgUser2.Id, Manage = false, HidePasswords = true, ReadOnly = false },
+            ]
+        );
 
         collection.Name = "Updated Collection Name";
 
         await collectionRepository.ReplaceAsync(collection, 
-            [ 
-                new CollectionAccessSelection { Id = group.Id, Manage = true, HidePasswords = true, ReadOnly = false, },
+            [
+                // Should delete group1
+                new CollectionAccessSelection { Id = group2.Id, Manage = true, HidePasswords = true, ReadOnly = false, },
+                // Should add group3
+                new CollectionAccessSelection { Id = group3.Id, Manage = false, HidePasswords = false, ReadOnly = true, },
             ],
             [
-                new CollectionAccessSelection { Id = orgUser.Id, Manage = false, HidePasswords = false, ReadOnly = true },
+                // Should delete orgUser1
+                new CollectionAccessSelection { Id = orgUser2.Id, Manage = false, HidePasswords = false, ReadOnly = true },
+                // Should add orgUser3
+                new CollectionAccessSelection { Id = orgUser3.Id, Manage = true, HidePasswords = false, ReadOnly = true },
             ]
         );
 
@@ -525,24 +568,36 @@ public class CollectionRepositoryTests
 
         Assert.Equal("Updated Collection Name", info.Name);
 
-        Assert.Collection(
-            info.Groups,
-            g =>
-            {
-                Assert.True(g.Manage);
-                Assert.True(g.HidePasswords);
-                Assert.False(g.ReadOnly);
-            }
-        );
+        var groups = info.Groups.ToArray();
 
-        Assert.Collection(
-            info.Users,
-            u => 
-            { 
-                Assert.False(u.Manage);
-                Assert.False(u.HidePasswords);
-                Assert.True(u.ReadOnly);
-            }
-        );
+        Assert.Equal(2, groups.Length);
+
+        var actualGroup2 = Assert.Single(groups.Where(g => g.Id == group2.Id));
+
+        Assert.True(actualGroup2.Manage);
+        Assert.True(actualGroup2.HidePasswords);
+        Assert.False(actualGroup2.ReadOnly);
+
+        var actualGroup3 = Assert.Single(groups.Where(g => g.Id == group3.Id));
+
+        Assert.False(actualGroup3.Manage);
+        Assert.False(actualGroup3.HidePasswords);
+        Assert.True(actualGroup3.ReadOnly);
+
+        var users = info.Users.ToArray();
+
+        Assert.Equal(2, users.Length);
+
+        var actualOrgUser2 = Assert.Single(users.Where(u => u.Id == orgUser2.Id));
+
+        Assert.False(actualOrgUser2.Manage);
+        Assert.False(actualOrgUser2.HidePasswords);
+        Assert.True(actualOrgUser2.ReadOnly);
+
+        var actualOrgUser3 = Assert.Single(users.Where(u => u.Id == orgUser3.Id));
+
+        Assert.True(actualOrgUser3.Manage);
+        Assert.False(actualOrgUser3.HidePasswords);
+        Assert.True(actualOrgUser3.ReadOnly);
     }
 }
