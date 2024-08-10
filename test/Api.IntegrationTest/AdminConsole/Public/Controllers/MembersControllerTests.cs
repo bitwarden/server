@@ -21,7 +21,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
-    
+
     // These will get set in `InitializeAsync` which is ran before all tests
     private Organization _organization = null!;
     private string _ownerEmail = null!;
