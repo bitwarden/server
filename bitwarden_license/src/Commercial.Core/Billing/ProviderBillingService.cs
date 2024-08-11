@@ -351,7 +351,14 @@ public class ProviderBillingService(
                 : null
         };
 
-        return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        try
+        {
+            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
+        {
+            throw new BadRequestException("Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
+        }
     }
 
     public async Task<Subscription> SetupSubscription(
