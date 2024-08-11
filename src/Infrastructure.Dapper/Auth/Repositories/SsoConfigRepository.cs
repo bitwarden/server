@@ -6,6 +6,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigRepository
@@ -18,7 +20,7 @@ public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigReposi
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<SsoConfig> GetByOrganizationIdAsync(Guid organizationId)
+    public async Task<SsoConfig?> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -31,7 +33,7 @@ public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigReposi
         }
     }
 
-    public async Task<SsoConfig> GetByIdentifierAsync(string identifier)
+    public async Task<SsoConfig?> GetByIdentifierAsync(string identifier)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

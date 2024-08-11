@@ -82,7 +82,7 @@ public class HandlebarsMailService : IMailService
         var model = new TrialInitiationVerifyEmail
         {
             Token = WebUtility.UrlEncode(token),
-            Email = email,
+            Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,
@@ -297,7 +297,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendTrialInitiationEmailAsync(string userEmail)
     {
-        var message = CreateDefaultMessage("Welcome to Bitwarden!", userEmail);
+        var message = CreateDefaultMessage("Welcome to Bitwarden; 3 steps to get started!", userEmail);
         var model = new BaseMailModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct,

@@ -8,6 +8,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequestRepository
