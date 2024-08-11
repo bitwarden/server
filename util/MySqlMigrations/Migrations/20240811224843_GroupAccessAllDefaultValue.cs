@@ -2,35 +2,34 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations
+namespace Bit.MySqlMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class GroupAccessAllDefaultValue : Migration
 {
     /// <inheritdoc />
-    public partial class GroupAccessAllDefaultValue : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AlterColumn<bool>(
-                name: "AccessAll",
-                table: "Group",
-                type: "tinyint(1)",
-                nullable: false,
-                defaultValue: false,
-                oldClrType: typeof(bool),
-                oldType: "tinyint(1)");
-        }
+        migrationBuilder.AlterColumn<bool>(
+            name: "AccessAll",
+            table: "Group",
+            type: "tinyint(1)",
+            nullable: false,
+            defaultValue: false,
+            oldClrType: typeof(bool),
+            oldType: "tinyint(1)");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AlterColumn<bool>(
-                name: "AccessAll",
-                table: "Group",
-                type: "tinyint(1)",
-                nullable: false,
-                oldClrType: typeof(bool),
-                oldType: "tinyint(1)",
-                oldDefaultValue: false);
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.AlterColumn<bool>(
+            name: "AccessAll",
+            table: "Group",
+            type: "tinyint(1)",
+            nullable: false,
+            oldClrType: typeof(bool),
+            oldType: "tinyint(1)",
+            oldDefaultValue: false);
     }
 }

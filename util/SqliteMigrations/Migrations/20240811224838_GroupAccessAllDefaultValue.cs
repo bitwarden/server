@@ -2,35 +2,34 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class GroupAccessAllDefaultValue : Migration
 {
     /// <inheritdoc />
-    public partial class GroupAccessAllDefaultValue : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AlterColumn<bool>(
-                name: "AccessAll",
-                table: "Group",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false,
-                oldClrType: typeof(bool),
-                oldType: "INTEGER");
-        }
+        migrationBuilder.AlterColumn<bool>(
+            name: "AccessAll",
+            table: "Group",
+            type: "INTEGER",
+            nullable: false,
+            defaultValue: false,
+            oldClrType: typeof(bool),
+            oldType: "INTEGER");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AlterColumn<bool>(
-                name: "AccessAll",
-                table: "Group",
-                type: "INTEGER",
-                nullable: false,
-                oldClrType: typeof(bool),
-                oldType: "INTEGER",
-                oldDefaultValue: false);
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.AlterColumn<bool>(
+            name: "AccessAll",
+            table: "Group",
+            type: "INTEGER",
+            nullable: false,
+            oldClrType: typeof(bool),
+            oldType: "INTEGER",
+            oldDefaultValue: false);
     }
 }
