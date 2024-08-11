@@ -20,30 +20,23 @@ public static class DatabaseContextExtensions
 
     public static async Task UserBumpManyAccountRevisionDatesAsync(this DatabaseContext context, ICollection<Guid> userIds)
     {
-        var users = context.Users.Where(u => userIds.Contains(u.Id));
-        var currentTime = DateTime.UtcNow;
-        await users.ForEachAsync(u =>
-        {
-            context.Attach(u);
-            u.AccountRevisionDate = currentTime;
-        });
+        await context.Users.Where(u => userIds.Contains(u.Id)).BumpRevisionDatesAsync();
     }
 
     public static async Task UserBumpAccountRevisionDateByOrganizationIdAsync(this DatabaseContext context, Guid organizationId)
     {
-        var users = await (from u in context.Users
-                           join ou in context.OrganizationUsers on u.Id equals ou.UserId
-                           where ou.OrganizationId == organizationId && ou.Status == OrganizationUserStatusType.Confirmed
-                           select u).ToListAsync();
+        var users = from u in context.Users
+                    join ou in context.OrganizationUsers on u.Id equals ou.UserId
+                    where ou.OrganizationId == organizationId && ou.Status == OrganizationUserStatusType.Confirmed
+                    select u;
 
-        UpdateUserRevisionDate(users);
+        await users.BumpRevisionDatesAsync();
     }
 
     public static async Task UserBumpAccountRevisionDateByCipherIdAsync(this DatabaseContext context, Guid cipherId, Guid organizationId)
     {
         var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipherId, organizationId);
-        var users = await query.Run(context).ToListAsync();
-        UpdateUserRevisionDate(users);
+        await query.Run(context).BumpRevisionDatesAsync();
     }
 
     public static async Task UserBumpAccountRevisionDateByCollectionIdAsync(this DatabaseContext context, Guid collectionId, Guid organizationId)
@@ -68,12 +61,11 @@ public static class DatabaseContextExtensions
                     from cg in cg_g.DefaultIfEmpty()
                     where ou.OrganizationId == organizationId &&
                       ou.Status == OrganizationUserStatusType.Confirmed &&
-                        (cu.CollectionId != null ||
-                        cg.CollectionId != null)
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                        (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select u;
 
-        var users = await query.ToListAsync();
-        UpdateUserRevisionDate(users);
+        await query.BumpRevisionDatesAsync();
     }
 
     public static async Task UserBumpAccountRevisionDateByCollectionIdsAsync(this DatabaseContext context, IEnumerable<Guid> collectionIds, Guid organizationId)
@@ -99,12 +91,11 @@ public static class DatabaseContextExtensions
                     from cg in cg_g.DefaultIfEmpty()
                     where ou.OrganizationId == organizationId && collectionIds.Contains(c.Id) &&
                       ou.Status == OrganizationUserStatusType.Confirmed &&
-                        (cu.CollectionId != null ||
-                        cg.CollectionId != null)
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                        (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select u;
 
-        var users = await query.ToListAsync();
-        UpdateUserRevisionDate(users);
+        await query.BumpRevisionDatesAsync();
     }
 
     public static async Task UserBumpAccountRevisionDateByOrganizationUserIdAsync(this DatabaseContext context, Guid organizationUserId)
@@ -115,8 +106,7 @@ public static class DatabaseContextExtensions
                     where ou.Id == organizationUserId && ou.Status == OrganizationUserStatusType.Confirmed
                     select u;
 
-        var users = await query.ToListAsync();
-        UpdateUserRevisionDate(users);
+        await query.BumpRevisionDatesAsync();
     }
 
     public static async Task UserBumpAccountRevisionDateByOrganizationUserIdsAsync(this DatabaseContext context, IEnumerable<Guid> organizationUserIds)
@@ -134,9 +124,7 @@ public static class DatabaseContextExtensions
                     where ea.Id == emergencyAccessId && ea.Status == EmergencyAccessStatusType.Confirmed
                     select u;
 
-        var users = await query.ToListAsync();
-
-        UpdateUserRevisionDate(users);
+        await query.BumpRevisionDatesAsync();
     }
 
     public static async Task UserBumpAccountRevisionDateByProviderIdAsync(this DatabaseContext context, Guid providerId)
@@ -146,8 +134,7 @@ public static class DatabaseContextExtensions
                     where pu.ProviderId == providerId && pu.Status == ProviderUserStatusType.Confirmed
                     select u;
 
-        var users = await query.ToListAsync();
-        UpdateUserRevisionDate(users);
+        await query.BumpRevisionDatesAsync();
     }
 
     public static async Task UserBumpAccountRevisionDateByProviderUserIdAsync(this DatabaseContext context, Guid providerUserId)
@@ -157,16 +144,11 @@ public static class DatabaseContextExtensions
                     where pu.ProviderId == providerUserId && pu.Status == ProviderUserStatusType.Confirmed
                     select u;
 
-        var users = await query.ToListAsync();
-        UpdateUserRevisionDate(users);
+        await query.BumpRevisionDatesAsync();
     }
 
-    private static void UpdateUserRevisionDate(List<Models.User> users)
+    private static async Task BumpRevisionDatesAsync(this IQueryable<Models.User> users)
     {
-        var time = DateTime.UtcNow;
-        foreach (var user in users)
-        {
-            user.AccountRevisionDate = time;
-        }
+        await users.ExecuteUpdateAsync(update => update.SetProperty(u => u.AccountRevisionDate, DateTime.UtcNow));
     }
 }
