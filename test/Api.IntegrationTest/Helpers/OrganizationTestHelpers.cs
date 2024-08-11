@@ -65,7 +65,6 @@ public static class OrganizationTestHelpers
             Key = null,
             Type = type,
             Status = OrganizationUserStatusType.Confirmed,
-            AccessAll = false,
             ExternalId = null,
             AccessSecretsManager = accessSecretsManager,
         };

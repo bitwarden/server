@@ -422,6 +422,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
+        organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
         {
             return default;
@@ -432,12 +433,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             organizationUser.SetNewId();
         }
 
-        var orgUsersTVP = organizationUsers.ToTvp();
         using (var connection = new SqlConnection(_marsConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_CreateMany2]",
-                new { OrganizationUsersInput = orgUsersTVP },
+                $"[{Schema}].[{Table}_CreateMany]",
+                new { jsonData = JsonSerializer.Serialize(organizationUsers) },
                 commandType: CommandType.StoredProcedure);
         }
 
@@ -446,17 +446,17 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
+        organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
         {
             return;
         }
 
-        var orgUsersTVP = organizationUsers.ToTvp();
         using (var connection = new SqlConnection(_marsConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_UpdateMany2]",
-                new { OrganizationUsersInput = orgUsersTVP },
+                $"[{Schema}].[{Table}_UpdateMany]",
+                new { jsonData = JsonSerializer.Serialize(organizationUsers) },
                 commandType: CommandType.StoredProcedure);
         }
     }
@@ -541,27 +541,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<OrganizationUser> resetPasswordKeys)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
-        {
-            const string sql = @"
-                            UPDATE
-                                [dbo].[OrganizationUser]
-                            SET
-                                [ResetPasswordKey] = AR.[ResetPasswordKey]
-                            FROM
-                                [dbo].[OrganizationUser] OU
-                            INNER JOIN
-                                @ResetPasswordKeys AR ON OU.Id = AR.Id
-                            WHERE
-                                OU.[UserId] = @UserId";
-
-            var organizationUsersTVP = resetPasswordKeys.ToTvp();
-
+        return async (connection, transaction) =>
             await connection.ExecuteAsync(
-                sql,
-                new { UserId = userId, resetPasswordKeys = organizationUsersTVP },
+                $"[{Schema}].[OrganizationUser_UpdateDataForKeyRotation]",
+                new { UserId = userId, OrganizationUserJson = JsonSerializer.Serialize(resetPasswordKeys) },
                 transaction: transaction,
-                commandType: CommandType.Text);
-        };
+                commandType: CommandType.StoredProcedure);
     }
 }

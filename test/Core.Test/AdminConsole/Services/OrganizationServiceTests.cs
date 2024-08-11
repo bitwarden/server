@@ -255,7 +255,7 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
-    public async Task SignUp_EnablesFlexibleCollectionsFeatures
+    public async Task SignUp_AssignsOwnerToDefaultCollection
         (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.Plan = planType;
@@ -271,13 +271,7 @@ public class OrganizationServiceTests
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
 
-        // Assert: AccessAll is not used
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
-            Arg.Is<OrganizationUser>(o =>
-                o.UserId == signup.Owner.Id &&
-                o.AccessAll == false));
-
-        // Assert: created a Can Manage association for the default collection instead
+        // Assert: created a Can Manage association for the default collection
         Assert.NotNull(orgUserId);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).CreateAsync(
             Arg.Any<Collection>(),
