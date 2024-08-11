@@ -52,8 +52,7 @@
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
     @LimitCollectionCreationDeletion BIT = 1,
-    @AllowAdminAccessToAllCollectionItems BIT = 1,
-    @FlexibleCollections BIT = 0
+    @AllowAdminAccessToAllCollectionItems BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -113,8 +112,7 @@ BEGIN
         [MaxAutoscaleSmServiceAccounts],
         [SecretsManagerBeta],
         [LimitCollectionCreationDeletion],
-        [AllowAdminAccessToAllCollectionItems],
-        [FlexibleCollections]
+        [AllowAdminAccessToAllCollectionItems]
     )
     VALUES
     (
@@ -171,7 +169,6 @@ BEGIN
         @MaxAutoscaleSmServiceAccounts,
         @SecretsManagerBeta,
         @LimitCollectionCreationDeletion,
-        @AllowAdminAccessToAllCollectionItems,
-        @FlexibleCollections
+        @AllowAdminAccessToAllCollectionItems
     )
 END
