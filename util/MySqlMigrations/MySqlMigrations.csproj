@@ -30,6 +30,6 @@
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.sql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.sql" />
     <EmbeddedResource Include="HelperScripts\2024-04-25_00_EnableOrgsCollectionEnhancements.sql" />
-    <EmbeddedResource Include="HelperScripts\2024-08-07_00_FinalFlexibleCollectionsDataMigrations.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-08-12_00_FinalFlexibleCollectionsDataMigrations.sql" />
   </ItemGroup>
 </Project>
