@@ -4,8 +4,6 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using User = Bit.Core.Entities.User;
 
@@ -33,16 +31,6 @@ public abstract class BaseEntityFrameworkRepository
     public DatabaseContext GetDatabaseContext(IServiceScope serviceScope)
     {
         return serviceScope.ServiceProvider.GetRequiredService<DatabaseContext>();
-    }
-
-    public void RunMigration(string? migrationName = null)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var migrator = dbContext.GetService<IMigrator>();
-            migrator.Migrate(migrationName);
-        }
     }
 
     public void ClearChangeTracking()
