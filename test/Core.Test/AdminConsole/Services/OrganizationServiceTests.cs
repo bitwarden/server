@@ -1473,6 +1473,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
         orgUser.UserId = user.Id;
         orgUser.Type = orgUserType;
+        orgUser.AccessSecretsManager = false;
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
         organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value).Returns(1);
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
@@ -1561,6 +1562,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         orgUser.Status = OrganizationUserStatusType.Accepted;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
         orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
+        orgUser.AccessSecretsManager = true;
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
         organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
@@ -1569,7 +1571,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, true);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 
