@@ -1,4 +1,3 @@
----
 name: Testing
 
 on:
@@ -18,8 +17,14 @@ jobs:
     name: Run tests
     if: ${{ startsWith(github.head_ref, 'version_bump_') == false }}
     runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
     steps:
       - name: Check out repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -52,7 +57,17 @@ jobs:
           reporter: dotnet-trx
           fail-on-error: true
 
+      - name: Check for Codecov secret
+        id: check-codecov-secret
+        run: |
+          if [ "${{ secrets.CODECOV_TOKEN }}" != '' ]; then
+            echo "available=true" >> $GITHUB_OUTPUT;
+          else
+            echo "available=false" >> $GITHUB_OUTPUT;
+          fi
+
       - name: Upload to codecov.io
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
+        if: steps.check-codecov-secret.outputs.available == 'true'
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
