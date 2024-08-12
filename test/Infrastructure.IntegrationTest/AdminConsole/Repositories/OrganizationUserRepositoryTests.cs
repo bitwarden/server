@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.IntegrationTest.Services;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -259,7 +260,7 @@ public class OrganizationUserRepositoryTests
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IMigrationTester migrationTester)
+        IMigrationTesterService migrationTester)
     {
         var editAssignedCollectionsPermissionJson =
             "{\"accessEventLogs\":false,\"accessImportExport\":false,\"accessReports\":false,\"createNewCollections\""
