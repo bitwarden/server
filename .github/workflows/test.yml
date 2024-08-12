@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: check-run
     permissions:
+      checks: write
       contents: read
       pull-requests: write
 
