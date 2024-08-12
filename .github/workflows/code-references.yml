@@ -2,21 +2,27 @@
 name: Collect code references
 
 on:
-  pull_request:
-    branches-ignore:
-      - "renovate/**"
-
-permissions:
-  contents: read
-  pull-requests: write
+  pull_request_target:
+    types: [opened, synchronize]
 
 jobs:
+  check-run:
+    name: Check PR run
+    uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
+
   refs:
     name: Code reference collection
     runs-on: ubuntu-22.04
+    needs: check-run
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
-      - name: Check out repository
+      - name: Check out repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          ref: ${{  github.event.pull_request.head.sha }}
 
       - name: Collect
         id: collect
