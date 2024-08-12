@@ -20,7 +20,7 @@ public class ClientMigrationResult
 
 public class ClientPreviousState
 {
-    public ClientPreviousState() {}
+    public ClientPreviousState() { }
 
     public ClientPreviousState(ClientOrganizationMigrationRecord migrationRecord)
     {
