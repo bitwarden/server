@@ -13,10 +13,29 @@ env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
 jobs:
+  check-test-secrets:
+    name: Check for test secrets
+    runs-on: ubuntu-22.04
+    outputs:
+      available: ${{ steps.check-test-secrets.outputs.available }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check
+        id: check-test-secrets
+        run: |
+          if [ "${{ secrets.CODECOV_TOKEN }}" != '' ]; then
+            echo "available=true" >> $GITHUB_OUTPUT;
+          else
+            echo "available=false" >> $GITHUB_OUTPUT;
+          fi
+
   testing:
     name: Run tests
     if: ${{ startsWith(github.head_ref, 'version_bump_') == false }}
     runs-on: ubuntu-22.04
+    needs: check-test-secrets
     permissions:
       checks: write
       contents: read
@@ -50,24 +69,15 @@ jobs:
 
       - name: Report test results
         uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
-        if: always()
+        if: ${{ needs.check-test-secrets.outputs.available == 'true' }} && (success() || failure())
         with:
           name: Test Results
           path: "**/*-test-results.trx"
           reporter: dotnet-trx
           fail-on-error: true
 
-      - name: Check for Codecov secret
-        id: check-codecov-secret
-        run: |
-          if [ "${{ secrets.CODECOV_TOKEN }}" != '' ]; then
-            echo "available=true" >> $GITHUB_OUTPUT;
-          else
-            echo "available=false" >> $GITHUB_OUTPUT;
-          fi
-
       - name: Upload to codecov.io
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
-        if: steps.check-codecov-secret.outputs.available == 'true'
+        if: ${{ needs.check-test-secrets.outputs.available == 'true' }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
