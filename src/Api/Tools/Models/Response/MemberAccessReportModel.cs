@@ -48,8 +48,13 @@ public class MemberAccessReportResponseModel
     /// such as item, collection, and group counts. As well as detailed information on the
     /// user and group collections along with their permissions
     /// </summary>
-    /// <param name="orgId">Id of the organization to generate the report</param>
-    /// <returns>List of MemberAccessReportResponseModel</returns>
+    /// <param name="orgUsers">Organization user details collection</param>
+    /// <param name="orgGroups">Organization groups collection</param>
+    /// <param name="orgCollectionsWithAccess">Collections for the organization and the groups/users and permissions</param>
+    /// <param name="orgItems">Cipher items for the organization with the collections associated with them</param>
+    /// <param name="organizationUsersTwoFactorEnabled">Organization users two factor status</param>
+    /// <param name="orgAbility">Organization ability for account recovery status</param>
+    /// <returns>List of the MemberAccessReportResponseModel</returns>;
     public static IEnumerable<MemberAccessReportResponseModel> CreateReport(
         IEnumerable<OrganizationUserUserDetails> orgUsers,
         ICollection<Group> orgGroups,

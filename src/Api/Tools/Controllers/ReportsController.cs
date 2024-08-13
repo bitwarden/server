@@ -62,7 +62,6 @@ public class ReportsController : Controller
 
         var orgGroups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
         var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-        // Contains the collections for the organization and the groups/users and permissions
         var orgCollectionsWithAccess = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
         var orgItems = await _organizationCiphersQuery.GetAllOrganizationCiphers(orgId);
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
