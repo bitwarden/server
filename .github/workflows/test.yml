@@ -69,7 +69,7 @@ jobs:
 
       - name: Report test results
         uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
-        if: ${{ needs.check-test-secrets.outputs.available == 'true' }} && !cancelled()
+        if: ${{ needs.check-test-secrets.outputs.available == 'true' && !cancelled() }}
         with:
           name: Test Results
           path: "**/*-test-results.trx"
