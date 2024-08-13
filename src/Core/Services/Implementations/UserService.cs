@@ -325,9 +325,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
-        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "2faEmail:" + email);
-
+        var token = await base.GenerateTwoFactorTokenAsync(user,
+            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
         await _mailService.SendTwoFactorEmailAsync(email, token);
     }
 
@@ -340,8 +339,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
-        return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "2faEmail:" + email, token);
+        return await base.VerifyTwoFactorTokenAsync(user,
+            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), token);
     }
 
     public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
@@ -1343,7 +1342,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             "otp:" + user.Email, token);
     }
 
-    public async Task<bool> VerifySecretAsync(User user, string secret)
+    public async Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false)
     {
         bool isVerified;
         if (user.HasMasterPassword())
@@ -1354,6 +1353,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             // does still have a password we will allow the use of OTP.
             isVerified = await CheckPasswordAsync(user, secret) ||
                 await VerifyOTPAsync(user, secret);
+        }
+        else if (isSettingMFA)
+        {
+            // this is temporary to allow users to view their MFA settings without invalidating email TOTP
+            // Will be removed with PM-9925
+            isVerified = true;
         }
         else
         {

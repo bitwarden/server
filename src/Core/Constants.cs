@@ -23,8 +23,6 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
-    public const string CipherKeyEncryptionMinimumVersion = "2024.2.0";
-
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
     /// </summary>
@@ -106,11 +104,6 @@ public static class FeatureFlagKeys
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
-
-    /// <summary>
-    /// Deprecated - never used, do not use. Will always default to false. Will be deleted as part of Flexible Collections cleanup
-    /// </summary>
-    public const string FlexibleCollections = "flexible-collections-disabled-do-not-use";
     public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
@@ -133,9 +126,16 @@ public static class FeatureFlagKeys
     public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
-    public const string GroupsComponentRefactor = "groups-component-refactor";
+    public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string AC2828_ProviderPortalMembersPage = "AC-2828_provider-portal-members-page";
     public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
+    public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
+    public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
+    public const string EnableUpgradePasswordManagerSub = "AC-2708-upgrade-password-manager-sub";
+    public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
+    public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
+    public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
+    public const string MembersTwoFAQueryOptimization = "ac-1698-members-two-fa-query-optimization";
 
     public static List<string> GetAllKeys()
     {
@@ -151,7 +151,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { FlexibleCollectionsV1, "true" }
+            { FlexibleCollectionsV1, "true" },
+            { BulkDeviceApproval, "true" }
         };
     }
 }

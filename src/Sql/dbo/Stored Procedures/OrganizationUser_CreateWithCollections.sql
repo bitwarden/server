@@ -6,7 +6,7 @@ CREATE PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
     @Key VARCHAR(MAX),
     @Status SMALLINT,
     @Type TINYINT,
-    @AccessAll BIT,
+    @AccessAll BIT = 0,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),

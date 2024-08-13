@@ -33,8 +33,7 @@ SELECT
     P.[Name] ProviderName,
     O.[PlanType],
     O.[LimitCollectionCreationDeletion],
-    O.[AllowAdminAccessToAllCollectionItems],
-    O.[FlexibleCollections]
+    O.[AllowAdminAccessToAllCollectionItems]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

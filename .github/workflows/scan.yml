@@ -26,12 +26,12 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{  github.event.pull_request.head.sha }}
 
       - name: Scan with Checkmarx
-        uses: checkmarx/ast-github-action@749fec53e0db0f6404a97e2e0807c3e80e3583a7 #2.0.23
+        uses: checkmarx/ast-github-action@4c637b1cb6b6b63637c7b99578c9fceefebbb08d # 2.0.30
         env:
           INCREMENTAL: "${{ contains(github.event_name, 'pull_request') && '--sast-incremental' || '' }}"
         with:
@@ -46,7 +46,7 @@ jobs:
             --output-path . ${{ env.INCREMENTAL }}
 
       - name: Upload Checkmarx results to GitHub
-        uses: github/codeql-action/upload-sarif@1b1aada464948af03b950897e5eb522f92603cc2 # v3.24.9
+        uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
         with:
           sarif_file: cx_result.sarif
 
@@ -66,20 +66,13 @@ jobs:
           distribution: "zulu"
 
       - name: Check out repo
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
           ref: ${{  github.event.pull_request.head.sha }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
-
-      - name: Cache SonarCloud packages
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
-        with:
-          path: ~\sonar\cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
 
       - name: Install SonarCloud scanner
         run: dotnet tool install dotnet-sonarscanner -g
@@ -90,6 +83,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" \
+          /d:sonar.test.inclusions=test/,bitwarden_license/test/ \
+          /d:sonar.exclusions=test/,bitwarden_license/test/ \
           /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
           /d:sonar.host.url="https://sonarcloud.io"
           dotnet build

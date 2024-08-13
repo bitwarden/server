@@ -1,9 +1,9 @@
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
-using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Responses;
 
 namespace Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -25,20 +25,17 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     /// Gets the organization user user details for the provided request
     /// </summary>
     /// <param name="request">Request details for the query</param>
-    /// <returns>List of OrganizationUserUserDetailsQueryResponse</returns>
-    public async Task<IEnumerable<OrganizationUserUserDetailsQueryResponse>> GetOrganizationUserUserDetails(OrganizationUserUserDetailsQueryRequest request)
+    /// <returns>List of OrganizationUserUserDetails</returns>
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetOrganizationUserUserDetails(OrganizationUserUserDetailsQueryRequest request)
     {
         var organizationUsers = await _organizationUserRepository
             .GetManyDetailsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
 
         var responseTasks = organizationUsers
-            .Select(async o =>
+            .Select(o =>
             {
-                var orgUser = new OrganizationUserUserDetailsQueryResponse(o,
-                    await _userService.TwoFactorIsEnabledAsync(o));
-
                 var userPermissions = o.GetPermissions();
-                orgUser.OrganizationUserUserDetails.Type = orgUser.OrganizationUserUserDetails.Type.GetFlexibleCollectionsUserType(userPermissions);
+                o.Type = o.Type.GetFlexibleCollectionsUserType(userPermissions);
 
                 // Set 'Edit/Delete Assigned Collections' custom permissions to false
                 if (userPermissions is not null)
@@ -47,9 +44,9 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
                     userPermissions.DeleteAssignedCollections = false;
                 }
 
-                return orgUser;
+                return o;
             });
-        var responses = await Task.WhenAll(responseTasks);
+        var responses = responseTasks;
         return responses;
     }
 }

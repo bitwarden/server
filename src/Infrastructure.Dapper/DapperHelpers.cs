@@ -3,6 +3,8 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Dapper;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper;
 
 public static class DapperHelpers
@@ -64,7 +66,7 @@ public static class DapperHelpers
         var table = new DataTable();
         table.SetTypeName("[dbo].[OrganizationSponsorshipType]");
 
-        var columnData = new List<(string name, Type type, Func<OrganizationSponsorship, object> getter)>
+        var columnData = new List<(string name, Type type, Func<OrganizationSponsorship, object?> getter)>
         {
             (nameof(OrganizationSponsorship.Id), typeof(Guid), ou => ou.Id),
             (nameof(OrganizationSponsorship.SponsoringOrganizationId), typeof(Guid), ou => ou.SponsoringOrganizationId),
@@ -82,7 +84,7 @@ public static class DapperHelpers
     }
 
     public static DataTable BuildTable<T>(this IEnumerable<T> entities, DataTable table,
-        List<(string name, Type type, Func<T, object> getter)> columnData)
+        List<(string name, Type type, Func<T, object?> getter)> columnData)
     {
         foreach (var (name, type, getter) in columnData)
         {
