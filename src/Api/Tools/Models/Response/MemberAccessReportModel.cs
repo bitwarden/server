@@ -132,7 +132,7 @@ public class MemberAccessReportResponseModel
 
             if (user.Collections.Any())
             {
-                var userCollections = accessDetails.Where(x => user.Collections.Any(y => x.CollectionId == y.Id && x.UserGuid == user.Id));
+                var userCollections = accessDetails.Where(x => user.Collections.Any(y => x.UserGuid == user.Id));
                 userAccessDetails.AddRange(userCollections);
             }
             report.AccessDetails = userAccessDetails;
