@@ -216,9 +216,19 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
-                newPlan, upgrade);
-            success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
+            try
+            {
+                paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
+                    newPlan, upgrade);
+                success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
+            }
+            catch
+            {
+                await _paymentService.CancelAndRecoverChargesAsync(organization);
+                organization.GatewayCustomerId = null;
+                await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+                throw;
+            }
         }
         else
         {
