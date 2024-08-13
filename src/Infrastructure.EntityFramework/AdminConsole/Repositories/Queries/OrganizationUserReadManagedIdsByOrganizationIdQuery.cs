@@ -11,13 +11,14 @@ public class OrganizationUserReadManagedIdsByOrganizationIdQuery : IQuery<Guid>
 
     public IQueryable<Guid> Run(DatabaseContext dbContext)
     {
-        var query = dbContext.OrganizationUsers
-            .Where(ou => ou.OrganizationId == _organizationId &&
-                         dbContext.OrganizationDomains
-                             .Any(od => od.OrganizationId == _organizationId &&
-                                        od.VerifiedDate != null &&
-                                        od.DomainName == ou.Email.Substring(ou.Email.IndexOf('@') + 1)))
-            .Select(ou => ou.Id);
+        var query = from ou in dbContext.OrganizationUsers
+            join u in dbContext.Users on ou.UserId equals u.Id
+            where ou.OrganizationId == _organizationId &&
+                  dbContext.OrganizationDomains
+                      .Any(od => od.OrganizationId == _organizationId &&
+                                 od.VerifiedDate != null &&
+                                 od.DomainName == u.Email.Substring(u.Email.IndexOf('@') + 1))
+            select ou.Id;
 
         return query;
     }
