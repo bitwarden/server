@@ -20,12 +20,16 @@ public interface IUserRepository : IRepository<User, Guid>
     Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate);
     Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids);
     /// <summary>
+    /// Retrieves the data for the requested user IDs and includes an additional property indicating
+    /// whether the user has premium access directly or through an organization.
+    /// </summary>
+    Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids);
+    /// <summary>
     /// Sets a new user key and updates all encrypted data.
     /// <para>Warning: Any user key encrypted data not included will be lost.</para>
     /// </summary>
     /// <param name="user">The user to update</param>
     /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
-    [Obsolete("Intended for future improvements to key rotation. Do not use.")]
     Task UpdateUserKeyAndEncryptedDataAsync(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
 }
