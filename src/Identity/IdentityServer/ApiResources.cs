@@ -20,7 +20,6 @@ public class ApiResources
                 Claims.Device,
                 Claims.OrganizationOwner,
                 Claims.OrganizationAdmin,
-                Claims.OrganizationManager,
                 Claims.OrganizationUser,
                 Claims.OrganizationCustom,
                 Claims.ProviderAdmin,

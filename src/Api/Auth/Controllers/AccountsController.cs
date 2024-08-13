@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
@@ -15,12 +16,10 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -29,18 +28,15 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
-using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -51,27 +47,19 @@ namespace Bit.Api.Auth.Controllers;
 public class AccountsController : Controller
 {
     private readonly GlobalSettings _globalSettings;
-    private readonly ICipherRepository _cipherRepository;
-    private readonly IFolderRepository _folderRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPaymentService _paymentService;
-    private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
-    private readonly ISendRepository _sendRepository;
-    private readonly ISendService _sendService;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
     private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
-
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
@@ -81,23 +69,20 @@ public class AccountsController : Controller
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _organizationUserValidator;
+    private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
+        _webauthnKeyValidator;
 
 
     public AccountsController(
         GlobalSettings globalSettings,
-        ICipherRepository cipherRepository,
-        IFolderRepository folderRepository,
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IPaymentService paymentService,
-        IUserRepository userRepository,
         IUserService userService,
-        ISendRepository sendRepository,
-        ISendService sendService,
-        ICaptchaValidationService captchaValidationService,
         IPolicyService policyService,
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
+        ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
         ISubscriberService subscriberService,
@@ -109,23 +94,19 @@ public class AccountsController : Controller
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
-            organizationUserValidator
+            organizationUserValidator,
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
         )
     {
-        _cipherRepository = cipherRepository;
-        _folderRepository = folderRepository;
         _globalSettings = globalSettings;
         _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
         _paymentService = paymentService;
-        _userRepository = userRepository;
         _userService = userService;
-        _sendRepository = sendRepository;
-        _sendService = sendService;
-        _captchaValidationService = captchaValidationService;
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
+        _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
         _subscriberService = subscriberService;
@@ -136,52 +117,9 @@ public class AccountsController : Controller
         _sendValidator = sendValidator;
         _emergencyAccessValidator = emergencyAccessValidator;
         _organizationUserValidator = organizationUserValidator;
+        _webauthnKeyValidator = webAuthnKeyValidator;
     }
 
-    #region DEPRECATED (Moved to Identity Service)
-
-    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
-    [HttpPost("prelogin")]
-    [AllowAnonymous]
-    public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
-    {
-        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
-        {
-            kdfInformation = new UserKdfInformation
-            {
-                Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
-            };
-        }
-        return new PreloginResponseModel(kdfInformation);
-    }
-
-    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
-    [HttpPost("register")]
-    [AllowAnonymous]
-    [CaptchaProtected]
-    public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
-    {
-        var user = model.ToUser();
-        var result = await _userService.RegisterUserAsync(user, model.MasterPasswordHash,
-            model.Token, model.OrganizationUserId);
-        if (result.Succeeded)
-        {
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-            return new RegisterResponseModel(captchaBypassToken);
-        }
-
-        foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
-    }
-
-    #endregion
 
     [HttpPost("password-hint")]
     [AllowAnonymous]
@@ -442,7 +380,8 @@ public class AccountsController : Controller
             Folders = await _folderValidator.ValidateAsync(user, model.Folders),
             Sends = await _sendValidator.ValidateAsync(user, model.Sends),
             EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys)
+            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys),
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.WebAuthnKeys)
         };
 
         var result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
@@ -926,6 +865,29 @@ public class AccountsController : Controller
         }
 
         var result = await _userService.UpdateTempPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
+    }
+
+    [HttpPut("update-tde-offboarding-password")]
+    public async Task PutUpdateTdePasswordAsync([FromBody] UpdateTdeOffboardingPasswordRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
         if (result.Succeeded)
         {
             return;

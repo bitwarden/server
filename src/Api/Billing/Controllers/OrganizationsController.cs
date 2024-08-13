@@ -45,7 +45,7 @@ public class OrganizationsController(
     ISubscriberService subscriberService)
     : Controller
 {
-    [HttpGet("{id}/billing-status")]
+    [HttpGet("{id:guid}/billing-status")]
     public async Task<OrganizationBillingStatusResponseModel> GetBillingStatus(Guid id)
     {
         if (!await currentContext.EditPaymentMethods(id))
@@ -162,13 +162,13 @@ public class OrganizationsController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
-        var organization = await organizationRepository.GetByIdAsync(id);
-        if (organization == null)
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        if (!await currentContext.EditSubscription(id))
+        var organization = await organizationRepository.GetByIdAsync(id);
+        if (organization == null)
         {
             throw new NotFoundException();
         }
@@ -195,13 +195,13 @@ public class OrganizationsController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
     {
-        var organization = await organizationRepository.GetByIdAsync(id);
-        if (organization == null)
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        if (!await currentContext.EditSubscription(id))
+        var organization = await organizationRepository.GetByIdAsync(id);
+        if (organization == null)
         {
             throw new NotFoundException();
         }

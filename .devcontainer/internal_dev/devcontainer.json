@@ -3,8 +3,16 @@
   "dockerComposeFile": [
     "../../.devcontainer/bitwarden_common/docker-compose.yml",
     "../../.devcontainer/internal_dev/docker-compose.override.yml"
-  ],  "service": "bitwarden_server",
+  ],
+  "service": "bitwarden_server",
   "workspaceFolder": "/workspace",
+  "mounts": [
+    {
+      "source": "../../dev/.data/keys",
+      "target": "/home/vscode/.aspnet/DataProtection-Keys",
+      "type": "bind"
+    }
+  ],
   "customizations": {
     "vscode": {
       "settings": {},

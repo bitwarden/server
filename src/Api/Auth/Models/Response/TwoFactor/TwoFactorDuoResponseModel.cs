@@ -59,8 +59,8 @@ public class TwoFactorDuoResponseModel : ResponseModel
             // check Skey and IKey first if they exist
             if (provider.MetaData.TryGetValue("SKey", out var sKey))
             {
-                ClientSecret = (string)sKey;
-                SecretKey = (string)sKey;
+                ClientSecret = MaskKey((string)sKey);
+                SecretKey = MaskKey((string)sKey);
             }
             if (provider.MetaData.TryGetValue("IKey", out var iKey))
             {
@@ -73,8 +73,8 @@ public class TwoFactorDuoResponseModel : ResponseModel
             {
                 if (!string.IsNullOrWhiteSpace((string)clientSecret))
                 {
-                    ClientSecret = (string)clientSecret;
-                    SecretKey = (string)clientSecret;
+                    ClientSecret = MaskKey((string)clientSecret);
+                    SecretKey = MaskKey((string)clientSecret);
                 }
             }
             if (provider.MetaData.TryGetValue("ClientId", out var clientId))
@@ -113,5 +113,16 @@ public class TwoFactorDuoResponseModel : ResponseModel
         {
             throw new InvalidDataException("Invalid Duo parameters.");
         }
+    }
+
+    private static string MaskKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key) || key.Length <= 6)
+        {
+            return key;
+        }
+
+        // Mask all but the first 6 characters.
+        return string.Concat(key.AsSpan(0, 6), new string('*', key.Length - 6));
     }
 }

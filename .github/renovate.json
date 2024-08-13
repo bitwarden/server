@@ -41,9 +41,9 @@
       "reviewers": ["team:team-auth-dev"]
     },
     {
-      "matchPackageNames": ["bootstrap", "del", "gulp"],
+      "matchPackageNames": ["bootstrap"],
       "matchUpdateTypes": ["major"],
-      "description": "Lock bootstrap, del, and gulp major versions due to ASP.NET conflicts",
+      "description": "Lock bootstrap major versions due to ASP.NET conflicts",
       "enabled": false
     },
     {
@@ -59,8 +59,6 @@
         "DuoUniversal",
         "Fido2.AspNet",
         "Duende.IdentityServer",
-        "Microsoft.Azure.Cosmos",
-        "Microsoft.Extensions.Caching.StackExchangeRedis",
         "Microsoft.Extensions.Identity.Stores",
         "Otp.NET",
         "Sustainsys.Saml2.AspNetCore2",
@@ -112,12 +110,15 @@
         "dbup-sqlserver",
         "dotnet-ef",
         "linq2db.EntityFrameworkCore",
+        "Microsoft.Azure.Cosmos",
         "Microsoft.Data.SqlClient",
         "Microsoft.EntityFrameworkCore.Design",
         "Microsoft.EntityFrameworkCore.InMemory",
         "Microsoft.EntityFrameworkCore.Relational",
         "Microsoft.EntityFrameworkCore.Sqlite",
         "Microsoft.EntityFrameworkCore.SqlServer",
+        "Microsoft.Extensions.Caching.SqlServer",
+        "Microsoft.Extensions.Caching.StackExchangeRedis",
         "Npgsql.EntityFrameworkCore.PostgreSQL",
         "Pomelo.EntityFrameworkCore.MySql"
       ],

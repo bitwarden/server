@@ -1,5 +1,7 @@
 ﻿namespace Bit.Core.Repositories;
 
+#nullable enable
+
 public interface IMaintenanceRepository
 {
     Task UpdateStatisticsAsync();

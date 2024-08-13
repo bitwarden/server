@@ -7,10 +7,14 @@ CREATE PROCEDURE [dbo].[ProviderInvoiceItem_Create]
     @PlanName NVARCHAR (50),
     @AssignedSeats INT,
     @UsedSeats INT,
-    @Total MONEY
+    @Total MONEY,
+    @Created DATETIME2 (7) = NULL,
+    @ClientId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
+
+    SET @Created = COALESCE(@Created, GETUTCDATE())
 
     INSERT INTO [dbo].[ProviderInvoiceItem]
     (
@@ -23,7 +27,8 @@ BEGIN
         [AssignedSeats],
         [UsedSeats],
         [Total],
-        [Created]
+        [Created],
+        [ClientId]
     )
     VALUES
     (
@@ -36,6 +41,7 @@ BEGIN
         @AssignedSeats,
         @UsedSeats,
         @Total,
-        GETUTCDATE()
+        @Created,
+        @ClientId
     )
 END
