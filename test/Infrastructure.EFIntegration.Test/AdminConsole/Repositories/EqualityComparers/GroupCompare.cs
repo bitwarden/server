@@ -8,7 +8,6 @@ public class GroupCompare : IEqualityComparer<Group>
     public bool Equals(Group x, Group y)
     {
         return x.Name == y.Name &&
-        x.AccessAll == y.AccessAll &&
         x.ExternalId == y.ExternalId;
     }
 
