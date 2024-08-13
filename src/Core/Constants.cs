@@ -135,6 +135,8 @@ public static class FeatureFlagKeys
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
     public const string MembersTwoFAQueryOptimization = "ac-1698-members-two-fa-query-optimization";
+    public const string NativeCarouselFlow = "native-carousel-flow";
+    public const string NativeCreateAccountFlow = "native-create-account-flow";
 
     public static List<string> GetAllKeys()
     {
