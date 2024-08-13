@@ -13,7 +13,6 @@ public class Group : ITableObject<Guid>, IExternal
     public Guid OrganizationId { get; set; }
     [MaxLength(100)]
     public string Name { get; set; } = null!;
-    public bool AccessAll { get; set; }
     [MaxLength(300)]
     public string? ExternalId { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
