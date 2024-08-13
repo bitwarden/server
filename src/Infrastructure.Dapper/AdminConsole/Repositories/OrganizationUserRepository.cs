@@ -564,4 +564,17 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 commandType: CommandType.Text);
         };
     }
+
+    public async Task<ICollection<Guid>> GetManagedUserIdsByOrganizationIdAsync(Guid orgId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Guid>(
+                $"[{Schema}].[{Table}_ReadManagedUserIdsByOrganizationId]",
+                new { OrganizationId = orgId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
 }
