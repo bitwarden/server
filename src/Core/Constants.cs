@@ -104,7 +104,6 @@ public static class FeatureFlagKeys
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
-    public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
@@ -153,7 +152,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { FlexibleCollectionsV1, "true" },
             { BulkDeviceApproval, "true" }
         };
     }
