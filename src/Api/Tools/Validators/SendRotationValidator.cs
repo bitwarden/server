@@ -42,7 +42,7 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
             var send = sends.FirstOrDefault(c => c.Id == existing.Id);
             if (send == null)
             {
-                throw new BadRequestException("All existing folders must be included in the rotation.");
+                throw new BadRequestException("All existing sends must be included in the rotation.");
             }
 
             result.Add(send.ToSend(existing, _sendService));
