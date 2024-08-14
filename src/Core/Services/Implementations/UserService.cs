@@ -890,9 +890,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 throw new BadRequestException("Invalid license.");
             }
 
-            if (!license.CanUse(user))
+            if (!license.CanUse(user, out var exceptionMessage))
             {
-                throw new BadRequestException("This license is not valid for this user.");
+                throw new BadRequestException(exceptionMessage);
             }
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -959,9 +959,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        if (!license.CanUse(user))
+        if (!license.CanUse(user, out var exceptionMessage))
         {
-            throw new BadRequestException("This license is not valid for this user.");
+            throw new BadRequestException(exceptionMessage);
         }
 
         var dir = $"{_globalSettings.LicenseDirectory}/user";
