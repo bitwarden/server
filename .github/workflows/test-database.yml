@@ -58,19 +58,19 @@ jobs:
       
       - name: Checking pending model changes (MySQL)
         working-directory: "util/MySqlMigrations"
-        run: 'dotnet ef migrations has-pending-model-changes --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
+        run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
 
       - name: Checking pending model changes (Postgres)
         working-directory: "util/PostgresMigrations"
-        run: 'dotnet ef migrations has-pending-model-changes --connection "$CONN_STR" -- --GlobalSettings:PostgreSql:ConnectionString="$CONN_STR"'
+        run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:PostgreSql:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
 
       - name: Checking pending model changes (SQLite)
         working-directory: "util/SqliteMigrations"
-        run: 'dotnet ef migrations has-pending-model-changes --connection "$CONN_STR" -- --GlobalSettings:Sqlite:ConnectionString="$CONN_STR"'
+        run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:Sqlite:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "Data Source=${{ runner.temp }}/test.db"
 
