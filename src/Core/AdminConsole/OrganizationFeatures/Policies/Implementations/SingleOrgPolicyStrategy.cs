@@ -38,7 +38,7 @@ public class SingleOrgPolicyStrategy : IPolicyStrategy
     {
         // Remove non-compliant users
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
-        var org = await _organizationRepository.GetByIdAsync(policy.Id);
+        var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
         if (org == null)
         {
             throw new NotFoundException("Organization not found.");
