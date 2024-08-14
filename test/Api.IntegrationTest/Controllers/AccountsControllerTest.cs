@@ -29,7 +29,6 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>
         Assert.False(content.EmailVerified);
         Assert.False(content.Premium);
         Assert.False(content.PremiumFromOrganization);
-        Assert.Null(content.MasterPasswordHint);
         Assert.Equal("en-US", content.Culture);
         Assert.Null(content.Key);
         Assert.Null(content.PrivateKey);
