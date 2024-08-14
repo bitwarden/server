@@ -113,21 +113,46 @@ public class UserLicense : ILicense
         }
     }
 
-    public bool CanUse(User user)
+    public bool CanUse(User user, out string exception)
     {
-        if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
+        var errorMessages = new StringBuilder();
+
+        if (Issued > DateTime.UtcNow)
         {
-            return false;
+            errorMessages.AppendLine("The license issue date is in the future.");
+        }
+
+        if (Expires < DateTime.UtcNow)
+        {
+            errorMessages.AppendLine("The license has expired.");
+        }
+
+        if (Version != 1)
+        {
+            throw new NotSupportedException($"Version {Version} is not supported.");
         }
 
         if (Version == 1)
         {
-            return user.EmailVerified && user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
+            if (!user.EmailVerified)
+            {
+                errorMessages.AppendLine("The user's email is not verified.");
+            }
+
+            if (!user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase))
+            {
+                errorMessages.AppendLine("The user's email does not match the license email.");
+            }
         }
-        else
+
+        if (errorMessages.Length > 0)
         {
-            throw new NotSupportedException($"Version {Version} is not supported.");
+            exception = errorMessages.ToString().TrimEnd();
+            return false;
         }
+
+        exception = "";
+        return true;
     }
 
     public bool VerifyData(User user)
@@ -144,10 +169,8 @@ public class UserLicense : ILicense
                 user.Premium == Premium &&
                 user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
         }
-        else
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
+
+        throw new NotSupportedException($"Version {Version} is not supported.");
     }
 
     public bool VerifySignature(X509Certificate2 certificate)
