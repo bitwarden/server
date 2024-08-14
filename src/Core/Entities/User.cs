@@ -72,7 +72,6 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastKdfChangeDate { get; set; }
     public DateTime? LastKeyRotationDate { get; set; }
     public DateTime? LastEmailChangeDate { get; set; }
-    public bool FakeModelChange { get; set; }
 
     public void SetNewId()
     {
