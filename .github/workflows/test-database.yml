@@ -55,6 +55,18 @@ jobs:
       # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
       - name: Sleep
         run: sleep 15s
+      
+      - name: Checking Pending Model Changes (MySQL)
+        working-directory: "util/MySqlMigrations"
+        run: "dotnet ef migrations has-pending-model-changes"
+
+      - name: Checking Pending Model Changes (Postgres)
+        working-directory: "util/PostgresMigrations"
+        run: "dotnet ef migrations has-pending-model-changes"
+
+      - name: Checking Pending Model Changes (SQLite)
+        working-directory: "util/SqliteMigrations"
+        run: "dotnet ef migrations has-pending-model-changes"
 
       - name: Migrate SQL Server
         run: 'dotnet run --project util/MsSqlMigratorUtility/ "$CONN_STR"'
