@@ -3,14 +3,12 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Trash.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [Authorize("secrets")]
-[SelfHosted(NotSelfHostedOnly = true)]
 public class TrashController : Controller
 {
     private readonly ICurrentContext _currentContext;
@@ -43,7 +41,7 @@ public class TrashController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var secrets = await _secretRepository.GetManyByOrganizationIdInTrashAsync(organizationId);
+        var secrets = await _secretRepository.GetManyDetailsByOrganizationIdInTrashAsync(organizationId);
         return new SecretWithProjectsListResponseModel(secrets);
     }
 

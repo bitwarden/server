@@ -6,7 +6,7 @@
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX), -- not used
     @Folders NVARCHAR(MAX), -- not used
-    @Attachments NVARCHAR(MAX), -- not used
+    @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,
@@ -15,7 +15,8 @@
     @ViewPassword BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(2),
-    @Reprompt TINYINT
+    @Reprompt TINYINT,
+    @Key VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -48,10 +49,12 @@ BEGIN
             ELSE
                 JSON_MODIFY([Favorites], @UserIdPath, NULL)
             END,
+        [Attachments] = @Attachments,
         [Reprompt] = @Reprompt,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [DeletedDate] = @DeletedDate
+        [DeletedDate] = @DeletedDate,
+        [Key] = @Key
     WHERE
         [Id] = @Id
 

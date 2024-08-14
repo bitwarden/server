@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
+using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -68,5 +69,36 @@ public static class ApiHelpers
         }
 
         return new OkObjectResult(response);
+    }
+
+    /// <summary>
+    /// Validates and returns a date range. Currently used for fetching events.
+    /// </summary>
+    /// <param name="start">start date and time</param>
+    /// <param name="end">end date and time</param>
+    /// <remarks>
+    /// If start or end are null, will return a range of the last 30 days.
+    /// If a time span greater than 367 days is passed will throw BadRequestException.
+    /// </remarks>
+    public static Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)
+    {
+        if (!end.HasValue || !start.HasValue)
+        {
+            end = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
+            start = DateTime.UtcNow.Date.AddDays(-30);
+        }
+        else if (start.Value > end.Value)
+        {
+            var newEnd = start;
+            start = end;
+            end = newEnd;
+        }
+
+        if ((end.Value - start.Value) > TimeSpan.FromDays(367))
+        {
+            throw new BadRequestException("Range too large.");
+        }
+
+        return new Tuple<DateTime, DateTime>(start.Value, end.Value);
     }
 }

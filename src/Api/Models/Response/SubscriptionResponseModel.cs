@@ -18,7 +18,6 @@ public class SubscriptionResponseModel : ResponseModel
         MaxStorageGb = user.MaxStorageGb;
         License = license;
         Expiration = License.Expires;
-        UsingInAppPurchase = subscription.UsingInAppPurchase;
     }
 
     public SubscriptionResponseModel(User user, UserLicense license = null)
@@ -42,7 +41,14 @@ public class SubscriptionResponseModel : ResponseModel
     public BillingSubscription Subscription { get; set; }
     public UserLicense License { get; set; }
     public DateTime? Expiration { get; set; }
-    public bool UsingInAppPurchase { get; set; }
+}
+
+public class BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
+{
+    public string Id { get; } = discount.Id;
+    public bool Active { get; } = discount.Active;
+    public decimal? PercentOff { get; } = discount.PercentOff;
+    public List<string> AppliesTo { get; } = discount.AppliesTo;
 }
 
 public class BillingSubscription
@@ -61,6 +67,10 @@ public class BillingSubscription
         {
             Items = sub.Items.Select(i => new BillingSubscriptionItem(i));
         }
+        CollectionMethod = sub.CollectionMethod;
+        SuspensionDate = sub.SuspensionDate;
+        UnpaidPeriodEndDate = sub.UnpaidPeriodEndDate;
+        GracePeriod = sub.GracePeriod;
     }
 
     public DateTime? TrialStartDate { get; set; }
@@ -72,23 +82,31 @@ public class BillingSubscription
     public string Status { get; set; }
     public bool Cancelled { get; set; }
     public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
+    public string CollectionMethod { get; set; }
+    public DateTime? SuspensionDate { get; set; }
+    public DateTime? UnpaidPeriodEndDate { get; set; }
+    public int? GracePeriod { get; set; }
 
     public class BillingSubscriptionItem
     {
         public BillingSubscriptionItem(SubscriptionInfo.BillingSubscription.BillingSubscriptionItem item)
         {
+            ProductId = item.ProductId;
             Name = item.Name;
             Amount = item.Amount;
             Interval = item.Interval;
             Quantity = item.Quantity;
             SponsoredSubscriptionItem = item.SponsoredSubscriptionItem;
+            AddonSubscriptionItem = item.AddonSubscriptionItem;
         }
 
+        public string ProductId { get; set; }
         public string Name { get; set; }
         public decimal Amount { get; set; }
         public int Quantity { get; set; }
         public string Interval { get; set; }
         public bool SponsoredSubscriptionItem { get; set; }
+        public bool AddonSubscriptionItem { get; set; }
     }
 }
 

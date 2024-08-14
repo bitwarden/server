@@ -13,4 +13,5 @@ public class OrganizationSignup : OrganizationUpgrade
     public PaymentMethodType? PaymentMethodType { get; set; }
     public string PaymentToken { get; set; }
     public int? MaxAutoscaleSeats { get; set; } = null;
+    public string InitiationPath { get; set; }
 }

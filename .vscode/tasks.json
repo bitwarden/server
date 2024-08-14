@@ -2,7 +2,72 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "buildIdentityApi",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "buildIdentityApiAdmin",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI",
+                "buildAdmin"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "buildFullServer",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+                "buildSso",
+                "buildIcons",
+                "buildBilling",
+                "buildNotifications",
+            ],
+        },
+        {
+            "label": "buildSelfHostBit",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+                "buildSso",
+                "buildNotifications",
+            ],
+        },
+        {
+            "label": "buildSelfHostOss",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+            ],
+        },
+        {
             "label": "buildIcons",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -15,6 +80,7 @@
         },
         {
             "label": "buildPortal",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -27,6 +93,7 @@
         },
         {
             "label": "buildSso",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -38,7 +105,21 @@
             "problemMatcher": "$msCompile"
         },
         {
+            "label": "buildEvents",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Events/Events.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
             "label": "buildEventsProcessor",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -51,6 +132,7 @@
         },
         {
             "label": "buildAdmin",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -63,6 +145,7 @@
         },
         {
             "label": "buildIdentity",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -75,6 +158,7 @@
         },
         {
             "label": "buildAPI",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -91,6 +175,7 @@
         },
         {
             "label": "buildNotifications",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -107,6 +192,7 @@
         },
         {
             "label": "buildBilling",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -120,20 +206,6 @@
                 "kind": "build",
                 "isDefault": true
             }
-        },
-        {
-            "label": "clean",
-            "type": "shell",
-            "command": "dotnet clean",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": "$msCompile"
         },
         {
             "label": "test",
@@ -152,6 +224,44 @@
                 "clear": false
             },
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Set Up Secrets",
+            "detail": "A task to run setup_secrets.ps1",
+            "type": "shell",
+            "command": "pwsh -WorkingDirectory ${workspaceFolder}/dev -Command '${workspaceFolder}/dev/setup_secrets.ps1 -clear:$${input:setupSecretsClear}'",
+            "problemMatcher": []
+        },
+        {
+            "label": "Install Dev Cert",
+            "detail": "A task to install the Bitwarden developer cert to run your local install as an admin.",
+            "type": "shell",
+            "command": "dotnet tool install -g dotnet-certificate-tool -g && certificate-tool add --file ${workspaceFolder}/dev/dev.pfx --password '${input:certPassword}'",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "setupSecretsClear",
+            "type": "pickString",
+            "default": "true",
+            "description": "Whether or not to clear existing secrets",
+            "options": [
+                {
+                    "label": "true",
+                    "value": "true"
+                },
+                {
+                    "label": "false",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "id": "certPassword",
+            "type": "promptString",
+            "description": "Password for your dev certificate.",
+            "password": true
         }
     ]
 }

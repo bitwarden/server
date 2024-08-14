@@ -10,8 +10,7 @@ public class EmergencyAccessRepositoriesTests
 {
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_UpdatesRevisionDate(IUserRepository userRepository,
-      IEmergencyAccessRepository emergencyAccessRepository,
-      ITestDatabaseHelper helper)
+      IEmergencyAccessRepository emergencyAccessRepository)
     {
         var grantorUser = await userRepository.CreateAsync(new User
         {
@@ -35,8 +34,6 @@ public class EmergencyAccessRepositoriesTests
             GranteeId = granteeUser.Id,
             Status = EmergencyAccessStatusType.Confirmed,
         });
-
-        helper.ClearTracker();
 
         await emergencyAccessRepository.DeleteAsync(emergencyAccess);
 

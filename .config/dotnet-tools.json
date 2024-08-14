@@ -3,28 +3,12 @@
   "isRoot": true,
   "tools": {
     "swashbuckle.aspnetcore.cli": {
-      "version": "6.5.0",
-      "commands": [
-        "swagger"
-      ]
-    },
-    "coverlet.console": {
-      "version": "3.1.2",
-      "commands": [
-        "coverlet"
-      ]
-    },
-    "dotnet-reportgenerator-globaltool": {
-      "version": "5.1.6",
-      "commands": [
-        "reportgenerator"
-      ]
+      "version": "6.7.0",
+      "commands": ["swagger"]
     },
     "dotnet-ef": {
-      "version": "7.0.8",
-      "commands": [
-        "dotnet-ef"
-      ]
+      "version": "8.0.7",
+      "commands": ["dotnet-ef"]
     }
   }
 }

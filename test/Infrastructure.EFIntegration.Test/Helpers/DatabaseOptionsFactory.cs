@@ -5,7 +5,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+using NSubstitute;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Helpers;
 
@@ -18,17 +18,17 @@ public static class DatabaseOptionsFactory
         var services = new ServiceCollection()
             .AddSingleton(sp =>
             {
-                var dataProtector = new Mock<IDataProtector>();
-                dataProtector
-                    .Setup(d => d.Unprotect(It.IsAny<byte[]>()))
-                    .Returns<byte[]>(data => Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix + Encoding.UTF8.GetString(data)));
+                var dataProtector = Substitute.For<IDataProtector>();
+                dataProtector.Unprotect(Arg.Any<byte[]>())
+                    .Returns<byte[]>(data =>
+                        Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix +
+                                               Encoding.UTF8.GetString((byte[])data[0])));
 
-                var dataProtectionProvider = new Mock<IDataProtectionProvider>();
-                dataProtectionProvider
-                    .Setup(x => x.CreateProtector(Constants.DatabaseFieldProtectorPurpose))
-                    .Returns(dataProtector.Object);
+                var dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
+                dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose)
+                    .Returns(dataProtector);
 
-                return dataProtectionProvider.Object;
+                return dataProtectionProvider;
             })
             .BuildServiceProvider();
 

@@ -6,6 +6,8 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>, IOrganizationDomainRepository
@@ -55,7 +57,7 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         return results.ToList();
     }
 
-    public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetailsAsync(string email)
+    public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -69,7 +71,21 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         }
     }
 
-    public async Task<OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
+    public async Task<OrganizationDomain?> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection
+                .QueryAsync<OrganizationDomain>(
+                    $"[{Schema}].[OrganizationDomain_ReadByIdOrganizationId]",
+                    new { Id = id, OrganizationId = orgId },
+                    commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
+    }
+
+    public async Task<OrganizationDomain?> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

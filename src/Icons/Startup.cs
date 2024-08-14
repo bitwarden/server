@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Icons.Services;
+using Bit.Icons.Extensions;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Net.Http.Headers;
 
@@ -30,6 +30,12 @@ public class Startup
         ConfigurationBinder.Bind(Configuration.GetSection("IconsSettings"), iconsSettings);
         services.AddSingleton(s => iconsSettings);
 
+        // Http client
+        services.ConfigureHttpClients();
+
+        // Add HtmlParser
+        services.AddHtmlParsing();
+
         // Cache
         services.AddMemoryCache(options =>
         {
@@ -37,8 +43,7 @@ public class Startup
         });
 
         // Services
-        services.AddSingleton<IDomainMappingService, DomainMappingService>();
-        services.AddSingleton<IIconFetchingService, IconFetchingService>();
+        services.AddServices();
 
         // Mvc
         services.AddMvc();

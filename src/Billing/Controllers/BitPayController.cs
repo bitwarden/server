@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Billing.Models;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -19,6 +20,7 @@ public class BitPayController : Controller
     private readonly ITransactionRepository _transactionRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IProviderRepository _providerRepository;
     private readonly IMailService _mailService;
     private readonly IPaymentService _paymentService;
     private readonly ILogger<BitPayController> _logger;
@@ -29,6 +31,7 @@ public class BitPayController : Controller
         ITransactionRepository transactionRepository,
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
+        IProviderRepository providerRepository,
         IMailService mailService,
         IPaymentService paymentService,
         ILogger<BitPayController> logger)
@@ -38,6 +41,7 @@ public class BitPayController : Controller
         _transactionRepository = transactionRepository;
         _organizationRepository = organizationRepository;
         _userRepository = userRepository;
+        _providerRepository = providerRepository;
         _mailService = mailService;
         _paymentService = paymentService;
         _logger = logger;
@@ -83,8 +87,8 @@ public class BitPayController : Controller
             return new OkResult();
         }
 
-        var ids = GetIdsFromPosData(invoice);
-        if (!ids.Item1.HasValue && !ids.Item2.HasValue)
+        var (organizationId, userId, providerId) = GetIdsFromPosData(invoice);
+        if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
             return new OkResult();
         }
@@ -93,14 +97,14 @@ public class BitPayController : Controller
         if (!isAccountCredit)
         {
             // Only processing credits
-            _logger.LogWarning("Non-credit payment received. #" + invoice.Id);
+            _logger.LogWarning("Non-credit payment received. #{InvoiceId}", invoice.Id);
             return new OkResult();
         }
 
         var transaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.BitPay, invoice.Id);
         if (transaction != null)
         {
-            _logger.LogWarning("Already processed this invoice. #" + invoice.Id);
+            _logger.LogWarning("Already processed this invoice. #{InvoiceId}", invoice.Id);
             return new OkResult();
         }
 
@@ -110,8 +114,9 @@ public class BitPayController : Controller
             {
                 Amount = Convert.ToDecimal(invoice.Price),
                 CreationDate = GetTransactionDate(invoice),
-                OrganizationId = ids.Item1,
-                UserId = ids.Item2,
+                OrganizationId = organizationId,
+                UserId = userId,
+                ProviderId = providerId,
                 Type = TransactionType.Credit,
                 Gateway = GatewayType.BitPay,
                 GatewayId = invoice.Id,
@@ -120,42 +125,57 @@ public class BitPayController : Controller
             };
             await _transactionRepository.CreateAsync(tx);
 
-            if (isAccountCredit)
+            string billingEmail = null;
+            if (tx.OrganizationId.HasValue)
             {
-                string billingEmail = null;
-                if (tx.OrganizationId.HasValue)
+                var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
+                if (org != null)
                 {
-                    var org = await _organizationRepository.GetByIdAsync(tx.OrganizationId.Value);
-                    if (org != null)
+                    billingEmail = org.BillingEmailAddress();
+                    if (await _paymentService.CreditAccountAsync(org, tx.Amount))
                     {
-                        billingEmail = org.BillingEmailAddress();
-                        if (await _paymentService.CreditAccountAsync(org, tx.Amount))
-                        {
-                            await _organizationRepository.ReplaceAsync(org);
-                        }
+                        await _organizationRepository.ReplaceAsync(org);
                     }
                 }
-                else
+            }
+            else if (tx.UserId.HasValue)
+            {
+                var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
+                if (user != null)
                 {
-                    var user = await _userRepository.GetByIdAsync(tx.UserId.Value);
-                    if (user != null)
+                    billingEmail = user.BillingEmailAddress();
+                    if (await _paymentService.CreditAccountAsync(user, tx.Amount))
                     {
-                        billingEmail = user.BillingEmailAddress();
-                        if (await _paymentService.CreditAccountAsync(user, tx.Amount))
-                        {
-                            await _userRepository.ReplaceAsync(user);
-                        }
+                        await _userRepository.ReplaceAsync(user);
                     }
                 }
+            }
+            else if (tx.ProviderId.HasValue)
+            {
+                var provider = await _providerRepository.GetByIdAsync(tx.ProviderId.Value);
+                if (provider != null)
+                {
+                    billingEmail = provider.BillingEmailAddress();
+                    if (await _paymentService.CreditAccountAsync(provider, tx.Amount))
+                    {
+                        await _providerRepository.ReplaceAsync(provider);
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogError("Received BitPay account credit transaction that didn't have a user, org, or provider. Invoice#{InvoiceId}", invoice.Id);
+            }
 
-                if (!string.IsNullOrWhiteSpace(billingEmail))
-                {
-                    await _mailService.SendAddedCreditAsync(billingEmail, tx.Amount);
-                }
+            if (!string.IsNullOrWhiteSpace(billingEmail))
+            {
+                await _mailService.SendAddedCreditAsync(billingEmail, tx.Amount);
             }
         }
         // Catch foreign key violations because user/org could have been deleted.
-        catch (SqlException e) when (e.Number == 547) { }
+        catch (SqlException e) when (e.Number == 547)
+        {
+        }
 
         return new OkResult();
     }
@@ -177,31 +197,41 @@ public class BitPayController : Controller
         return CoreHelpers.FromEpocMilliseconds(invoice.CurrentTime);
     }
 
-    public Tuple<Guid?, Guid?> GetIdsFromPosData(BitPayLight.Models.Invoice.Invoice invoice)
+    public Tuple<Guid?, Guid?, Guid?> GetIdsFromPosData(BitPayLight.Models.Invoice.Invoice invoice)
     {
         Guid? orgId = null;
         Guid? userId = null;
+        Guid? providerId = null;
 
-        if (invoice != null && !string.IsNullOrWhiteSpace(invoice.PosData) && invoice.PosData.Contains(":"))
+        if (invoice == null || string.IsNullOrWhiteSpace(invoice.PosData) || !invoice.PosData.Contains(':'))
         {
-            var mainParts = invoice.PosData.Split(',');
-            foreach (var mainPart in mainParts)
+            return new Tuple<Guid?, Guid?, Guid?>(null, null, null);
+        }
+
+        var mainParts = invoice.PosData.Split(',');
+        foreach (var mainPart in mainParts)
+        {
+            var parts = mainPart.Split(':');
+
+            if (parts.Length <= 1 || !Guid.TryParse(parts[1], out var id))
             {
-                var parts = mainPart.Split(':');
-                if (parts.Length > 1 && Guid.TryParse(parts[1], out var id))
-                {
-                    if (parts[0] == "userId")
-                    {
-                        userId = id;
-                    }
-                    else if (parts[0] == "organizationId")
-                    {
-                        orgId = id;
-                    }
-                }
+                continue;
+            }
+
+            switch (parts[0])
+            {
+                case "userId":
+                    userId = id;
+                    break;
+                case "organizationId":
+                    orgId = id;
+                    break;
+                case "providerId":
+                    providerId = id;
+                    break;
             }
         }
 
-        return new Tuple<Guid?, Guid?>(orgId, userId);
+        return new Tuple<Guid?, Guid?, Guid?>(orgId, userId, providerId);
     }
 }

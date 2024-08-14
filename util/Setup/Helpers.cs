@@ -148,7 +148,7 @@ public static class Helpers
         Console.Write(prompt);
         if (prompt.EndsWith("?"))
         {
-            Console.Write(" (y/n)");
+            Console.Write(" (y/N)");
         }
         Console.Write(": ");
         var input = Console.ReadLine();
@@ -221,5 +221,14 @@ public static class Helpers
         {
             Console.WriteLine();
         }
+    }
+
+    public static void WriteError(string errorMessage)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Write("(!) ");
+        Console.ResetColor();
+        Console.Write(errorMessage);
+        Console.WriteLine();
     }
 }

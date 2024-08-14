@@ -7,6 +7,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,11 +16,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NoopRepos = Bit.Core.Repositories.Noop;
 
+#nullable enable
+
 namespace Bit.IntegrationTestCommon.Factories;
 
 public static class FactoryConstants
 {
-    public const string DefaultDatabaseName = "test_database";
     public const string WhitelistedIp = "1.1.1.1";
 }
 
@@ -27,16 +29,20 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     where T : class
 {
     /// <summary>
-    /// The database name to use for this instance of the factory. By default it will use a shared database name so all instances will connect to the same database during it's lifetime.
+    /// The database to use for this instance of the factory. By default it will use a shared database so all instances will connect to the same database during it's lifetime.
     /// </summary>
     /// <remarks>
     /// This will need to be set BEFORE using the <c>Server</c> property
     /// </remarks>
-    public string DatabaseName { get; set; } = Guid.NewGuid().ToString();
+    public SqliteConnection? SqliteConnection { get; set; }
 
     private readonly List<Action<IServiceCollection>> _configureTestServices = new();
+    private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
 
-    public void SubstitueService<TService>(Action<TService> mockService)
+    private bool _handleSqliteDisposal { get; set; }
+
+
+    public void SubstituteService<TService>(Action<TService> mockService)
         where TService : class
     {
         _configureTestServices.Add(services =>
@@ -52,10 +58,61 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     }
 
     /// <summary>
-    /// Configure the web host to use an EF in memory database
+    /// Add your own configuration provider to the application.
+    /// </summary>
+    /// <param name="configure">The action adding your own providers.</param>
+    /// <remarks>This needs to be ran BEFORE making any calls through the factory to take effect.</remarks>
+    /// <example>
+    ///   <code lang="C#">
+    ///   factory.UpdateConfiguration(builder =&gt;
+    ///   {
+    ///       builder.AddInMemoryCollection(new Dictionary&lt;string, string?&gt;
+    ///       {
+    ///           { "globalSettings:attachment:connectionString", null},
+    ///           { "globalSettings:events:connectionString", null},
+    ///       })
+    ///   })
+    ///   </code>
+    /// </example>
+    public void UpdateConfiguration(Action<IConfigurationBuilder> configure)
+    {
+        _configureAppConfiguration.Add(configure);
+    }
+
+    /// <summary>
+    /// Updates a single configuration entry for multiple entries at once use <see cref="UpdateConfiguration(Action{IConfigurationBuilder})"/>.
+    /// </summary>
+    /// <param name="key">The fully qualified name of the setting, using <c>:</c> as delimiter between sections.</param>
+    /// <param name="value">The value of the setting.</param>
+    /// <remarks>This needs to be ran BEFORE making any calls through the factory to take effect.</remarks>
+    /// <example>
+    ///   <code lang="C#">
+    ///   factory.UpdateConfiguration("globalSettings:attachment:connectionString", null);
+    ///   </code>
+    /// </example>
+    public void UpdateConfiguration(string key, string? value)
+    {
+        _configureAppConfiguration.Add(builder =>
+        {
+            builder.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { key, value },
+            });
+        });
+    }
+
+    /// <summary>
+    /// Configure the web host to use a SQLite in memory database
     /// </summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        if (SqliteConnection == null)
+        {
+            SqliteConnection = new SqliteConnection("DataSource=:memory:");
+            SqliteConnection.Open();
+            _handleSqliteDisposal = true;
+        }
+
         builder.ConfigureAppConfiguration(c =>
         {
             c.SetBasePath(AppContext.BaseDirectory)
@@ -63,7 +120,8 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 .AddJsonFile("appsettings.Development.json");
 
             c.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
-            c.AddInMemoryCollection(new Dictionary<string, string>
+
+            c.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
                 // DbContextOptions to use an in memory database
@@ -79,8 +137,23 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { "globalSettings:send:connectionString", null},
                 { "globalSettings:notifications:connectionString", null},
                 { "globalSettings:storage:connectionString", null},
+
+                // This will force it to use an ephemeral key for IdentityServer
+                { "globalSettings:developmentDirectory", null },
+
+
+                // Email Verification
+                { "globalSettings:enableEmailVerification", "true" },
+                { "globalSettings:disableUserRegistration", "false" },
+                { "globalSettings:launchDarkly:flagValues:email-verification", "true" }
             });
         });
+
+        // Run configured actions after defaults to allow them to take precedence
+        foreach (var configureAppConfiguration in _configureAppConfiguration)
+        {
+            builder.ConfigureAppConfiguration(configureAppConfiguration);
+        }
 
         builder.ConfigureTestServices(services =>
         {
@@ -89,10 +162,12 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddScoped(services =>
             {
                 return new DbContextOptionsBuilder<DatabaseContext>()
-                    .UseInMemoryDatabase(DatabaseName)
+                    .UseSqlite(SqliteConnection)
                     .UseApplicationServiceProvider(services)
                     .Options;
             });
+
+            MigrateDbContext<DatabaseContext>(services);
 
             // QUESTION: The normal licensing service should run fine on developer machines but not in CI
             // should we have a fork here to leave the normal service for developers?
@@ -125,22 +200,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.Remove(captchaValidationService);
             services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
 
-            // Disable blocking
-            var blockingService = services.First(sd => sd.ServiceType == typeof(IBlockIpService));
-            services.Remove(blockingService);
-            services.AddSingleton<IBlockIpService, NoopBlockIpService>();
-
             // TODO: Install and use azurite in CI pipeline
             var installationDeviceRepository =
                 services.First(sd => sd.ServiceType == typeof(IInstallationDeviceRepository));
             services.Remove(installationDeviceRepository);
             services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
-
-            // TODO: Install and use azurite in CI pipeline
-            var metaDataRepository =
-                services.First(sd => sd.ServiceType == typeof(IMetaDataRepository));
-            services.Remove(metaDataRepository);
-            services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
 
             // TODO: Install and use azurite in CI pipeline
             var referenceEventService = services.First(sd => sd.ServiceType == typeof(IReferenceEventService));
@@ -163,6 +227,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Disable logs
             services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
+
+            // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
+            var stripePaymentService = services.First(sd => sd.ServiceType == typeof(IPaymentService));
+            services.Remove(stripePaymentService);
+            services.AddSingleton(Substitute.For<IPaymentService>());
         });
 
         foreach (var configureTestService in _configureTestServices)
@@ -177,9 +246,32 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         return scope.ServiceProvider.GetRequiredService<DatabaseContext>();
     }
 
-    public TS GetService<TS>()
+    public TService GetService<TService>()
+        where TService : notnull
     {
         var scope = Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<TS>();
+        return scope.ServiceProvider.GetRequiredService<TService>();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (_handleSqliteDisposal)
+        {
+            SqliteConnection!.Dispose();
+        }
+    }
+
+    private void MigrateDbContext<TContext>(IServiceCollection serviceCollection) where TContext : DbContext
+    {
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        var services = scope.ServiceProvider;
+        var context = services.GetRequiredService<TContext>();
+        if (_handleSqliteDisposal)
+        {
+            context.Database.EnsureDeleted();
+        }
+        context.Database.EnsureCreated();
     }
 }

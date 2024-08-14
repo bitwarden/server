@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
@@ -12,6 +13,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Admin.Controllers;
 
@@ -95,12 +97,13 @@ public class ToolsController : Controller
                     SubmitForSettlement = true,
                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                     {
-                        CustomField = $"{btObjIdField}:{btObjId}"
+                        CustomField = $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
                     }
                 },
                 CustomFields = new Dictionary<string, string>
                 {
-                    [btObjIdField] = btObjId.ToString()
+                    [btObjIdField] = btObjId.ToString(),
+                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion
                 }
             });
 
@@ -516,8 +519,17 @@ public class ToolsController : Controller
             {
                 model.Filter.StartingAfter = null;
             }
+
             if (model.Action == StripeSubscriptionsAction.NextPage || model.Action == StripeSubscriptionsAction.Search)
             {
+                if (!string.IsNullOrEmpty(model.Filter.StartingAfter))
+                {
+                    var subscription = await _stripeAdapter.SubscriptionGetAsync(model.Filter.StartingAfter);
+                    if (subscription.Status == "canceled")
+                    {
+                        model.Filter.StartingAfter = null;
+                    }
+                }
                 model.Filter.EndingBefore = null;
             }
         }

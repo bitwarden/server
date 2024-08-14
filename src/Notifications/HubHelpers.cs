@@ -14,10 +14,12 @@ public static class HubHelpers
         string notificationJson,
         IHubContext<NotificationsHub> hubContext,
         IHubContext<AnonymousNotificationsHub> anonymousHubContext,
+        ILogger logger,
         CancellationToken cancellationToken = default(CancellationToken)
     )
     {
         var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson, _deserializerOptions);
+        logger.LogInformation("Sending notification: {NotificationType}", notification.Type);
         switch (notification.Type)
         {
             case PushType.SyncCipherUpdate:
@@ -50,6 +52,7 @@ public static class HubHelpers
                 break;
             case PushType.SyncCiphers:
             case PushType.SyncVault:
+            case PushType.SyncOrganizations:
             case PushType.SyncOrgKeys:
             case PushType.SyncSettings:
             case PushType.LogOut:

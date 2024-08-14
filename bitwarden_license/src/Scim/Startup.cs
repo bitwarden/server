@@ -1,5 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Core.Context;
+using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Scim.Context;
@@ -68,6 +70,10 @@ public class Startup
         services.AddDefaultServices(globalSettings);
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+        // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
+        // TODO: no longer be required - see PM-1880
+        services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
         // Mvc
         services.AddMvc(config =>

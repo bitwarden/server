@@ -1,20 +1,17 @@
 #!/usr/bin/env pwsh
 # Creates the vault_dev database, and runs all the migrations.
 
-# Due to azure-edge-sql not containing the mssql-tools on ARM, we manually use
-#  the mssql-tools container which runs under x86_64. We should monitor this
-#  in the future and investigate if we can migrate back.
-# docker-compose --profile mssql exec mssql bash /mnt/helpers/run_migrations.sh @args
-
 param(
-  [switch]$all = $false,
-  [switch]$postgres = $false,
-  [switch]$mysql = $false,
-  [switch]$mssql = $false,
-  [switch]$sqlite = $false,
-  [switch]$selfhost = $false,
-  [switch]$pipeline = $false
+  [switch]$all,
+  [switch]$postgres,
+  [switch]$mysql,
+  [switch]$mssql,
+  [switch]$sqlite,
+  [switch]$selfhost
 )
+
+# Abort on any error
+$ErrorActionPreference = "Stop"
 
 if (!$all -and !$postgres -and !$mysql -and !$sqlite) {
   $mssql = $true;
@@ -29,22 +26,23 @@ if ($all -or $postgres -or $mysql -or $sqlite) {
 }
 
 if ($all -or $mssql) {
-  if ($selfhost) {
-    $migrationArgs = "-s"
-  } elseif ($pipeline) {
-    $migrationArgs = "-p"
+  function Get-UserSecrets {
+    # The dotnet cli command sometimes adds //BEGIN and //END comments to the output, Where-Object removes comments
+    # to ensure a valid json
+    return dotnet user-secrets list --json --project ../src/Api | Where-Object { $_ -notmatch "^//" } | ConvertFrom-Json
   }
 
-  Write-Host "Starting Microsoft SQL Server Migrations"
-  docker run `
-    -v "$(pwd)/helpers/mssql:/mnt/helpers" `
-    -v "$(pwd)/../util/Migrator:/mnt/migrator/" `
-    -v "$(pwd)/.data/mssql:/mnt/data" `
-    --env-file .env `
-    --network=bitwardenserver_default `
-    --rm `
-    mcr.microsoft.com/mssql-tools `
-    /mnt/helpers/run_migrations.sh $migrationArgs
+  if ($selfhost) {
+    $msSqlConnectionString = $(Get-UserSecrets).'dev:selfHostOverride:globalSettings:sqlServer:connectionString'
+    $envName = "self-host"
+  } else {
+    $msSqlConnectionString = $(Get-UserSecrets).'globalSettings:sqlServer:connectionString'
+    $envName = "cloud"
+  }
+
+  Write-Host "Starting Microsoft SQL Server Migrations for $envName"
+
+  dotnet run --project ../util/MsSqlMigratorUtility/ "$msSqlConnectionString"
 }
 
 $currentDir = Get-Location

@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
@@ -72,6 +73,18 @@ public class AuthRequestsController : Controller
     [HttpPost("")]
     [AllowAnonymous]
     public async Task<AuthRequestResponseModel> Post([FromBody] AuthRequestCreateRequestModel model)
+    {
+        if (model.Type == AuthRequestType.AdminApproval)
+        {
+            throw new BadRequestException("You must be authenticated to create a request of that type.");
+        }
+        var authRequest = await _authRequestService.CreateAuthRequestAsync(model);
+        var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
+        return r;
+    }
+
+    [HttpPost("admin-request")]
+    public async Task<AuthRequestResponseModel> PostAdminRequest([FromBody] AuthRequestCreateRequestModel model)
     {
         var authRequest = await _authRequestService.CreateAuthRequestAsync(model);
         var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);

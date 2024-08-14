@@ -1,9 +1,9 @@
-﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
-using Bit.Core.Repositories;
 using Bit.Scim.Context;
 using Bit.Scim.Groups;
 using Bit.Scim.Models;
@@ -38,7 +38,6 @@ public class PutGroupCommandTests
         var expectedResult = new Group
         {
             Id = group.Id,
-            AccessAll = group.AccessAll,
             ExternalId = group.ExternalId,
             Name = displayName,
             OrganizationId = group.OrganizationId
@@ -77,7 +76,6 @@ public class PutGroupCommandTests
         var expectedResult = new Group
         {
             Id = group.Id,
-            AccessAll = group.AccessAll,
             ExternalId = group.ExternalId,
             Name = displayName,
             OrganizationId = group.OrganizationId

@@ -17,8 +17,8 @@ public class Program
                     logging.AddSerilog(hostingContext, (e, globalSettings) =>
                     {
                         var context = e.Properties["SourceContext"].ToString();
-                        if (context.Contains("IdentityServer4.Validation.TokenValidator") ||
-                            context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
+                        if (context.Contains("Duende.IdentityServer.Validation.TokenValidator") ||
+                            context.Contains("Duende.IdentityServer.Validation.TokenRequestValidator"))
                         {
                             return e.Level >= globalSettings.MinLogLevel.NotificationsSettings.IdentityToken;
                         }

@@ -1,0 +1,112 @@
+﻿using Bit.Api.Billing.Controllers;
+using Bit.Api.Billing.Models.Responses;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
+using Bit.Core.Context;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http.HttpResults;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Api.Test.Billing.Controllers;
+
+[ControllerCustomize(typeof(OrganizationBillingController))]
+[SutProviderCustomize]
+public class OrganizationBillingControllerTests
+{
+    [Theory, BitAutoData]
+    public async Task GetMetadataAsync_Unauthorized_ReturnsUnauthorized(
+        Guid organizationId,
+        SutProvider<OrganizationBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(false);
+
+        var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
+
+        Assert.IsType<UnauthorizedHttpResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMetadataAsync_MetadataNull_NotFound(
+        Guid organizationId,
+        SutProvider<OrganizationBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadataDTO)null);
+
+        var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
+
+        Assert.IsType<NotFound>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMetadataAsync_OK(
+        Guid organizationId,
+        SutProvider<OrganizationBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
+            .Returns(new OrganizationMetadataDTO(true));
+
+        var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
+
+        Assert.IsType<Ok<OrganizationMetadataResponse>>(result);
+
+        var organizationMetadataResponse = ((Ok<OrganizationMetadataResponse>)result).Value;
+
+        Assert.True(organizationMetadataResponse.IsOnSecretsManagerStandalone);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetHistoryAsync_Unauthorized_ReturnsUnauthorized(
+        Guid organizationId,
+        SutProvider<OrganizationBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(false);
+
+        var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
+
+        Assert.IsType<UnauthorizedHttpResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetHistoryAsync_OrganizationNotFound_ReturnsNotFound(
+        Guid organizationId,
+        SutProvider<OrganizationBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns((Organization)null);
+
+        var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
+
+        Assert.IsType<NotFound>(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetHistoryAsync_OK(
+        Guid organizationId,
+        Organization organization,
+        SutProvider<OrganizationBillingController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        // Manually create a BillingHistoryInfo object to avoid requiring AutoFixture to create HttpResponseHeaders
+        var billingInfo = new BillingHistoryInfo();
+
+        sutProvider.GetDependency<IPaymentService>().GetBillingHistoryAsync(organization).Returns(billingInfo);
+
+        // Act
+        var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
+
+        // Assert
+        var okResult = Assert.IsType<Ok<BillingHistoryInfo>>(result);
+        Assert.Equal(billingInfo, okResult.Value);
+    }
+}

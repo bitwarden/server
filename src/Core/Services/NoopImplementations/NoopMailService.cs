@@ -1,7 +1,8 @@
-﻿using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Models.Business;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services;
@@ -14,6 +15,20 @@ public class NoopMailService : IMailService
     }
 
     public Task SendVerifyEmailEmailAsync(string email, Guid userId, string hint)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendRegistrationVerificationEmailAsync(string email, string hint)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendTrialInitiationSignupEmailAsync(
+        string email,
+        string token,
+        ProductTierType productTier,
+        IEnumerable<ProductType> products)
     {
         return Task.FromResult(0);
     }
@@ -43,22 +58,18 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails)
+    public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
+        IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
+    public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg, bool initOrganization = false)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg, bool initOrganization = false)
+    public Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
         return Task.FromResult(0);
     }
@@ -88,11 +99,19 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
-        List<string> items, bool mentionInvoices)
-    {
-        return Task.FromResult(0);
-    }
+    public Task SendInvoiceUpcoming(
+        string email,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices) => Task.FromResult(0);
+
+    public Task SendInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices) => Task.FromResult(0);
 
     public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {
@@ -194,6 +213,9 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendProviderUpdatePaymentMethod(Guid organizationId, string organizationName, string providerName,
+        IEnumerable<string> emails) => Task.FromResult(0);
+
     public Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
     {
         return Task.FromResult(0);
@@ -239,9 +261,35 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
+        IEnumerable<string> ownerEmails)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization,
+        int maxSeatCount,
+        IEnumerable<string> ownerEmails)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier)
     {
         return Task.FromResult(0);
     }
+
+    public Task SendTrialInitiationEmailAsync(string email)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token) => throw new NotImplementedException();
+
+    public Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
+    {
+        return Task.FromResult(0);
+    }
+    public Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent) => throw new NotImplementedException();
 }
 

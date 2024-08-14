@@ -1,0 +1,21 @@
+{
+  "name": "Bitwarden Community Dev",
+  "dockerComposeFile": "../../.devcontainer/bitwarden_common/docker-compose.yml",
+  "service": "bitwarden_server",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    {
+      "source": "../../dev/.data/keys",
+      "target": "/home/vscode/.aspnet/DataProtection-Keys",
+      "type": "bind"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "features": {},
+      "extensions": ["ms-dotnettools.csdevkit"]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/community_dev/postCreateCommand.sh"
+}

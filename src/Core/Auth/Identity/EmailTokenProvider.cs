@@ -1,83 +1,63 @@
-﻿using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
+﻿using System.Text;
 using Bit.Core.Entities;
-using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Auth.Identity;
 
 public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
 {
-    private readonly IServiceProvider _serviceProvider;
+    private const string CacheKeyFormat = "EmailToken_{0}_{1}_{2}";
 
-    public EmailTokenProvider(IServiceProvider serviceProvider)
+    private readonly IDistributedCache _distributedCache;
+    private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
+
+    public EmailTokenProvider(
+        [FromKeyedServices("persistent")]
+        IDistributedCache distributedCache)
     {
-        _serviceProvider = serviceProvider;
+        _distributedCache = distributedCache;
+        _distributedCacheEntryOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+        };
     }
 
-    public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+    public int TokenLength { get; protected set; } = 8;
+    public bool TokenAlpha { get; protected set; } = false;
+    public bool TokenNumeric { get; protected set; } = true;
+
+    public virtual Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (!HasProperMetaData(provider))
+        return Task.FromResult(!string.IsNullOrEmpty(user.Email));
+    }
+
+    public virtual async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
+    {
+        var code = CoreHelpers.SecureRandomString(TokenLength, TokenAlpha, true, false, TokenNumeric, false);
+        var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
+        await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(code), _distributedCacheEntryOptions);
+        return code;
+    }
+
+    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    {
+        var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
+        var cachedValue = await _distributedCache.GetAsync(cacheKey);
+        if (cachedValue == null)
         {
             return false;
         }
 
-        return await _serviceProvider.GetRequiredService<IUserService>().
-            TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Email, user);
-    }
-
-    public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
-    {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (!HasProperMetaData(provider))
+        var code = Encoding.UTF8.GetString(cachedValue);
+        var valid = string.Equals(token, code);
+        if (valid)
         {
-            return null;
+            await _distributedCache.RemoveAsync(cacheKey);
         }
 
-        return Task.FromResult(RedactEmail((string)provider.MetaData["Email"]));
-    }
-
-    public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
-    {
-        return _serviceProvider.GetRequiredService<IUserService>().VerifyTwoFactorEmailAsync(user, token);
-    }
-
-    private bool HasProperMetaData(TwoFactorProvider provider)
-    {
-        return provider?.MetaData != null && provider.MetaData.ContainsKey("Email") &&
-            !string.IsNullOrWhiteSpace((string)provider.MetaData["Email"]);
-    }
-
-    private static string RedactEmail(string email)
-    {
-        var emailParts = email.Split('@');
-
-        string shownPart = null;
-        if (emailParts[0].Length > 2 && emailParts[0].Length <= 4)
-        {
-            shownPart = emailParts[0].Substring(0, 1);
-        }
-        else if (emailParts[0].Length > 4)
-        {
-            shownPart = emailParts[0].Substring(0, 2);
-        }
-        else
-        {
-            shownPart = string.Empty;
-        }
-
-        string redactedPart = null;
-        if (emailParts[0].Length > 4)
-        {
-            redactedPart = new string('*', emailParts[0].Length - 2);
-        }
-        else
-        {
-            redactedPart = new string('*', emailParts[0].Length - shownPart.Length);
-        }
-
-        return $"{shownPart}{redactedPart}@{emailParts[1]}";
+        return valid;
     }
 }

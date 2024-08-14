@@ -3,12 +3,15 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -22,7 +25,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using IdentityServer4.Validation;
+using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Identity.IdentityServer;
@@ -32,9 +35,9 @@ public abstract class BaseRequestValidator<T> where T : class
     private UserManager<User> _userManager;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IDeviceService _deviceService;
-    private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
+    private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -48,6 +51,8 @@ public abstract class BaseRequestValidator<T> where T : class
     protected IPolicyService PolicyService { get; }
     protected IFeatureService FeatureService { get; }
     protected ISsoConfigRepository SsoConfigRepository { get; }
+    protected IUserService _userService { get; }
+    protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -56,6 +61,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
+        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
@@ -67,7 +73,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
-        ISsoConfigRepository ssoConfigRepository)
+        ISsoConfigRepository ssoConfigRepository,
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -75,6 +82,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _userService = userService;
         _eventService = eventService;
         _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
+        _duoWebV4SDKService = duoWebV4SDKService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _applicationCacheService = applicationCacheService;
@@ -87,6 +95,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _tokenDataFactory = tokenDataFactory;
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
+        UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -132,18 +141,17 @@ public abstract class BaseRequestValidator<T> where T : class
 
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
-
-            if ((!verified || isBot) && twoFactorProviderType != TwoFactorProviderType.Remember)
+            if (!verified || isBot)
             {
-                await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
-                await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
-                return;
-            }
-            else if ((!verified || isBot) && twoFactorProviderType == TwoFactorProviderType.Remember)
-            {
-                // Delay for brute force.
-                await Task.Delay(2000);
-                await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
+                if (twoFactorProviderType != TwoFactorProviderType.Remember)
+                {
+                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                    await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
+                }
+                else if (twoFactorProviderType == TwoFactorProviderType.Remember)
+                {
+                    await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
+                }
                 return;
             }
         }
@@ -152,6 +160,17 @@ public abstract class BaseRequestValidator<T> where T : class
             twoFactorRequest = false;
             twoFactorRemember = false;
             twoFactorToken = null;
+        }
+
+
+        // Force legacy users to the web for migration
+        if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
+        {
+            if (UserService.IsLegacyUser(user) && request.ClientId != "web")
+            {
+                await FailAuthForLegacyUserAsync(user, context);
+                return;
+            }
         }
 
         // Returns true if can finish validation process
@@ -174,6 +193,13 @@ public abstract class BaseRequestValidator<T> where T : class
                     { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
                 });
         }
+    }
+
+    protected async Task FailAuthForLegacyUserAsync(User user, T context)
+    {
+        await BuildErrorResultAsync(
+            $"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}",
+            false, context, user);
     }
 
     protected abstract Task<bool> ValidateContextAsync(T context, CustomValidatorRequestContext validatorContext);
@@ -207,7 +233,7 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfIterations", user.KdfIterations);
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
-        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, GetSubject(context)));
+        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
 
         if (sendRememberToken)
         {
@@ -311,7 +337,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
     protected abstract ClaimsPrincipal GetSubject(T context);
 
-    private async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
+    protected virtual async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
     {
         if (request.GrantType == "client_credentials")
         {
@@ -350,7 +376,8 @@ public abstract class BaseRequestValidator<T> where T : class
             return true;
         }
 
-        // Check if user belongs to any organization with an active SSO policy 
+
+        // Check if user belongs to any organization with an active SSO policy
         var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
         {
@@ -401,9 +428,22 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Remember:
                 if (type != TwoFactorProviderType.Remember &&
-                    !(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
+                    !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return false;
+                }
+                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
+                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
+                {
+                    if (type == TwoFactorProviderType.Duo)
+                    {
+                        if (!token.Contains(':'))
+                        {
+                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
+                            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
+                        }
+                    }
                 }
 
                 return await _userManager.VerifyTwoFactorTokenAsync(user,
@@ -412,6 +452,20 @@ public abstract class BaseRequestValidator<T> where T : class
                 if (!organization?.TwoFactorProviderIsEnabled(type) ?? true)
                 {
                     return false;
+                }
+
+                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
+                if (FeatureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
+                {
+                    if (type == TwoFactorProviderType.OrganizationDuo)
+                    {
+                        if (!token.Contains(':'))
+                        {
+                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
+                            var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
+                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
+                        }
+                    }
                 }
 
                 return await _organizationDuoWebTokenProvider.ValidateAsync(token, organization, user);
@@ -429,7 +483,7 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Email:
             case TwoFactorProviderType.YubiKey:
-                if (!(await _userService.TwoFactorProviderIsEnabledAsync(type, user)))
+                if (!await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return null;
                 }
@@ -438,11 +492,13 @@ public abstract class BaseRequestValidator<T> where T : class
                     CoreHelpers.CustomProviderName(type));
                 if (type == TwoFactorProviderType.Duo)
                 {
-                    return new Dictionary<string, object>
+                    var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = token
+                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
                     };
+
+                    return duoResponse;
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)
                 {
@@ -455,7 +511,9 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else if (type == TwoFactorProviderType.Email)
                 {
-                    return new Dictionary<string, object> { ["Email"] = token };
+                    var twoFactorEmail = (string)provider.MetaData["Email"];
+                    var redactedEmail = CoreHelpers.RedactEmailAddress(twoFactorEmail);
+                    return new Dictionary<string, object> { ["Email"] = redactedEmail };
                 }
                 else if (type == TwoFactorProviderType.YubiKey)
                 {
@@ -466,13 +524,14 @@ public abstract class BaseRequestValidator<T> where T : class
             case TwoFactorProviderType.OrganizationDuo:
                 if (await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
                 {
-                    return new Dictionary<string, object>
+                    var duoResponse = new Dictionary<string, object>
                     {
                         ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
+                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
                     };
-                }
 
+                    return duoResponse;
+                }
                 return null;
             default:
                 return null;
@@ -587,34 +646,17 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <summary>
     /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
     /// </summary>
-    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, ClaimsPrincipal subject)
+    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, Device device, ClaimsPrincipal subject)
     {
-        var ssoConfigurationData = await GetSsoConfigurationDataAsync(subject);
-
-        var userDecryptionOption = new UserDecryptionOptions
-        {
-            HasMasterPassword = !string.IsNullOrEmpty(user.MasterPassword)
-        };
-
-        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
-        {
-            // KeyConnector makes it mutually exclusive
-            userDecryptionOption.KeyConnectorOption = new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
-            return userDecryptionOption;
-        }
-
-        // Only add the trusted device specific option when the flag is turned on
-        if (FeatureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext) && ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
-        {
-            var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
-            // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
-            userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval);
-        }
-
-        return userDecryptionOption;
+        var ssoConfig = await GetSsoConfigurationDataAsync(subject);
+        return await UserDecryptionOptionsBuilder
+            .ForUser(user)
+            .WithDevice(device)
+            .WithSso(ssoConfig)
+            .BuildAsync();
     }
 
-    private async Task<SsoConfigurationData?> GetSsoConfigurationDataAsync(ClaimsPrincipal subject)
+    private async Task<SsoConfig?> GetSsoConfigurationDataAsync(ClaimsPrincipal subject)
     {
         var organizationClaim = subject?.FindFirstValue("organizationId");
 
@@ -629,6 +671,6 @@ public abstract class BaseRequestValidator<T> where T : class
             return null;
         }
 
-        return ssoConfig.GetData();
+        return ssoConfig;
     }
 }

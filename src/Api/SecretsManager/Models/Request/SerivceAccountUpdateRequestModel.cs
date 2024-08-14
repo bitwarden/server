@@ -8,6 +8,7 @@ public class ServiceAccountUpdateRequestModel
 {
     [Required]
     [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string Name { get; set; }
 
     public ServiceAccount ToServiceAccount(Guid id)

@@ -12,6 +12,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
     {
         _userId = userId;
     }
+
     public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
     {
         var query = from c in dbContext.Ciphers
@@ -25,8 +26,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                            new { OrganizationId = (Guid?)o.Id, OuOrganizationId = o.Id, o.Enabled }
 
                     join cc in dbContext.CollectionCiphers
-                        on new { ou.AccessAll, CipherId = c.Id } equals
-                           new { AccessAll = false, cc.CipherId } into cc_g
+                        on c.Id equals cc.CipherId into cc_g
                     from cc in cc_g.DefaultIfEmpty()
 
                     join cu in dbContext.CollectionUsers
@@ -35,8 +35,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                     from cu in cu_g.DefaultIfEmpty()
 
                     join gu in dbContext.GroupUsers
-                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                           new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
+                        on new { CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                           new { CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
 
                     join g in dbContext.Groups
@@ -44,11 +44,11 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                     from g in g_g.DefaultIfEmpty()
 
                     join cg in dbContext.CollectionGroups
-                        on new { g.AccessAll, cc.CollectionId, gu.GroupId } equals
-                           new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
+                        on new { cc.CollectionId, gu.GroupId } equals
+                           new { cg.CollectionId, cg.GroupId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
 
-                    where ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null
+                    where cu.CollectionId != null || cg.CollectionId != null
 
                     select c;
 
@@ -73,6 +73,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Reprompt = c.Reprompt,
             ViewPassword = true,
             OrganizationUseTotp = false,
+            Key = c.Key
         });
         return union;
     }

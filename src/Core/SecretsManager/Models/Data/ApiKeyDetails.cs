@@ -1,11 +1,10 @@
-﻿using Bit.Core.SecretsManager.Entities;
+﻿using System.Diagnostics.CodeAnalysis;
+using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
 public class ApiKeyDetails : ApiKey
 {
-    public string ClientSecret { get; set; } // Deprecated as of 2023-05-17
-
     protected ApiKeyDetails() { }
 
     protected ApiKeyDetails(ApiKey apiKey)
@@ -30,6 +29,7 @@ public class ServiceAccountApiKeyDetails : ApiKeyDetails
 
     }
 
+    [SetsRequiredMembers]
     public ServiceAccountApiKeyDetails(ApiKey apiKey, Guid organizationId) : base(apiKey)
     {
         ServiceAccountOrganizationId = organizationId;

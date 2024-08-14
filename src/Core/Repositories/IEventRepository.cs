@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Models.Data;
 using Bit.Core.Vault.Entities;
 
+#nullable enable
+
 namespace Bit.Core.Repositories;
 
 public interface IEventRepository
@@ -19,4 +21,6 @@ public interface IEventRepository
         PageOptions pageOptions);
     Task CreateAsync(IEvent e);
     Task CreateManyAsync(IEnumerable<IEvent> e);
+    Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions);
 }

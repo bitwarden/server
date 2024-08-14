@@ -42,6 +42,11 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
+    public Task PushSyncOrganizationsAsync(Guid userId)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task PushSyncOrgKeysAsync(Guid userId)
     {
         return Task.FromResult(0);

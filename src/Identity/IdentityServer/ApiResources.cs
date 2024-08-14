@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Duende.IdentityServer.Models;
 using IdentityModel;
-using IdentityServer4.Models;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -20,7 +20,6 @@ public class ApiResources
                 Claims.Device,
                 Claims.OrganizationOwner,
                 Claims.OrganizationAdmin,
-                Claims.OrganizationManager,
                 Claims.OrganizationUser,
                 Claims.OrganizationCustom,
                 Claims.ProviderAdmin,

@@ -1,78 +1,39 @@
 ﻿using Bit.Migrator;
-using Microsoft.Extensions.Logging;
+using CommandDotNet;
 
 internal class Program
 {
     private static int Main(string[] args)
     {
-        if (args.Length == 0)
-        {
-            Console.WriteLine("Please enter a database connection string argument.");
-            WriteUsageToConsole();
-            return 1;
-        }
-
-        if (args.Length == 1 && (args[0] == "--verbose" || args[0] == "-v"))
-        {
-            Console.WriteLine($"Please enter a database connection string argument before {args[0]} option.");
-            WriteUsageToConsole();
-            return 1;
-        }
-
-        var databaseConnectionString = args[0];
-
-        var verbose = false;
-
-        if (args.Length == 2 && (args[1] == "--verbose" || args[1] == "-v"))
-        {
-            verbose = true;
-        }
-
-        var success = MigrateDatabase(databaseConnectionString, verbose);
-
-        if (!success)
-        {
-            return -1;
-        }
-
-        return 0;
+        return new AppRunner<Program>().Run(args);
     }
 
-    private static void WriteUsageToConsole()
-    {
-        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string>");
-        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs)");
-    }
+    [DefaultCommand]
+    public void Execute(
+        [Operand(Description = "Database connection string")]
+        string databaseConnectionString,
+        [Option('r', "repeatable", Description = "Mark scripts as repeatable")]
+        bool repeatable = false,
+        [Option('f', "folder", Description = "Folder name of database scripts")]
+        string folderName = MigratorConstants.DefaultMigrationsFolderName,
+        [Option('d', "dry-run", Description = "Print the scripts that will be applied without actually executing them")]
+        bool dryRun = false
+        ) => MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun);
 
-    private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, int attempt = 1)
+    private static bool MigrateDatabase(string databaseConnectionString,
+        bool repeatable = false, string folderName = "", bool dryRun = false)
     {
-        var logger = CreateLogger(verbose);
-
-        var migrator = new DbMigrator(databaseConnectionString, logger);
-        var success = migrator.MigrateMsSqlDatabaseWithRetries(verbose);
+        var migrator = new DbMigrator(databaseConnectionString);
+        bool success;
+        if (!string.IsNullOrWhiteSpace(folderName))
+        {
+            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, folderName, dryRun);
+        }
+        else
+        {
+            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, dryRun: dryRun);
+        }
 
         return success;
-    }
-
-    private static ILogger<DbMigrator> CreateLogger(bool verbose)
-    {
-        var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder
-                .AddFilter("Microsoft", LogLevel.Warning)
-                .AddFilter("System", LogLevel.Warning)
-                .AddConsole();
-
-            if (verbose)
-            {
-                builder.AddFilter("DbMigrator.DbMigrator", LogLevel.Debug);
-            }
-            else
-            {
-                builder.AddFilter("DbMigrator.DbMigrator", LogLevel.Information);
-            }
-        });
-        var logger = loggerFactory.CreateLogger<DbMigrator>();
-        return logger;
     }
 }

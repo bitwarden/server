@@ -1,0 +1,144 @@
+@inject IWebHostEnvironment HostingEnvironment
+@using Bit.Admin.Utilities
+@using Bit.Core.Billing.Enums
+@using Bit.Core.Enums
+@using Bit.Core.Utilities
+@model OrganizationEditModel
+
+<script>
+    (() => {
+        document.getElementById('@(nameof(Model.PlanType))').addEventListener('change', () => {
+            const selectEl = document.getElementById('@(nameof(Model.PlanType))');
+            const selectText = selectEl.options[selectEl.selectedIndex].text;
+            document.getElementById('@(nameof(Model.Plan))').value = selectText;
+            togglePlanFeatures(selectEl.options[selectEl.selectedIndex].value);
+        });
+        document.getElementById('gateway-customer-link')?.addEventListener('click', () => {
+            const gateway = document.getElementById('@(nameof(Model.Gateway))');
+            const customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
+            if (!gateway || gateway.value === '' || !customerId || customerId.value === '') {
+                return;
+            }
+            if (gateway.value === '@((byte)GatewayType.Stripe)') {
+                const url = `@(HostingEnvironment.GetStripeUrl())/customers/${customerId.value}/`;
+                window.open(url, '_blank');
+            } else if (gateway.value === '@((byte)GatewayType.Braintree)') {
+                const url = `@(HostingEnvironment.GetBraintreeMerchantUrl())/@Model.BraintreeMerchantId/${customerId.value}`;
+                window.open(url, '_blank');
+            }
+        });
+        document.getElementById('gateway-subscription-link')?.addEventListener('click', () => {
+            const gateway = document.getElementById('@(nameof(Model.Gateway))');
+            const subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
+            if (!gateway || gateway.value === '' || !subId || subId.value === '') {
+                return;
+            }
+            if (gateway.value === '@((byte)GatewayType.Stripe)') {
+                const url = `@(HostingEnvironment.GetStripeUrl())/subscriptions/${subId.value}/`;
+                window.open(url, '_blank');
+            } else if (gateway.value === '@((byte)GatewayType.Braintree)') {
+                const url = `@(HostingEnvironment.GetBraintreeMerchantUrl())/@Model.BraintreeMerchantId/subscriptions/${subId.value}`;
+                window.open(url, '_blank');
+            }
+        });
+        document.getElementById('@(nameof(Model.UseSecretsManager))').addEventListener('change', (event) => {
+            document.getElementById('organization-secrets-configuration').hidden = !event.target.checked;
+
+            if (event.target.checked) {
+                setInitialSecretsManagerConfiguration();
+                return;
+            }
+
+            clearSecretsManagerConfiguration();
+        });
+    })();
+
+    function togglePlanFeatures(planType) {
+        const plan = getPlan(planType);
+
+        if (!plan) {
+            return;
+        }
+
+        console.log(plan);
+
+        document.getElementById('@(nameof(Model.SelfHost))').checked = plan.hasSelfHost;
+
+        document.getElementById('@(nameof(Model.Use2fa))').checked = plan.has2fa;
+        document.getElementById('@(nameof(Model.UseApi))').checked = plan.hasApi;
+        document.getElementById('@(nameof(Model.UseGroups))').checked = plan.hasGroups;
+        document.getElementById('@(nameof(Model.UsePolicies))').checked = plan.hasPolicies;
+        document.getElementById('@(nameof(Model.UseSso))').checked = plan.hasSso;
+        document.getElementById('@(nameof(Model.UseScim))').checked = plan.hasScim;
+        document.getElementById('@(nameof(Model.UseDirectory))').checked = plan.hasDirectory;
+        document.getElementById('@(nameof(Model.UseEvents))').checked = plan.hasEvents;
+        document.getElementById('@(nameof(Model.UseResetPassword))').checked = plan.hasResetPassword;
+        document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = plan.hasCustomPermissions;
+        // use key connector is intentionally omitted
+
+        document.getElementById('@(nameof(Model.UseTotp))').checked = plan.hasTotp;
+        document.getElementById('@(nameof(Model.UsersGetPremium))').checked = plan.usersGetPremium;
+
+        document.getElementById('@(nameof(Model.MaxStorageGb))').value =
+            document.getElementById('@(nameof(Model.MaxStorageGb))').value ||
+            plan.passwordManager.baseStorageGb ||
+            1;
+        document.getElementById('@(nameof(Model.Seats))').value = document.getElementById('@(nameof(Model.Seats))').value ||
+            plan.passwordManager.baseSeats ||
+            1;
+    }
+
+    function unlinkProvider(id) {
+        if (confirm('Are you sure you want to unlink this organization from its provider?')) {
+            $.ajax({
+                type: "POST",
+                url: `@Url.Action("UnlinkOrganizationFromProvider", "Organizations")?id=${id}`,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    alert("Successfully unlinked provider");
+                    window.location.href = `@Url.Action("Edit", "Organizations")?id=${id}`;
+                },
+                error: function (response) {
+                    alert("Error!");
+                }
+            });
+        }
+        return false;
+    }
+
+    /***
+    * Set Secrets Manager values based on current usage (for migrating from SM beta or reinstating an old subscription)
+    */
+    function setInitialSecretsManagerConfiguration() {
+        const planType = document.getElementById('@(nameof(Model.PlanType))').value;
+
+        // Seats
+        document.getElementById('@(nameof(Model.SmSeats))').value = Math.max(@Model.OccupiedSmSeatsCount, 1);
+
+        // Service accounts
+        const baseServiceAccounts = getPlan(planType)?.secretsManager?.baseServiceAccount ?? 0;
+        if (planType !== '@((byte)PlanType.Free)' && @Model.ServiceAccountsCount > baseServiceAccounts) {
+            document.getElementById('@(nameof(Model.SmServiceAccounts))').value = @Model.ServiceAccountsCount;
+        } else {
+            document.getElementById('@(nameof(Model.SmServiceAccounts))').value = baseServiceAccounts;
+        }
+
+        // Clear autoscale values (no defaults)
+        document.getElementById('@(nameof(Model.MaxAutoscaleSmSeats))').value = '';
+        document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
+    }
+
+    function clearSecretsManagerConfiguration() {
+        document.getElementById('@(nameof(Model.SmSeats))').value = '';
+        document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '';
+        document.getElementById('@(nameof(Model.MaxAutoscaleSmSeats))').value = '';
+        document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
+    }
+
+    function getPlan(planType) {
+        const plans = @Html.Raw(Json.Serialize(Model.GetPlansHelper()));
+        return plans.find(p => p.type == planType);
+    }
+</script>
