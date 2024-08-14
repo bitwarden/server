@@ -6,6 +6,8 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Azure.Cosmos;
 
+#nullable enable
+
 namespace Bit.Core.Auth.Repositories.Cosmos;
 
 public class GrantRepository : IGrantRepository
@@ -34,7 +36,7 @@ public class GrantRepository : IGrantRepository
         _container = _database.GetContainer("grant");
     }
 
-    public async Task<IGrant> GetByKeyAsync(string key)
+    public async Task<IGrant?> GetByKeyAsync(string key)
     {
         var id = Base64IdStringConverter.ToId(key);
         try

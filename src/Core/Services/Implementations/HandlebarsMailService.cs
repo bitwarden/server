@@ -4,6 +4,8 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Mail;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
@@ -70,6 +72,27 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendTrialInitiationSignupEmailAsync(
+        string email,
+        string token,
+        ProductTierType productTier,
+        IEnumerable<ProductType> products)
+    {
+        var message = CreateDefaultMessage("Verify your email", email);
+        var model = new TrialInitiationVerifyEmail
+        {
+            Token = WebUtility.UrlEncode(token),
+            Email = WebUtility.UrlEncode(email),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            ProductTier = productTier,
+            Product = products
+        };
+        await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "VerifyEmail";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
 
     public async Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token)
     {
@@ -274,7 +297,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendTrialInitiationEmailAsync(string userEmail)
     {
-        var message = CreateDefaultMessage("Welcome to Bitwarden!", userEmail);
+        var message = CreateDefaultMessage("Welcome to Bitwarden; 3 steps to get started!", userEmail);
         var model = new BaseMailModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct,
@@ -492,7 +515,7 @@ public class HandlebarsMailService : IMailService
         return CreateDefaultMessage(subject, new List<string> { toEmail });
     }
 
-    private MailMessage CreateDefaultMessage(string subject, IEnumerable<string> toEmails)
+    private static MailMessage CreateDefaultMessage(string subject, IEnumerable<string> toEmails)
     {
         return new MailMessage
         {
