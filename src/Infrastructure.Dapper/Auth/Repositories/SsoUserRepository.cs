@@ -6,6 +6,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class SsoUserRepository : Repository<SsoUser, long>, ISsoUserRepository
@@ -29,7 +31,7 @@ public class SsoUserRepository : Repository<SsoUser, long>, ISsoUserRepository
         }
     }
 
-    public async Task<SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
+    public async Task<SsoUser?> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

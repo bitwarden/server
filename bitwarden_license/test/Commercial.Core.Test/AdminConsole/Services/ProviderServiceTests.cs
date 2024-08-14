@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -77,6 +78,51 @@ public class ProviderServiceTests
         await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key);
 
         await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(provider);
+        await sutProvider.GetDependency<IProviderUserRepository>().Received()
+            .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CompleteSetupAsync_ConsolidatedBilling_Success(User user, Provider provider, string key, TaxInfo taxInfo,
+            [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)] ProviderUser providerUser,
+            SutProvider<ProviderService> sutProvider)
+    {
+        providerUser.ProviderId = provider.Id;
+        providerUser.UserId = user.Id;
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByIdAsync(user.Id).Returns(user);
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetByProviderUserAsync(provider.Id, user.Id).Returns(providerUser);
+
+        var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
+        var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+        sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
+            .Returns(true);
+
+        var providerBillingService = sutProvider.GetDependency<IProviderBillingService>();
+
+        var customer = new Customer { Id = "customer_id" };
+        providerBillingService.SetupCustomer(provider, taxInfo).Returns(customer);
+
+        var subscription = new Subscription { Id = "subscription_id" };
+        providerBillingService.SetupSubscription(provider).Returns(subscription);
+
+        sutProvider.Create();
+
+        var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo);
+
+        await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(Arg.Is<Provider>(
+            p =>
+                p.GatewayCustomerId == customer.Id &&
+                p.GatewaySubscriptionId == subscription.Id &&
+                p.Status == ProviderStatusType.Billable));
+
         await sutProvider.GetDependency<IProviderUserRepository>().Received()
             .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
     }

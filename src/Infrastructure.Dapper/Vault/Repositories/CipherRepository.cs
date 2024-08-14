@@ -750,7 +750,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         collectionsTable.Columns.Add(creationDateColumn);
         var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
         collectionsTable.Columns.Add(revisionDateColumn);
-        var externalIdColumn = new DataColumn(nameof(c.ExternalId), c.ExternalId.GetType());
+        var externalIdColumn = new DataColumn(nameof(c.ExternalId), typeof(string));
         collectionsTable.Columns.Add(externalIdColumn);
 
         foreach (DataColumn col in collectionsTable.Columns)

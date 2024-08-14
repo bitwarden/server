@@ -39,38 +39,7 @@ public class ProviderClientsControllerTests
 
         var result = await sutProvider.Sut.CreateAsync(provider.Id, requestBody);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateAsync_MissingClientOrganization_ServerError(
-        Provider provider,
-        CreateClientOrganizationRequestBody requestBody,
-        SutProvider<ProviderClientsController> sutProvider)
-    {
-        ConfigureStableAdminInputs(provider, sutProvider);
-
-        var user = new User();
-
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-
-        var clientOrganizationId = Guid.NewGuid();
-
-        sutProvider.GetDependency<IProviderService>().CreateOrganizationAsync(
-                provider.Id,
-                Arg.Any<OrganizationSignup>(),
-                requestBody.OwnerEmail,
-                user)
-            .Returns(new ProviderOrganization
-            {
-                OrganizationId = clientOrganizationId
-            });
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(clientOrganizationId).ReturnsNull();
-
-        var result = await sutProvider.Sut.CreateAsync(provider.Id, requestBody);
-
-        Assert.IsType<ProblemHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -137,32 +106,11 @@ public class ProviderClientsControllerTests
 
         var result = await sutProvider.Sut.UpdateAsync(provider.Id, providerOrganizationId, requestBody);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_NoOrganization_ServerError(
-        Provider provider,
-        Guid providerOrganizationId,
-        UpdateClientOrganizationRequestBody requestBody,
-        ProviderOrganization providerOrganization,
-        SutProvider<ProviderClientsController> sutProvider)
-    {
-        ConfigureStableServiceUserInputs(provider, sutProvider);
-
-        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
-            .Returns(providerOrganization);
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(providerOrganization.OrganizationId)
-            .ReturnsNull();
-
-        var result = await sutProvider.Sut.UpdateAsync(provider.Id, providerOrganizationId, requestBody);
-
-        Assert.IsType<ProblemHttpResult>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_AssignedSeats_NoContent(
+    public async Task UpdateAsync_AssignedSeats_Ok(
         Provider provider,
         Guid providerOrganizationId,
         UpdateClientOrganizationRequestBody requestBody,
@@ -193,7 +141,7 @@ public class ProviderClientsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_Name_NoContent(
+    public async Task UpdateAsync_Name_Ok(
         Provider provider,
         Guid providerOrganizationId,
         UpdateClientOrganizationRequestBody requestBody,

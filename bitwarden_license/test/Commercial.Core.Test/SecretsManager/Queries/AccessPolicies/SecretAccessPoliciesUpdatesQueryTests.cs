@@ -122,8 +122,8 @@ public class SecretAccessPoliciesUpdatesQueryTests
         {
             OrganizationUserId = data.UserAccessPolicies.First().OrganizationUserId,
             GrantedSecretId = data.SecretId,
-            Read = !data.ServiceAccountAccessPolicies.First().Read,
-            Write = !data.ServiceAccountAccessPolicies.First().Write
+            Read = !data.UserAccessPolicies.First().Read,
+            Write = !data.UserAccessPolicies.First().Write
         };
 
         return (updatePolicy, currentPolicyToDelete);
@@ -138,8 +138,8 @@ public class SecretAccessPoliciesUpdatesQueryTests
         {
             GroupId = data.GroupAccessPolicies.First().GroupId,
             GrantedSecretId = data.SecretId,
-            Read = !data.ServiceAccountAccessPolicies.First().Read,
-            Write = !data.ServiceAccountAccessPolicies.First().Write
+            Read = !data.GroupAccessPolicies.First().Read,
+            Write = !data.GroupAccessPolicies.First().Write
         };
 
         return (updatePolicy, currentPolicyToDelete);
