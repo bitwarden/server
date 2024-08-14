@@ -104,7 +104,6 @@ public static class FeatureFlagKeys
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
-    public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
@@ -136,6 +135,8 @@ public static class FeatureFlagKeys
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
     public const string MembersTwoFAQueryOptimization = "ac-1698-members-two-fa-query-optimization";
+    public const string NativeCarouselFlow = "native-carousel-flow";
+    public const string NativeCreateAccountFlow = "native-create-account-flow";
 
     public static List<string> GetAllKeys()
     {
@@ -151,7 +152,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { FlexibleCollectionsV1, "true" },
             { BulkDeviceApproval, "true" }
         };
     }
