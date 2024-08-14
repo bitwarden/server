@@ -1800,16 +1800,19 @@ public class OrganizationService : IOrganizationService
 
         // Users
 
+        var events = new List<(OrganizationUser ou, EventType e, DateTime? d)>();
+
         // Remove Users
         if (removeUserExternalIds?.Any() ?? false)
         {
-            var removeUsersSet = new HashSet<string>(removeUserExternalIds);
             var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
-
-            await _organizationUserRepository.DeleteManyAsync(removeUsersSet
+            var removeUsersSet = new HashSet<string>(removeUserExternalIds)
                 .Except(newUsersSet)
                 .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
-                .Select(u => existingUsersDict[u].Id));
+                .Select(u => existingUsersDict[u]);
+
+            await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
+            events.AddRange(removeUsersSet.Select(u => (new OrganizationUser { Id = u.Id, UserId = u.UserId, OrganizationId = u.OrganizationId }, EventType.OrganizationUser_Removed, (DateTime?)DateTime.UtcNow)));
         }
 
         if (overwriteExisting)
@@ -1820,6 +1823,7 @@ public class OrganizationService : IOrganizationService
                 !newUsersSet.Contains(u.ExternalId) &&
                 existingExternalUsersIdDict.ContainsKey(u.ExternalId));
             await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
+            events.AddRange(usersToDelete.Select(u => (new OrganizationUser { Id = u.Id, UserId = u.UserId, OrganizationId = u.OrganizationId }, EventType.OrganizationUser_Removed, (DateTime?)DateTime.UtcNow)));
             foreach (var deletedUser in usersToDelete)
             {
                 existingExternalUsersIdDict.Remove(deletedUser.ExternalId);
@@ -1953,6 +1957,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        await _eventService.LogOrganizationUserEventsAsync(events);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
