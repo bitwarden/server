@@ -56,15 +56,15 @@ jobs:
       - name: Sleep
         run: sleep 15s
       
-      - name: Checking Pending Model Changes (MySQL)
+      - name: Checking pending model changes (MySQL)
         working-directory: "util/MySqlMigrations"
         run: "dotnet ef migrations has-pending-model-changes"
 
-      - name: Checking Pending Model Changes (Postgres)
+      - name: Checking pending model changes (Postgres)
         working-directory: "util/PostgresMigrations"
         run: "dotnet ef migrations has-pending-model-changes"
 
-      - name: Checking Pending Model Changes (SQLite)
+      - name: Checking pending model changes (SQLite)
         working-directory: "util/SqliteMigrations"
         run: "dotnet ef migrations has-pending-model-changes"
 
