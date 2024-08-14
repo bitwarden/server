@@ -9,7 +9,7 @@ on:
       - "rc"
       - "hotfix-rc"
     paths:
-      - ".github/workflows/infrastructure-tests.yml" # This file
+      - ".github/workflows/test-database.yml" # This file
       - "src/Sql/**" # SQL Server Database Changes
       - "util/Migrator/**" # New SQL Server Migrations
       - "util/MySqlMigrations/**" # Changes to MySQL
@@ -20,7 +20,7 @@ on:
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
   pull_request:
     paths:
-      - ".github/workflows/infrastructure-tests.yml" # This file
+      - ".github/workflows/test-database.yml" # This file
       - "src/Sql/**" # SQL Server Database Changes
       - "util/Migrator/**" # New SQL Server Migrations
       - "util/MySqlMigrations/**" # Changes to MySQL
