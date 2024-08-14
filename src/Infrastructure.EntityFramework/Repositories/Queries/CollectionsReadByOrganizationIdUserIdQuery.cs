@@ -3,6 +3,9 @@ using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
+/// <summary>
+/// Returns all Collections that a user is assigned to in an organization, either directly or via a group.
+/// </summary>
 public class CollectionsReadByOrganizationIdUserIdQuery : IQuery<Collection>
 {
     private readonly Guid? _organizationId;
