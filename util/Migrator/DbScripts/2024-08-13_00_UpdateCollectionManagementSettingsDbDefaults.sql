@@ -1,5 +1,19 @@
 -- Objective: 'LimitCollectionCreationDeletion' and 'AllowAdminAccessToAllCollectionItems' columns were set to 1 by
 -- default as a transitional measure. This script updates the default values to 0 to mirror the values set in code.
+
+-- Step 1: Drop existing default constraints
+ALTER TABLE [dbo].[Organization] DROP CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion];
+GO
+ALTER TABLE [dbo].[Organization] DROP CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems];
+GO
+
+-- Step 2: Add new default constraints with default value of 0
+ALTER TABLE [dbo].[Organization] ADD CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion] DEFAULT (0) FOR [LimitCollectionCreationDeletion];
+GO
+ALTER TABLE [dbo].[Organization] ADD CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems] DEFAULT (0) FOR [AllowAdminAccessToAllCollectionItems];
+GO
+
+-- Step 3: Update default values on Create stored procedure
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Identifier NVARCHAR(50),
@@ -176,6 +190,7 @@ BEGIN
 END
 GO
 
+-- Step 4: Update default values on Update stored procedure
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
