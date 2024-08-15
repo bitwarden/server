@@ -170,7 +170,6 @@ public class CiphersControllerTests
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = allowAdminsAccessToAllItems
         });
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
         if (shouldSucceed)
         {
