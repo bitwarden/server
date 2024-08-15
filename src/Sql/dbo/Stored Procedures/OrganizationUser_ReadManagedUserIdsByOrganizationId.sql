@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadManagedIdsByOrganizationId]
+﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadManagedUserIdsByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -13,6 +13,6 @@ BEGIN
         FROM [dbo].[OrganizationDomain] OD
         WHERE OD.[OrganizationId] = @OrganizationId
             AND OD.[VerifiedDate] IS NOT NULL
-            AND OD.[DomainName] = SUBSTRING(U.[Email], CHARINDEX('@', U.[Email]) + 1, LEN(U.[Email]))
+            AND U.[Email] LIKE '%@' + OD.[DomainName]
     );
 END

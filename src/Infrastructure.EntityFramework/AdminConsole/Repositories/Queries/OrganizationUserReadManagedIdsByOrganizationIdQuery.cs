@@ -17,7 +17,7 @@ public class OrganizationUserReadManagedIdsByOrganizationIdQuery : IQuery<Guid>
                           dbContext.OrganizationDomains
                               .Any(od => od.OrganizationId == _organizationId &&
                                          od.VerifiedDate != null &&
-                                         od.DomainName == u.Email.Substring(u.Email.IndexOf('@') + 1))
+                                         u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower()))
                     select ou.Id;
 
         return query;
