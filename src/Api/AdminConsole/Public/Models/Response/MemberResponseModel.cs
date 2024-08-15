@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Entities;
@@ -16,6 +17,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     [JsonConstructor]
     public MemberResponseModel() { }
 
+    [SetsRequiredMembers]
     public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections) : base(user)
     {
         if (user == null)
@@ -30,6 +32,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
     }
 
+    [SetsRequiredMembers]
     public MemberResponseModel(OrganizationUserUserDetails user, bool twoFactorEnabled,
         IEnumerable<CollectionAccessSelection> collections) : base(user)
     {

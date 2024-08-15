@@ -143,7 +143,7 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "SCIM")]
     public bool UseScim { get; set; }
     [Display(Name = "Secrets Manager")]
-    public bool UseSecretsManager { get; set; }
+    public new bool UseSecretsManager { get; set; }
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]

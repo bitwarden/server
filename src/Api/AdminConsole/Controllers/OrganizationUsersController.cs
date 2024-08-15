@@ -668,8 +668,8 @@ public class OrganizationUsersController : Controller
     {
         var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
-        var responseTasks = organizationUsers
-            .Select(async o =>
+        var responses = organizationUsers
+            .Select(o =>
             {
                 var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
                 var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
@@ -686,7 +686,6 @@ public class OrganizationUsersController : Controller
 
                 return orgUser;
             });
-        var responses = await Task.WhenAll(responseTasks);
 
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
