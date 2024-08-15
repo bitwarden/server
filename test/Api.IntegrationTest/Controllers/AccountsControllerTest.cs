@@ -24,6 +24,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadFromJsonAsync<ProfileResponseModel>();
+        Assert.NotNull(content);
         Assert.Equal("integration-test@bitwarden.com", content.Email);
         Assert.Null(content.Name);
         Assert.False(content.EmailVerified);

@@ -275,14 +275,14 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
+        uses: anchore/scan-action@bc9adf64917dd9444d6cf4dd68620c34ca3a5f69 # v4.1.1
         with:
           image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
           output-format: sarif
 
       - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
+        uses: github/codeql-action/upload-sarif@eb055d739abdc2e8de2e5f4ba1a8b246daa779aa # v3.26.0
         with:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
 

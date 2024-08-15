@@ -113,9 +113,6 @@ public class CollectionServiceTest
     {
         collection.Id = default;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, Arg.Any<bool>())
-            .Returns(true);
         organization.AllowAdminAccessToAllCollectionItems = false;
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, users));
