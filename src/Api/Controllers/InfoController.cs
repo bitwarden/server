@@ -18,6 +18,12 @@ public class InfoController : Controller
         return Json(AssemblyHelpers.GetVersion());
     }
 
+    [HttpGet("~/hello")]
+    public IActionResult Hello()
+    {
+        return Content("Hello, this is API!", "text/plain");
+    }
+
     [HttpGet("~/ip")]
     public JsonResult Ip()
     {
