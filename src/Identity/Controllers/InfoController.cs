@@ -12,6 +12,12 @@ public class InfoController : Controller
         return DateTime.UtcNow;
     }
 
+    [HttpGet("~/hello")]
+    public IActionResult Hello()
+    {
+        return Content("Hello, this is Identity!", "text/plain");
+    }
+
     [HttpGet("~/version")]
     public JsonResult GetVersion()
     {
