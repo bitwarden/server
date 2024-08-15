@@ -1,5 +1,5 @@
 general:
-  webVersionOverride: 2024.6.0
+  webVersionOverride: 2024.7.1
 component:
   admin:
     image:
