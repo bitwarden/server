@@ -123,11 +123,12 @@ public class AuthRequestService : IAuthRequestService
             }
 
             // A user event will automatically create logs for each organization/provider this user belongs to.
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            await _eventService.LogUserEventAsync(user!.Id, EventType.User_RequestedDeviceApproval);
 
             AuthRequest? firstAuthRequest = null;
             foreach (var organizationUser in organizationUsers)
             {
+                Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
                 var createdAuthRequest = await CreateAuthRequestAsync(model, user, organizationUser.OrganizationId);
                 firstAuthRequest ??= createdAuthRequest;
             }
@@ -136,6 +137,7 @@ public class AuthRequestService : IAuthRequestService
             return firstAuthRequest!;
         }
 
+        Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
         var authRequest = await CreateAuthRequestAsync(model, user, organizationId: null);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
         return authRequest;
