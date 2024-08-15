@@ -1,2 +1,39 @@
 general:
   webVersionOverride: 2024.6.0
+component:
+  admin:
+    image:
+      name: bitwardenprod.azurecr.io/admin
+      tag:
+  api:
+    image:
+      name: bitwardenprod.azurecr.io/api
+  attachments:
+    image:
+      name: bitwardenprod.azurecr.io/attachments
+  events:
+    image:
+      name: bitwardenprod.azurecr.io/events
+  icons:
+    image:
+      name: bitwardenprod.azurecr.io/icons
+  identity:
+    image:
+      name: bitwardenprod.azurecr.io/identity
+  notifications:
+    image:
+      name: bitwardenprod.azurecr.io/notifications
+  scim:
+    image:
+      name: bitwardenprod.azurecr.io/scim
+  sso:
+    image:
+      name: bitwardenprod.azurecr.io/sso
+  web:
+    image:
+      name: bitwardenprod.azurecr.io/web
+
+supportComponents:
+  dbMigrator:
+    image:
+      name: bitwardenprod.azurecr.io/mssqlmigratorutility
