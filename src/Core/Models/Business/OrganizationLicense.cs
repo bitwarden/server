@@ -234,17 +234,17 @@ public class OrganizationLicense : ILicense
 
         if (!Enabled)
         {
-            errorMessages.AppendLine("Invalid license. The license is not enabled.");
+            errorMessages.AppendLine("The license is not enabled.");
         }
 
         if (Issued > DateTime.UtcNow)
         {
-            errorMessages.AppendLine("Invalid license. The license issue date is in the future.");
+            errorMessages.AppendLine("The license hasn't been issued yet");
         }
 
         if (Expires < DateTime.UtcNow)
         {
-            errorMessages.AppendLine("Invalid license. The license has expired.");
+            errorMessages.AppendLine("The license has expired.");
         }
 
         if (!ValidLicenseVersion)
@@ -254,12 +254,12 @@ public class OrganizationLicense : ILicense
 
         if (InstallationId != globalSettings.Installation.Id)
         {
-            errorMessages.AppendLine("Invalid license. The installation ID does not match the current installation.");
+            errorMessages.AppendLine("The installation ID does not match the current installation.");
         }
 
         if (!SelfHost)
         {
-            errorMessages.AppendLine("Invalid license. The license does not allow for on-premise hosting of organizations.");
+            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
         }
 
         if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
@@ -275,7 +275,7 @@ public class OrganizationLicense : ILicense
 
         if (errorMessages.Length > 0)
         {
-            exception = errorMessages.ToString().TrimEnd();
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
             return false;
         }
 

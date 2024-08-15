@@ -119,7 +119,7 @@ public class UserLicense : ILicense
 
         if (Issued > DateTime.UtcNow)
         {
-            errorMessages.AppendLine("The license issue date is in the future.");
+            errorMessages.AppendLine("The license hasn't been issued yet");
         }
 
         if (Expires < DateTime.UtcNow)
@@ -132,22 +132,19 @@ public class UserLicense : ILicense
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
 
-        if (Version == 1)
+        if (!user.EmailVerified)
         {
-            if (!user.EmailVerified)
-            {
-                errorMessages.AppendLine("The user's email is not verified.");
-            }
+            errorMessages.AppendLine("The user's email is not verified.");
+        }
 
-            if (!user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase))
-            {
-                errorMessages.AppendLine("The user's email does not match the license email.");
-            }
+        if (!user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase))
+        {
+            errorMessages.AppendLine("The user's email does not match the license email.");
         }
 
         if (errorMessages.Length > 0)
         {
-            exception = errorMessages.ToString().TrimEnd();
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
             return false;
         }
 
