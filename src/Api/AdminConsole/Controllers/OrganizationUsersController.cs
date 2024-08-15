@@ -17,6 +17,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -52,6 +53,7 @@ public class OrganizationUsersController : Controller
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -107,7 +109,7 @@ public class OrganizationUsersController : Controller
         var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
 
         // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-        response.Type = response.Type.GetFlexibleCollectionsUserType(response.Permissions);
+        response.Type = GetFlexibleCollectionsUserType(response.Type, response.Permissions);
 
         // Set 'Edit/Delete Assigned Collections' custom permissions to false
         if (response.Permissions is not null)
@@ -134,7 +136,12 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var OrganizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            return await Get_vNext(orgId, includeGroups, includeCollections);
+        }
+
+        var organizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
             new OrganizationUserUserDetailsQueryRequest
             {
                 OrganizationId = orgId,
@@ -143,20 +150,12 @@ public class OrganizationUsersController : Controller
             }
         );
 
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(OrganizationUsers);
-        var responseTasks = OrganizationUsers
+        var responseTasks = organizationUsers
             .Select(async o =>
             {
-                bool userTwoFactorEnabled = false;
-                if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
-                {
-                    userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
-                }
-                else
-                {
-                    userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(o);
-                }
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
+                var orgUser = new OrganizationUserUserDetailsResponseModel(o,
+                    await _userService.TwoFactorIsEnabledAsync(o));
+
                 return orgUser;
             });
         var responses = await Task.WhenAll(responseTasks);
@@ -637,5 +636,57 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    private OrganizationUserType GetFlexibleCollectionsUserType(OrganizationUserType type, Permissions permissions)
+    {
+        // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
+        if (type == OrganizationUserType.Custom && permissions is not null)
+        {
+            if ((permissions.EditAssignedCollections || permissions.DeleteAssignedCollections) &&
+                permissions is
+                {
+                    AccessEventLogs: false,
+                    AccessImportExport: false,
+                    AccessReports: false,
+                    CreateNewCollections: false,
+                    EditAnyCollection: false,
+                    DeleteAnyCollection: false,
+                    ManageGroups: false,
+                    ManagePolicies: false,
+                    ManageSso: false,
+                    ManageUsers: false,
+                    ManageResetPassword: false,
+                    ManageScim: false
+                })
+            {
+                return OrganizationUserType.User;
+            }
+        }
+
+        return type;
+    }
+
+    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get_vNext(Guid orgId,
+        bool includeGroups = false, bool includeCollections = false)
+    {
+        var organizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
+            new OrganizationUserUserDetailsQueryRequest
+            {
+                OrganizationId = orgId,
+                IncludeGroups = includeGroups,
+                IncludeCollections = includeCollections
+            }
+        );
+        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
+        var responses = organizationUsers
+            .Select(o =>
+            {
+                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
+                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
+
+                return orgUser;
+            });
+        return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
 }

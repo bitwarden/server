@@ -67,7 +67,6 @@ public class ReportsController : Controller
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
 
         var reports = MemberAccessReportResponseModel.CreateReport(
-            orgUsers,
             orgGroups,
             orgCollectionsWithAccess,
             orgItems,

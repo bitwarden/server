@@ -31,7 +31,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         var organizationUsers = await _organizationUserRepository
             .GetManyDetailsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
 
-        var responseTasks = organizationUsers
+        return organizationUsers
             .Select(o =>
             {
                 var userPermissions = o.GetPermissions();
@@ -46,7 +46,5 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
                 return o;
             });
-        var responses = responseTasks;
-        return responses;
     }
 }

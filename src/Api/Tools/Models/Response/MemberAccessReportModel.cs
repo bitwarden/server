@@ -23,9 +23,6 @@ public class MemberAccessReportAccessDetails
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
     public bool Manage { get; set; }
-
-    // internal to not expose 
-    internal Guid? UserGuid { get; set; }
 }
 
 /// <summary>
@@ -56,25 +53,30 @@ public class MemberAccessReportResponseModel
     /// <param name="orgAbility">Organization ability for account recovery status</param>
     /// <returns>List of the MemberAccessReportResponseModel</returns>;
     public static IEnumerable<MemberAccessReportResponseModel> CreateReport(
-        IEnumerable<OrganizationUserUserDetails> orgUsers,
         ICollection<Group> orgGroups,
         ICollection<Tuple<Collection, CollectionAccessDetails>> orgCollectionsWithAccess,
         IEnumerable<CipherOrganizationDetailsWithCollections> orgItems,
         IEnumerable<(OrganizationUserUserDetails user, bool twoFactorIsEnabled)> organizationUsersTwoFactorEnabled,
         OrganizationAbility orgAbility)
     {
+        var orgUsers = organizationUsersTwoFactorEnabled.Select(x => x.user);
         // Create a dictionary to lookup the group names later. 
         var groupNameDictionary = orgGroups.ToDictionary(x => x.Id, x => x.Name);
 
-        // Get collection counts into a dictionary
-        var groupCollectionItems = orgItems.SelectMany(x => x.CollectionIds, (x, b) => new { CipherId = x.Id, CollectionId = b }).GroupBy(y => y.CollectionId, (key, g) => new { CollectionId = key, ItemCount = g.Count() });
-        var collectionCountDictionary = groupCollectionItems.ToDictionary(x => x.CollectionId, x => x.ItemCount);
+        // Get collections grouped and into a dictionary for counts
+        var collectionItems = orgItems
+            .SelectMany(x => x.CollectionIds,
+                (x, b) => new { CipherId = x.Id, CollectionId = b })
+            .GroupBy(y => y.CollectionId,
+                (key, g) => new { CollectionId = key, Ciphers = g });
+        var collectionItemCounts = collectionItems.ToDictionary(x => x.CollectionId, x => x.Ciphers.Count());
 
         // Take the collections/groups and create the access details items
-        var accessDetails = new List<MemberAccessReportAccessDetails>();
+        var groupAccessDetails = new List<MemberAccessReportAccessDetails>();
+        var userCollectionAccessDetails = new List<MemberAccessReportAccessDetails>();
         foreach (var tCollect in orgCollectionsWithAccess)
         {
-            var itemCounts = collectionCountDictionary.TryGetValue(tCollect.Item1.Id, out var itemCount) ? itemCount : 0;
+            var itemCounts = collectionItemCounts.TryGetValue(tCollect.Item1.Id, out var itemCount) ? itemCount : 0;
             if (tCollect.Item2.Groups.Count() > 0)
             {
                 var groupDetails = tCollect.Item2.Groups.Select(x =>
@@ -89,7 +91,7 @@ public class MemberAccessReportResponseModel
                         Manage = x.Manage,
                         ItemCount = itemCounts,
                     });
-                accessDetails.AddRange(groupDetails);
+                groupAccessDetails.AddRange(groupDetails);
             }
 
             // All collections assigned to users and their permissions
@@ -100,13 +102,12 @@ public class MemberAccessReportResponseModel
                     {
                         CollectionId = tCollect.Item1.Id,
                         CollectionName = tCollect.Item1.Name,
-                        UserGuid = x.Id,
                         ReadOnly = x.ReadOnly,
                         HidePasswords = x.HidePasswords,
                         Manage = x.Manage,
                         ItemCount = itemCounts,
                     });
-                accessDetails.AddRange(userCollectionDetails);
+                userCollectionAccessDetails.AddRange(userCollectionDetails);
             }
         }
 
@@ -126,20 +127,25 @@ public class MemberAccessReportResponseModel
             var userAccessDetails = new List<MemberAccessReportAccessDetails>();
             if (user.Groups.Any())
             {
-                var userGroups = accessDetails.Where(x => user.Groups.Contains(x.GroupId.GetValueOrDefault()));
+                var userGroups = groupAccessDetails.Where(x => user.Groups.Contains(x.GroupId.GetValueOrDefault()));
                 userAccessDetails.AddRange(userGroups);
             }
 
             if (user.Collections.Any())
             {
-                var userCollections = accessDetails.Where(x => user.Collections.Any(y => x.UserGuid == user.Id));
+                var userCollections = userCollectionAccessDetails.Where(x => user.Collections.Any(y => x.CollectionId == y.Id));
                 userAccessDetails.AddRange(userCollections);
             }
             report.AccessDetails = userAccessDetails;
 
+            report.TotalItemCount = collectionItems
+                .Where(x => report.AccessDetails.Any(y => x.CollectionId == y.CollectionId))
+                .SelectMany(x => x.Ciphers)
+                .GroupBy(g => g.CipherId).Select(grp => grp.FirstOrDefault())
+                .Count();
+
             // Distinct items only            
             var distinctItems = report.AccessDetails.Select(x => x.CollectionId).Distinct();
-            report.TotalItemCount = distinctItems.Select(x => collectionCountDictionary.TryGetValue(x, out var count) ? count : 0).Sum();
             report.CollectionsCount = distinctItems.Count();
             report.GroupsCount = report.AccessDetails.Select(x => x.GroupId).Where(y => y.HasValue).Distinct().Count();
             memberAccessReport.Add(report);
