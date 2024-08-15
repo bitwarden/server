@@ -80,4 +80,48 @@ public class OrganizationDomainServiceTests
         await sutProvider.GetDependency<IOrganizationDomainRepository>().ReceivedWithAnyArgs(1)
             .DeleteExpiredAsync(7);
     }
+
+    [Theory, BitAutoData]
+    public async Task HasVerifiedDomainsAsync_WithVerifiedDomain_ReturnsTrue(
+        OrganizationDomain organizationDomain,
+        SutProvider<OrganizationDomainService> sutProvider)
+    {
+        organizationDomain.SetVerifiedDate(); // Set the verified date to make it verified
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainsByOrganizationIdAsync(organizationDomain.OrganizationId)
+            .Returns(new List<OrganizationDomain> { organizationDomain });
+
+        var result = await sutProvider.Sut.HasVerifiedDomainsAsync(organizationDomain.OrganizationId);
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasVerifiedDomainsAsync_WithoutVerifiedDomain_ReturnsFalse(
+        OrganizationDomain organizationDomain,
+        SutProvider<OrganizationDomainService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainsByOrganizationIdAsync(organizationDomain.OrganizationId)
+            .Returns(new List<OrganizationDomain> { organizationDomain });
+
+        var result = await sutProvider.Sut.HasVerifiedDomainsAsync(organizationDomain.OrganizationId);
+
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasVerifiedDomainsAsync_WithoutOrganizationDomains_ReturnsFalse(
+        Guid organizationId,
+        SutProvider<OrganizationDomainService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainsByOrganizationIdAsync(organizationId)
+            .Returns(new List<OrganizationDomain>());
+
+        var result = await sutProvider.Sut.HasVerifiedDomainsAsync(organizationId);
+
+        Assert.False(result);
+    }
 }

@@ -130,7 +130,7 @@ public class OrganizationDomainService : IOrganizationDomainService
     public async Task<bool> HasVerifiedDomainsAsync(Guid orgId)
     {
         var orgDomains = await _domainRepository.GetDomainsByOrganizationIdAsync(orgId);
-        return orgDomains.Any();
+        return orgDomains.Any(od => od.VerifiedDate != null);
     }
 
     private async Task<List<string>> GetAdminEmailsAsync(Guid organizationId)
