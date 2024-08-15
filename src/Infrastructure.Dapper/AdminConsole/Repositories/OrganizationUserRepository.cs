@@ -565,7 +565,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         };
     }
 
-    public async Task<ICollection<Guid>> GetManagedUserIdsByOrganizationIdAsync(Guid orgId)
+    public async Task<ICollection<Guid>> GetManagedUserIdsByOrganizationAsync(Guid orgId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

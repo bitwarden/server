@@ -54,8 +54,8 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
         IEnumerable<OrganizationUser> resetPasswordKeys);
 
     /// <summary>
-    /// Returns a list of user IDs for users whose email domain matches a verified organization domain.
+    /// Returns a list of user IDs for users whose email domain matches one of the Organization's verified domains.
     /// </summary>
     /// <param name="orgId">The Id of the Organization to check.</param>
-    Task<ICollection<Guid>> GetManagedUserIdsByOrganizationIdAsync(Guid orgId);
+    Task<ICollection<Guid>> GetManagedUserIdsByOrganizationAsync(Guid orgId);
 }
