@@ -20,18 +20,22 @@ public static class DatabaseContextExtensions
 
     public static async Task UserBumpManyAccountRevisionDatesAsync(this DatabaseContext context, ICollection<Guid> userIds)
     {
-        var users = await context.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
-        UpdateUserRevisionDate(users);
+        var users = context.Users.Where(u => userIds.Contains(u.Id));
+        var currentTime = DateTime.UtcNow;
+        await users.ForEachAsync(u =>
+        {
+            context.Attach(u);
+            u.AccountRevisionDate = currentTime;
+        });
     }
 
     public static async Task UserBumpAccountRevisionDateByOrganizationIdAsync(this DatabaseContext context, Guid organizationId)
     {
-        var query = from u in context.Users
-                    join ou in context.OrganizationUsers on u.Id equals ou.UserId
-                    where ou.OrganizationId == organizationId && ou.Status == OrganizationUserStatusType.Confirmed
-                    select u;
+        var users = await (from u in context.Users
+                           join ou in context.OrganizationUsers on u.Id equals ou.UserId
+                           where ou.OrganizationId == organizationId && ou.Status == OrganizationUserStatusType.Confirmed
+                           select u).ToListAsync();
 
-        var users = await query.ToListAsync();
         UpdateUserRevisionDate(users);
     }
 
@@ -131,6 +135,7 @@ public static class DatabaseContextExtensions
                     select u;
 
         var users = await query.ToListAsync();
+
         UpdateUserRevisionDate(users);
     }
 
