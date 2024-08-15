@@ -246,7 +246,6 @@ public class CipherRequestModel
 
             PrivateKey = SSHKey.PrivateKey,
             PublicKey = SSHKey.PublicKey,
-            KeyAlgorithm = SSHKey.KeyAlgorithm,
             KeyFingerprint = SSHKey.KeyFingerprint,
         };
     }
