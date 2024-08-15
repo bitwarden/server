@@ -17,7 +17,7 @@ public interface IProviderBillingService
     /// <see cref="PlanType"/>.
     /// </summary>
     /// <param name="provider">The <see cref="Provider"/> that manages the client <paramref name="organization"/>.</param>
-    /// <param name="organization">The client <see cref="Organization"/> whose <see cref="seats"/> you want to update.</param>
+    /// <param name="organization">The client <see cref="Organization"/> whose <paramref name="seats"/> you want to update.</param>
     /// <param name="seats">The number of seats to assign to the client organization.</param>
     Task AssignSeatsToClientOrganization(
         Provider provider,
