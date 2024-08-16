@@ -129,7 +129,7 @@ public class SyncControllerTests
         // Asserts
         // Assert that methods are called
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -216,7 +216,7 @@ public class SyncControllerTests
         // Assert that methods are called
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -293,7 +293,7 @@ public class SyncControllerTests
         // Assert that methods are called
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);

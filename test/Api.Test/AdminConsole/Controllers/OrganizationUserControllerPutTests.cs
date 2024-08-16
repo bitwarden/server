@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -258,9 +257,6 @@ public class OrganizationUserControllerPutTests
         OrganizationAbility organizationAbility, OrganizationUser organizationUser, Guid savingUserId,
         List<CollectionAccessSelection> currentCollectionAccess)
     {
-        // FCv1 is now fully enabled
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
-
         var orgId = organizationAbility.Id = organizationUser.OrganizationId;
 
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
