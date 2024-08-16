@@ -565,12 +565,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         };
     }
 
-    public async Task<ICollection<Guid>> GetManagedUserIdsByOrganizationAsync(Guid orgId)
+    public async Task<ICollection<Guid>> GetManyIdsManagedByOrganizationIdAsync(Guid orgId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<Guid>(
-                $"[{Schema}].[{Table}_ReadManagedUserIdsByOrganizationId]",
+                $"[{Schema}].[{Table}_ReadOrganizationUserIdsManagedByOrganizationId]",
                 new { OrganizationId = orgId },
                 commandType: CommandType.StoredProcedure);
 

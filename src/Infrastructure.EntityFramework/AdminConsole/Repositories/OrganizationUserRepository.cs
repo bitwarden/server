@@ -711,7 +711,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         };
     }
 
-    public async Task<ICollection<Guid>> GetManagedUserIdsByOrganizationAsync(Guid orgId)
+    public async Task<ICollection<Guid>> GetManyIdsManagedByOrganizationIdAsync(Guid orgId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

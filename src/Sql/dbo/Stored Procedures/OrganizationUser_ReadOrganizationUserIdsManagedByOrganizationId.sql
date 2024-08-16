@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadManagedUserIdsByOrganizationId]
+﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadOrganizationUserIdsManagedByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -16,4 +16,3 @@ BEGIN
             AND U.[Email] LIKE '%@' + OD.[DomainName]
     );
 END
-GO
