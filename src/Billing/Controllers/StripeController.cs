@@ -93,6 +93,7 @@ public class StripeController : Controller
 
         return versionContainer.ApiVersion switch
         {
+            "2024-06-20" => _billingSettings.StripeWebhookSecret20240620,
             "2023-10-16" => _billingSettings.StripeWebhookSecret20231016,
             "2022-08-01" => _billingSettings.StripeWebhookSecret,
             _ => HandleDefault(versionContainer.ApiVersion)
