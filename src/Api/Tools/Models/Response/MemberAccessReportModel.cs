@@ -15,14 +15,14 @@ namespace Bit.Api.Tools.Models.Response;
 /// </summary>
 public class MemberAccessReportAccessDetails
 {
-    public Guid CollectionId { get; set; }
+    public Guid? CollectionId { get; set; }
     public Guid? GroupId { get; set; }
     public string GroupName { get; set; }
     public string CollectionName { get; set; }
     public int ItemCount { get; set; }
-    public bool ReadOnly { get; set; }
-    public bool HidePasswords { get; set; }
-    public bool Manage { get; set; }
+    public bool? ReadOnly { get; set; }
+    public bool? HidePasswords { get; set; }
+    public bool? Manage { get; set; }
 }
 
 /// <summary>
@@ -45,11 +45,10 @@ public class MemberAccessReportResponseModel
     /// such as item, collection, and group counts. As well as detailed information on the
     /// user and group collections along with their permissions
     /// </summary>
-    /// <param name="orgUsers">Organization user details collection</param>
     /// <param name="orgGroups">Organization groups collection</param>
     /// <param name="orgCollectionsWithAccess">Collections for the organization and the groups/users and permissions</param>
     /// <param name="orgItems">Cipher items for the organization with the collections associated with them</param>
-    /// <param name="organizationUsersTwoFactorEnabled">Organization users two factor status</param>
+    /// <param name="organizationUsersTwoFactorEnabled">Organization users and two factor status</param>
     /// <param name="orgAbility">Organization ability for account recovery status</param>
     /// <returns>List of the MemberAccessReportResponseModel</returns>;
     public static IEnumerable<MemberAccessReportResponseModel> CreateReport(
@@ -131,6 +130,19 @@ public class MemberAccessReportResponseModel
                 userAccessDetails.AddRange(userGroups);
             }
 
+            // There can be edge cases where groups don't have a collection
+            var groupsWithoutCollections = user.Groups.Where(x => !userAccessDetails.Any(y => x == y.GroupId));
+            if (groupsWithoutCollections.Count() > 0)
+            {
+                var emptyGroups = groupsWithoutCollections.Select(x => new MemberAccessReportAccessDetails
+                {
+                    GroupId = x,
+                    GroupName = groupNameDictionary[x],
+                    ItemCount = 0
+                });
+                userAccessDetails.AddRange(emptyGroups);
+            }
+
             if (user.Collections.Any())
             {
                 var userCollections = userCollectionAccessDetails.Where(x => user.Collections.Any(y => x.CollectionId == y.Id));
@@ -145,7 +157,7 @@ public class MemberAccessReportResponseModel
                 .Count();
 
             // Distinct items only            
-            var distinctItems = report.AccessDetails.Select(x => x.CollectionId).Distinct();
+            var distinctItems = report.AccessDetails.Where(x => x.CollectionId.HasValue).Select(x => x.CollectionId).Distinct();
             report.CollectionsCount = distinctItems.Count();
             report.GroupsCount = report.AccessDetails.Select(x => x.GroupId).Where(y => y.HasValue).Distinct().Count();
             memberAccessReport.Add(report);

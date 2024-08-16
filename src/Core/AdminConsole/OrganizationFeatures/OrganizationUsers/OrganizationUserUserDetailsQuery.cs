@@ -35,6 +35,8 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
             .Select(o =>
             {
                 var userPermissions = o.GetPermissions();
+
+                // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
                 o.Type = o.Type.GetFlexibleCollectionsUserType(userPermissions);
 
                 // Set 'Edit/Delete Assigned Collections' custom permissions to false
