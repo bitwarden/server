@@ -10,6 +10,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class GroupRepository : Repository<Group, Guid>, IGroupRepository
@@ -22,7 +24,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<Tuple<Group, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<Group?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -34,7 +36,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
             var group = await results.ReadFirstOrDefaultAsync<Group>();
             var colletions = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
 
-            return new Tuple<Group, ICollection<CollectionAccessSelection>>(group, colletions);
+            return new Tuple<Group?, ICollection<CollectionAccessSelection>>(group, colletions);
         }
     }
 
@@ -136,7 +138,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
     public async Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections)
     {
         obj.SetNewId();
-        var objWithCollections = JsonSerializer.Deserialize<GroupWithCollections>(JsonSerializer.Serialize(obj));
+        var objWithCollections = JsonSerializer.Deserialize<GroupWithCollections>(JsonSerializer.Serialize(obj))!;
         objWithCollections.Collections = collections.ToArrayTVP();
 
         using (var connection = new SqlConnection(ConnectionString))
@@ -150,7 +152,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
 
     public async Task ReplaceAsync(Group obj, IEnumerable<CollectionAccessSelection> collections)
     {
-        var objWithCollections = JsonSerializer.Deserialize<GroupWithCollections>(JsonSerializer.Serialize(obj));
+        var objWithCollections = JsonSerializer.Deserialize<GroupWithCollections>(JsonSerializer.Serialize(obj))!;
         objWithCollections.Collections = collections.ToArrayTVP();
 
         using (var connection = new SqlConnection(ConnectionString))
