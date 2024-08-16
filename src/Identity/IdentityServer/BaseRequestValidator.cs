@@ -350,9 +350,8 @@ public abstract class BaseRequestValidator<T> where T : class
                                  (await _userManager.GetValidTwoFactorProvidersAsync(user)).Count > 0;
 
         Organization firstEnabledOrg = null;
-        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
-            .ToList();
-        if (orgs.Any())
+        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id)).ToList();
+        if (orgs.Count > 0)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
             var twoFactorOrgs = orgs.Where(o => OrgUsing2fa(orgAbilities, o.Id));
