@@ -262,7 +262,7 @@ public class OrganizationUserRepositoryTests
         IOrganizationDomainRepository organizationDomainRepository)
     {
         var id = Guid.NewGuid();
-        var domainName = $"{id}.com";
+        var domainName = $"{id}.example.com";
 
         var user1 = await userRepository.CreateAsync(new User
         {
@@ -291,7 +291,7 @@ public class OrganizationUserRepositoryTests
         var user3 = await userRepository.CreateAsync(new User
         {
             Name = "Test User 2",
-            Email = $"test+{id}@{domainName}.co", // Different domain
+            Email = $"test+{id}@{domainName}.example.com", // Different domain
             ApiKey = "TEST",
             SecurityStamp = "stamp",
             Kdf = KdfType.PBKDF2_SHA256,
@@ -315,7 +315,7 @@ public class OrganizationUserRepositoryTests
             Txt = "btw+12345",
         };
         organizationDomain.SetVerifiedDate();
-        organizationDomain.SetNextRunDate(1000);
+        organizationDomain.SetNextRunDate(12);
         organizationDomain.SetJobRunCount();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
@@ -327,7 +327,7 @@ public class OrganizationUserRepositoryTests
             ResetPasswordKey = "resetpasswordkey1",
         });
 
-        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             OrganizationId = organization.Id,
             UserId = user2.Id,
@@ -335,7 +335,7 @@ public class OrganizationUserRepositoryTests
             ResetPasswordKey = "resetpasswordkey1",
         });
 
-        var orgUser3 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             OrganizationId = organization.Id,
             UserId = user3.Id,
@@ -343,7 +343,7 @@ public class OrganizationUserRepositoryTests
             ResetPasswordKey = "resetpasswordkey1",
         });
 
-        var responseModel = await organizationUserRepository.GetManagedUserIdsByOrganizationAsync(organization.Id);
+        var responseModel = await organizationUserRepository.GetManyIdsManagedByOrganizationIdAsync(organization.Id);
 
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
