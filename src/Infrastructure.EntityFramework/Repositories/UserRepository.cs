@@ -263,4 +263,24 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public async Task<bool> IsManagedByAnyOrganizationAsync(Guid id)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var isManagedQuery = from u in dbContext.Users
+                                 join ou in dbContext.OrganizationUsers on u.Id equals ou.UserId
+                                 join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+                                 where u.Id == id
+                                       && od.VerifiedDate != null
+                                       && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
+                                 select true;
+
+            var isManaged = await isManagedQuery.AnyAsync();
+
+            return isManaged;
+        }
+    }
 }
