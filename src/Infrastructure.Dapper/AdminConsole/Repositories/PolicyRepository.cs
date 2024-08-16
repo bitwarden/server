@@ -7,6 +7,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
@@ -19,7 +21,7 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
+    public async Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
