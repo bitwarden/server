@@ -160,10 +160,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         return Task.CompletedTask;
     }
 
-    protected override ClaimsPrincipal GetSubject(CustomTokenRequestValidationContext context)
+    protected override ClaimsPrincipal? GetSubject(CustomTokenRequestValidationContext context)
     {
         Debug.Assert(context.Result is not null);
-        Debug.Assert(context.Result.ValidatedRequest.Subject is not null);
         return context.Result.ValidatedRequest.Subject;
     }
 
