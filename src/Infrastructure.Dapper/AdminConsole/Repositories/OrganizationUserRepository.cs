@@ -13,6 +13,8 @@ using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IOrganizationUserRepository
@@ -25,7 +27,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     private string _marsConnectionString;
 
     public OrganizationUserRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         var builder = new SqlConnectionStringBuilder(ConnectionString)
         {
@@ -33,10 +35,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         };
         _marsConnectionString = builder.ToString();
     }
-
-    public OrganizationUserRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
 
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
@@ -132,7 +130,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
+    public async Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -172,7 +170,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -183,11 +181,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             var user = (await results.ReadAsync<OrganizationUser>()).SingleOrDefault();
             var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
-            return new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(user, collections);
+            return new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(user, collections);
         }
     }
 
-    public async Task<OrganizationUserUserDetails> GetDetailsByIdAsync(Guid id)
+    public async Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -199,7 +197,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.SingleOrDefault();
         }
     }
-    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>>
+    public async Task<Tuple<OrganizationUserUserDetails?, ICollection<CollectionAccessSelection>>>
         GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -211,7 +209,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             var user = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
             var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
-            return new Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>(user, collections);
+            return new Tuple<OrganizationUserUserDetails?, ICollection<CollectionAccessSelection>>(user, collections);
         }
     }
 
@@ -224,8 +222,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            List<IGrouping<Guid, GroupUser>> userGroups = null;
-            List<IGrouping<Guid, CollectionUser>> userCollections = null;
+            List<IGrouping<Guid, GroupUser>>? userGroups = null;
+            List<IGrouping<Guid, CollectionUser>>? userCollections = null;
 
             var users = results.ToList();
 
@@ -294,7 +292,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId,
+    public async Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId,
         Guid organizationId, OrganizationUserStatusType? status = null)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -323,7 +321,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     {
         obj.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
-            JsonSerializer.Serialize(obj));
+            JsonSerializer.Serialize(obj))!;
         objWithCollections.Collections = collections.ToArrayTVP();
 
         using (var connection = new SqlConnection(ConnectionString))
@@ -340,7 +338,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
-            JsonSerializer.Serialize(obj));
+            JsonSerializer.Serialize(obj))!;
         objWithCollections.Collections = collections.ToArrayTVP();
 
         using (var connection = new SqlConnection(ConnectionString))
@@ -378,7 +376,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
+    public async Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -420,7 +418,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await ReplaceManyAsync(replaceUsers);
     }
 
-    public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+    public async Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
         if (!organizationUsers.Any())
         {
