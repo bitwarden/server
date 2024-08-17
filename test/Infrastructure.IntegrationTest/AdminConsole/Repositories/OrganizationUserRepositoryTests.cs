@@ -38,6 +38,7 @@ public class OrganizationUserRepositoryTests
         await organizationUserRepository.DeleteAsync(orgUser);
 
         var newUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(newUser);
         Assert.NotEqual(newUser.AccountRevisionDate, user.AccountRevisionDate);
     }
 
@@ -90,7 +91,9 @@ public class OrganizationUserRepositoryTests
         });
 
         var updatedUser1 = await userRepository.GetByIdAsync(user1.Id);
+        Assert.NotNull(updatedUser1);
         var updatedUser2 = await userRepository.GetByIdAsync(user2.Id);
+        Assert.NotNull(updatedUser2);
 
         Assert.NotEqual(updatedUser1.AccountRevisionDate, user1.AccountRevisionDate);
         Assert.NotEqual(updatedUser2.AccountRevisionDate, user2.AccountRevisionDate);
