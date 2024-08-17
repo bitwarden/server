@@ -1247,14 +1247,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
     {
         var organization = await _organizationRepository.GetByClaimedUserDomainAsync(userId);
-        if (organization != null)
+        if (organization is { Enabled: true })
         {
-            if (organization.Enabled)
-            {
-                var plan = StaticStore.GetPlan(organization.PlanType);
-                return plan.ProductTier == ProductTierType.Enterprise;
-            }
-
+            var plan = StaticStore.GetPlan(organization.PlanType);
+            return plan.ProductTier == ProductTierType.Enterprise;
         }
 
         return false;
