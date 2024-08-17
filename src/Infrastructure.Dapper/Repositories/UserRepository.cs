@@ -270,19 +270,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<bool> IsManagedByAnyOrganizationAsync(Guid id)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.ExecuteScalarAsync<bool>(
-                $"[{Schema}].[{Table}_IsManagedByAnyOrganization]",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure);
-
-            return results;
-        }
-    }
-
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
     {
         if (user == null)

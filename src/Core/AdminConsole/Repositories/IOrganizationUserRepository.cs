@@ -54,10 +54,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
         IEnumerable<OrganizationUser> resetPasswordKeys);
 
     /// <summary>
-    /// Returns a list of OrganizationUserIds that are managed by a specific Organization.
+    /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
-    /// <remarks>
-    /// A managed user is a user whose email domain matches one of the Organization's verified domains.
-    /// </remarks>
-    Task<ICollection<Guid>> GetManyIdsManagedByOrganizationIdAsync(Guid organizationId);
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
 }

@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1241,6 +1242,22 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return IsLegacyUser(user);
+    }
+
+    public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
+    {
+        var organization = await _organizationRepository.GetByClaimedUserDomainAsync(userId);
+        if (organization != null)
+        {
+            if (organization.Enabled)
+            {
+                var plan = StaticStore.GetPlan(organization.PlanType);
+                return plan.ProductTier == ProductTierType.Enterprise;
+            }
+
+        }
+
+        return false;
     }
 
     /// <inheritdoc cref="IsLegacyUser(string)"/>

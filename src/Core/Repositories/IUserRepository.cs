@@ -32,12 +32,4 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
     Task UpdateUserKeyAndEncryptedDataAsync(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
-
-    /// <summary>
-    /// Indicates if the user is managed by any organization.
-    /// </summary>
-    /// <remarks>
-    /// A managed user is a user whose email domain matches one of the Organization's verified domains.
-    /// </remarks>
-    Task<bool> IsManagedByAnyOrganizationAsync(Guid id);
 }

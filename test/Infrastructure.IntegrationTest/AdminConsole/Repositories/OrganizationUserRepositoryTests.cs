@@ -255,7 +255,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManagedUserIdsByOrganizationAsync_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsOneOrgUserId(
+    public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -343,10 +343,10 @@ public class OrganizationUserRepositoryTests
             ResetPasswordKey = "resetpasswordkey1",
         });
 
-        var responseModel = await organizationUserRepository.GetManyIdsManagedByOrganizationIdAsync(organization.Id);
+        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
 
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
-        Assert.Equal(orgUser1.Id, responseModel.Single());
+        Assert.Equal(orgUser1.Id, responseModel.Single().Id);
     }
 }

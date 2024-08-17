@@ -711,12 +711,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         };
     }
 
-    public async Task<ICollection<Guid>> GetManyIdsManagedByOrganizationIdAsync(Guid orgId)
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new OrganizationUserReadManagedIdsByOrganizationIdQuery(orgId);
+            var query = new OrganizationUserReadByClaimedOrganizationDomainsQuery(organizationId);
             var data = await query.Run(dbContext).ToListAsync();
             return data;
         }

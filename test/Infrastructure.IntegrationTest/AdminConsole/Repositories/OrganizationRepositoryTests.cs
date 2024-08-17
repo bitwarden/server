@@ -6,10 +6,10 @@ using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
 
-public class UserRepositoryTests
+public class OrganizationRepositoryTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task IsManagedByAnyOrganizationAsync_WithVerifiedDomain_Success(
+    public async Task GetByClaimedUserDomainAsync_WithVerifiedDomain_Success(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -97,12 +97,13 @@ public class UserRepositoryTests
             ResetPasswordKey = "resetpasswordkey1",
         });
 
-        var user1Response = await userRepository.IsManagedByAnyOrganizationAsync(user1.Id);
-        var user2Response = await userRepository.IsManagedByAnyOrganizationAsync(user2.Id);
-        var user3Response = await userRepository.IsManagedByAnyOrganizationAsync(user3.Id);
+        var user1Response = await organizationRepository.GetByClaimedUserDomainAsync(user1.Id);
+        var user2Response = await organizationRepository.GetByClaimedUserDomainAsync(user2.Id);
+        var user3Response = await organizationRepository.GetByClaimedUserDomainAsync(user3.Id);
 
-        Assert.True(user1Response);
-        Assert.False(user2Response);
-        Assert.False(user3Response);
+        Assert.NotNull(user1Response);
+        Assert.Equal(organization.Id, user1Response.Id);
+        Assert.Null(user2Response);
+        Assert.Null(user3Response);
     }
 }

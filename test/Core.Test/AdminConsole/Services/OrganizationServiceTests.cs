@@ -2726,6 +2726,85 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await sutProvider.Sut.ValidateOrganizationCustomPermissionsEnabledAsync(organization.Id, OrganizationUserType.Custom);
     }
 
+    [Theory, BitAutoData]
+    public async Task GetUsersOrganizationManagementStatusAsync_WithNoUsers_ReturnsEmpty(
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, new List<Guid>());
+
+        Assert.Empty(result);
+    }
+
+    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.EnterpriseAnnually)]
+    public async Task GetUsersOrganizationManagementStatusAsync_WithEnterprisePlan_Success(
+        Organization organization,
+        ICollection<OrganizationUser> usersWithClaimedDomain,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var userIdWithoutClaimedDomain = Guid.NewGuid();
+        var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
+            .Returns(usersWithClaimedDomain);
+
+        var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
+
+        Assert.True(usersWithClaimedDomain.All(ou => result.FirstOrDefault(r => r.OrganizationUserId == ou.Id).IsManaged));
+        Assert.True(result.FirstOrDefault(r => r.OrganizationUserId == userIdWithoutClaimedDomain).IsManaged == false);
+    }
+
+    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.TeamsAnnually)]
+    public async Task GetUsersOrganizationManagementStatusAsync_WithoutEnterprisePlan_ReturnsAllFalse(
+        Organization organization,
+        ICollection<OrganizationUser> usersWithClaimedDomain,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var userIdWithoutClaimedDomain = Guid.NewGuid();
+        var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
+            .Returns(usersWithClaimedDomain);
+
+        var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
+
+        Assert.All(result, r => Assert.False(r.IsManaged));
+    }
+
+    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.EnterpriseAnnually)]
+    public async Task GetUsersOrganizationManagementStatusAsync_WithDisabledOrganization_ReturnsAllFalse(
+        Organization organization,
+        ICollection<OrganizationUser> usersWithClaimedDomain,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Enabled = false;
+
+        var userIdWithoutClaimedDomain = Guid.NewGuid();
+        var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
+            .Returns(usersWithClaimedDomain);
+
+        var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
+
+        Assert.All(result, r => Assert.False(r.IsManaged));
+    }
+
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
     private void SetupOrgUserRepositoryCreateManyAsyncMock(IOrganizationUserRepository organizationUserRepository)
     {

@@ -2720,4 +2720,23 @@ public class OrganizationService : IOrganizationService
             await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
         }
     }
+
+    public async Task<ICollection<(Guid OrganizationUserId, bool IsManaged)>> GetUsersOrganizationManagementStatusAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    {
+        if (organizationUserIds.Any())
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization is { Enabled: true })
+            {
+                var plan = StaticStore.GetPlan(organization.PlanType);
+                if (plan.ProductTier == ProductTierType.Enterprise)
+                {
+                    var organizationUsersWithClaimedDomain = await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
+                    return organizationUserIds.Select(ouId => (ouId, organizationUsersWithClaimedDomain.Any(ou => ou.Id == ouId))).ToList();
+                }
+            }
+        }
+
+        return organizationUserIds.Select(ouId => (ouId, false)).ToList();
+    }
 }

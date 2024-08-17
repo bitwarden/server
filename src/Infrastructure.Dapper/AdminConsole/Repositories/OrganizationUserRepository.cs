@@ -565,13 +565,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         };
     }
 
-    public async Task<ICollection<Guid>> GetManyIdsManagedByOrganizationIdAsync(Guid orgId)
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<Guid>(
-                $"[{Schema}].[{Table}_ReadOrganizationUserIdsManagedByOrganizationId]",
-                new { OrganizationId = orgId },
+            var results = await connection.QueryAsync<OrganizationUser>(
+                $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains]",
+                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
