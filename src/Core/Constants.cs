@@ -139,6 +139,7 @@ public static class FeatureFlagKeys
     public const string NativeCarouselFlow = "native-carousel-flow";
     public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
+    public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
 
     public static List<string> GetAllKeys()
     {
