@@ -20,6 +20,8 @@ using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
 
+#nullable enable
+
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
 [ControllerCustomize(typeof(GroupsController))]
@@ -305,7 +307,7 @@ public class GroupsControllerPutTests
             .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, currentCollectionAccess ?? []));
         if (savingUser != null)
         {
-            sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, savingUser.UserId.Value)
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, savingUser.UserId!.Value)
                 .Returns(savingUser);
         }
 
