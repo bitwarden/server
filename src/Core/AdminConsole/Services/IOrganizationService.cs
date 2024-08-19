@@ -95,7 +95,6 @@ public interface IOrganizationService
 
     /// <summary>
     /// Checks whether each user in the provided list of organization user IDs is managed by the specified organization.
-    /// Returns a collection of tuples containing the OrganizationUserId and a boolean indicating if the user is managed by the organization.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization to check against.</param>
     /// <param name="organizationUserIds">A list of OrganizationUserIds to be checked.</param>
@@ -104,8 +103,8 @@ public interface IOrganizationService
     /// The organization must be enabled and be on an Enterprise plan.
     /// </remarks>
     /// <returns>
-    /// A collection of tuples where each tuple contains a OrganizationUserId and a boolean indicating whether the user is managed by the organization.
+    /// A dictionary containing the OrganizationUserId and a boolean indicating if the user is managed by the organization.
     /// </returns>
-    Task<ICollection<(Guid OrganizationUserId, bool IsManaged)>> GetUsersOrganizationManagementStatusAsync(Guid organizationId,
+    Task<IDictionary<Guid, bool>> GetUsersOrganizationManagementStatusAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds);
 }

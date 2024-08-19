@@ -2721,7 +2721,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task<ICollection<(Guid OrganizationUserId, bool IsManaged)>> GetUsersOrganizationManagementStatusAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    public async Task<IDictionary<Guid, bool>> GetUsersOrganizationManagementStatusAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
     {
         if (organizationUserIds.Any())
         {
@@ -2732,11 +2732,11 @@ public class OrganizationService : IOrganizationService
                 if (plan.ProductTier == ProductTierType.Enterprise)
                 {
                     var organizationUsersWithClaimedDomain = await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
-                    return organizationUserIds.Select(ouId => (ouId, organizationUsersWithClaimedDomain.Any(ou => ou.Id == ouId))).ToList();
+                    return organizationUserIds.ToDictionary(ouId => ouId, ouId => organizationUsersWithClaimedDomain.Any(ou => ou.Id == ouId));
                 }
             }
         }
 
-        return organizationUserIds.Select(ouId => (ouId, false)).ToList();
+        return organizationUserIds.ToDictionary(ouId => ouId, _ => false);
     }
 }

@@ -2755,8 +2755,8 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
 
-        Assert.True(usersWithClaimedDomain.All(ou => result.FirstOrDefault(r => r.OrganizationUserId == ou.Id).IsManaged));
-        Assert.True(result.FirstOrDefault(r => r.OrganizationUserId == userIdWithoutClaimedDomain).IsManaged == false);
+        Assert.All(usersWithClaimedDomain, ou => Assert.True(result[ou.Id]));
+        Assert.False(result[userIdWithoutClaimedDomain]);
     }
 
     [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.TeamsAnnually)]
@@ -2778,7 +2778,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
 
-        Assert.All(result, r => Assert.False(r.IsManaged));
+        Assert.All(result, r => Assert.False(r.Value));
     }
 
     [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.EnterpriseAnnually)]
@@ -2802,7 +2802,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
 
-        Assert.All(result, r => Assert.False(r.IsManaged));
+        Assert.All(result, r => Assert.False(r.Value));
     }
 
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
