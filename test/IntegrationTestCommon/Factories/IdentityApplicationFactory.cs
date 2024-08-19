@@ -82,7 +82,8 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         string clientId = "web",
         DeviceType deviceType = DeviceType.FirefoxBrowser,
         string deviceName = "firefox",
-        string twoFactorProviderType = "Email")
+        string twoFactorProviderType = "Email",
+        string twoFactorToken = "two-factor-token")
     {
         var context = await Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -94,7 +95,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "grant_type", "password" },
             { "username", username },
             { "password", password },            
-            { "TwoFactorToken", "two-factor-token" },
+            { "TwoFactorToken", twoFactorToken },
             { "TwoFactorProvider", twoFactorProviderType },
             { "TwoFactorRemember", "1" },
         }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));

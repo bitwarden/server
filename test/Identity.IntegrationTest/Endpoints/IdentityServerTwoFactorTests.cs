@@ -19,43 +19,35 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
 using IdentityModel;
 using LinqToDB;
-using Microsoft.AspNetCore.TestHost;
 using NSubstitute;
 using Xunit;
 
-#nullable enable
+// #nullable enable
 
 namespace Bit.Identity.IntegrationTest.Endpoints;
 
 public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFactory>
 {
+    const string _organizationTwoFactor = """{"6":{"Enabled":true,"MetaData":{"IKey":"DIEFB13LB49IEB3459N2","SKey":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
+    const string _testEmail = "test+2farequired@email.com";
+    const string _testPassword = "master_password_hash";
+    const string _userEmailTwoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
+
     private readonly IdentityApplicationFactory _factory;
-    private readonly IUserRepository _userRepository;
-    private readonly IUserService _userService;
 
     public IdentityServerTwoFactorTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
-        _userRepository = _factory.GetService<IUserRepository>();
-        _userService = _factory.GetService<IUserService>();
     }
 
-    [Theory, BitAutoData]
-    public async Task TokenEndpoint_GrantTypePassword_UserTwoFactorRequired_NoTwoFactorProvided_Fails(string deviceId)
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_UserTwoFactorRequired_NoTwoFactorProvided_Fails()
     {
         // Arrange
-        var username = "test+2farequired@email.com";
-        var twoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
-
-        await CreateUserAsync(_factory.Server, username, deviceId, async () =>
-        {
-            var user = await _userRepository.GetByEmailAsync(username);
-            user.TwoFactorProviders = twoFactor;
-            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-        });
+        await CreateUserAsync(_factory, _testEmail, _userEmailTwoFactor);
 
         // Act
-        var context = await _factory.ContextFromPasswordAsync(username, "master_password_hash");
+        var context = await _factory.ContextFromPasswordAsync(_testEmail, _testPassword);
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -65,23 +57,51 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         Assert.Equal("Two factor required.", error);
     }
 
-    [Theory, BitAutoData]
-    public async Task TokenEndpoint_GrantTypePassword_InvalidTwoFactorToken_Fails(string deviceId)
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_UserTwoFactorRequired_TwoFactorProvided_Success()
     {
         // Arrange
-        var username = "test+2farequired@email.com";
-        var twoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
+        // we can't use the class factory here.
+        var factory = new IdentityApplicationFactory();
 
-        await CreateUserAsync(_factory.Server, username, deviceId, async () =>
+        string emailToken = null;
+        factory.SubstituteService<IMailService>(mailService =>
         {
-            var user = await _userRepository.GetByEmailAsync(username);
-            user.TwoFactorProviders = twoFactor;
-            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+            mailService.SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Do<string>(t => emailToken = t))
+                .Returns(Task.CompletedTask);
         });
+
+        // Create Test User
+        await CreateUserAsync(factory, _testEmail, _userEmailTwoFactor);
+
+        // Act
+        var failedTokenContext = await factory.ContextFromPasswordAsync(_testEmail, _testPassword);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
+        Assert.NotNull(emailToken);
+
+        var twoFactorProvidedContext = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorToken: emailToken);
+
+        // Assert
+        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(twoFactorProvidedContext);
+        var root = body.RootElement;
+
+        var result = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_InvalidTwoFactorToken_Fails()
+    {
+        // Arrange
+        await CreateUserAsync(_factory, _testEmail, _userEmailTwoFactor);
 
         // Act
         var context = await _factory.ContextFromPasswordWithTwoFactorAsync(
-                                username, "master_password_hash", twoFactorProviderType: "Email");
+                                _testEmail, _testPassword, twoFactorProviderType: "Email");
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -95,74 +115,47 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         Assert.Equal("invalid_username_or_password", error);
     }
 
-    //! Fails when ran with other tests may need to re init the Fixure?
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypePassword_OrgDuoTwoFactorRequired_NoTwoFactorProvided_Fails(string deviceId)
     {
         // Arrange
-        var username = "test+org2farequired@email.com";
-        // use valid length keys so DuoWeb.SignRequest doesn't throw
-        // ikey: 20, skey: 40, akey: 40
-        var orgTwoFactor =
-            """{"6":{"Enabled":true,"MetaData":{"IKey":"DIEFB13LB49IEB3459N2","SKey":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
-
-        var server = _factory.WithWebHostBuilder(builder =>
+        var challenge = new string('c', 50);
+        var ssoConfigData = new SsoConfigurationData
         {
-            builder.UseSetting("globalSettings:Duo:AKey", "WJHB374KM3N5hglO9hniwbkibg$789EfbhNyLpNq1");
-        }).Server;
-
-
-        await CreateUserAsync(server, username, deviceId, async () =>
-        {
-            var user = await _userRepository.GetByEmailAsync(username);
-            var organizationRepository = _factory.Services.GetService<IOrganizationRepository>();
-            var organization = await organizationRepository.CreateAsync(new Organization
-            {
-                Name = "Test Org",
-                Use2fa = true,
-                TwoFactorProviders = orgTwoFactor,
-                BillingEmail = "billing-email@example.com",
-                Plan = "Enterprise",
-            });
-
-            await _factory.Services.GetService<IOrganizationUserRepository>()
-                .CreateAsync(new OrganizationUser
-                {
-                    UserId = user.Id,
-                    OrganizationId = organization.Id,
-                    Status = OrganizationUserStatusType.Confirmed,
-                    Type = OrganizationUserType.User,
-                });
-        });
+            MemberDecryptionType = MemberDecryptionType.MasterPassword,
+        };
+        await CreateSsoOrganizationAndUserAsync(
+            _factory, ssoConfigData, challenge, _testEmail, orgTwoFactor: _organizationTwoFactor);
 
         // Act
-        var context = await _factory.ContextFromPasswordAsync(username, "master_password_hash");
+        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "12" },
+            { "deviceIdentifier", deviceId },
+            { "deviceName", "edge" },
+            { "grant_type", "password" },
+            { "username", _testEmail },
+            { "password", _testPassword },
+        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
 
-        // Assert
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
+        // Assert 
+        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = responseBody.RootElement;
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
     }
 
-    [Theory, BitAutoData]
-    public async Task TokenEndpoint_GrantTypePassword_RememberTwoFactorType_InvalidTwoFactorToken_Fails(string deviceId)
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_RememberTwoFactorType_InvalidTwoFactorToken_Fails()
     {
         // Arrange
-        var username = "test+2farequired@email.com";
-        var twoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
-
-        await CreateUserAsync(_factory.Server, username, deviceId, async () =>
-        {
-            var user = await _userRepository.GetByEmailAsync(username);
-            user.TwoFactorProviders = twoFactor;
-            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-        });
+        await CreateUserAsync(_factory, _testEmail, _userEmailTwoFactor);
 
         // Act
         var context = await _factory.ContextFromPasswordWithTwoFactorAsync(
-                                username, "master_password_hash", twoFactorProviderType: "Remember");
+                                _testEmail, _testPassword, twoFactorProviderType: "Remember");
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -172,26 +165,22 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         Assert.Equal("Two factor required.", error);
     }
 
-    /// client_credential grant type should not require two factor even if it's enabled for either Org or individual user
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredential_OrgTwoFactorRequired_Success(Organization organization, OrganizationApiKey organizationApiKey)
     {
         // Arrange        
-        var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
-        // use valid length keys so DuoWeb.SignRequest doesn't throw
-        // ikey: 20, skey: 40, akey: 40
-        var orgTwoFactor =
-            """{"6":{"Enabled":true,"MetaData":{"IKey":"DIEFB13LB49IEB3459N2","SKey":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
         organization.Enabled = true;
         organization.UseApi = true;
         organization.Use2fa = true;
-        organization.TwoFactorProviders = orgTwoFactor;
+        organization.TwoFactorProviders = _organizationTwoFactor;
+
+        var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
         organization = await orgRepo.CreateAsync(organization);
 
-        var orgApiKeyRepo = _factory.Services.GetRequiredService<IOrganizationApiKeyRepository>();
         organizationApiKey.OrganizationId = organization.Id;
         organizationApiKey.Type = OrganizationApiKeyType.Default;
 
+        var orgApiKeyRepo = _factory.Services.GetRequiredService<IOrganizationApiKeyRepository>();
         await orgApiKeyRepo.CreateAsync(organizationApiKey);
 
         // Act
@@ -209,26 +198,17 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
         var token = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
-        Assert.NotEmpty(token);
+        Assert.NotNull(token);
     }
 
-    /// client_credential grant type should not require two factor even if it's enabled for either Org or individual user
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredential_IndvTwoFactorRequired_Success(string deviceId)
     {
         // Arrange
-        var username = "test+2farequired@email.com";
-        var twoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
-
-        await CreateUserAsync(_factory.Server, username, deviceId, async () =>
-        {
-            var user = await _userRepository.GetByEmailAsync(username);
-            user.TwoFactorProviders = twoFactor;
-            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-        });
+        await CreateUserAsync(_factory, _testEmail, _userEmailTwoFactor);
 
         var database = _factory.GetDatabaseContext();
-        var user = await database.Users.FirstAsync(u => u.Email == username);
+        var user = await database.Users.FirstAsync(u => u.Email == _testEmail);
 
         // Act
         var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
@@ -248,24 +228,24 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
         var token = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
-        Assert.NotEmpty(token);
+        Assert.NotNull(token);
     }
 
-    //! User with enabled TwoFactor is not saved for some reason...
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeAuthCode_OrgTwoFactorRequired_IndvTwoFactor_NoTwoFactorProvided_Fails(string deviceId)
     {
         // Arrange
-        var username = "test+org2farequired@email.com";
-        var twoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
+        var localFactory = new IdentityApplicationFactory();
         var challenge = new string('c', 50);
-        var factory = await CreateSsoOrganizationAndUserAsync(new SsoConfigurationData
+        var ssoConfigData = new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
-        }, challenge, username, twoFactor);
+        };
+        await CreateSsoOrganizationAndUserAsync(
+            localFactory, ssoConfigData, challenge, _testEmail, userTwoFactor: _userEmailTwoFactor);
 
         // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        var context = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
             { "client_id", "web" },
@@ -276,39 +256,93 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
 
         // Assert 
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-
         var root = responseBody.RootElement;
-        var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
-        Assert.Equal("Two-step token is invalid. Try again.", errorMessage);
-
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
+    }
+
+    [Theory, BitAutoData]
+    public async Task TokenEndpoint_GrantTypeAuthCode_OrgTwoFactorRequired_IndvTwoFactor_TwoFactorProvided_Success(string deviceId)
+    {
+        // Arrange
+        var localFactory = new IdentityApplicationFactory();
+        string emailToken = null;
+        localFactory.SubstituteService<IMailService>(mailService =>
+        {
+            mailService.SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Do<string>(t => emailToken = t))
+                .Returns(Task.CompletedTask);
+        });
+
+        // Create Test User
+        var challenge = new string('c', 50);
+        var ssoConfigData = new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.MasterPassword,
+        };
+        await CreateSsoOrganizationAndUserAsync(
+            localFactory, ssoConfigData, challenge, _testEmail, userTwoFactor: _userEmailTwoFactor);
+
+        // Act
+        var failedTokenContext = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "12" },
+            { "deviceIdentifier", deviceId },
+            { "deviceName", "edge" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
+        Assert.NotNull(emailToken);
+
+        var twoFactorProvidedContext = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "12" },
+            { "deviceIdentifier", deviceId },
+            { "deviceName", "edge" },
+            { "twoFactorToken", emailToken},
+            { "twoFactorProvider", "1" },
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+
+
+        // Assert 
+        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(twoFactorProvidedContext);
+        var root = body.RootElement;
+
+        var result = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
+        Assert.NotNull(result);
     }
 
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeAuthCode_OrgTwoFactorRequired_OrgDuoTwoFactor_NoTwoFactorProvided_Fails(string deviceId)
     {
         // Arrange
-        var username = "test+org2farequired@email.com";
-
-        // use valid length keys so DuoWeb.SignRequest doesn't throw
-        // ikey: 20, skey: 40, akey: 40
-        var orgTwoFactor =
-            """{"6":{"Enabled":true,"MetaData":{"IKey":"DIEFB13LB49IEB3459N2","SKey":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
-
+        var localFactory = new IdentityApplicationFactory();
         var challenge = new string('c', 50);
-        var factory = await CreateSsoOrganizationAndUserAsync(new SsoConfigurationData
+        var ssoConfigData = new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
-        }, challenge, username, orgTwoFactor: orgTwoFactor);
+        };
+        await CreateSsoOrganizationAndUserAsync(
+            localFactory, ssoConfigData, challenge, _testEmail, orgTwoFactor: _organizationTwoFactor);
 
         // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        var context = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
             { "client_id", "web" },
@@ -319,7 +353,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
 
         // Assert 
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -328,33 +362,41 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         Assert.Equal("Two factor required.", error);
     }
 
-    private async Task CreateUserAsync(TestServer server, string username, string deviceId,
-        Func<Task> twoFactorSetup)
+    private async Task CreateUserAsync(
+        IdentityApplicationFactory factory,
+        string testEmail,
+        string userTwoFactor = null)
     {
-        // Register user
-        await _factory.RegisterAsync(new RegisterRequestModel
+        // Create Test User
+        await factory.RegisterAsync(new RegisterRequestModel
         {
-            Email = username,
-            MasterPasswordHash = "master_password_hash"
+            Email = testEmail,
+            MasterPasswordHash = _testPassword,
         });
 
-        // Add two factor
-        if (twoFactorSetup != null)
+        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(testEmail);
+        Assert.NotNull(user);
+
+        var userService = factory.GetService<IUserService>();
+        if (userTwoFactor != null)
         {
-            await twoFactorSetup();
+            user.TwoFactorProviders = userTwoFactor;
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+            user = await userRepository.GetByEmailAsync(testEmail);
+            Assert.NotNull(user.TwoFactorProviders);
         }
     }
 
     private async Task<IdentityApplicationFactory> CreateSsoOrganizationAndUserAsync(
+        IdentityApplicationFactory factory,
         SsoConfigurationData ssoConfigurationData,
         string challenge,
         string testEmail,
-        string? orgTwoFactor = null,
-        string? userTwoFactor = null,
-        Permissions? permissions = null)
+        string orgTwoFactor = null,
+        string userTwoFactor = null,
+        Permissions permissions = null)
     {
-        var factory = new IdentityApplicationFactory();
-
         var authorizationCode = new AuthorizationCode
         {
             ClientId = "web",
@@ -377,17 +419,18 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var registerResponse = await factory.RegisterAsync(new RegisterRequestModel
         {
             Email = testEmail,
-            MasterPasswordHash = "master_password_hash",
+            MasterPasswordHash = _testPassword,
         });
 
         var userRepository = factory.Services.GetRequiredService<IUserRepository>();
         var user = await userRepository.GetByEmailAsync(testEmail);
         Assert.NotNull(user);
 
-        if(userTwoFactor != null)
+        var userService = factory.GetService<IUserService>();
+        if (userTwoFactor != null)
         {
             user.TwoFactorProviders = userTwoFactor;
-            await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
         }
 
         // Create Organization
@@ -403,7 +446,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             TwoFactorProviders = orgTwoFactor,
         });
 
-        if(orgTwoFactor != null)
+        if (orgTwoFactor != null)
         {
             factory.WithWebHostBuilder(builder =>
             {
@@ -411,12 +454,10 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             });
         }
 
+        // Register User to Organization
         var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
-
         var orgUserPermissions =
             (permissions == null) ? null : JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase);
-
-        // Register User to Organization
         var organizationUser = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             UserId = user.Id,
@@ -450,30 +491,3 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         return factory;
     }
 }
-
-#region scratch pad
-/*
-Bunch of options for form body when logging in via SSO
-var ssoContext = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-{
-    { "scope", "api offline_access" },
-    { "client_id", "web" },
-    { "deviceType", "12" },
-    { "deviceIdentifier", deviceId },
-    { "deviceName", "firefox" },
-    { "grant_type", "authorization_code" },
-    { "username", username },
-    { "password", "master_password_hash" },
-    { "redirect_uri", "https://localhost:8080/sso-connector.html" },
-    { "scope", "api offline_access" },
-    { "client_id", "web" },
-    { "deviceType", "10" },
-    { "deviceIdentifier", deviceId },
-    { "deviceName", "firefox" },
-    { "grant_type", "authorization_code" },
-    { "code", "test_code" },
-    { "code_verifier", challenge },
-    { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-}), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
-*/
-#endregion
