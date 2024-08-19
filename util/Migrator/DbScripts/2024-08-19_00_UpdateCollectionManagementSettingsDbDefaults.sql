@@ -1,16 +1,30 @@
 -- Objective: 'LimitCollectionCreationDeletion' and 'AllowAdminAccessToAllCollectionItems' columns were set to 1 by
 -- default as a transitional measure. This script updates the default values to 0 to mirror the values set in code.
 
--- Step 1: Drop existing default constraints
-ALTER TABLE [dbo].[Organization] DROP CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion];
-GO
-ALTER TABLE [dbo].[Organization] DROP CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems];
+-- Step 1: Drop existing default constraints if they exist
+IF OBJECT_ID('[dbo].[DF_Organization_LimitCollectionCreationDeletion]', 'D') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[Organization] DROP CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion];
+END
 GO
 
--- Step 2: Add new default constraints with default value of 0
-ALTER TABLE [dbo].[Organization] ADD CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion] DEFAULT (0) FOR [LimitCollectionCreationDeletion];
+IF OBJECT_ID('[dbo].[DF_Organization_AllowAdminAccessToAllCollectionItems]', 'D') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[Organization] DROP CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems];
+END
 GO
-ALTER TABLE [dbo].[Organization] ADD CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems] DEFAULT (0) FOR [AllowAdminAccessToAllCollectionItems];
+
+-- Step 2: Add new default constraints with default value of 0 if columns exist
+IF COL_LENGTH('[dbo].[Organization]', 'LimitCollectionCreationDeletion') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[Organization] ADD CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion] DEFAULT (0) FOR [LimitCollectionCreationDeletion];
+END
+GO
+
+IF COL_LENGTH('[dbo].[Organization]', 'AllowAdminAccessToAllCollectionItems') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[Organization] ADD CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems] DEFAULT (0) FOR [AllowAdminAccessToAllCollectionItems];
+END
 GO
 
 -- Step 3: Update default values on Create stored procedure
