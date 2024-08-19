@@ -1,4 +1,5 @@
-﻿using Bit.Api.IntegrationTest.Factories;
+﻿using System.Diagnostics;
+using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -38,6 +39,8 @@ public static class OrganizationTestHelpers
             PaymentMethodType = paymentMethod
         });
 
+        Debug.Assert(signUpResult.organizationUser is not null);
+
         return new Tuple<Organization, OrganizationUser>(signUpResult.organization, signUpResult.organizationUser);
     }
 
@@ -57,6 +60,7 @@ public static class OrganizationTestHelpers
         var organizationUserRepository = factory.GetService<IOrganizationUserRepository>();
 
         var user = await userRepository.GetByEmailAsync(userEmail);
+        Debug.Assert(user is not null);
 
         var orgUser = new OrganizationUser
         {
