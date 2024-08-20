@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -20,6 +19,8 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
+
+#nullable enable
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -284,9 +285,6 @@ public class GroupsControllerPutTests
         bool adminAccess, Group group, OrganizationUser? savingUser, List<CollectionAccessSelection> currentCollectionAccess,
         List<Guid> currentGroupUsers)
     {
-        // FCv1 is now fully enabled
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
-
         var orgId = organization.Id = group.OrganizationId;
 
         // Arrange org and orgAbility
@@ -309,7 +307,7 @@ public class GroupsControllerPutTests
             .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, currentCollectionAccess ?? []));
         if (savingUser != null)
         {
-            sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, savingUser.UserId.Value)
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(orgId, savingUser.UserId!.Value)
                 .Returns(savingUser);
         }
 
