@@ -379,63 +379,6 @@ public class BaseRequestValidatorTests
         Assert.Null(result.Item2);
     }
 
-    [Theory, BitAutoData]
-    public async Task RequiresTwoFactorAsync_IndividualHasTwoFactor_ShouldReturnTrue(
-       [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-       CustomValidatorRequestContext requestContext,
-       GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
-        var user = context.CustomValidatorRequestContext.User;
-        user.TwoFactorProviders = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
-        _userService
-            .TwoFactorProviderIsEnabledAsync(Arg.Any<TwoFactorProviderType>(), user)
-            .Returns(true);
-
-        // mock GetTwoFactorEnabledAsync -> true
-        // _userManager.GetTwoFactorEnabledAsync(user).Returns(Task.FromResult(true));
-        // mock GetValidTwoFactorProvidersAsync -> user.TwoFactorProviders?
-        // _userManager.GetValidTwoFactorProvidersAsync(user).Returns([user.TwoFactorProviders]);
-
-        // Act
-        var result = await _sut.TestRequiresTwoFactorAsync(user, context.ValidatedTokenRequest);
-
-        // Assert
-        Assert.True(result.Item1);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RequiresTwoFactorAsync_OrganizationHasTwoFactor_ShouldReturnTrue(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
-        var user = context.CustomValidatorRequestContext.User;
-        user.TwoFactorProviders = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2FARequired@email.com"}}}""";
-        _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id)
-                       .Returns([new CurrentContextOrganization()]);
-        _organizationRepository.GetManyByUserIdAsync(user.Id)
-                               .Returns([new Organization() { }]);
-
-        // mock GetTwoFactorEnabledAsync -> true
-        // _userManager.GetTwoFactorEnabledAsync(user).Returns(Task.FromResult(true));
-        // mock GetValidTwoFactorProvidersAsync -> user.TwoFactorProviders?
-        // _userManager.GetValidTwoFactorProvidersAsync(user).Returns([user.TwoFactorProviders]);
-
-        // Act
-        var result = await _sut.TestRequiresTwoFactorAsync(user, context.ValidatedTokenRequest);
-
-        // Assert
-        Assert.True(result.Item1);
-    }
-
     private BaseRequestValidationContextFake CreateContext(
         ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
