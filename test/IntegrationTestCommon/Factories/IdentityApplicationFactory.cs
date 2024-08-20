@@ -94,7 +94,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "deviceName", deviceName },
             { "grant_type", "password" },
             { "username", username },
-            { "password", password },            
+            { "password", password },
             { "TwoFactorToken", twoFactorToken },
             { "TwoFactorProvider", twoFactorProviderType },
             { "TwoFactorRemember", "1" },
