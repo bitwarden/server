@@ -122,6 +122,7 @@ public class AuthRequestService : IAuthRequestService
                 throw new BadRequestException("User does not belong to any organizations.");
             }
 
+            Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
             // A user event will automatically create logs for each organization/provider this user belongs to.
             await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
 
@@ -136,6 +137,7 @@ public class AuthRequestService : IAuthRequestService
             return firstAuthRequest!;
         }
 
+        Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
         var authRequest = await CreateAuthRequestAsync(model, user, organizationId: null);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
         return authRequest;
