@@ -2,11 +2,13 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 
+#nullable enable
+
 namespace Bit.Core.AdminConsole.Repositories;
 
 public interface IGroupRepository : IRepository<Group, Guid>
 {
-    Task<Tuple<Group, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
+    Task<Tuple<Group?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
     Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Tuple<Group, ICollection<CollectionAccessSelection>>>> GetManyWithCollectionsByOrganizationIdAsync(
         Guid organizationId);

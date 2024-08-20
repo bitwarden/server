@@ -27,6 +27,7 @@ public class SendRepositoryTests
         Assert.Equal(expirationDate, createdSend.ExpirationDate!.Value, LaxDateTimeComparer.Default);
 
         var sendFromDatabase = await sendRepository.GetByIdAsync(createdSend.Id);
+        Assert.NotNull(sendFromDatabase);
         Assert.Equal(expirationDate, sendFromDatabase.ExpirationDate!.Value, LaxDateTimeComparer.Default);
         Assert.Equal(SendType.Text, sendFromDatabase.Type);
         Assert.Equal(0, sendFromDatabase.AccessCount);
