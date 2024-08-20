@@ -21,9 +21,9 @@ public static class ConfigurationExtensions
     public static Database[] GetDatabases(this IConfiguration config)
     {
         var typedConfig = config.Get<TypedConfig>();
-        if (typedConfig.Databases == null)
+        if (typedConfig?.Databases == null)
         {
-            return Array.Empty<Database>();
+            return [];
         }
 
         return typedConfig.Databases.Where(d => d.Enabled).ToArray();

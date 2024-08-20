@@ -65,6 +65,7 @@ public interface IUserService
     Task<bool> CheckPasswordAsync(User user, string password);
     Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
     Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
+    [Obsolete("Use ITwoFactorIsEnabledQuery instead.")]
     Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
     Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);

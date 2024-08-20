@@ -17,7 +17,7 @@ public interface IProviderBillingService
     /// <see cref="PlanType"/>.
     /// </summary>
     /// <param name="provider">The <see cref="Provider"/> that manages the client <paramref name="organization"/>.</param>
-    /// <param name="organization">The client <see cref="Organization"/> whose <see cref="seats"/> you want to update.</param>
+    /// <param name="organization">The client <see cref="Organization"/> whose <paramref name="seats"/> you want to update.</param>
     /// <param name="seats">The number of seats to assign to the client organization.</param>
     Task AssignSeatsToClientOrganization(
         Provider provider,
@@ -88,4 +88,9 @@ public interface IProviderBillingService
     /// <remarks>This method requires the <paramref name="provider"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
     Task<Subscription> SetupSubscription(
         Provider provider);
+
+    Task UpdateSeatMinimums(
+        Provider provider,
+        int enterpriseSeatMinimum,
+        int teamsSeatMinimum);
 }

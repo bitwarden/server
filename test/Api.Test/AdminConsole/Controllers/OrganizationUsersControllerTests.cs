@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -170,7 +169,6 @@ public class OrganizationUsersControllerTests
     public async Task Invite_NotAuthorizedToGiveAccessToCollections_Throws(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
             .Returns(organizationAbility);

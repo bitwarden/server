@@ -187,16 +187,32 @@ public class OrganizationEditModel : OrganizationViewModel
                 var plan = new
                 {
                     Type = p.Type,
-                    Has2fa = p.Has2fa,
-                    HasApi = p.HasApi,
-                    HasGroups = p.HasGroups,
+                    ProductTier = p.ProductTier,
+                    Name = p.Name,
+                    IsAnnual = p.IsAnnual,
+                    NameLocalizationKey = p.NameLocalizationKey,
+                    DescriptionLocalizationKey = p.DescriptionLocalizationKey,
+                    CanBeUsedByBusiness = p.CanBeUsedByBusiness,
+                    TrialPeriodDays = p.TrialPeriodDays,
+                    HasSelfHost = p.HasSelfHost,
                     HasPolicies = p.HasPolicies,
-                    HasSso = p.HasSso,
-                    HasScim = p.HasScim,
+                    HasGroups = p.HasGroups,
                     HasDirectory = p.HasDirectory,
                     HasEvents = p.HasEvents,
+                    HasTotp = p.HasTotp,
+                    Has2fa = p.Has2fa,
+                    HasApi = p.HasApi,
+                    HasSso = p.HasSso,
+                    HasKeyConnector = p.HasKeyConnector,
+                    HasScim = p.HasScim,
                     HasResetPassword = p.HasResetPassword,
+                    UsersGetPremium = p.UsersGetPremium,
                     HasCustomPermissions = p.HasCustomPermissions,
+                    UpgradeSortOrder = p.UpgradeSortOrder,
+                    DisplaySortOrder = p.DisplaySortOrder,
+                    LegacyYear = p.LegacyYear,
+                    Disabled = p.Disabled,
+                    SupportsSecretsManager = p.SupportsSecretsManager,
                     PasswordManager =
                         new
                         {
@@ -244,17 +260,10 @@ public class OrganizationEditModel : OrganizationViewModel
                 return plan;
             });
 
-    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsV1Enabled)
+    public Organization CreateOrganization(Provider provider)
     {
         BillingEmail = provider.BillingEmail;
-
-        var newOrg = new Organization
-        {
-            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
-            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
-        };
-        return ToOrganization(newOrg);
+        return ToOrganization(new Organization());
     }
 
     public Organization ToOrganization(Organization existingOrganization)
