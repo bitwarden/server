@@ -1,8 +1,11 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
+﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -11,6 +14,7 @@ public static class DatabaseContextExtensions
     public static async Task UserBumpAccountRevisionDateAsync(this DatabaseContext context, Guid userId)
     {
         var user = await context.Users.FindAsync(userId);
+        Debug.Assert(user is not null, "The user id is expected to be validated as a true-in database user before making this call.");
         user.AccountRevisionDate = DateTime.UtcNow;
     }
 
@@ -64,8 +68,8 @@ public static class DatabaseContextExtensions
                     from cg in cg_g.DefaultIfEmpty()
                     where ou.OrganizationId == organizationId &&
                       ou.Status == OrganizationUserStatusType.Confirmed &&
-                        (cu.CollectionId != null ||
-                        cg.CollectionId != null)
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                        (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select u;
 
         var users = await query.ToListAsync();
@@ -95,8 +99,8 @@ public static class DatabaseContextExtensions
                     from cg in cg_g.DefaultIfEmpty()
                     where ou.OrganizationId == organizationId && collectionIds.Contains(c.Id) &&
                       ou.Status == OrganizationUserStatusType.Confirmed &&
-                        (cu.CollectionId != null ||
-                        cg.CollectionId != null)
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                        (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select u;
 
         var users = await query.ToListAsync();

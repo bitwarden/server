@@ -15,32 +15,23 @@ public class CollectionService : ICollectionService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IMailService _mailService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
 
     public CollectionService(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
-        IUserRepository userRepository,
-        IMailService mailService,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext,
-        IFeatureService featureService)
+        ICurrentContext currentContext)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
-        _userRepository = userRepository;
-        _mailService = mailService;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
-        _featureService = featureService;
     }
 
     public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
@@ -62,16 +53,13 @@ public class CollectionService : ICollectionService
             throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
         }
 
-        // If using Flexible Collections V1 - a collection should always have someone with Can Manage permissions
-        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
+        // A collection should always have someone with Can Manage permissions
+        var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
+        var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
+        if (!groupHasManageAccess && !userHasManageAccess && !org.AllowAdminAccessToAllCollectionItems)
         {
-            var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
-            var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
-            if (!groupHasManageAccess && !userHasManageAccess && !org.AllowAdminAccessToAllCollectionItems)
-            {
-                throw new BadRequestException(
-                    "At least one member or group must have can manage permission.");
-            }
+            throw new BadRequestException(
+                "At least one member or group must have can manage permission.");
         }
 
         if (collection.Id == default(Guid))
@@ -128,10 +116,7 @@ public class CollectionService : ICollectionService
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(
-                _currentContext.UserId.Value,
-                _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections)
-            );
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
             orgCollections = collections.Where(c => c.OrganizationId == organizationId);
         }
 

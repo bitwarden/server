@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -107,7 +108,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -115,7 +116,7 @@ public class SyncControllerTests
         policyRepository.GetManyByUserIdAsync(user.Id).Returns(policies);
 
         // Returns for methods only called if we have enabled orgs
-        collectionRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(collections);
+        collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
         collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
@@ -128,7 +129,7 @@ public class SyncControllerTests
         // Asserts
         // Assert that methods are called
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -197,7 +198,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -215,7 +216,7 @@ public class SyncControllerTests
         // Assert that methods are called
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -271,7 +272,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -279,7 +280,7 @@ public class SyncControllerTests
         policyRepository.GetManyByUserIdAsync(user.Id).Returns(policies);
 
         // Returns for methods only called if we have enabled orgs
-        collectionRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(collections);
+        collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
         collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
@@ -292,7 +293,7 @@ public class SyncControllerTests
         // Assert that methods are called
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -333,7 +334,7 @@ public class SyncControllerTests
             .GetManyByUserIdAsync(default);
 
         await cipherRepository.ReceivedWithAnyArgs(1)
-            .GetManyByUserIdAsync(default, useFlexibleCollections: default);
+            .GetManyByUserIdAsync(default);
 
         await sendRepository.ReceivedWithAnyArgs(1)
             .GetManyByUserIdAsync(default);
@@ -342,7 +343,7 @@ public class SyncControllerTests
         if (hasEnabledOrgs)
         {
             await collectionRepository.ReceivedWithAnyArgs(1)
-                .GetManyByUserIdAsync(default, default);
+                .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(1)
                 .GetManyByUserIdAsync(default);
         }
@@ -350,13 +351,13 @@ public class SyncControllerTests
         {
             // all disabled orgs
             await collectionRepository.ReceivedWithAnyArgs(0)
-                .GetManyByUserIdAsync(default, default);
+                .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(0)
                 .GetManyByUserIdAsync(default);
         }
 
         await userService.ReceivedWithAnyArgs(1)
-            .TwoFactorIsEnabledAsync(default);
+            .TwoFactorIsEnabledAsync(default(ITwoFactorProvidersUser));
         await userService.ReceivedWithAnyArgs(1)
             .HasPremiumFromOrganization(default);
     }

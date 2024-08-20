@@ -41,6 +41,8 @@ public class AccountsControllerTests : IDisposable
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
+    private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+
 
     public AccountsControllerTests()
     {
@@ -54,6 +56,8 @@ public class AccountsControllerTests : IDisposable
         _sendVerificationEmailForRegistrationCommand = Substitute.For<ISendVerificationEmailForRegistrationCommand>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _featureService = Substitute.For<IFeatureService>();
+        _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
+
         _sut = new AccountsController(
             _currentContext,
             _logger,
@@ -64,7 +68,8 @@ public class AccountsControllerTests : IDisposable
             _getWebAuthnLoginCredentialAssertionOptionsCommand,
             _sendVerificationEmailForRegistrationCommand,
             _referenceEventService,
-            _featureService
+            _featureService,
+            _registrationEmailVerificationTokenDataFactory
         );
     }
 
@@ -81,7 +86,7 @@ public class AccountsControllerTests : IDisposable
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default
         };
-        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult(userKdfInfo));
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
@@ -92,7 +97,7 @@ public class AccountsControllerTests : IDisposable
     [Fact]
     public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
     {
-        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation>(null!));
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
@@ -379,5 +384,106 @@ public class AccountsControllerTests : IDisposable
         var modelError = modelStateEntry.Errors.First();
         Assert.Equal(duplicateUserEmailErrorDesc, modelError.ErrorMessage);
     }
+
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterVerificationEmailClicked_WhenTokenIsValid_ShouldReturnOk(string email, string emailVerificationToken)
+    {
+        // Arrange
+        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email);
+        _registrationEmailVerificationTokenDataFactory
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = registrationEmailVerificationTokenable;
+                return true;
+            });
+
+        _userRepository.GetByEmailAsync(email).ReturnsNull(); // no existing user
+
+        var requestModel = new RegisterVerificationEmailClickedRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken
+        };
+
+        // Act
+        var result = await _sut.PostRegisterVerificationEmailClicked(requestModel);
+
+        // Assert
+        var okResult = Assert.IsType<OkResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+
+        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
+            e.Type == ReferenceEventType.SignupEmailClicked
+            && e.EmailVerificationTokenValid == true
+            && e.UserAlreadyExists == false
+            ));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterVerificationEmailClicked_WhenTokenIsInvalid_ShouldReturnBadRequest(string email, string emailVerificationToken)
+    {
+        // Arrange
+        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable("wrongEmail");
+        _registrationEmailVerificationTokenDataFactory
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = registrationEmailVerificationTokenable;
+                return true;
+            });
+
+        _userRepository.GetByEmailAsync(email).ReturnsNull(); // no existing user
+
+        var requestModel = new RegisterVerificationEmailClickedRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken
+        };
+
+        // Act & assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterVerificationEmailClicked(requestModel));
+
+        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
+            e.Type == ReferenceEventType.SignupEmailClicked
+            && e.EmailVerificationTokenValid == false
+            && e.UserAlreadyExists == false
+        ));
+    }
+
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterVerificationEmailClicked_WhenTokenIsValidButExistingUser_ShouldReturnBadRequest(string email, string emailVerificationToken, User existingUser)
+    {
+        // Arrange
+        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email);
+        _registrationEmailVerificationTokenDataFactory
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = registrationEmailVerificationTokenable;
+                return true;
+            });
+
+        _userRepository.GetByEmailAsync(email).Returns(existingUser);
+
+        var requestModel = new RegisterVerificationEmailClickedRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken
+        };
+
+        // Act & assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterVerificationEmailClicked(requestModel));
+
+        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
+            e.Type == ReferenceEventType.SignupEmailClicked
+            && e.EmailVerificationTokenValid == true
+            && e.UserAlreadyExists == true
+        ));
+    }
+
+
 
 }

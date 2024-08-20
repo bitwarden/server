@@ -4,14 +4,37 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
+using Xunit;
 
 namespace Bit.Api.Test.Billing;
 
 public static class Utilities
 {
+    public static void AssertNotFound(IResult result)
+    {
+        Assert.IsType<NotFound<ErrorResponseModel>>(result);
+
+        var response = ((NotFound<ErrorResponseModel>)result).Value;
+
+        Assert.Equal("Resource not found.", response.Message);
+    }
+
+    public static void AssertUnauthorized(IResult result)
+    {
+        Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+
+        var response = (JsonHttpResult<ErrorResponseModel>)result;
+
+        Assert.Equal(StatusCodes.Status401Unauthorized, response.StatusCode);
+        Assert.Equal("Unauthorized.", response.Value.Message);
+    }
+
     public static void ConfigureStableAdminInputs<T>(
         Provider provider,
         SutProvider<T> sutProvider) where T : BaseProviderController
