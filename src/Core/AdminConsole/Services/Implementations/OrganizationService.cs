@@ -21,6 +21,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -1800,7 +1801,7 @@ public class OrganizationService : IOrganizationService
 
         // Users
 
-        var events = new List<(OrganizationUser ou, EventType e, DateTime? d)>();
+        var events = new List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)>();
 
         // Remove Users
         if (removeUserExternalIds?.Any() ?? false)
@@ -1812,7 +1813,11 @@ public class OrganizationService : IOrganizationService
                 .Select(u => existingUsersDict[u]);
 
             await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
-            events.AddRange(removeUsersSet.Select(u => (new OrganizationUser { Id = u.Id, UserId = u.UserId, OrganizationId = u.OrganizationId }, EventType.OrganizationUser_Removed, (DateTime?)DateTime.UtcNow)));
+            events.AddRange(removeUsersSet.Select(u => (
+              u,
+              EventType.OrganizationUser_Removed,
+              (DateTime?)DateTime.UtcNow))
+            );
         }
 
         if (overwriteExisting)
@@ -1823,7 +1828,11 @@ public class OrganizationService : IOrganizationService
                 !newUsersSet.Contains(u.ExternalId) &&
                 existingExternalUsersIdDict.ContainsKey(u.ExternalId));
             await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
-            events.AddRange(usersToDelete.Select(u => (new OrganizationUser { Id = u.Id, UserId = u.UserId, OrganizationId = u.OrganizationId }, EventType.OrganizationUser_Removed, (DateTime?)DateTime.UtcNow)));
+            events.AddRange(usersToDelete.Select(u => (
+              u,
+              EventType.OrganizationUser_Removed,
+              (DateTime?)DateTime.UtcNow))
+            );
             foreach (var deletedUser in usersToDelete)
             {
                 existingExternalUsersIdDict.Remove(deletedUser.ExternalId);
