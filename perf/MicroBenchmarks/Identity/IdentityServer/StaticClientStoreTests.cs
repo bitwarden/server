@@ -15,7 +15,7 @@ public class StaticClientStoreTests
     }
 
     [Params("mobile", "connector", "invalid", "a_much_longer_invalid_value_that_i_am_making_up", "WEB", "")]
-    public string? ClientId { get; set; }
+    public string ClientId { get; set; } = null!;
 
     [Benchmark]
     public Client? TryGetValue()
