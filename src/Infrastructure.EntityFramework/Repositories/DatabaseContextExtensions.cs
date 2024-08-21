@@ -68,8 +68,8 @@ public static class DatabaseContextExtensions
                     from cg in cg_g.DefaultIfEmpty()
                     where ou.OrganizationId == organizationId &&
                       ou.Status == OrganizationUserStatusType.Confirmed &&
-                        (cu.CollectionId != null ||
-                        cg.CollectionId != null)
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                        (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select u;
 
         var users = await query.ToListAsync();
@@ -99,8 +99,8 @@ public static class DatabaseContextExtensions
                     from cg in cg_g.DefaultIfEmpty()
                     where ou.OrganizationId == organizationId && collectionIds.Contains(c.Id) &&
                       ou.Status == OrganizationUserStatusType.Confirmed &&
-                        (cu.CollectionId != null ||
-                        cg.CollectionId != null)
+                        ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                        (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select u;
 
         var users = await query.ToListAsync();

@@ -2,6 +2,8 @@
 using Bit.Core.Entities;
 using Dapper;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 
 public static class OrganizationUserHelpers
@@ -11,7 +13,7 @@ public static class OrganizationUserHelpers
         var table = new DataTable();
         table.SetTypeName("[dbo].[OrganizationUserType2]");
 
-        var columnData = new List<(string name, Type type, Func<OrganizationUser, object> getter)>
+        var columnData = new List<(string name, Type type, Func<OrganizationUser, object?> getter)>
         {
             (nameof(OrganizationUser.Id), typeof(Guid), ou => ou.Id),
             (nameof(OrganizationUser.OrganizationId), typeof(Guid), ou => ou.OrganizationId),
