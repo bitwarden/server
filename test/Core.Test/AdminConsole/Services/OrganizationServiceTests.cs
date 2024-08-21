@@ -1833,22 +1833,28 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory]
     [PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually)]
-    [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2)]
-    [BitAutoData("Cannot set max seat autoscaling below seat count", 4, -1, 6)]
-    public async Task Enterprise_UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
-        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
+    [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2, 2)]
+    [BitAutoData("Cannot set max seat autoscaling below seat count", 4, -1, 6, 6)]
+    public async Task Enterprise_UpdateMaxSeatAutoscaling_BadInputThrows(string expectedMessage,
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats,
+            currentMaxAutoscaleSeats, organization, sutProvider);
     [Theory]
     [FreeOrganizationCustomize]
-    [BitAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
-    public async Task Free_UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
-        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
+    [BitAutoData("Your plan does not allow seat autoscaling", 10, 0, null, null)]
+    public async Task Free_UpdateMaxSeatAutoscaling_BadInputThrows(string expectedMessage,
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats,
+            currentMaxAutoscaleSeats, organization, sutProvider);
 
     private async Task UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
     {
         organization.Seats = currentSeats;
+        organization.MaxAutoscaleSeats = currentMaxAutoscaleSeats;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,
