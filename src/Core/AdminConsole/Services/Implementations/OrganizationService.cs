@@ -1930,19 +1930,20 @@ public class OrganizationService : IOrganizationService
 
             var newGroups = groups
                 .Where(g => !existingExternalGroupsDict.ContainsKey(g.Group.ExternalId))
-                .Select(g => g.Group);
+                .Select(g => g.Group).ToList();
 
+            var savedGroups = new List<Group>();
             foreach (var group in newGroups)
             {
                 group.CreationDate = group.RevisionDate = DateTime.UtcNow;
 
-                await _groupRepository.CreateAsync(group);
+                savedGroups.Add(await _groupRepository.CreateAsync(group));
                 await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
                     existingExternalUsersIdDict);
             }
 
             await _eventService.LogGroupEventsAsync(
-                newGroups.Select(g => (g, EventType.Group_Created, eventSystemUser, (DateTime?)DateTime.UtcNow)));
+                savedGroups.Select(g => (g, EventType.Group_Created, eventSystemUser, (DateTime?)DateTime.UtcNow)));
 
             var updateGroups = existingExternalGroups
                 .Where(g => groupsDict.ContainsKey(g.ExternalId))
