@@ -17,4 +17,5 @@ GO
 CREATE NONCLUSTERED INDEX [IX_Report_OrganizationId] ON [dbo].[Report] ([OrganizationId] ASC);
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Report_Group] ON [dbo].[Report] ([GroupId] ASC);
+CREATE NONCLUSTERED INDEX [IX_Report_Group] ON [dbo].[Report] ([GroupId] ASC)
+    WHERE [GroupId] IS NOT NULL;

@@ -20,6 +20,22 @@ BEGIN
 END
 GO
 
+-- Create indexes
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_Report_OrganizationId')
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_Report_OrganizationId]
+            ON [dbo].[Report]([OrganizationId] ASC);
+    END
+GO
+
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_Report_Group')
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_Report_Group]
+            ON [dbo].[Report]([GroupId] ASC)
+            WHERE [GroupId] IS NOT NULL;
+    END
+GO
+
 -- Stored Procedure: Create
 IF OBJECT_ID('[dbo].[Report_Create]') IS NOT NULL
 BEGIN
