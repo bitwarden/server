@@ -35,13 +35,6 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
                 // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
                 o.Type = o.Type.GetFlexibleCollectionsUserType(userPermissions);
 
-                // Set 'Edit/Delete Assigned Collections' custom permissions to false
-                if (userPermissions is not null)
-                {
-                    userPermissions.EditAssignedCollections = false;
-                    userPermissions.DeleteAssignedCollections = false;
-                }
-
                 return o;
             });
     }
