@@ -1,15 +1,21 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.Services;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Migrations;
 
 public class FinalFlexibleCollectionsDataMigrationsTests
 {
-    [DatabaseTheory, DatabaseData(MigrationName = "FinalFlexibleCollectionsDataMigrations")]
+    private const string _migrationName = "FinalFlexibleCollectionsDataMigrations";
+
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
     public async Task RunMigration_WithEditAssignedCollections_WithCustomUserType_MigratesToUserNullPermissions(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -19,7 +25,7 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         // Setup data
         var orgUser = await SetupData(
             userRepository, organizationRepository, organizationUserRepository,
-            editAssignedCollections: true, deleteAssignedCollections: false);
+            OrganizationUserType.Custom, editAssignedCollections: true, deleteAssignedCollections: false);
 
         // Run data migration
         migrationTester.ApplyMigration();
@@ -32,7 +38,7 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         Assert.Null(migratedOrgUser.Permissions);
     }
 
-    [DatabaseTheory, DatabaseData(MigrationName = "FinalFlexibleCollectionsDataMigrations")]
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
     public async Task RunMigration_WithDeleteAssignedCollections_WithCustomUserType_MigratesToUserNullPermissions(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -42,7 +48,7 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         // Setup data
         var orgUser = await SetupData(
             userRepository, organizationRepository, organizationUserRepository,
-            editAssignedCollections: false, deleteAssignedCollections: true);
+            OrganizationUserType.Custom, editAssignedCollections: false, deleteAssignedCollections: true);
 
         // Run data migration
         migrationTester.ApplyMigration();
@@ -55,7 +61,7 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         Assert.Null(migratedOrgUser.Permissions);
     }
 
-    [DatabaseTheory, DatabaseData(MigrationName = "FinalFlexibleCollectionsDataMigrations")]
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
     public async Task RunMigration_WithEditAndDeleteAssignedCollections_WithCustomUserType_MigratesToUserNullPermissions(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -65,7 +71,7 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         // Setup data
         var orgUser = await SetupData(
             userRepository, organizationRepository, organizationUserRepository,
-            editAssignedCollections: true, deleteAssignedCollections: true);
+            OrganizationUserType.Custom, editAssignedCollections: true, deleteAssignedCollections: true);
 
         // Run data migration
         migrationTester.ApplyMigration();
@@ -78,7 +84,7 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         Assert.Null(migratedOrgUser.Permissions);
     }
 
-    [DatabaseTheory, DatabaseData(MigrationName = "FinalFlexibleCollectionsDataMigrations")]
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
     public async Task RunMigration_WithoutAssignedCollectionsPermissions_WithCustomUserType_RemovesAssignedCollectionsPermissions(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -87,21 +93,103 @@ public class FinalFlexibleCollectionsDataMigrationsTests
     {
         // Setup data
         var orgUser = await SetupData(
-            userRepository, organizationRepository, organizationUserRepository,
-            editAssignedCollections: false, deleteAssignedCollections: false);
+            userRepository, organizationRepository, organizationUserRepository, OrganizationUserType.Custom,
+            editAssignedCollections: false, deleteAssignedCollections: false, accessEventLogs: true);
 
         // Run data migration
         migrationTester.ApplyMigration();
 
-        // Assert that the user was migrated to a User type with null permissions
+        // Assert that the user kept the accessEventLogs permission and lost the editAssignedCollections and deleteAssignedCollections permissions
         var migratedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(migratedOrgUser);
         Assert.Equal(orgUser.Id, migratedOrgUser.Id);
         Assert.Equal(OrganizationUserType.Custom, migratedOrgUser.Type);
         Assert.NotEqual(orgUser.Permissions, migratedOrgUser.Permissions);
         Assert.NotNull(migratedOrgUser.Permissions);
+        Assert.Contains("accessEventLogs", orgUser.Permissions);
         Assert.Contains("editAssignedCollections", orgUser.Permissions);
         Assert.Contains("deleteAssignedCollections", orgUser.Permissions);
+
+        Assert.Contains("accessEventLogs", migratedOrgUser.Permissions);
+        Assert.True(migratedOrgUser.GetPermissions().AccessEventLogs);
+        Assert.DoesNotContain("editAssignedCollections", migratedOrgUser.Permissions);
+        Assert.DoesNotContain("deleteAssignedCollections", migratedOrgUser.Permissions);
+    }
+
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
+    public async Task RunMigration_WithAdminUserType_RemovesAssignedCollectionsPermissions(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IMigrationTesterService migrationTester)
+    {
+        // Setup data
+        var orgUser = await SetupData(
+            userRepository, organizationRepository, organizationUserRepository, OrganizationUserType.Admin,
+            editAssignedCollections: false, deleteAssignedCollections: false, accessEventLogs: true);
+
+        // Run data migration
+        migrationTester.ApplyMigration();
+
+        // Assert that the user kept the Admin type and lost the editAssignedCollections and deleteAssignedCollections
+        // permissions but kept the accessEventLogs permission
+        var migratedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(migratedOrgUser);
+        Assert.Equal(orgUser.Id, migratedOrgUser.Id);
+        Assert.Equal(OrganizationUserType.Admin, migratedOrgUser.Type);
+        Assert.NotEqual(orgUser.Permissions, migratedOrgUser.Permissions);
+        Assert.NotNull(migratedOrgUser.Permissions);
+        Assert.Contains("accessEventLogs", orgUser.Permissions);
+        Assert.Contains("editAssignedCollections", orgUser.Permissions);
+        Assert.Contains("deleteAssignedCollections", orgUser.Permissions);
+
+        Assert.Contains("accessEventLogs", migratedOrgUser.Permissions);
+        Assert.True(migratedOrgUser.GetPermissions().AccessEventLogs);
+        Assert.DoesNotContain("editAssignedCollections", migratedOrgUser.Permissions);
+        Assert.DoesNotContain("deleteAssignedCollections", migratedOrgUser.Permissions);
+    }
+
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
+    public async Task RunMigration_WithoutAssignedCollectionsPermissions_DoesNothing(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IMigrationTesterService migrationTester)
+    {
+        // Setup data
+        var orgUser = await SetupData(
+            userRepository, organizationRepository, organizationUserRepository, OrganizationUserType.Custom,
+            editAssignedCollections: false, deleteAssignedCollections: false, accessEventLogs: true);
+        orgUser.Permissions = JsonSerializer.Serialize(new
+        {
+            AccessEventLogs = true,
+            AccessImportExport = false,
+            AccessReports = false,
+            CreateNewCollections = false,
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManagePolicies = false,
+            ManageSso = false,
+            ManageUsers = false,
+            ManageResetPassword = false,
+            ManageScim = false
+        }, JsonHelpers.CamelCase);
+        await organizationUserRepository.ReplaceAsync(orgUser);
+
+        // Run data migration
+        migrationTester.ApplyMigration();
+
+        // Assert that the user kept the Admin type and no changes were made to the permissions
+        var migratedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(migratedOrgUser);
+        Assert.Equal(orgUser.Id, migratedOrgUser.Id);
+        Assert.Equal(orgUser.Type, migratedOrgUser.Type);
+        Assert.NotNull(migratedOrgUser.Permissions);
+        // Assert that the permissions remain unchanged by comparing JSON data, ignoring the order of properties
+        Assert.True(JToken.DeepEquals(JObject.Parse(orgUser.Permissions), JObject.Parse(migratedOrgUser.Permissions)));
+        Assert.Contains("accessEventLogs", migratedOrgUser.Permissions);
+        Assert.True(migratedOrgUser.GetPermissions().AccessEventLogs);
         Assert.DoesNotContain("editAssignedCollections", migratedOrgUser.Permissions);
         Assert.DoesNotContain("deleteAssignedCollections", migratedOrgUser.Permissions);
     }
@@ -110,16 +198,28 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
+        OrganizationUserType organizationUserType,
         bool editAssignedCollections,
-        bool deleteAssignedCollections)
+        bool deleteAssignedCollections,
+        bool accessEventLogs = false)
     {
-        var permissionJson =
-            "{\"accessEventLogs\":false,\"accessImportExport\":false,\"accessReports\":false,\"createNewCollections\""
-            + ":false,\"editAnyCollection\":false,\"deleteAnyCollection\":false,\""
-            + "editAssignedCollections\":" + editAssignedCollections.ToString().ToLower() + ",\""
-            + "deleteAssignedCollections\":" + deleteAssignedCollections.ToString().ToLower()
-            + ",\"manageGroups\":false,\"managePolicies\":false,\"manageSso\":false,\""
-            + "manageUsers\":false,\"manageResetPassword\":false,\"manageScim\":false}";
+        var permissions = new Permissions
+        {
+            AccessEventLogs = accessEventLogs,
+            AccessImportExport = false,
+            AccessReports = false,
+            CreateNewCollections = false,
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            EditAssignedCollections = editAssignedCollections,
+            DeleteAssignedCollections = deleteAssignedCollections,
+            ManageGroups = false,
+            ManagePolicies = false,
+            ManageSso = false,
+            ManageUsers = false,
+            ManageResetPassword = false,
+            ManageScim = false
+        };
 
         var user = await userRepository.CreateAsync(new User
         {
@@ -147,8 +247,8 @@ public class FinalFlexibleCollectionsDataMigrationsTests
             UserId = user.Id,
             Status = OrganizationUserStatusType.Confirmed,
             ResetPasswordKey = "resetpasswordkey1",
-            Type = OrganizationUserType.Custom,
-            Permissions = permissionJson
+            Type = organizationUserType,
+            Permissions = JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase)
         });
 
         return orgUser;
