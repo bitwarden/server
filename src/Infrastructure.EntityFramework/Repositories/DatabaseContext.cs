@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.ActionableInsights.Entities;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
@@ -71,6 +72,7 @@ public class DatabaseContext : DbContext
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
     public DbSet<ProviderPlan> ProviderPlans { get; set; }
     public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
+    public DbSet<Report> Report { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
