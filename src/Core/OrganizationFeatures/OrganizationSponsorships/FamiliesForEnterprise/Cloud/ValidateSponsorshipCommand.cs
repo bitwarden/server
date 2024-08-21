@@ -44,6 +44,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             await CancelSponsorshipAsync(sponsoredOrganization, null);
             return false;
         }
+
         if (existingSponsorship.SponsoringOrganizationId == null)
         {
             _logger.LogWarning("Sponsoring OrganizationId is null for sponsored Organization {SponsoredOrganizationId}", sponsoredOrganizationId);
@@ -126,7 +127,6 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
 
     private async Task CancelSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
     {
-        return;
         if (sponsoredOrganization != null)
         {
             await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
