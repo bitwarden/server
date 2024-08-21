@@ -40,6 +40,9 @@ public class EfMigrationTesterService : IMigrationTesterService
         migrator.Migrate(_migrationName);
     }
 
+    /// <summary>
+    /// Deletes the migration history for the specified migration name.
+    /// </summary>
     private void DeleteMigrationHistory()
     {
         var deleteCommand = "DELETE FROM __EFMigrationsHistory WHERE MigrationId LIKE @migrationName";
