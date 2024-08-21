@@ -1,4 +1,4 @@
--- ProviderInvoiceItem
+-- Report
 
 -- Table
 IF OBJECT_ID('[dbo].[Report]') IS NULL
