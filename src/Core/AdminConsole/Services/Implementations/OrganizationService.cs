@@ -1781,7 +1781,9 @@ public class OrganizationService : IOrganizationService
         IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers,
         IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting)
+        bool overwriteExisting,
+        EventSystemUser? eventSystemUser = null
+    )
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -1816,7 +1818,8 @@ public class OrganizationService : IOrganizationService
             events.AddRange(removeUsersSet.Select(u => (
               u,
               EventType.OrganizationUser_Removed,
-              (DateTime?)DateTime.UtcNow))
+              (DateTime?)DateTime.UtcNow
+              ))
             );
         }
 
@@ -1831,7 +1834,8 @@ public class OrganizationService : IOrganizationService
             events.AddRange(usersToDelete.Select(u => (
               u,
               EventType.OrganizationUser_Removed,
-              (DateTime?)DateTime.UtcNow))
+              (DateTime?)DateTime.UtcNow
+              ))
             );
             foreach (var deletedUser in usersToDelete)
             {
@@ -1966,7 +1970,14 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        await _eventService.LogOrganizationUserEventsAsync(events);
+        if (eventSystemUser != null)
+        {
+            await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser.Value, e.d)));
+        }
+        else
+        {
+            await _eventService.LogOrganizationUserEventsAsync(events);
+        }
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
