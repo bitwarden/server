@@ -19,7 +19,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         : base(serviceScopeFactory, mapper, db => db.Secret)
     { }
 
-    public override async Task<Core.SecretsManager.Entities.Secret> GetByIdAsync(Guid id)
+    public override async Task<Core.SecretsManager.Entities.Secret?> GetByIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -323,6 +323,23 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await dbContext.Secret.Where(s => s.DeletedDate != null && s.DeletedDate < currentDate.AddDays(-deleteAfterThisNumberOfDays)).ExecuteDeleteAsync();
 
         await dbContext.SaveChangesAsync();
+    }
+
+    public async Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId, Guid userId,
+        AccessClientType accessType)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Secret.Where(s => s.OrganizationId == organizationId && s.DeletedDate == null);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        return await query.CountAsync();
     }
 
     private IQueryable<SecretPermissionDetails> SecretToPermissionDetails(IQueryable<Secret> query, Guid userId, AccessClientType accessType)

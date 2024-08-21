@@ -115,11 +115,6 @@ public class CreateGroupCommand : ICreateGroupCommand
             throw new BadRequestException("This organization cannot use groups.");
         }
 
-        if (group.AccessAll)
-        {
-            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the group to collections instead.");
-        }
-
         var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
         if (invalidAssociations?.Any() ?? false)
         {

@@ -104,12 +104,10 @@ public static class FeatureFlagKeys
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
-    public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
     public const string ItemShare = "item-share";
     public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
-    public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EnableConsolidatedBilling = "enable-consolidated-billing";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
@@ -132,8 +130,14 @@ public static class FeatureFlagKeys
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string EnableUpgradePasswordManagerSub = "AC-2708-upgrade-password-manager-sub";
+    public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
+    public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
+    public const string MembersTwoFAQueryOptimization = "ac-1698-members-two-fa-query-optimization";
+    public const string NativeCarouselFlow = "native-carousel-flow";
+    public const string NativeCreateAccountFlow = "native-create-account-flow";
+    public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
 
     public static List<string> GetAllKeys()
     {
@@ -149,7 +153,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { FlexibleCollectionsV1, "true" },
             { BulkDeviceApproval, "true" }
         };
     }

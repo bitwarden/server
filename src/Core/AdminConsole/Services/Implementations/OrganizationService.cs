@@ -13,6 +13,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -67,6 +68,7 @@ public class OrganizationService : IOrganizationService
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -99,7 +101,8 @@ public class OrganizationService : IOrganizationService
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -132,6 +135,7 @@ public class OrganizationService : IOrganizationService
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -437,9 +441,6 @@ public class OrganizationService : IOrganizationService
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
 
-        var flexibleCollectionsV1Enabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription.
@@ -476,10 +477,6 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = true,
             // Secrets Manager not available for purchase with Consolidated Billing.
             UseSecretsManager = false,
-
-            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
-            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
         };
 
         var returnValue = await SignUpAsync(organization, default, signup.OwnerKey, signup.CollectionName, false);
@@ -522,9 +519,6 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var flexibleCollectionsV1IsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription..
@@ -561,11 +555,7 @@ public class OrganizationService : IOrganizationService
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
-            UseSecretsManager = signup.UseSecretsManager,
-
-            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
-            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
+            UseSecretsManager = signup.UseSecretsManager
         };
 
         if (signup.UseSecretsManager)
@@ -1305,7 +1295,10 @@ public class OrganizationService : IOrganizationService
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, IUserService userService)
     {
-        var result = await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
+        var result = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
+            ? await ConfirmUsersAsync_vNext(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
+                confirmingUserId)
+            : await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
             confirmingUserId, userService);
 
         if (!result.Any())
@@ -1369,6 +1362,77 @@ public class OrganizationService : IOrganizationService
                 }
 
                 await CheckPolicies(organizationId, user, orgUsers, userService);
+                orgUser.Status = OrganizationUserStatusType.Confirmed;
+                orgUser.Key = keys[orgUser.Id];
+                orgUser.Email = null;
+
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+                await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
+                succeededUsers.Add(orgUser);
+                result.Add(Tuple.Create(orgUser, ""));
+            }
+            catch (BadRequestException e)
+            {
+                result.Add(Tuple.Create(orgUser, e.Message));
+            }
+        }
+
+        await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
+
+        return result;
+    }
+
+    public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync_vNext(Guid organizationId, Dictionary<Guid, string> keys,
+        Guid confirmingUserId)
+    {
+        var selectedOrganizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
+        var validSelectedOrganizationUsers = selectedOrganizationUsers
+            .Where(u => u.Status == OrganizationUserStatusType.Accepted && u.OrganizationId == organizationId && u.UserId != null)
+            .ToList();
+
+        if (!validSelectedOrganizationUsers.Any())
+        {
+            return new List<Tuple<OrganizationUser, string>>();
+        }
+
+        var validSelectedUserIds = validSelectedOrganizationUsers.Select(u => u.UserId.Value).ToList();
+
+        var organization = await GetOrgById(organizationId);
+        var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
+        var users = await _userRepository.GetManyWithCalculatedPremiumAsync(validSelectedUserIds);
+        var usersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(validSelectedUserIds);
+
+        var keyedFilteredUsers = validSelectedOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
+        var keyedOrganizationUsers = allUsersOrgs.GroupBy(u => u.UserId.Value)
+            .ToDictionary(u => u.Key, u => u.ToList());
+
+        var succeededUsers = new List<OrganizationUser>();
+        var result = new List<Tuple<OrganizationUser, string>>();
+
+        foreach (var user in users)
+        {
+            if (!keyedFilteredUsers.ContainsKey(user.Id))
+            {
+                continue;
+            }
+            var orgUser = keyedFilteredUsers[user.Id];
+            var orgUsers = keyedOrganizationUsers.GetValueOrDefault(user.Id, new List<OrganizationUser>());
+            try
+            {
+                if (organization.PlanType == PlanType.Free && (orgUser.Type == OrganizationUserType.Admin
+                    || orgUser.Type == OrganizationUserType.Owner))
+                {
+                    // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
+                    var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
+                    if (adminCount > 0)
+                    {
+                        throw new BadRequestException("User can only be an admin of one free organization.");
+                    }
+                }
+
+                var twoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
+                await CheckPolicies_vNext(organizationId, user, orgUsers, twoFactorEnabled);
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
@@ -1479,6 +1543,33 @@ public class OrganizationService : IOrganizationService
         // Enforce Two Factor Authentication Policy for this organization
         var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)).Any(p => p.OrganizationId == organizationId);
         if (orgRequiresTwoFactor && !await userService.TwoFactorIsEnabledAsync(user))
+        {
+            throw new BadRequestException("User does not have two-step login enabled.");
+        }
+
+        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
+        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
+        var otherSingleOrgPolicies =
+            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
+        // Enforce Single Organization Policy for this organization
+        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
+        {
+            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
+        }
+        // Enforce Single Organization Policy of other organizations user is a member of
+        if (otherSingleOrgPolicies.Any())
+        {
+            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+        }
+    }
+
+    private async Task CheckPolicies_vNext(Guid organizationId, UserWithCalculatedPremium user,
+        ICollection<OrganizationUser> userOrgs, bool twoFactorEnabled)
+    {
+        // Enforce Two Factor Authentication Policy for this organization
+        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
+            .Any(p => p.OrganizationId == organizationId);
+        if (orgRequiresTwoFactor && !twoFactorEnabled)
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }
@@ -2333,7 +2424,21 @@ public class OrganizationService : IOrganizationService
             await AutoAddSeatsAsync(organization, 1);
         }
 
-        await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            var userTwoFactorIsEnabled = false;
+            // Only check Two Factor Authentication status if the user is linked to a user account
+            if (organizationUser.UserId.HasValue)
+            {
+                userTwoFactorIsEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(new[] { organizationUser.UserId.Value })).FirstOrDefault().twoFactorIsEnabled;
+            }
+
+            await CheckPoliciesBeforeRestoreAsync_vNext(organizationUser, userTwoFactorIsEnabled);
+        }
+        else
+        {
+            await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
+        }
 
         var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
@@ -2365,6 +2470,14 @@ public class OrganizationService : IOrganizationService
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
+        // Query Two Factor Authentication status for all users in the organization
+        // This is an optimization to avoid querying the Two Factor Authentication status for each user individually
+        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> organizationUsersTwoFactorEnabled = null;
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(filteredUsers.Select(ou => ou.UserId.Value));
+        }
+
         var result = new List<Tuple<OrganizationUser, string>>();
 
         foreach (var organizationUser in filteredUsers)
@@ -2386,7 +2499,15 @@ public class OrganizationService : IOrganizationService
                     throw new BadRequestException("Only owners can restore other owners.");
                 }
 
-                await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
+                if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+                {
+                    var twoFactorIsEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value).twoFactorIsEnabled;
+                    await CheckPoliciesBeforeRestoreAsync_vNext(organizationUser, twoFactorIsEnabled);
+                }
+                else
+                {
+                    await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
+                }
 
                 var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
@@ -2441,6 +2562,52 @@ public class OrganizationService : IOrganizationService
         // Enforce Two Factor Authentication Policy of organization user is trying to join
         var user = await _userRepository.GetByIdAsync(userId);
         if (!await userService.TwoFactorIsEnabledAsync(user))
+        {
+            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
+                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+            {
+                throw new BadRequestException("You cannot restore this user until they enable " +
+                    "two-step login on their user account.");
+            }
+        }
+    }
+
+    private async Task CheckPoliciesBeforeRestoreAsync_vNext(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
+    {
+        // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
+        // The user will be subject to the same checks when they try to accept the invite
+        if (GetPriorActiveOrganizationUserStatusType(orgUser) == OrganizationUserStatusType.Invited)
+        {
+            return;
+        }
+
+        var userId = orgUser.UserId.Value;
+
+        // Enforce Single Organization Policy of organization user is being restored to
+        var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+        var singleOrgPoliciesApplyingToRevokedUsers = await _policyService.GetPoliciesApplicableToUserAsync(userId,
+            PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
+        var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
+
+        if (hasOtherOrgs && singleOrgPolicyApplies)
+        {
+            throw new BadRequestException("You cannot restore this user until " +
+                "they leave or remove all other organizations.");
+        }
+
+        // Enforce Single Organization Policy of other organizations user is a member of
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId,
+            PolicyType.SingleOrg);
+        if (anySingleOrgPolicies)
+        {
+            throw new BadRequestException("You cannot restore this user because they are a member of " +
+                "another organization which forbids it");
+        }
+
+        // Enforce Two Factor Authentication Policy of organization user is trying to join
+        if (!userHasTwoFactorEnabled)
         {
             var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
