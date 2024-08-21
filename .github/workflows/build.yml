@@ -275,14 +275,14 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
+        uses: anchore/scan-action@bc9adf64917dd9444d6cf4dd68620c34ca3a5f69 # v4.1.1
         with:
           image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
           output-format: sarif
 
       - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
+        uses: github/codeql-action/upload-sarif@eb055d739abdc2e8de2e5f4ba1a8b246daa779aa # v3.26.0
         with:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
 
@@ -385,7 +385,7 @@ jobs:
           path: docker-stub-EU-sha256.txt
           if-no-files-found: error
 
-      - name: Build Swagger
+      - name: Build Public API Swagger
         run: |
           cd ./src/Api
           echo "Restore tools"
@@ -402,12 +402,53 @@ jobs:
           DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
           GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
-      - name: Upload Swagger artifact
+      - name: Upload Public API Swagger artifact
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: swagger.json
           path: swagger.json
           if-no-files-found: error
+      
+      - name: Build Internal API Swagger
+        run: |
+          cd ./src/Api
+          echo "Restore API tools"
+          dotnet tool restore
+          echo "Publish API"
+          dotnet publish -c "Release" -o obj/build-output/publish
+          
+          dotnet swagger tofile --output ../../internal.json --host https://api.bitwarden.com \
+            ./obj/build-output/publish/Api.dll internal
+          
+          cd ../Identity
+          
+          echo "Restore Identity tools"
+          dotnet tool restore
+          echo "Publish Identity"
+          dotnet publish -c "Release" -o obj/build-output/publish
+          
+          dotnet swagger tofile --output ../../identity.json --host https://identity.bitwarden.com \
+            ./obj/build-output/publish/Identity.dll v1
+          cd ../..
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          swaggerGen: "True"
+          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
+          GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
+
+      - name: Upload Internal API Swagger artifact
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        with:
+          name: internal.json
+          path: internal.json
+          if-no-files-found: error
+
+      - name: Upload Identity Swagger artifact
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        with:
+          name: identity.json
+          path: identity.json
+          if-no-files-found: error  
 
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility

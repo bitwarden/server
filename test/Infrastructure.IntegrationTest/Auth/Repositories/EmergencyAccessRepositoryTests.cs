@@ -39,6 +39,7 @@ public class EmergencyAccessRepositoriesTests
 
         var updatedGrantee = await userRepository.GetByIdAsync(granteeUser.Id);
 
+        Assert.NotNull(updatedGrantee);
         Assert.NotEqual(updatedGrantee.AccountRevisionDate, granteeUser.AccountRevisionDate);
     }
 }

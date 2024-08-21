@@ -39,6 +39,11 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
 
     public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails)
     {
+        if (_globalSettings.DisableUserRegistration)
+        {
+            throw new BadRequestException("Open registration has been disabled by the system administrator.");
+        }
+
         if (string.IsNullOrWhiteSpace(email))
         {
             throw new ArgumentNullException(nameof(email));
