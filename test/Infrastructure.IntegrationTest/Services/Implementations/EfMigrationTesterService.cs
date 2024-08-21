@@ -10,6 +10,11 @@ using Npgsql;
 
 namespace Bit.Infrastructure.IntegrationTest.Services;
 
+/// <summary>
+/// An implementation of <see cref="IMigrationTesterService"/> for testing Entity Framework migrations.
+/// This service applies a specific migration and manages the migration history
+/// to ensure that the migration is tested in isolation. It supports MySQL, Postgres, and SQLite.
+/// </summary>
 public class EfMigrationTesterService : IMigrationTesterService
 {
     private readonly DatabaseContext _databaseContext;
