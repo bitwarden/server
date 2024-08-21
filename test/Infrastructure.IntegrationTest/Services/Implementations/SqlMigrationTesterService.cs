@@ -1,4 +1,5 @@
 ﻿using Bit.Migrator;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.IntegrationTest.Services;
 
@@ -19,7 +20,41 @@ public class SqlMigrationTesterService : IMigrationTesterService
 
     public void ApplyMigration()
     {
-        var dbMigrator = new DbMigrator(_connectionString);
-        dbMigrator.MigrateMsSqlDatabaseWithRetries(scriptName: _migrationName, repeatable: true);
+        var script = GetMigrationScript(_migrationName);
+
+        using var connection = new SqlConnection(_connectionString);
+        connection.Open();
+
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            using (var command = new SqlCommand(script, connection, transaction))
+            {
+                command.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    private string GetMigrationScript(string scriptName)
+    {
+        var assembly = typeof(DbMigrator).Assembly; ;
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(r => r.EndsWith($"{scriptName}.sql"));
+
+        if (resourceName == null)
+        {
+            throw new FileNotFoundException($"SQL migration script file for '{scriptName}' was not found.");
+        }
+
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 }
