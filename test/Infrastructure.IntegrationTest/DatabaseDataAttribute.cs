@@ -1,4 +1,6 @@
 ﻿using System.Reflection;
+using Bit.Commercial.Infrastructure.Dapper;
+using Bit.Commercial.Infrastructure.EntityFramework.ActionableInsights;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
@@ -57,6 +59,7 @@ public class DatabaseDataAttribute : DataAttribute
                 var dapperSqlServerCollection = new ServiceCollection();
                 AddCommonServices(dapperSqlServerCollection, configureLogging);
                 dapperSqlServerCollection.AddDapperRepositories(SelfHosted);
+                dapperSqlServerCollection.AddCommercialDapperRepositories();
                 var globalSettings = new GlobalSettings
                 {
                     DatabaseProvider = "sqlServer",
@@ -82,6 +85,7 @@ public class DatabaseDataAttribute : DataAttribute
                 AddCommonServices(efCollection, configureLogging);
                 efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
                 efCollection.AddPasswordManagerEFRepositories(SelfHosted);
+                efCollection.AddActionableInsightsEfRepositories();
                 efCollection.AddSingleton(database);
                 efCollection.AddSingleton<IDistributedCache, EntityFrameworkCache>();
                 yield return efCollection.BuildServiceProvider();

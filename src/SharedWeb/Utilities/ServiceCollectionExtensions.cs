@@ -3,6 +3,8 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Bit.Commercial.Infrastructure.Dapper;
+using Bit.Commercial.Infrastructure.EntityFramework.ActionableInsights;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
@@ -76,10 +78,12 @@ public static class ServiceCollectionExtensions
         if (provider != SupportedDatabaseProviders.SqlServer)
         {
             services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
+            services.AddActionableInsightsEfRepositories();
         }
         else
         {
             services.AddDapperRepositories(globalSettings.SelfHosted);
+            services.AddCommercialDapperRepositories();
         }
 
         if (globalSettings.SelfHosted)
