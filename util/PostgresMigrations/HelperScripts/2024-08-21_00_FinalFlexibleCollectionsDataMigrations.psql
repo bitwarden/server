@@ -7,8 +7,8 @@ WHERE
     "Type" = 4
     AND jsonb_typeof("Permissions"::jsonb) = 'object'
     AND (
-        COALESCE(("Permissions"::jsonb)->>'editAssignedCollections', 'false') = 'true'
-        OR COALESCE(("Permissions"::jsonb)->>'deleteAssignedCollections', 'false') = 'true'
+        ("Permissions"::jsonb)->>'editAssignedCollections' = 'true'
+        OR ("Permissions"::jsonb)->>'deleteAssignedCollections' = 'true'
     )
     AND COALESCE(("Permissions"::jsonb)->>'accessEventLogs', 'true') = 'false'
     AND COALESCE(("Permissions"::jsonb)->>'accessImportExport', 'true') = 'false'
@@ -29,10 +29,4 @@ SET
     "Permissions" = "Permissions"::jsonb - 'editAssignedCollections' - 'deleteAssignedCollections'
 WHERE
     "Permissions" IS NOT NULL
-    AND (
-        SELECT
-            CASE
-                WHEN jsonb_typeof("Permissions"::jsonb) = 'object' THEN TRUE
-                ELSE FALSE
-            END
-    );
+    AND jsonb_typeof("Permissions"::jsonb) = 'object';
