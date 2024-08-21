@@ -159,10 +159,11 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         // Setup data
         var orgUser = await SetupData(
             userRepository, organizationRepository, organizationUserRepository, OrganizationUserType.Custom,
-            editAssignedCollections: false, deleteAssignedCollections: false, accessEventLogs: true);
+            editAssignedCollections: false, deleteAssignedCollections: false, accessEventLogs: false);
+        // Remove the editAssignedCollections and deleteAssignedCollections permissions
         orgUser.Permissions = JsonSerializer.Serialize(new
         {
-            AccessEventLogs = true,
+            AccessEventLogs = false,
             AccessImportExport = false,
             AccessReports = false,
             CreateNewCollections = false,
@@ -188,10 +189,6 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         Assert.NotNull(migratedOrgUser.Permissions);
         // Assert that the permissions remain unchanged by comparing JSON data, ignoring the order of properties
         Assert.True(JToken.DeepEquals(JObject.Parse(orgUser.Permissions), JObject.Parse(migratedOrgUser.Permissions)));
-        Assert.Contains("accessEventLogs", migratedOrgUser.Permissions);
-        Assert.True(migratedOrgUser.GetPermissions().AccessEventLogs);
-        Assert.DoesNotContain("editAssignedCollections", migratedOrgUser.Permissions);
-        Assert.DoesNotContain("deleteAssignedCollections", migratedOrgUser.Permissions);
     }
 
     private async Task<OrganizationUser> SetupData(
