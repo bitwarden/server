@@ -7,7 +7,7 @@ namespace Bit.PostgresMigrations.Migrations;
 
 public partial class FinalFlexibleCollectionsDataMigrations : Migration
 {
-    private const string _finalFlexibleCollectionsDataMigrationsScript = "PostgresMigrations.HelperScripts.2024-08-12_00_FinalFlexibleCollectionsDataMigrations.psql";
+    private const string _finalFlexibleCollectionsDataMigrationsScript = "PostgresMigrations.HelperScripts.2024-08-21_00_FinalFlexibleCollectionsDataMigrations.psql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
