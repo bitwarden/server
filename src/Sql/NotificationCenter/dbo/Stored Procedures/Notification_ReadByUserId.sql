@@ -12,4 +12,5 @@ BEGIN
             AND [UserId] = @UserId
             )
         OR [Global] = 1
+    ORDER BY [CreationDate] DESC
 END

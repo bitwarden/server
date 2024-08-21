@@ -21,4 +21,5 @@ BEGIN
                 FROM @OrganizationIds
                 )
             )
+    ORDER BY [CreationDate] DESC
 END

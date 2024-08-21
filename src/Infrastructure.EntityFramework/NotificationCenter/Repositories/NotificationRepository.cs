@@ -50,7 +50,7 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
                 ) || n.Global == true);
         }
 
-        var notifications = await notificationQuery.OrderBy(c => c.CreationDate).ToListAsync();
+        var notifications = await notificationQuery.OrderByDescending(c => c.CreationDate).ToListAsync();
         return Mapper.Map<List<Core.NotificationCenter.Entities.Notification>>(notifications);
 
     }
@@ -98,7 +98,7 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
                                   (statusFilter.Deleted == true ? ns.DeletedDate != null : ns.DeletedDate == null)
                             select n;
 
-        var notifications = await notificationQuery.OrderBy(c => c.CreationDate).ToListAsync();
+        var notifications = await notificationQuery.OrderByDescending(c => c.CreationDate).ToListAsync();
         return Mapper.Map<List<Core.NotificationCenter.Entities.Notification>>(notifications);
     }
 }

@@ -17,8 +17,8 @@ CREATE TABLE [dbo].[Notification]
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Notification_RevisionDate]
-    ON [dbo].[Notification]([RevisionDate] ASC);
+CREATE NONCLUSTERED INDEX [IX_Notification_CreationDate]
+    ON [dbo].[Notification]([CreationDate] DESC);
 
 
 GO

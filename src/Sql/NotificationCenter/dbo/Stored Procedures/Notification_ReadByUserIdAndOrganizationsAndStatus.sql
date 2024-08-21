@@ -50,4 +50,5 @@ BEGIN
                 AND [NotificationStatus].[DeletedDate] IS NOT NULL
                 )
             )
+    ORDER BY [CreationDate] DESC
 END
