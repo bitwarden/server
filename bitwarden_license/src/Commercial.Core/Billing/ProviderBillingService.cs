@@ -82,10 +82,24 @@ public class ProviderBillingService(
             return;
         }
 
-        var providerCustomer = await subscriberService.GetCustomerOrThrow(provider, new CustomerGetOptions
+        if (string.IsNullOrEmpty(provider.GatewayCustomerId))
+        {
+            logger.LogError("Cannot create customer for client organization ({OrganizationID}) without a provider ({OrganizationID}) customer ID", organization.Id, provider.Id);
+
+            throw new BillingException();
+        }
+
+        var providerCustomer = await stripeAdapter.CustomerTryGet(provider.GatewayCustomerId, new CustomerGetOptions
         {
             Expand = ["tax_ids"]
         });
+
+        if (providerCustomer == null)
+        {
+            logger.LogError("Could not retrieve Stripe customer for provider ({ProviderID}) when creating client organization customer", provider.Id);
+
+            throw new BillingException();
+        }
 
         var providerTaxId = providerCustomer.TaxIds.FirstOrDefault();
 
@@ -132,7 +146,7 @@ public class ProviderBillingService(
             ]
         };
 
-        var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        var customer = await stripeAdapter.CustomerCreate(customerCreateOptions);
 
         organization.GatewayCustomerId = customer.Id;
 
@@ -353,7 +367,7 @@ public class ProviderBillingService(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            return await stripeAdapter.CustomerCreate(customerCreateOptions);
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
         {
@@ -366,7 +380,21 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        var customer = await subscriberService.GetCustomerOrThrow(provider);
+        if (string.IsNullOrEmpty(provider.GatewayCustomerId))
+        {
+            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no Stripe customer ID", provider.Id);
+
+            throw new BillingException();
+        }
+
+        var customer = await stripeAdapter.CustomerTryGet(provider.GatewayCustomerId);
+
+        if (customer == null)
+        {
+            logger.LogError("Could not retrieve Stripe customer for provider ({ProviderID}) when setting up subscription", provider.Id);
+
+            throw new BillingException();
+        }
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
@@ -435,7 +463,7 @@ public class ProviderBillingService(
 
         try
         {
-            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await stripeAdapter.SubscriptionCreate(subscriptionCreateOptions);
 
             if (subscription.Status == StripeConstants.SubscriptionStatus.Active)
             {
@@ -468,7 +496,7 @@ public class ProviderBillingService(
             throw new BadRequestException("Provider seat minimums must be at least 0.");
         }
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.SubscriptionGet(provider.GatewaySubscriptionId);
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
 
@@ -564,7 +592,7 @@ public class ProviderBillingService(
 
         if (subscriptionItemOptionsList.Count > 0)
         {
-            await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            await stripeAdapter.SubscriptionUpdate(provider.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
         }
     }

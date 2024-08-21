@@ -155,7 +155,7 @@ public class StripePaymentService : IPaymentService
 
             customerCreateOptions.AddExpand("tax");
 
-            customer = await _stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            customer = await _stripeAdapter.CustomerCreate(customerCreateOptions);
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
             subCreateOptions.Customer = customer.Id;
 
@@ -164,12 +164,12 @@ public class StripePaymentService : IPaymentService
                 subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
             }
 
-            subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
+            subscription = await _stripeAdapter.SubscriptionCreate(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {
                 if (subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
                 {
-                    await _stripeAdapter.SubscriptionCancelAsync(subscription.Id, new SubscriptionCancelOptions());
+                    await _stripeAdapter.SubscriptionCancel(subscription.Id, new SubscriptionCancelOptions());
                     throw new GatewayException("Payment method was declined.");
                 }
             }
@@ -179,7 +179,7 @@ public class StripePaymentService : IPaymentService
             _logger.LogError(ex, "Error creating customer, walking back operation.");
             if (customer != null)
             {
-                await _stripeAdapter.CustomerDeleteAsync(customer.Id);
+                await _stripeAdapter.CustomerDelete(customer.Id);
             }
             if (braintreeCustomer != null)
             {
@@ -219,7 +219,7 @@ public class StripePaymentService : IPaymentService
 
         await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, true);
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
+        var sub = await _stripeAdapter.SubscriptionGet(org.GatewaySubscriptionId);
         org.ExpirationDate = sub.CurrentPeriodEnd;
 
         if (sponsorship is not null)
@@ -246,7 +246,7 @@ public class StripePaymentService : IPaymentService
         customerOptions.AddExpand("default_source");
         customerOptions.AddExpand("invoice_settings.default_payment_method");
         customerOptions.AddExpand("tax");
-        var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId, customerOptions);
+        var customer = await _stripeAdapter.CustomerGet(org.GatewayCustomerId, customerOptions);
         if (customer == null)
         {
             throw new GatewayException("Could not find customer payment profile.");
@@ -269,7 +269,7 @@ public class StripePaymentService : IPaymentService
             customerUpdateOptions.AddExpand("default_source");
             customerUpdateOptions.AddExpand("invoice_settings.default_payment_method");
             customerUpdateOptions.AddExpand("tax");
-            customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId, customerUpdateOptions);
+            customer = await _stripeAdapter.CustomerUpdate(org.GatewayCustomerId, customerUpdateOptions);
         }
 
         var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
@@ -392,7 +392,7 @@ public class StripePaymentService : IPaymentService
             {
                 var customerGetOptions = new CustomerGetOptions();
                 customerGetOptions.AddExpand("tax");
-                customer = await _stripeAdapter.CustomerGetAsync(user.GatewayCustomerId, customerGetOptions);
+                customer = await _stripeAdapter.CustomerGet(user.GatewayCustomerId, customerGetOptions);
             }
             catch
             {
@@ -463,7 +463,7 @@ public class StripePaymentService : IPaymentService
                 },
             };
             customerCreateOptions.AddExpand("tax");
-            customer = await _stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            customer = await _stripeAdapter.CustomerCreate(customerCreateOptions);
             createdStripeCustomer = true;
         }
 
@@ -587,7 +587,7 @@ public class StripePaymentService : IPaymentService
                         throw new GatewayException("No payment was able to be collected.");
                     }
 
-                    await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                    await _stripeAdapter.CustomerUpdate(customer.Id, new CustomerUpdateOptions
                     {
                         Balance = customer.Balance - previewInvoice.AmountDue
                     });
@@ -620,12 +620,12 @@ public class StripePaymentService : IPaymentService
             subCreateOptions.OffSession = true;
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
 
-            subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
+            subscription = await _stripeAdapter.SubscriptionCreate(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {
                 if (subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
                 {
-                    await _stripeAdapter.SubscriptionCancelAsync(subscription.Id, new SubscriptionCancelOptions());
+                    await _stripeAdapter.SubscriptionCancel(subscription.Id, new SubscriptionCancelOptions());
                     throw new GatewayException("Payment method was declined.");
                 }
             }
@@ -657,11 +657,11 @@ public class StripePaymentService : IPaymentService
             {
                 if (createdStripeCustomer)
                 {
-                    await _stripeAdapter.CustomerDeleteAsync(customer.Id);
+                    await _stripeAdapter.CustomerDelete(customer.Id);
                 }
                 else if (addedCreditToStripeCustomer || customer.Balance < 0)
                 {
-                    await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                    await _stripeAdapter.CustomerUpdate(customer.Id, new CustomerUpdateOptions
                     {
                         Balance = customer.Balance
                     });
@@ -705,7 +705,7 @@ public class StripePaymentService : IPaymentService
         var subGetOptions = new SubscriptionGetOptions();
         // subGetOptions.AddExpand("customer");
         subGetOptions.AddExpand("customer.tax");
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subGetOptions);
+        var sub = await _stripeAdapter.SubscriptionGet(subscriber.GatewaySubscriptionId, subGetOptions);
         if (sub == null)
         {
             throw new GatewayException("Subscription not found.");
@@ -749,7 +749,7 @@ public class StripePaymentService : IPaymentService
         string paymentIntentClientSecret = null;
         try
         {
-            var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
+            var subResponse = await _stripeAdapter.SubscriptionUpdate(sub.Id, subUpdateOptions);
 
             var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new InvoiceGetOptions());
             if (invoice == null)
@@ -780,7 +780,7 @@ public class StripePaymentService : IPaymentService
                 catch
                 {
                     // Need to revert the subscription
-                    await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new SubscriptionUpdateOptions
+                    await _stripeAdapter.SubscriptionUpdate(sub.Id, new SubscriptionUpdateOptions
                     {
                         Items = subscriptionUpdate.RevertItemsOptions(sub),
                         // This proration behavior prevents a false "credit" from
@@ -805,7 +805,7 @@ public class StripePaymentService : IPaymentService
             // Change back the subscription collection method and/or days until due
             if (collectionMethod != "send_invoice" || daysUntilDue == null)
             {
-                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new SubscriptionUpdateOptions
+                await _stripeAdapter.SubscriptionUpdate(sub.Id, new SubscriptionUpdateOptions
                 {
                     CollectionMethod = collectionMethod,
                     DaysUntilDue = daysUntilDue,
@@ -881,7 +881,7 @@ public class StripePaymentService : IPaymentService
     {
         if (!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
         {
-            await _stripeAdapter.SubscriptionCancelAsync(subscriber.GatewaySubscriptionId,
+            await _stripeAdapter.SubscriptionCancel(subscriber.GatewaySubscriptionId,
                 new SubscriptionCancelOptions());
         }
 
@@ -890,7 +890,7 @@ public class StripePaymentService : IPaymentService
             return;
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+        var customer = await _stripeAdapter.CustomerGet(subscriber.GatewayCustomerId);
         if (customer == null)
         {
             return;
@@ -929,7 +929,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        await _stripeAdapter.CustomerDeleteAsync(subscriber.GatewayCustomerId);
+        await _stripeAdapter.CustomerDelete(subscriber.GatewayCustomerId);
     }
 
     public async Task<string> PayInvoiceAfterSubscriptionChangeAsync(ISubscriber subscriber, Invoice invoice)
@@ -937,7 +937,7 @@ public class StripePaymentService : IPaymentService
         var customerOptions = new CustomerGetOptions();
         customerOptions.AddExpand("default_source");
         customerOptions.AddExpand("invoice_settings.default_payment_method");
-        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
+        var customer = await _stripeAdapter.CustomerGet(subscriber.GatewayCustomerId, customerOptions);
 
         string paymentIntentClientSecret = null;
 
@@ -1070,12 +1070,12 @@ public class StripePaymentService : IPaymentService
                     // Customer had a balance applied to this invoice. Since we can't fully trust Stripe to
                     //  credit it back to the customer (even though their docs claim they will), we need to
                     //  check that balance against the current customer balance and determine if it needs to be re-applied
-                    customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
+                    customer = await _stripeAdapter.CustomerGet(subscriber.GatewayCustomerId, customerOptions);
 
                     // Assumption: Customer balance should now be $0, otherwise payment would not have failed.
                     if (customer.Balance == 0)
                     {
-                        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                        await _stripeAdapter.CustomerUpdate(customer.Id, new CustomerUpdateOptions
                         {
                             Balance = invoice.StartingBalance
                         });
@@ -1107,7 +1107,7 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("No subscription.");
         }
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+        var sub = await _stripeAdapter.SubscriptionGet(subscriber.GatewaySubscriptionId);
         if (sub == null)
         {
             throw new GatewayException("Subscription was not found.");
@@ -1123,9 +1123,9 @@ public class StripePaymentService : IPaymentService
         try
         {
             var canceledSub = endOfPeriod ?
-                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id,
+                await _stripeAdapter.SubscriptionUpdate(sub.Id,
                     new SubscriptionUpdateOptions { CancelAtPeriodEnd = true }) :
-                await _stripeAdapter.SubscriptionCancelAsync(sub.Id, new SubscriptionCancelOptions());
+                await _stripeAdapter.SubscriptionCancel(sub.Id, new SubscriptionCancelOptions());
             if (!canceledSub.CanceledAt.HasValue)
             {
                 throw new GatewayException("Unable to cancel subscription.");
@@ -1152,7 +1152,7 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("No subscription.");
         }
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+        var sub = await _stripeAdapter.SubscriptionGet(subscriber.GatewaySubscriptionId);
         if (sub == null)
         {
             throw new GatewayException("Subscription was not found.");
@@ -1164,7 +1164,7 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Subscription is not marked for cancellation.");
         }
 
-        var updatedSub = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id,
+        var updatedSub = await _stripeAdapter.SubscriptionUpdate(sub.Id,
             new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
         if (updatedSub.CanceledAt.HasValue)
         {
@@ -1201,7 +1201,7 @@ public class StripePaymentService : IPaymentService
         if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
             var options = new CustomerGetOptions { Expand = ["sources", "tax", "subscriptions"] };
-            customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, options);
+            customer = await _stripeAdapter.CustomerGet(subscriber.GatewayCustomerId, options);
             if (customer.Metadata?.Any() ?? false)
             {
                 stripeCustomerMetadata = customer.Metadata;
@@ -1300,7 +1300,7 @@ public class StripePaymentService : IPaymentService
         {
             if (customer == null)
             {
-                customer = await _stripeAdapter.CustomerCreateAsync(new CustomerCreateOptions
+                customer = await _stripeAdapter.CustomerCreate(new CustomerCreateOptions
                 {
                     Description = subscriber.BillingName(),
                     Email = subscriber.BillingEmailAddress(),
@@ -1384,7 +1384,7 @@ public class StripePaymentService : IPaymentService
                     await _stripeAdapter.PaymentMethodDetachAsync(cardMethod.Id, new PaymentMethodDetachOptions());
                 }
 
-                customer = await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                customer = await _stripeAdapter.CustomerUpdate(customer.Id, new CustomerUpdateOptions
                 {
                     Metadata = stripeCustomerMetadata,
                     DefaultSource = defaultSourceId,
@@ -1425,7 +1425,7 @@ public class StripePaymentService : IPaymentService
                     DefaultTaxRates = []
                 };
 
-                _ = await _stripeAdapter.SubscriptionUpdateAsync(
+                _ = await _stripeAdapter.SubscriptionUpdate(
                     subscriber.GatewaySubscriptionId,
                     subscriptionUpdateOptions);
             }
@@ -1449,11 +1449,11 @@ public class StripePaymentService : IPaymentService
             !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId);
         if (customerExists)
         {
-            customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+            customer = await _stripeAdapter.CustomerGet(subscriber.GatewayCustomerId);
         }
         else
         {
-            customer = await _stripeAdapter.CustomerCreateAsync(new CustomerCreateOptions
+            customer = await _stripeAdapter.CustomerCreate(new CustomerCreateOptions
             {
                 Email = subscriber.BillingEmailAddress(),
                 Description = subscriber.BillingName(),
@@ -1461,7 +1461,7 @@ public class StripePaymentService : IPaymentService
             subscriber.Gateway = GatewayType.Stripe;
             subscriber.GatewayCustomerId = customer.Id;
         }
-        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        await _stripeAdapter.CustomerUpdate(customer.Id, new CustomerUpdateOptions
         {
             Balance = customer.Balance - (long)(creditAmount * 100)
         });
@@ -1500,7 +1500,7 @@ public class StripePaymentService : IPaymentService
         {
             var customerGetOptions = new CustomerGetOptions();
             customerGetOptions.AddExpand("discount.coupon.applies_to");
-            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
+            var customer = await _stripeAdapter.CustomerGet(subscriber.GatewayCustomerId, customerGetOptions);
 
             if (customer.Discount != null)
             {
@@ -1513,7 +1513,7 @@ public class StripePaymentService : IPaymentService
             return subscriptionInfo;
         }
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, new SubscriptionGetOptions
+        var sub = await _stripeAdapter.SubscriptionGet(subscriber.GatewaySubscriptionId, new SubscriptionGetOptions
         {
             Expand = ["test_clock"]
         });
@@ -1564,7 +1564,7 @@ public class StripePaymentService : IPaymentService
             return null;
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId,
+        var customer = await _stripeAdapter.CustomerGet(subscriber.GatewayCustomerId,
             new CustomerGetOptions { Expand = ["tax_ids"] });
 
         if (customer == null)
@@ -1598,7 +1598,7 @@ public class StripePaymentService : IPaymentService
     {
         if (subscriber != null && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
-            var customer = await _stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
+            var customer = await _stripeAdapter.CustomerUpdate(subscriber.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Address = new AddressOptions
                 {
@@ -1715,7 +1715,7 @@ public class StripePaymentService : IPaymentService
             return false;
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId);
+        var customer = await _stripeAdapter.CustomerGet(organization.GatewayCustomerId);
 
         return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }
@@ -1829,7 +1829,7 @@ public class StripePaymentService : IPaymentService
         Customer customer = null;
         try
         {
-            customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId, options);
+            customer = await _stripeAdapter.CustomerGet(gatewayCustomerId, options);
         }
         catch (StripeException) { }
 

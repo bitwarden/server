@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -8,6 +9,8 @@ using Bit.Core.Utilities;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
+
+#nullable enable
 
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
@@ -27,7 +30,14 @@ public class SubscriberService(
         OffboardingSurveyResponse offboardingSurveyResponse,
         bool cancelImmediately)
     {
-        var subscription = await GetSubscriptionOrThrow(subscriber);
+        var subscription = await GetSubscription(subscriber);
+
+        if (subscription == null)
+        {
+            logger.LogError("Could not retrieve Stripe subscription for subscriber ({SubscriberID}) when canceling subscription", subscriber.Id);
+
+            throw new BillingException();
+        }
 
         if (subscription.CanceledAt.HasValue ||
             subscription.Status == "canceled" ||
@@ -59,7 +69,7 @@ public class SubscriberService(
         {
             if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
             {
-                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, new SubscriptionUpdateOptions
+                await stripeAdapter.SubscriptionUpdate(subscription.Id, new SubscriptionUpdateOptions
                 {
                     Metadata = metadata
                 });
@@ -78,7 +88,7 @@ public class SubscriberService(
                 options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
             }
 
-            await stripeAdapter.SubscriptionCancelAsync(subscription.Id, options);
+            await stripeAdapter.SubscriptionCancel(subscription.Id, options);
         }
         else
         {
@@ -97,89 +107,36 @@ public class SubscriberService(
                 options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
             }
 
-            await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, options);
+            await stripeAdapter.SubscriptionUpdate(subscription.Id, options);
         }
     }
 
-    public async Task<Customer> GetCustomer(
+    public async Task<Customer?> GetCustomer(
         ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null)
+        CustomerGetOptions? customerGetOptions = null)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
         if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
         {
-            logger.LogError("Cannot retrieve customer for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
+            logger.LogError("Cannot retrieve Stripe customer for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
 
             return null;
         }
 
         try
         {
-            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
-
-            if (customer != null)
-            {
-                return customer;
-            }
-
-            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
-                subscriber.GatewayCustomerId, subscriber.Id);
-
-            return null;
+            return await stripeAdapter.CustomerGet(subscriber.GatewayCustomerId, customerGetOptions);
         }
-        catch (StripeException exception)
+        catch (StripeException exception) when (exception.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
         {
-            logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewayCustomerId, subscriber.Id, exception.Message);
+            logger.LogError("Subscriber's ({SubscriberID}) Stripe customer resource was missing", subscriber.Id);
 
             return null;
         }
     }
 
-    public async Task<Customer> GetCustomerOrThrow(
-        ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
-        {
-            logger.LogError("Cannot retrieve customer for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
-
-            throw new BillingException();
-        }
-
-        try
-        {
-            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
-
-            if (customer != null)
-            {
-                return customer;
-            }
-
-            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
-                subscriber.GatewayCustomerId, subscriber.Id);
-
-            throw new BillingException();
-        }
-        catch (StripeException stripeException)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewayCustomerId, subscriber.Id, stripeException.Message);
-
-            throw new BillingException(
-                message: "An error occurred while trying to retrieve a Stripe customer",
-                innerException: stripeException);
-        }
-    }
-
-    public async Task<PaymentInformationDTO> GetPaymentInformation(
+    public async Task<PaymentInformation> GetPaymentInformation(
         ISubscriber subscriber)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
         var customer = await GetCustomer(subscriber, new CustomerGetOptions
         {
             Expand = ["default_source", "invoice_settings.default_payment_method", "tax_ids"]
@@ -187,132 +144,65 @@ public class SubscriberService(
 
         if (customer == null)
         {
-            return null;
+            logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when retrieving payment information", subscriber.Id);
+
+            throw new BillingException();
         }
 
         var accountCredit = customer.Balance * -1 / 100;
 
-        var paymentMethod = await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
+        var paymentMethod = await GetPaymentMethodAsync(subscriber.Id, customer);
 
-        var taxInformation = GetTaxInformationDTOFrom(customer);
+        var taxInformation = GetTaxInformation(customer);
 
-        return new PaymentInformationDTO(
+        return new PaymentInformation(
             accountCredit,
             paymentMethod,
             taxInformation);
     }
 
-    public async Task<MaskedPaymentMethodDTO> GetPaymentMethod(
-        ISubscriber subscriber)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
-        {
-            Expand = ["default_source", "invoice_settings.default_payment_method"]
-        });
-
-        return await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
-    }
-
-    public async Task<Subscription> GetSubscription(
+    public async Task<Subscription?> GetSubscription(
         ISubscriber subscriber,
-        SubscriptionGetOptions subscriptionGetOptions = null)
+        SubscriptionGetOptions? subscriptionGetOptions = null)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
         if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
         {
-            logger.LogError("Cannot retrieve subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
+            logger.LogError("Cannot retrieve Stripe subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
 
             return null;
         }
 
         try
         {
-            var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
-
-            if (subscription != null)
-            {
-                return subscription;
-            }
-
-            logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})",
-                subscriber.GatewaySubscriptionId, subscriber.Id);
+            return await stripeAdapter.SubscriptionGet(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
+        }
+        catch (StripeException exception) when (exception.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
+        {
+            logger.LogError("Subscriber's ({SubscriberID}) Stripe subscription resource was missing", subscriber.Id);
 
             return null;
         }
-        catch (StripeException exception)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewaySubscriptionId, subscriber.Id, exception.Message);
-
-            return null;
-        }
-    }
-
-    public async Task<Subscription> GetSubscriptionOrThrow(
-        ISubscriber subscriber,
-        SubscriptionGetOptions subscriptionGetOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
-        {
-            logger.LogError("Cannot retrieve subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
-
-            throw new BillingException();
-        }
-
-        try
-        {
-            var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
-
-            if (subscription != null)
-            {
-                return subscription;
-            }
-
-            logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})",
-                subscriber.GatewaySubscriptionId, subscriber.Id);
-
-            throw new BillingException();
-        }
-        catch (StripeException stripeException)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewaySubscriptionId, subscriber.Id, stripeException.Message);
-
-            throw new BillingException(
-                message: "An error occurred while trying to retrieve a Stripe subscription",
-                innerException: stripeException);
-        }
-    }
-
-    public async Task<TaxInformation> GetTaxInformation(
-        ISubscriber subscriber)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions { Expand = ["tax_ids"] });
-
-        return GetTaxInformationDTOFrom(customer);
     }
 
     public async Task RemovePaymentMethod(
         ISubscriber subscriber)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
         if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
         {
             throw new BillingException();
         }
 
-        var stripeCustomer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        var stripeCustomer = await GetCustomer(subscriber, new CustomerGetOptions
         {
             Expand = ["invoice_settings.default_payment_method", "sources"]
         });
+
+        if (stripeCustomer == null)
+        {
+            logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when removing payment method", subscriber.Id);
+
+            throw new BillingException();
+        }
 
         if (stripeCustomer.Metadata?.TryGetValue(BraintreeCustomerIdKey, out var braintreeCustomerId) ?? false)
         {
@@ -320,7 +210,7 @@ public class SubscriberService(
 
             if (braintreeCustomer == null)
             {
-                logger.LogError("Failed to retrieve Braintree customer ({ID}) when removing payment method", braintreeCustomerId);
+                logger.LogError("Could not retrieve Braintree customer for subscriber ({SubscriberID}) when removing payment method", subscriber.Id);
 
                 throw new BillingException();
             }
@@ -335,8 +225,8 @@ public class SubscriberService(
 
                 if (!updateCustomerResult.IsSuccess())
                 {
-                    logger.LogError("Failed to update payment method for Braintree customer ({ID}) | Message: {Message}",
-                        braintreeCustomerId, updateCustomerResult.Message);
+                    logger.LogError("Failed to remove Braintree payment method for subscriber ({SubscriberID}) | Message: {Message}",
+                        subscriber.Id, updateCustomerResult.Message);
 
                     throw new BillingException();
                 }
@@ -350,15 +240,15 @@ public class SubscriberService(
                         new CustomerRequest { DefaultPaymentMethodToken = existingDefaultPaymentMethod.Token });
 
                     logger.LogError(
-                        "Failed to delete Braintree payment method for Customer ({ID}), re-linked payment method. Message: {Message}",
-                        braintreeCustomerId, deletePaymentMethodResult.Message);
+                        "Failed to delete Braintree payment method for subscriber ({SubscriberID}), re-linked payment method. Message: {Message}",
+                        subscriber.Id, deletePaymentMethodResult.Message);
 
                     throw new BillingException();
                 }
             }
             else
             {
-                logger.LogWarning("Tried to remove non-existent Braintree payment method for Customer ({ID})", braintreeCustomerId);
+                logger.LogWarning("Tried to remove non-existent Braintree payment method for subscriber ({SubscriberID})", subscriber.Id);
             }
         }
         else
@@ -393,12 +283,16 @@ public class SubscriberService(
 
     public async Task UpdatePaymentMethod(
         ISubscriber subscriber,
-        TokenizedPaymentMethodDTO tokenizedPaymentMethod)
+        TokenizedPaymentMethod tokenizedPaymentMethod)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNull(tokenizedPaymentMethod);
+        var customer = await GetCustomer(subscriber);
 
-        var customer = await GetCustomerOrThrow(subscriber);
+        if (customer == null)
+        {
+            logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when updating payment method", subscriber.Id);
+
+            throw new NotImplementedException();
+        }
 
         var (type, token) = tokenizedPaymentMethod;
 
@@ -491,7 +385,7 @@ public class SubscriberService(
                     }
 
                     // Set the customer's default payment method in Stripe and remove their Braintree customer ID.
-                    postProcessing.Add(stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
+                    postProcessing.Add(stripeAdapter.CustomerUpdate(subscriber.GatewayCustomerId, new CustomerUpdateOptions
                     {
                         InvoiceSettings = new CustomerInvoiceSettingsOptions
                         {
@@ -506,19 +400,17 @@ public class SubscriberService(
                 }
             case PaymentMethodType.PayPal:
                 {
-                    string braintreeCustomerId;
-
                     if (customer.Metadata != null)
                     {
-                        var hasBraintreeCustomerId = customer.Metadata.TryGetValue(BraintreeCustomerIdKey, out braintreeCustomerId);
+                        var hasBraintreeCustomerId = customer.Metadata.TryGetValue(BraintreeCustomerIdKey, out var existingBraintreeCustomerId);
 
                         if (hasBraintreeCustomerId)
                         {
-                            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
+                            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(existingBraintreeCustomerId);
 
                             if (braintreeCustomer == null)
                             {
-                                logger.LogError("Failed to retrieve Braintree customer ({BraintreeCustomerId}) when updating payment method for subscriber ({SubscriberID})", braintreeCustomerId, subscriber.Id);
+                                logger.LogError("Failed to retrieve Braintree customer for subscriber ({SubscriberID}) when updating payment method", subscriber.Id);
 
                                 throw new BillingException();
                             }
@@ -529,9 +421,9 @@ public class SubscriberService(
                         }
                     }
 
-                    braintreeCustomerId = await CreateBraintreeCustomerAsync(subscriber, token);
+                    var newBraintreeCustomerId = await CreateBraintreeCustomerAsync(subscriber, token);
 
-                    await AddBraintreeCustomerIdAsync(customer, braintreeCustomerId);
+                    await AddBraintreeCustomerIdAsync(customer, newBraintreeCustomerId);
 
                     break;
                 }
@@ -548,15 +440,19 @@ public class SubscriberService(
         ISubscriber subscriber,
         TaxInformation taxInformation)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNull(taxInformation);
-
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        var customer = await GetCustomer(subscriber, new CustomerGetOptions
         {
             Expand = ["tax_ids"]
         });
 
-        await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        if (customer == null)
+        {
+            logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when updating tax information", subscriber.Id);
+
+            throw new BillingException();
+        }
+
+        await stripeAdapter.CustomerUpdate(customer.Id, new CustomerUpdateOptions
         {
             Address = new AddressOptions
             {
@@ -596,13 +492,11 @@ public class SubscriberService(
         ISubscriber subscriber,
         (long, long) microdeposits)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
         var setupIntentId = await setupIntentCache.Get(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
-            logger.LogError("No setup intent ID exists to verify for subscriber with ID ({SubscriberID})", subscriber.Id);
+            logger.LogError("No setup intent ID exists to verify for subscriber ({SubscriberID})", subscriber.Id);
 
             throw new BillingException();
         }
@@ -621,7 +515,7 @@ public class SubscriberService(
             Customer = subscriber.GatewayCustomerId
         });
 
-        await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+        await stripeAdapter.CustomerUpdate(subscriber.GatewayCustomerId,
             new CustomerUpdateOptions
             {
                 InvoiceSettings = new CustomerInvoiceSettingsOptions
@@ -641,7 +535,7 @@ public class SubscriberService(
 
         metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
 
-        await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        await stripeAdapter.CustomerUpdate(customer.Id, new CustomerUpdateOptions
         {
             Metadata = metadata
         });
@@ -678,7 +572,7 @@ public class SubscriberService(
         throw new BillingException();
     }
 
-    private async Task<MaskedPaymentMethodDTO> GetMaskedPaymentMethodDTOAsync(
+    private async Task<MaskedPaymentMethod?> GetPaymentMethodAsync(
         Guid subscriberId,
         Customer customer)
     {
@@ -690,15 +584,15 @@ public class SubscriberService(
             {
                 var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
 
-                return MaskedPaymentMethodDTO.From(braintreeCustomer);
+                return MaskedPaymentMethod.From(braintreeCustomer);
             }
         }
 
-        var attachedPaymentMethodDTO = MaskedPaymentMethodDTO.From(customer);
+        var attachedPaymentMethod = MaskedPaymentMethod.From(customer);
 
-        if (attachedPaymentMethodDTO != null)
+        if (attachedPaymentMethod != null)
         {
-            return attachedPaymentMethodDTO;
+            return attachedPaymentMethod;
         }
 
         /*
@@ -717,10 +611,10 @@ public class SubscriberService(
             Expand = ["payment_method"]
         });
 
-        return MaskedPaymentMethodDTO.From(setupIntent);
+        return MaskedPaymentMethod.From(setupIntent);
     }
 
-    private static TaxInformation GetTaxInformationDTOFrom(
+    private static TaxInformation? GetTaxInformation(
         Customer customer)
     {
         if (customer.Address == null)
@@ -741,13 +635,13 @@ public class SubscriberService(
     private async Task RemoveBraintreeCustomerIdAsync(
         Customer customer)
     {
-        var metadata = customer.Metadata ?? new Dictionary<string, string>();
+        var metadata = customer.Metadata ?? new Dictionary<string, string?>();
 
         if (metadata.ContainsKey(BraintreeCustomerIdKey))
         {
             metadata[BraintreeCustomerIdKey] = null;
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+            await stripeAdapter.CustomerUpdate(customer.Id, new CustomerUpdateOptions
             {
                 Metadata = metadata
             });

@@ -520,7 +520,7 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
 
         await sutProvider.GetDependency<ISubscriberService>().DidNotReceiveWithAnyArgs()
-            .GetCustomerOrThrow(Arg.Any<ISubscriber>(), Arg.Any<CustomerGetOptions>());
+            .GetCustomer(Arg.Any<ISubscriber>(), Arg.Any<CustomerGetOptions>());
     }
 
     [Theory, BitAutoData]
@@ -553,7 +553,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
+        sutProvider.GetDependency<ISubscriberService>().GetCustomer(provider, Arg.Is<CustomerGetOptions>(
                 options => options.Expand.FirstOrDefault() == "tax_ids"))
             .Returns(providerCustomer);
 
@@ -563,7 +563,7 @@ public class ProviderBillingServiceTests
                 CloudRegion = "US"
             });
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
+        sutProvider.GetDependency<IStripeAdapter>().CustomerCreate(Arg.Is<CustomerCreateOptions>(
                 options =>
                     options.Address.Country == providerCustomer.Address.Country &&
                     options.Address.PostalCode == providerCustomer.Address.PostalCode &&
@@ -583,7 +583,7 @@ public class ProviderBillingServiceTests
 
         await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
 
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerCreate(Arg.Is<CustomerCreateOptions>(
             options =>
                 options.Address.Country == providerCustomer.Address.Country &&
                 options.Address.PostalCode == providerCustomer.Address.PostalCode &&
@@ -762,7 +762,7 @@ public class ProviderBillingServiceTests
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
-            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
+            .CustomerGet(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
     }
 
     [Theory, BitAutoData]
@@ -777,7 +777,7 @@ public class ProviderBillingServiceTests
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
-            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
+            .CustomerGet(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
     }
 
     [Theory, BitAutoData]
@@ -798,7 +798,7 @@ public class ProviderBillingServiceTests
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         };
 
-        stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
+        stripeAdapter.CustomerCreate(Arg.Is<CustomerCreateOptions>(o =>
                 o.Address.Country == taxInfo.BillingAddressCountry &&
                 o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
                 o.Address.Line1 == taxInfo.BillingAddressLine1 &&
@@ -835,7 +835,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<ISubscriberService>().GetCustomer(provider).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -848,7 +848,7 @@ public class ProviderBillingServiceTests
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .SubscriptionCreate(Arg.Any<SubscriptionCreateOptions>());
     }
 
     [Theory, BitAutoData]
@@ -858,7 +858,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<ISubscriberService>().GetCustomer(provider).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -873,7 +873,7 @@ public class ProviderBillingServiceTests
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .SubscriptionCreate(Arg.Any<SubscriptionCreateOptions>());
     }
 
     [Theory, BitAutoData]
@@ -883,7 +883,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<ISubscriberService>().GetCustomer(provider).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -898,7 +898,7 @@ public class ProviderBillingServiceTests
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .SubscriptionCreate(Arg.Any<SubscriptionCreateOptions>());
     }
 
     [Theory, BitAutoData]
@@ -908,7 +908,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<ISubscriberService>().GetCustomer(provider).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -939,7 +939,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreate(Arg.Any<SubscriptionCreateOptions>())
             .Returns(
                 new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Incomplete });
 
@@ -953,7 +953,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<ISubscriberService>().GetCustomer(provider).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -989,7 +989,7 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreate(Arg.Is<SubscriptionCreateOptions>(
             sub =>
                 sub.AutomaticTax.Enabled == true &&
                 sub.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
@@ -1058,7 +1058,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.SubscriptionGet(provider.GatewaySubscriptionId).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1076,7 +1076,7 @@ public class ProviderBillingServiceTests
         await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly && providerPlan.SeatMinimum == 50));
 
-        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+        await stripeAdapter.Received(1).SubscriptionUpdate(provider.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(
                 options =>
                     options.Items.Count == 2 &&
@@ -1120,7 +1120,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.SubscriptionGet(provider.GatewaySubscriptionId).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1139,7 +1139,7 @@ public class ProviderBillingServiceTests
             providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly && providerPlan.SeatMinimum == 60 && providerPlan.PurchasedSeats == 10));
 
         await stripeAdapter.DidNotReceiveWithAnyArgs()
-            .SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+            .SubscriptionUpdate(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Theory, BitAutoData]
@@ -1176,7 +1176,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.SubscriptionGet(provider.GatewaySubscriptionId).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1194,7 +1194,7 @@ public class ProviderBillingServiceTests
         await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly && providerPlan.SeatMinimum == 80 && providerPlan.PurchasedSeats == 0));
 
-        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+        await stripeAdapter.Received(1).SubscriptionUpdate(provider.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(
                 options =>
                     options.Items.Count == 2 &&
@@ -1238,7 +1238,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.SubscriptionGet(provider.GatewaySubscriptionId).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1256,7 +1256,7 @@ public class ProviderBillingServiceTests
         await providerPlanRepository.DidNotReceive().ReplaceAsync(Arg.Is<ProviderPlan>(
             providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly));
 
-        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+        await stripeAdapter.Received(1).SubscriptionUpdate(provider.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(
                 options =>
                     options.Items.Count == 1 &&

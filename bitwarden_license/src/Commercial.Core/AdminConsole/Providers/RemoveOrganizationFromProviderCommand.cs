@@ -105,7 +105,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             organization.Status == OrganizationStatusType.Managed &&
             !string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            await _stripeAdapter.CustomerUpdate(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
                 Email = organization.BillingEmail
@@ -128,7 +128,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
-            var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await _stripeAdapter.SubscriptionCreate(subscriptionCreateOptions);
 
             organization.GatewaySubscriptionId = subscription.Id;
             organization.Status = OrganizationStatusType.Created;
@@ -137,19 +137,19 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         }
         else if (organization.IsStripeEnabled())
         {
-            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+            var subscription = await _stripeAdapter.SubscriptionGet(organization.GatewaySubscriptionId);
             if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
             {
                 return;
             }
 
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            await _stripeAdapter.CustomerUpdate(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Coupon = string.Empty,
                 Email = organization.BillingEmail
             });
 
-            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
+            await _stripeAdapter.SubscriptionUpdate(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
             {
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30

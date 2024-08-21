@@ -467,7 +467,7 @@ public class ToolsController : Controller
         options.Expand = new List<string>() { "data.customer", "data.latest_invoice" };
         options.SelectAll = false;
 
-        var subscriptions = await _stripeAdapter.SubscriptionListAsync(options);
+        var subscriptions = await _stripeAdapter.SubscriptionList(options);
 
         options.StartingAfter = subscriptions.LastOrDefault()?.Id;
         options.EndingBefore = await StripeSubscriptionsGetHasPreviousPage(subscriptions, options) ?
@@ -500,7 +500,7 @@ public class ToolsController : Controller
         if (model.Action == StripeSubscriptionsAction.Export || model.Action == StripeSubscriptionsAction.BulkCancel)
         {
             var subscriptions = model.Filter.SelectAll ?
-                await _stripeAdapter.SubscriptionListAsync(model.Filter) :
+                await _stripeAdapter.SubscriptionList(model.Filter) :
                 model.Items.Where(x => x.Selected).Select(x => x.Subscription);
 
             if (model.Action == StripeSubscriptionsAction.Export)
@@ -524,7 +524,7 @@ public class ToolsController : Controller
             {
                 if (!string.IsNullOrEmpty(model.Filter.StartingAfter))
                 {
-                    var subscription = await _stripeAdapter.SubscriptionGetAsync(model.Filter.StartingAfter);
+                    var subscription = await _stripeAdapter.SubscriptionGet(model.Filter.StartingAfter);
                     if (subscription.Status == "canceled")
                     {
                         model.Filter.StartingAfter = null;
@@ -554,7 +554,7 @@ public class ToolsController : Controller
                 CurrentPeriodEndRange = options.CurrentPeriodEndRange,
                 Price = options.Price
             };
-            hasPreviousPage = (await _stripeAdapter.SubscriptionListAsync(previousPageSearchOptions)).Count > 0;
+            hasPreviousPage = (await _stripeAdapter.SubscriptionList(previousPageSearchOptions)).Count > 0;
         }
         return hasPreviousPage;
     }
@@ -563,7 +563,7 @@ public class ToolsController : Controller
     {
         foreach (var s in subscriptions)
         {
-            await _stripeAdapter.SubscriptionCancelAsync(s.Id);
+            await _stripeAdapter.SubscriptionCancel(s.Id);
             if (s.LatestInvoice?.Status == "open")
             {
                 await _stripeAdapter.InvoiceVoidInvoiceAsync(s.LatestInvoiceId);

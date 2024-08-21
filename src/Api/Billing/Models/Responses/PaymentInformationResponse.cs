@@ -4,10 +4,10 @@ namespace Bit.Api.Billing.Models.Responses;
 
 public record PaymentInformationResponse(
     long AccountCredit,
-    MaskedPaymentMethodDTO PaymentMethod,
+    MaskedPaymentMethod PaymentMethod,
     TaxInformation TaxInformation)
 {
-    public static PaymentInformationResponse From(PaymentInformationDTO paymentInformation) =>
+    public static PaymentInformationResponse From(PaymentInformation paymentInformation) =>
         new(
             paymentInformation.AccountCredit,
             paymentInformation.PaymentMethod,

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -42,6 +43,9 @@ public static class BillingExtensions
                 UsBankAccount: not null
             }
         };
+
+    public static bool ResourceMissing(this StripeException stripeException)
+        => stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing;
 
     public static bool SupportsConsolidatedBilling(this PlanType planType)
         => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly;

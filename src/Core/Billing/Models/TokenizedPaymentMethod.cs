@@ -2,6 +2,6 @@
 
 namespace Bit.Core.Billing.Models;
 
-public record TokenizedPaymentMethodDTO(
+public record TokenizedPaymentMethod(
     PaymentMethodType Type,
     string Token);

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Models;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models;
 using Bit.Core.Services;
 using Stripe;
 
@@ -7,6 +8,9 @@ namespace Bit.Core.Billing;
 public static class Utilities
 {
     public const string BraintreeCustomerIdKey = "btCustomerId";
+
+    public static bool ResourceMissing(StripeException stripeException) =>
+        stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing;
 
     public static async Task<SubscriptionSuspension> GetSubscriptionSuspensionAsync(
         IStripeAdapter stripeAdapter,

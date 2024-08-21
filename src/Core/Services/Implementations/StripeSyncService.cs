@@ -23,9 +23,9 @@ public class StripeSyncService : IStripeSyncService
             throw new InvalidEmailException();
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
+        var customer = await _stripeAdapter.CustomerGet(gatewayCustomerId);
 
-        await _stripeAdapter.CustomerUpdateAsync(customer.Id,
+        await _stripeAdapter.CustomerUpdate(customer.Id,
             new Stripe.CustomerUpdateOptions { Email = emailAddress });
     }
 }

@@ -3,6 +3,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -15,6 +16,7 @@ namespace Bit.Core.Test.Billing.Services;
 public class OrganizationBillingServiceTests
 {
     #region GetMetadata
+
     [Theory, BitAutoData]
     public async Task GetMetadata_OrganizationNull_ReturnsNull(
         Guid organizationId,
@@ -26,7 +28,22 @@ public class OrganizationBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetMetadata_CustomerNull_ReturnsNull(
+    public async Task GetMetadata_OrganizationHasNoGatewayCustomerId_ReturnsNull(
+        Guid organizationId,
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        var metadata = await sutProvider.Sut.GetMetadata(organizationId);
+
+        Assert.Null(metadata);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMetadata_CustomerNull_ReturnsDefault(
         Guid organizationId,
         Organization organization,
         SutProvider<OrganizationBillingService> sutProvider)
@@ -46,7 +63,7 @@ public class OrganizationBillingServiceTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomer(organization).Returns(new Customer());
+        sutProvider.GetDependency<IStripeAdapter>().CustomerTryGet(organization.GatewayCustomerId!).Returns(new Customer());
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
@@ -61,10 +78,8 @@ public class OrganizationBillingServiceTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
-        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
-
-        subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerTryGet(organization.GatewayCustomerId!, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
             .Returns(new Customer
             {
                 Discount = new Discount

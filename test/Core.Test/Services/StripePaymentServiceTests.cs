@@ -40,11 +40,11 @@ public class StripePaymentServiceTests
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -62,7 +62,7 @@ public class StripePaymentServiceTests
         Assert.True(organization.Enabled);
         Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
 
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
+        await stripeAdapter.Received().CustomerCreate(Arg.Is<Stripe.CustomerCreateOptions>(c =>
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&
             c.Source == paymentToken &&
@@ -80,7 +80,7 @@ public class StripePaymentServiceTests
             c.TaxIdData == null
         ));
 
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
+        await stripeAdapter.Received().SubscriptionCreate(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
@@ -95,11 +95,11 @@ public class StripePaymentServiceTests
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -119,7 +119,7 @@ public class StripePaymentServiceTests
         Assert.True(organization.Enabled);
         Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
 
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
+        await stripeAdapter.Received().CustomerCreate(Arg.Is<Stripe.CustomerCreateOptions>(c =>
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&
             c.Source == paymentToken &&
@@ -137,7 +137,7 @@ public class StripePaymentServiceTests
             c.TaxIdData == null
         ));
 
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
+        await stripeAdapter.Received().SubscriptionCreate(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
@@ -151,11 +151,11 @@ public class StripePaymentServiceTests
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -173,7 +173,7 @@ public class StripePaymentServiceTests
         Assert.Equal("S-1", organization.GatewaySubscriptionId);
         Assert.True(organization.Enabled);
         Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
+        await stripeAdapter.Received().CustomerCreate(Arg.Is<Stripe.CustomerCreateOptions>(c =>
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&
             c.Source == paymentToken &&
@@ -193,7 +193,7 @@ public class StripePaymentServiceTests
             c.TaxIdData == null
         ));
 
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
+        await stripeAdapter.Received().SubscriptionCreate(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
@@ -208,11 +208,11 @@ public class StripePaymentServiceTests
         paymentToken = "pm_" + paymentToken;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -230,7 +230,7 @@ public class StripePaymentServiceTests
         Assert.True(organization.Enabled);
         Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
 
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
+        await stripeAdapter.Received().CustomerCreate(Arg.Is<Stripe.CustomerCreateOptions>(c =>
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&
             c.Source == null &&
@@ -250,7 +250,7 @@ public class StripePaymentServiceTests
             c.TaxIdData == null
         ));
 
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
+        await stripeAdapter.Received().SubscriptionCreate(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
@@ -265,11 +265,11 @@ public class StripePaymentServiceTests
         paymentToken = "pm_" + paymentToken;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -288,7 +288,7 @@ public class StripePaymentServiceTests
 
         Assert.Equal("Payment method was declined.", exception.Message);
 
-        await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
+        await stripeAdapter.Received(1).CustomerDelete("C-1");
     }
 
     [Theory, BitAutoData]
@@ -298,11 +298,11 @@ public class StripePaymentServiceTests
         paymentToken = "pm_" + paymentToken;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -322,7 +322,7 @@ public class StripePaymentServiceTests
 
         Assert.Equal("Payment method was declined.", exception.Message);
 
-        await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
+        await stripeAdapter.Received(1).CustomerDelete("C-1");
     }
 
     [Theory, BitAutoData]
@@ -331,11 +331,11 @@ public class StripePaymentServiceTests
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -362,11 +362,11 @@ public class StripePaymentServiceTests
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -394,11 +394,11 @@ public class StripePaymentServiceTests
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -427,7 +427,7 @@ public class StripePaymentServiceTests
         Assert.True(organization.Enabled);
         Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
 
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
+        await stripeAdapter.Received().CustomerCreate(Arg.Is<Stripe.CustomerCreateOptions>(c =>
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&
             c.PaymentMethod == null &&
@@ -444,7 +444,7 @@ public class StripePaymentServiceTests
             c.TaxIdData == null
         ));
 
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
+        await stripeAdapter.Received().SubscriptionCreate(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
@@ -458,11 +458,11 @@ public class StripePaymentServiceTests
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -496,7 +496,7 @@ public class StripePaymentServiceTests
         Assert.True(organization.Enabled);
         Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
 
-        await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
+        await stripeAdapter.Received().CustomerCreate(Arg.Is<Stripe.CustomerCreateOptions>(c =>
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&
             c.PaymentMethod == null &&
@@ -513,7 +513,7 @@ public class StripePaymentServiceTests
             c.TaxIdData == null
         ));
 
-        await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
+        await stripeAdapter.Received().SubscriptionCreate(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
@@ -567,11 +567,11 @@ public class StripePaymentServiceTests
         paymentToken = "pm_" + paymentToken;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerCreate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription
         {
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
@@ -600,7 +600,7 @@ public class StripePaymentServiceTests
 
         Assert.Equal("Payment method was declined.", exception.Message);
 
-        await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
+        await stripeAdapter.Received(1).CustomerDelete("C-1");
         await braintreeGateway.Customer.Received(1).DeleteAsync("Braintree-Id");
     }
 
@@ -610,7 +610,7 @@ public class StripePaymentServiceTests
     {
         organization.GatewaySubscriptionId = null;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerGetAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerGet(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
@@ -618,7 +618,7 @@ public class StripePaymentServiceTests
                 { "btCustomerId", "B-123" },
             }
         });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerUpdate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
@@ -631,7 +631,7 @@ public class StripePaymentServiceTests
             PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
             AmountDue = 0
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription { });
 
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
@@ -655,7 +655,7 @@ public class StripePaymentServiceTests
     {
         organization.GatewaySubscriptionId = null;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.CustomerGetAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerGet(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
@@ -663,7 +663,7 @@ public class StripePaymentServiceTests
                 { "btCustomerId", "B-123" },
             }
         });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerUpdate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
@@ -676,7 +676,7 @@ public class StripePaymentServiceTests
             PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
             AmountDue = 0
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription { });
 
         var upgrade = new OrganizationUpgrade()
         {
@@ -703,7 +703,7 @@ public class StripePaymentServiceTests
         organization.GatewaySubscriptionId = null;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var featureService = sutProvider.GetDependency<IFeatureService>();
-        stripeAdapter.CustomerGetAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerGet(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
@@ -711,7 +711,7 @@ public class StripePaymentServiceTests
                 { "btCustomerId", "B-123" },
             }
         });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerUpdate(default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
@@ -724,7 +724,7 @@ public class StripePaymentServiceTests
             PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
             AmountDue = 0
         });
-        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
+        stripeAdapter.SubscriptionCreate(default).ReturnsForAnyArgs(new Stripe.Subscription { });
 
         var upgrade = new OrganizationUpgrade()
         {
@@ -740,7 +740,7 @@ public class StripePaymentServiceTests
         _ = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, upgrade);
 
         await stripeAdapter.Received()
-            .CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<Stripe.CustomerUpdateOptions>(c =>
+            .CustomerUpdate(organization.GatewayCustomerId, Arg.Is<Stripe.CustomerUpdateOptions>(c =>
                 c.Address.Country == taxInfo.BillingAddressCountry &&
                 c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
                 c.Address.Line1 == taxInfo.BillingAddressLine1 &&

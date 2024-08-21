@@ -330,7 +330,7 @@ public class ProviderBillingControllerTests
             Status = "unpaid",
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+        stripeAdapter.SubscriptionGet(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
