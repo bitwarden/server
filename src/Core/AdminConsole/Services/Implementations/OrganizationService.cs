@@ -1941,6 +1941,9 @@ public class OrganizationService : IOrganizationService
                     existingExternalUsersIdDict);
             }
 
+            await _eventService.LogGroupEventsAsync(
+                newGroups.Select(g => (g, EventType.Group_Created, eventSystemUser, (DateTime?)DateTime.UtcNow)));
+
             var updateGroups = existingExternalGroups
                 .Where(g => groupsDict.ContainsKey(g.ExternalId))
                 .ToList();
