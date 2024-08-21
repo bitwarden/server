@@ -28,6 +28,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
     public async Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId)
     {
         var sponsoredOrganization = await _organizationRepository.GetByIdAsync(sponsoredOrganizationId);
+
         if (sponsoredOrganization == null)
         {
             _logger.LogWarning("Sponsored Organization {OrganizationId} does not exist", sponsoredOrganizationId);
@@ -69,8 +70,23 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        if (existingSponsorship.SponsoringOrganizationId == null || existingSponsorship.SponsoringOrganizationUserId == default || existingSponsorship.PlanSponsorshipType == null)
+        if (existingSponsorship.SponsoringOrganizationId == null)
         {
+            _logger.LogWarning("Sponsoring OrganizationId is null for sponsored Organization {SponsoredOrganizationId}", sponsoredOrganizationId);
+            await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+            return false;
+        }
+
+        if (existingSponsorship.SponsoringOrganizationUserId == default)
+        {
+            _logger.LogWarning("Sponsoring OrganizationUserId is null for sponsored Organization {SponsoredOrganizationId}", sponsoredOrganizationId);
+            await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+            return false;
+        }
+
+        if (existingSponsorship.PlanSponsorshipType == null)
+        {
+            _logger.LogWarning("PlanSponsorshipType is null for sponsored Organization {SponsoredOrganizationId}", sponsoredOrganizationId);
             await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
             return false;
         }
