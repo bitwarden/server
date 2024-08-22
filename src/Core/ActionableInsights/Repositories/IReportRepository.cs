@@ -1,13 +1,10 @@
 ﻿#nullable enable
 using Bit.Core.ActionableInsights.Entities;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.ActionableInsights.Repositories;
 
-public interface IReportRepository
+public interface IReportRepository : IRepository<Report, Guid>
 {
     Task<Report?> GetByOrganizationId(Guid organizationId);
-
-    Task<Report> CreateAsync(Report report);
-
-    Task ReplaceAsync(Report report);
 }
