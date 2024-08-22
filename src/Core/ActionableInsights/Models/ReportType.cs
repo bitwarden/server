@@ -1,5 +1,5 @@
 ﻿#nullable enable
-namespace Bit.Core.ActionableInsights.Entities;
+namespace Bit.Core.ActionableInsights.Models;
 
 public enum ReportType : byte
 {

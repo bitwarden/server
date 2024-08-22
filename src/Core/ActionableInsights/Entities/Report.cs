@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core.ActionableInsights.Models;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
