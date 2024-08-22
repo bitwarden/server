@@ -195,42 +195,6 @@ public class SubscriberService(
         return await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
     }
 
-    public async Task<Subscription> GetSubscription(
-        ISubscriber subscriber,
-        SubscriptionGetOptions subscriptionGetOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
-        {
-            logger.LogError("Cannot retrieve subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
-
-            return null;
-        }
-
-        try
-        {
-            var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
-
-            if (subscription != null)
-            {
-                return subscription;
-            }
-
-            logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})",
-                subscriber.GatewaySubscriptionId, subscriber.Id);
-
-            return null;
-        }
-        catch (StripeException exception)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewaySubscriptionId, subscriber.Id, exception.Message);
-
-            return null;
-        }
-    }
-
     public async Task<TaxInformation> GetTaxInformation(
         ISubscriber subscriber)
     {

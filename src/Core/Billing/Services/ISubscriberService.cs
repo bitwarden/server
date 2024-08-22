@@ -53,18 +53,6 @@ public interface ISubscriberService
         ISubscriber subscriber);
 
     /// <summary>
-    /// Retrieves a Stripe <see cref="Subscription"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> property.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the Stripe subscription for.</param>
-    /// <param name="subscriptionGetOptions">Optional parameters that can be passed to Stripe to expand or modify the subscription.</param>
-    /// <returns>A Stripe <see cref="Subscription"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<Subscription> GetSubscription(
-        ISubscriber subscriber,
-        SubscriptionGetOptions subscriptionGetOptions = null);
-
-    /// <summary>
     /// Retrieves the <paramref name="subscriber"/>'s tax information using their Stripe <see cref="Stripe.Customer"/>'s <see cref="Stripe.Customer.Address"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the tax information for.</param>
