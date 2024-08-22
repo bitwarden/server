@@ -12,9 +12,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Repositories;
-using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -36,22 +34,6 @@ namespace Bit.Commercial.Core.Test.Billing;
 public class ProviderBillingServiceTests
 {
     #region AssignSeatsToClientOrganization & ScaleSeats
-
-    [Theory, BitAutoData]
-    public Task AssignSeatsToClientOrganization_NullProvider_ArgumentNullException(
-        Organization organization,
-        int seats,
-        SutProvider<ProviderBillingService> sutProvider)
-        => Assert.ThrowsAsync<ArgumentNullException>(() =>
-            sutProvider.Sut.AssignSeatsToClientOrganization(null, organization, seats));
-
-    [Theory, BitAutoData]
-    public Task AssignSeatsToClientOrganization_NullOrganization_ArgumentNullException(
-        Provider provider,
-        int seats,
-        SutProvider<ProviderBillingService> sutProvider)
-        => Assert.ThrowsAsync<ArgumentNullException>(() =>
-            sutProvider.Sut.AssignSeatsToClientOrganization(provider, null, seats));
 
     [Theory, BitAutoData]
     public Task AssignSeatsToClientOrganization_NegativeSeats_BillingException(
@@ -144,8 +126,6 @@ public class ProviderBillingServiceTests
                 AllocatedSeats = 0
             }
         };
-
-        var providerPlan = providerPlans.First();
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
@@ -595,20 +575,15 @@ public class ProviderBillingServiceTests
     #region GenerateClientInvoiceReport
 
     [Theory, BitAutoData]
-    public async Task GenerateClientInvoiceReport_NullInvoiceId_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GenerateClientInvoiceReport(null));
-
-    [Theory, BitAutoData]
-    public async Task GenerateClientInvoiceReport_NoInvoiceItems_ReturnsNull(
+    public async Task GenerateClientInvoiceReport_NoInvoiceItems_ThrowsBillingException(
         string invoiceId,
         SutProvider<ProviderBillingService> sutProvider)
     {
         sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns([]);
 
-        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
-
-        Assert.Null(reportContent);
+        await ThrowsBillingExceptionAsync(
+            () => sutProvider.Sut.GenerateClientInvoiceReport(invoiceId),
+            response: "We had a problem generating your invoice CSV. Please contact support.");
     }
 
     [Theory, BitAutoData]
@@ -723,18 +698,6 @@ public class ProviderBillingServiceTests
     #endregion
 
     #region SetupCustomer
-
-    [Theory, BitAutoData]
-    public async Task SetupCustomer_NullProvider_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        TaxInfo taxInfo) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupCustomer(null, taxInfo));
-
-    [Theory, BitAutoData]
-    public async Task SetupCustomer_NullTaxInfo_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupCustomer(provider, null));
 
     [Theory, BitAutoData]
     public async Task SetupCustomer_MissingCountry_ContactSupport(
@@ -995,11 +958,6 @@ public class ProviderBillingServiceTests
     #region UpdateSeatMinimums
 
     [Theory, BitAutoData]
-    public async Task UpdateSeatMinimums_NullProvider_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdateSeatMinimums(null, 0, 0));
-
-    [Theory, BitAutoData]
     public async Task UpdateSeatMinimums_NegativeSeatMinimum_ThrowsBadRequestException(
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider) =>
@@ -1039,7 +997,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId!).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1101,7 +1059,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId!).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1157,7 +1115,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId!).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1219,7 +1177,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId!).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {

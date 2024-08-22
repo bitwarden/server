@@ -25,6 +25,8 @@ using Stripe;
 
 namespace Bit.Commercial.Core.Billing;
 
+#nullable enable
+
 public class ProviderBillingService(
     ICurrentContext currentContext,
     IGlobalSettings globalSettings,
@@ -35,16 +37,13 @@ public class ProviderBillingService(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
-    IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IProviderBillingService
+    IStripeAdapter stripeAdapter) : IProviderBillingService
 {
     public async Task AssignSeatsToClientOrganization(
         Provider provider,
         Organization organization,
         int seats)
     {
-        ArgumentNullException.ThrowIfNull(organization);
-
         if (seats < 0)
         {
             throw new BillingException(
@@ -146,15 +145,13 @@ public class ProviderBillingService(
     public async Task<byte[]> GenerateClientInvoiceReport(
         string invoiceId)
     {
-        ArgumentException.ThrowIfNullOrEmpty(invoiceId);
-
         var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
 
         if (invoiceItems.Count == 0)
         {
             logger.LogError("No provider invoice item records were found for invoice ({InvoiceID})", invoiceId);
 
-            return null;
+            throw new BillingException("We had a problem generating your invoice CSV. Please contact support.");
         }
 
         var csvRows = invoiceItems.Select(ProviderClientInvoiceReportRow.From);
@@ -210,9 +207,7 @@ public class ProviderBillingService(
         PlanType planType,
         int seatAdjustment)
     {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        if (provider.Type != ProviderType.Msp)
+        if (provider is not { Type: ProviderType.Msp })
         {
             logger.LogError("Non-MSP provider ({ProviderID}) cannot scale their seats", provider.Id);
 
@@ -305,9 +300,6 @@ public class ProviderBillingService(
         Provider provider,
         TaxInfo taxInfo)
     {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(taxInfo);
-
         if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
             string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
         {
@@ -470,7 +462,12 @@ public class ProviderBillingService(
         int enterpriseSeatMinimum,
         int teamsSeatMinimum)
     {
-        ArgumentNullException.ThrowIfNull(provider);
+        if (provider is not { GatewaySubscriptionId: not null })
+        {
+            logger.LogError("Cannot update seat minimums for provider ({ProviderID}) with no {FieldName}", provider.Id, nameof(provider.GatewaySubscriptionId));
+
+            throw new BillingException();
+        }
 
         if (enterpriseSeatMinimum < 0 || teamsSeatMinimum < 0)
         {

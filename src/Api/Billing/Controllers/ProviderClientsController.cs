@@ -70,7 +70,7 @@ public class ProviderClientsController(
 
         await providerBillingService.CreateCustomerForClientOrganization(
             provider,
-            clientOrganization);
+            clientOrganization!);
 
         clientOrganization.Status = OrganizationStatusType.Managed;
 
@@ -101,7 +101,7 @@ public class ProviderClientsController(
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
 
-        if (clientOrganization.Seats != requestBody.AssignedSeats)
+        if (clientOrganization!.Seats != requestBody.AssignedSeats)
         {
             await providerBillingService.AssignSeatsToClientOrganization(
                 provider,

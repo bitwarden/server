@@ -61,11 +61,6 @@ public class ProviderBillingController(
 
         var reportContent = await providerBillingService.GenerateClientInvoiceReport(invoiceId);
 
-        if (reportContent == null)
-        {
-            return ServerErrorResponse("We had a problem generating your invoice CSV. Please contact support.");
-        }
-
         return TypedResults.File(
             reportContent,
             "text/csv");
@@ -81,7 +76,7 @@ public class ProviderBillingController(
             return result;
         }
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId,
+        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId!,
             new SubscriptionGetOptions { Expand = ["customer.tax_ids", "test_clock"] });
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);

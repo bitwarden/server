@@ -8,6 +8,8 @@ using Stripe;
 
 namespace Bit.Core.Billing.Services;
 
+#nullable enable
+
 public interface IProviderBillingService
 {
     /// <summary>
