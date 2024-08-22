@@ -9,6 +9,8 @@ using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationRepository : Repository<Organization, Guid>, IOrganizationRepository
@@ -18,16 +20,12 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
     public OrganizationRepository(
         GlobalSettings globalSettings,
         ILogger<OrganizationRepository> logger)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _logger = logger;
     }
 
-    public OrganizationRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
-
-    public async Task<Organization> GetByIdentifierAsync(string identifier)
+    public async Task<Organization?> GetByIdentifierAsync(string identifier)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -104,7 +102,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task<Organization> GetByLicenseKeyAsync(string licenseKey)
+    public async Task<Organization?> GetByLicenseKeyAsync(string licenseKey)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -117,7 +115,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id)
+    public async Task<SelfHostedOrganizationDetails?> GetSelfHostedOrganizationDetailsById(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
