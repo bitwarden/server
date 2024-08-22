@@ -54,7 +54,7 @@ public class SqlMigrationTesterService : IMigrationTesterService
         }
 
         using var stream = assembly.GetManifestResourceStream(resourceName);
-        using var reader = new StreamReader(stream);
+        using var reader = new StreamReader(stream!);
         return reader.ReadToEnd();
     }
 }

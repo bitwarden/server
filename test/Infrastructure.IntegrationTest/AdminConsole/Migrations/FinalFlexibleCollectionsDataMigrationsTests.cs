@@ -111,7 +111,9 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         Assert.Contains("deleteAssignedCollections", orgUser.Permissions);
 
         Assert.Contains("accessEventLogs", migratedOrgUser.Permissions);
-        Assert.True(migratedOrgUser.GetPermissions().AccessEventLogs);
+        var migratedOrgUserPermissions = migratedOrgUser.GetPermissions();
+        Assert.NotNull(migratedOrgUserPermissions);
+        Assert.True(migratedOrgUserPermissions.AccessEventLogs);
         Assert.DoesNotContain("editAssignedCollections", migratedOrgUser.Permissions);
         Assert.DoesNotContain("deleteAssignedCollections", migratedOrgUser.Permissions);
     }

@@ -46,7 +46,7 @@ public class EfMigrationTesterService : IMigrationTesterService
     private void DeleteMigrationHistory()
     {
         var deleteCommand = "DELETE FROM __EFMigrationsHistory WHERE MigrationId LIKE @migrationName";
-        IDbDataParameter? parameter = null;
+        IDbDataParameter? parameter;
 
         switch (_databaseType)
         {
@@ -60,6 +60,8 @@ public class EfMigrationTesterService : IMigrationTesterService
             case SupportedDatabaseProviders.Sqlite:
                 parameter = new SqliteParameter("@migrationName", "%" + _migrationName);
                 break;
+            default:
+                throw new InvalidOperationException($"Unsupported database type: {_databaseType}");
         }
 
         _databaseContext.Database.ExecuteSqlRaw(deleteCommand, parameter);
