@@ -11,7 +11,6 @@ using Stripe;
 
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
-using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
@@ -27,7 +26,7 @@ public class SubscriberService(
         OffboardingSurveyResponse offboardingSurveyResponse,
         bool cancelImmediately)
     {
-        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        if (subscriber is not { GatewaySubscriptionId: not null })
         {
             logger.LogError("Cannot cancel subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
 
@@ -111,9 +110,7 @@ public class SubscriberService(
     public async Task<PaymentInformationDTO> GetPaymentInformation(
         ISubscriber subscriber)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        if (subscriber is not { GatewayCustomerId: not null })
         {
             logger.LogError("Cannot retrieve payment information for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
 
@@ -134,61 +131,14 @@ public class SubscriberService(
 
         var accountCredit = customer.Balance * -1 / 100;
 
-        var paymentMethod = await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
+        var paymentMethod = await GetPaymentMethodAsync(subscriber.Id, customer);
 
-        var taxInformation = GetTaxInformationDTOFrom(customer);
+        var taxInformation = GetTaxInformation(customer);
 
         return new PaymentInformationDTO(
             accountCredit,
             paymentMethod,
             taxInformation);
-    }
-
-    public async Task<MaskedPaymentMethodDTO> GetPaymentMethod(
-        ISubscriber subscriber)
-    {
-        if (subscriber is not { GatewayCustomerId: not null })
-        {
-            logger.LogError("Cannot retrieve payment method for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
-
-            return null;
-        }
-
-        var customer = await stripeAdapter.CustomerTryGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions
-        {
-            Expand = ["default_source", "invoice_settings.default_payment_method"]
-        });
-
-        if (customer != null)
-        {
-            return await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
-        }
-
-        logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when retrieving payment method", subscriber.Id);
-
-        return null;
-    }
-
-    public async Task<TaxInformation> GetTaxInformation(
-        ISubscriber subscriber)
-    {
-        if (subscriber is not { GatewayCustomerId: not null })
-        {
-            logger.LogError("Cannot retrieve tax information for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
-
-            return null;
-        }
-
-        var customer = await stripeAdapter.CustomerTryGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions { Expand = ["tax_ids"] });
-
-        if (customer != null)
-        {
-            return GetTaxInformationDTOFrom(customer);
-        }
-
-        logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when retrieving tax information", subscriber.Id);
-
-        return null;
     }
 
     public async Task RemovePaymentMethod(
@@ -496,13 +446,18 @@ public class SubscriberService(
         ISubscriber subscriber,
         (long, long) microdeposits)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
+        if (subscriber is not { GatewayCustomerId: not null })
+        {
+            logger.LogError("Cannot verify bank account for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
+
+            throw new BillingException();
+        }
 
         var setupIntentId = await setupIntentCache.Get(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
-            logger.LogError("No setup intent ID exists to verify for subscriber with ID ({SubscriberID})", subscriber.Id);
+            logger.LogError("No setup intent is cached to verify for subscriber ({SubscriberID})", subscriber.Id);
 
             throw new BillingException();
         }
@@ -578,7 +533,7 @@ public class SubscriberService(
         throw new BillingException();
     }
 
-    private async Task<MaskedPaymentMethodDTO> GetMaskedPaymentMethodDTOAsync(
+    private async Task<MaskedPaymentMethodDTO> GetPaymentMethodAsync(
         Guid subscriberId,
         Customer customer)
     {
@@ -620,7 +575,7 @@ public class SubscriberService(
         return MaskedPaymentMethodDTO.From(setupIntent);
     }
 
-    private static TaxInformation GetTaxInformationDTOFrom(
+    private static TaxInformation GetTaxInformation(
         Customer customer)
     {
         if (customer.Address == null)

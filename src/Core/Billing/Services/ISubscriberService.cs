@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Stripe;
 
 namespace Bit.Core.Billing.Services;
 
@@ -23,30 +22,11 @@ public interface ISubscriberService
 
     /// <summary>
     /// Retrieves the account credit, a masked representation of the default payment method and the tax information for the
-    /// provided <paramref name="subscriber"/>. This is essentially a consolidated invocation of the <see cref="GetPaymentMethod"/>
-    /// and <see cref="GetTaxInformation"/> methods with a response that includes the customer's <see cref="Stripe.Customer.Balance"/> as account credit in order to cut down on Stripe API calls.
+    /// provided <paramref name="subscriber"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve payment information for.</param>
     /// <returns>A <see cref="PaymentInformationDTO"/> containing the subscriber's account credit, masked payment method and tax information.</returns>
     Task<PaymentInformationDTO> GetPaymentInformation(
-        ISubscriber subscriber);
-
-    /// <summary>
-    /// Retrieves a masked representation of the subscriber's payment method for presentation to a client.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the masked payment method for.</param>
-    /// <returns>A <see cref="MaskedPaymentMethodDTO"/> containing a non-identifiable description of the subscriber's payment method.</returns>
-    Task<MaskedPaymentMethodDTO> GetPaymentMethod(
-        ISubscriber subscriber);
-
-    /// <summary>
-    /// Retrieves the <paramref name="subscriber"/>'s tax information using their Stripe <see cref="Stripe.Customer"/>'s <see cref="Stripe.Customer.Address"/>.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the tax information for.</param>
-    /// <returns>A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s tax information.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<TaxInformation> GetTaxInformation(
         ISubscriber subscriber);
 
     /// <summary>
