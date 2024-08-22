@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Models;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Models;
 
 namespace Bit.Core.Billing.Services;
 
@@ -6,5 +7,5 @@ namespace Bit.Core.Billing.Services;
 
 public interface IOrganizationBillingService
 {
-    Task<OrganizationMetadata?> GetMetadata(Guid organizationId);
+    Task<OrganizationMetadata?> GetMetadata(Organization organization);
 }

@@ -10,7 +10,10 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
+
+using static Bit.Api.Test.Billing.Utilities;
 
 namespace Bit.Api.Test.Billing.Controllers;
 
@@ -27,38 +30,60 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMetadataAsync_OrganizationNull_NotFound(
+        Guid organizationId,
+        SutProvider<OrganizationBillingController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).ReturnsNull();
+
+        var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
+
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
     public async Task GetMetadataAsync_MetadataNull_NotFound(
         Guid organizationId,
+        Organization organization,
         SutProvider<OrganizationBillingController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadata)null);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organization).ReturnsNull();
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
     public async Task GetMetadataAsync_OK(
         Guid organizationId,
+        Organization organization,
         SutProvider<OrganizationBillingController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organization)
             .Returns(new OrganizationMetadata(true));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
         Assert.IsType<Ok<OrganizationMetadataResponse>>(result);
 
-        var organizationMetadataResponse = ((Ok<OrganizationMetadataResponse>)result).Value;
+        var response = ((Ok<OrganizationMetadataResponse>)result).Value;
 
-        Assert.True(organizationMetadataResponse.IsOnSecretsManagerStandalone);
+        Assert.True(response.IsOnSecretsManagerStandalone);
     }
 
     [Theory, BitAutoData]
@@ -70,7 +95,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -83,7 +108,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory]

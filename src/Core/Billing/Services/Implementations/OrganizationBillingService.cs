@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Stripe;
@@ -11,13 +10,10 @@ namespace Bit.Core.Billing.Services.Implementations;
 #nullable enable
 
 public class OrganizationBillingService(
-    IOrganizationRepository organizationRepository,
     IStripeAdapter stripeAdapter) : IOrganizationBillingService
 {
-    public async Task<OrganizationMetadata?> GetMetadata(Guid organizationId)
+    public async Task<OrganizationMetadata?> GetMetadata(Organization organization)
     {
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
         if (organization is not { GatewayCustomerId: not null, GatewaySubscriptionId: not null })
         {
             return null;

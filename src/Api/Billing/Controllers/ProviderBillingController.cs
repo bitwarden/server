@@ -108,8 +108,7 @@ public class ProviderBillingController(
 
         if (requestBody is not { Country: not null, PostalCode: not null })
         {
-            return TypedResults.BadRequest(
-                new ErrorResponseModel("Country and postal code are required to update your tax information."));
+            return Error.BadRequest("Country and postal code are required to update your tax information.");
         }
 
         var taxInformation = new TaxInformation(

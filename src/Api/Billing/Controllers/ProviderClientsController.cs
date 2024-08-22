@@ -39,7 +39,7 @@ public class ProviderClientsController(
 
         if (user == null)
         {
-            return UnauthorizedResponse();
+            return Error.Unauthorized();
         }
 
         var organizationSignup = new OrganizationSignup
@@ -96,7 +96,7 @@ public class ProviderClientsController(
 
         if (providerOrganization == null)
         {
-            return NotFoundResponse();
+            return Error.NotFound();
         }
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
