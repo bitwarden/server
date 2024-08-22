@@ -27,7 +27,14 @@ public class SubscriberService(
         OffboardingSurveyResponse offboardingSurveyResponse,
         bool cancelImmediately)
     {
-        var subscription = await GetSubscriptionOrThrow(subscriber);
+        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            logger.LogError("Cannot cancel subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
+
+            throw new BillingException();
+        }
+
+        var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
 
         if (subscription.CanceledAt.HasValue ||
             subscription.Status == "canceled" ||
@@ -221,44 +228,6 @@ public class SubscriberService(
                 subscriber.GatewaySubscriptionId, subscriber.Id, exception.Message);
 
             return null;
-        }
-    }
-
-    public async Task<Subscription> GetSubscriptionOrThrow(
-        ISubscriber subscriber,
-        SubscriptionGetOptions subscriptionGetOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
-        {
-            logger.LogError("Cannot retrieve subscription for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewaySubscriptionId));
-
-            throw new BillingException();
-        }
-
-        try
-        {
-            var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
-
-            if (subscription != null)
-            {
-                return subscription;
-            }
-
-            logger.LogError("Could not find Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID})",
-                subscriber.GatewaySubscriptionId, subscriber.Id);
-
-            throw new BillingException();
-        }
-        catch (StripeException stripeException)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe subscription ({SubscriptionID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewaySubscriptionId, subscriber.Id, stripeException.Message);
-
-            throw new BillingException(
-                message: "An error occurred while trying to retrieve a Stripe subscription",
-                innerException: stripeException);
         }
     }
 

@@ -30,6 +30,27 @@ public class SubscriberServiceTests
     #region CancelSubscription
 
     [Theory, BitAutoData]
+    public async Task CancelSubscription_OrganizationGatewaySubscriptionIdNull_ThrowsBillingException(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+
+        await ThrowsBillingExceptionAsync(() =>
+            sutProvider.Sut.CancelSubscription(organization, new OffboardingSurveyResponse(), false));
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
     public async Task CancelSubscription_SubscriptionInactive_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
@@ -42,7 +63,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .SubscriptionGetAsync(organization.GatewaySubscriptionId!)
             .Returns(subscription);
 
         await ThrowsBillingExceptionAsync(() =>
@@ -79,7 +100,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .SubscriptionGetAsync(organization.GatewaySubscriptionId!)
             .Returns(subscription);
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
@@ -125,7 +146,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .SubscriptionGetAsync(organization.GatewaySubscriptionId!)
             .Returns(subscription);
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
@@ -168,7 +189,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .SubscriptionGetAsync(organization.GatewaySubscriptionId!)
             .Returns(subscription);
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
@@ -618,69 +639,6 @@ public class SubscriberServiceTests
             .Returns(subscription);
 
         var gotSubscription = await sutProvider.Sut.GetSubscription(organization);
-
-        Assert.Equivalent(subscription, gotSubscription);
-    }
-    #endregion
-
-    #region GetSubscriptionOrThrow
-    [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_NullSubscriber_ThrowsArgumentNullException(
-        SutProvider<SubscriberService> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await sutProvider.Sut.GetSubscriptionOrThrow(null));
-
-    [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_NoGatewaySubscriptionId_ThrowsBillingException(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        organization.GatewaySubscriptionId = null;
-
-        await ThrowsBillingExceptionAsync(async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization));
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_NoSubscription_ThrowsBillingException(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .ReturnsNull();
-
-        await ThrowsBillingExceptionAsync(async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization));
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_StripeException_ThrowsBillingException(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var stripeException = new StripeException();
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .ThrowsAsync(stripeException);
-
-        await ThrowsBillingExceptionAsync(
-            async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization),
-            message: "An error occurred while trying to retrieve a Stripe subscription",
-            innerException: stripeException);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_Succeeds(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var subscription = new Subscription();
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .Returns(subscription);
-
-        var gotSubscription = await sutProvider.Sut.GetSubscriptionOrThrow(organization);
 
         Assert.Equivalent(subscription, gotSubscription);
     }
