@@ -72,8 +72,12 @@ public class ProviderBillingService(
         Provider provider,
         Organization organization)
     {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(organization);
+        if (provider is not { GatewayCustomerId: not null })
+        {
+            logger.LogError("Cannot create client organization customer for provider ({ProviderID}) with no {FieldName}", provider.Id, nameof(provider.GatewayCustomerId));
+
+            throw new BillingException();
+        }
 
         if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
@@ -82,7 +86,7 @@ public class ProviderBillingService(
             return;
         }
 
-        var providerCustomer = await subscriberService.GetCustomerOrThrow(provider, new CustomerGetOptions
+        var providerCustomer = await stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId, new CustomerGetOptions
         {
             Expand = ["tax_ids"]
         });
@@ -364,9 +368,14 @@ public class ProviderBillingService(
     public async Task<Subscription> SetupSubscription(
         Provider provider)
     {
-        ArgumentNullException.ThrowIfNull(provider);
+        if (provider is not { GatewayCustomerId: not null })
+        {
+            logger.LogError("Cannot start subscription for provider ({ProviderID}) with no {FieldName}", provider.Id, nameof(provider.GatewayCustomerId));
 
-        var customer = await subscriberService.GetCustomerOrThrow(provider);
+            throw new BillingException();
+        }
+
+        var customer = await stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 

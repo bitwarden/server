@@ -496,20 +496,6 @@ public class ProviderBillingServiceTests
     #region CreateCustomerForClientOrganization
 
     [Theory, BitAutoData]
-    public async Task CreateCustomerForClientOrganization_ProviderNull_ThrowsArgumentNullException(
-        Organization organization,
-        SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            sutProvider.Sut.CreateCustomerForClientOrganization(null, organization));
-
-    [Theory, BitAutoData]
-    public async Task CreateCustomerForClientOrganization_OrganizationNull_ThrowsArgumentNullException(
-        Provider provider,
-        SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            sutProvider.Sut.CreateCustomerForClientOrganization(provider, null));
-
-    [Theory, BitAutoData]
     public async Task CreateCustomerForClientOrganization_HasGatewayCustomerId_NoOp(
         Provider provider,
         Organization organization,
@@ -519,8 +505,8 @@ public class ProviderBillingServiceTests
 
         await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
 
-        await sutProvider.GetDependency<ISubscriberService>().DidNotReceiveWithAnyArgs()
-            .GetCustomerOrThrow(Arg.Any<ISubscriber>(), Arg.Any<CustomerGetOptions>());
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
     }
 
     [Theory, BitAutoData]
@@ -553,7 +539,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId!, Arg.Is<CustomerGetOptions>(
                 options => options.Expand.FirstOrDefault() == "tax_ids"))
             .Returns(providerCustomer);
 
@@ -824,18 +810,13 @@ public class ProviderBillingServiceTests
     #region SetupSubscription
 
     [Theory, BitAutoData]
-    public async Task SetupSubscription_NullProvider_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupSubscription(null));
-
-    [Theory, BitAutoData]
     public async Task SetupSubscription_NoProviderPlans_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId!).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -858,7 +839,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId!).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -883,7 +864,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId!).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -908,7 +889,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId!).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
@@ -953,7 +934,7 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId!).Returns(new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }

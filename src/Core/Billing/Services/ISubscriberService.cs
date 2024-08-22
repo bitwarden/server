@@ -22,19 +22,6 @@ public interface ISubscriberService
         bool cancelImmediately);
 
     /// <summary>
-    /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the Stripe customer for.</param>
-    /// <param name="customerGetOptions">Optional parameters that can be passed to Stripe to expand or modify the customer.</param>
-    /// <returns>A Stripe <see cref="Customer"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <exception cref="BillingException">Thrown when the subscriber's <see cref="ISubscriber.GatewayCustomerId"/> is <see langword="null"/> or empty.</exception>
-    /// <exception cref="BillingException">Thrown when the <see cref="Customer"/> returned from Stripe's API is null.</exception>
-    Task<Customer> GetCustomerOrThrow(
-        ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null);
-
-    /// <summary>
     /// Retrieves the account credit, a masked representation of the default payment method and the tax information for the
     /// provided <paramref name="subscriber"/>. This is essentially a consolidated invocation of the <see cref="GetPaymentMethod"/>
     /// and <see cref="GetTaxInformation"/> methods with a response that includes the customer's <see cref="Stripe.Customer.Balance"/> as account credit in order to cut down on Stripe API calls.

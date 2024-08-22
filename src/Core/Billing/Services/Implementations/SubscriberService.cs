@@ -108,44 +108,6 @@ public class SubscriberService(
         }
     }
 
-    public async Task<Customer> GetCustomerOrThrow(
-        ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
-        {
-            logger.LogError("Cannot retrieve customer for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
-
-            throw new BillingException();
-        }
-
-        try
-        {
-            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
-
-            if (customer != null)
-            {
-                return customer;
-            }
-
-            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
-                subscriber.GatewayCustomerId, subscriber.Id);
-
-            throw new BillingException();
-        }
-        catch (StripeException stripeException)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewayCustomerId, subscriber.Id, stripeException.Message);
-
-            throw new BillingException(
-                message: "An error occurred while trying to retrieve a Stripe customer",
-                innerException: stripeException);
-        }
-    }
-
     public async Task<PaymentInformationDTO> GetPaymentInformation(
         ISubscriber subscriber)
     {
@@ -185,37 +147,61 @@ public class SubscriberService(
     public async Task<MaskedPaymentMethodDTO> GetPaymentMethod(
         ISubscriber subscriber)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
+        if (subscriber is not { GatewayCustomerId: not null })
+        {
+            logger.LogError("Cannot retrieve payment method for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
 
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+            return null;
+        }
+
+        var customer = await stripeAdapter.CustomerTryGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions
         {
             Expand = ["default_source", "invoice_settings.default_payment_method"]
         });
 
-        return await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
+        if (customer != null)
+        {
+            return await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
+        }
+
+        logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when retrieving payment method", subscriber.Id);
+
+        return null;
     }
 
     public async Task<TaxInformation> GetTaxInformation(
         ISubscriber subscriber)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
+        if (subscriber is not { GatewayCustomerId: not null })
+        {
+            logger.LogError("Cannot retrieve tax information for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
 
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions { Expand = ["tax_ids"] });
+            return null;
+        }
 
-        return GetTaxInformationDTOFrom(customer);
+        var customer = await stripeAdapter.CustomerTryGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions { Expand = ["tax_ids"] });
+
+        if (customer != null)
+        {
+            return GetTaxInformationDTOFrom(customer);
+        }
+
+        logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when retrieving tax information", subscriber.Id);
+
+        return null;
     }
 
     public async Task RemovePaymentMethod(
         ISubscriber subscriber)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        if (subscriber is not { GatewayCustomerId: not null })
         {
+            logger.LogError("Cannot remove payment method for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
+
             throw new BillingException();
         }
 
-        var stripeCustomer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        var stripeCustomer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions
         {
             Expand = ["invoice_settings.default_payment_method", "sources"]
         });
@@ -301,10 +287,14 @@ public class SubscriberService(
         ISubscriber subscriber,
         TokenizedPaymentMethodDTO tokenizedPaymentMethod)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNull(tokenizedPaymentMethod);
+        if (subscriber is not { GatewayCustomerId: not null })
+        {
+            logger.LogError("Cannot update payment method for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
 
-        var customer = await GetCustomerOrThrow(subscriber);
+            throw new BillingException();
+        }
+
+        var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
 
         var (type, token) = tokenizedPaymentMethod;
 
@@ -454,10 +444,14 @@ public class SubscriberService(
         ISubscriber subscriber,
         TaxInformation taxInformation)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNull(taxInformation);
+        if (subscriber is not { GatewayCustomerId: not null })
+        {
+            logger.LogError("Cannot update tax information for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
 
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+            throw new BillingException();
+        }
+
+        var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions
         {
             Expand = ["tax_ids"]
         });
