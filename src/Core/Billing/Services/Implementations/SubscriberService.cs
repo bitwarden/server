@@ -101,42 +101,6 @@ public class SubscriberService(
         }
     }
 
-    public async Task<Customer> GetCustomer(
-        ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
-        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
-        {
-            logger.LogError("Cannot retrieve customer for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
-
-            return null;
-        }
-
-        try
-        {
-            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
-
-            if (customer != null)
-            {
-                return customer;
-            }
-
-            logger.LogError("Could not find Stripe customer ({CustomerID}) for subscriber ({SubscriberID})",
-                subscriber.GatewayCustomerId, subscriber.Id);
-
-            return null;
-        }
-        catch (StripeException exception)
-        {
-            logger.LogError("An error occurred while trying to retrieve Stripe customer ({CustomerID}) for subscriber ({SubscriberID}): {Error}",
-                subscriber.GatewayCustomerId, subscriber.Id, exception.Message);
-
-            return null;
-        }
-    }
-
     public async Task<Customer> GetCustomerOrThrow(
         ISubscriber subscriber,
         CustomerGetOptions customerGetOptions = null)
@@ -180,14 +144,23 @@ public class SubscriberService(
     {
         ArgumentNullException.ThrowIfNull(subscriber);
 
-        var customer = await GetCustomer(subscriber, new CustomerGetOptions
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            logger.LogError("Cannot retrieve payment information for subscriber ({SubscriberID}) with no {FieldName}", subscriber.Id, nameof(subscriber.GatewayCustomerId));
+
+            throw new BillingException();
+        }
+
+        var customer = await stripeAdapter.CustomerTryGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions
         {
             Expand = ["default_source", "invoice_settings.default_payment_method", "tax_ids"]
         });
 
         if (customer == null)
         {
-            return null;
+            logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when retrieving payment information", subscriber.Id);
+
+            throw new BillingException();
         }
 
         var accountCredit = customer.Balance * -1 / 100;

@@ -2,30 +2,33 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Stripe;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
+#nullable enable
+
 public class OrganizationBillingService(
     IOrganizationRepository organizationRepository,
-    ISubscriberService subscriberService) : IOrganizationBillingService
+    IStripeAdapter stripeAdapter) : IOrganizationBillingService
 {
-    public async Task<OrganizationMetadataDTO> GetMetadata(Guid organizationId)
+    public async Task<OrganizationMetadataDTO?> GetMetadata(Guid organizationId)
     {
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
-        if (organization == null)
+        if (organization is not { GatewayCustomerId: not null, GatewaySubscriptionId: not null })
         {
             return null;
         }
 
-        var customer = await subscriberService.GetCustomer(organization, new CustomerGetOptions
+        var customer = await stripeAdapter.CustomerTryGetAsync(organization.GatewayCustomerId, new CustomerGetOptions
         {
-            Expand = ["discount.coupon.applies_to"]
+            Expand = ["discount.coupon.applies_to", "subscriptions"]
         });
 
-        var subscription = await subscriberService.GetSubscription(organization);
+        var subscription = customer?.Subscriptions.FirstOrDefault(subscription => subscription.Id == organization.GatewaySubscriptionId);
 
         if (customer == null || subscription == null)
         {

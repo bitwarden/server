@@ -28,18 +28,6 @@ public interface ISubscriberService
     /// <param name="customerGetOptions">Optional parameters that can be passed to Stripe to expand or modify the customer.</param>
     /// <returns>A Stripe <see cref="Customer"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<Customer> GetCustomer(
-        ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null);
-
-    /// <summary>
-    /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the Stripe customer for.</param>
-    /// <param name="customerGetOptions">Optional parameters that can be passed to Stripe to expand or modify the customer.</param>
-    /// <returns>A Stripe <see cref="Customer"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
     /// <exception cref="BillingException">Thrown when the subscriber's <see cref="ISubscriber.GatewayCustomerId"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="BillingException">Thrown when the <see cref="Customer"/> returned from Stripe's API is null.</exception>
     Task<Customer> GetCustomerOrThrow(
