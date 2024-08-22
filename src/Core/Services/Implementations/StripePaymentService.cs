@@ -12,6 +12,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using PaymentMethod = Stripe.PaymentMethod;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 

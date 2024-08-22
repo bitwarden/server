@@ -4,6 +4,8 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Billing.Services;
 
+#nullable enable
+
 public interface ISubscriberService
 {
     /// <summary>
@@ -21,34 +23,33 @@ public interface ISubscriberService
         bool cancelImmediately);
 
     /// <summary>
-    /// Retrieves the account credit, a masked representation of the default payment method and the tax information for the
-    /// provided <paramref name="subscriber"/>.
+    /// Retrieves the subscriber's payment method, which includes their account credit, a masked representation of their payment source and their tax information.
     /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve payment information for.</param>
-    /// <returns>A <see cref="PaymentInformationDTO"/> containing the subscriber's account credit, masked payment method and tax information.</returns>
-    Task<PaymentInformationDTO> GetPaymentInformation(
+    /// <param name="subscriber">The subscriber to retrieve payment method for.</param>
+    /// <returns>A <see cref="PaymentMethod"/> containing the subscriber's account credit, masked payment source and tax information.</returns>
+    Task<PaymentMethod> GetPaymentMethod(
         ISubscriber subscriber);
 
     /// <summary>
-    /// Attempts to remove a subscriber's saved payment method. If the Stripe <see cref="Stripe.Customer"/> representing the
+    /// Attempts to remove a subscriber's saved payment source. If the Stripe <see cref="Stripe.Customer"/> representing the
     /// <paramref name="subscriber"/> contains a valid <b>"btCustomerId"</b> key in its <see cref="Stripe.Customer.Metadata"/> property,
     /// this command will attempt to remove the Braintree <see cref="Braintree.PaymentMethod"/>. Otherwise, it will attempt to remove the
     /// Stripe <see cref="Stripe.PaymentMethod"/>.
     /// </summary>
-    /// <param name="subscriber">The subscriber to remove the saved payment method for.</param>
-    Task RemovePaymentMethod(ISubscriber subscriber);
+    /// <param name="subscriber">The subscriber to remove the saved payment source for.</param>
+    Task RemovePaymentSource(ISubscriber subscriber);
 
     /// <summary>
-    /// Updates the payment method for the provided <paramref name="subscriber"/> using the <paramref name="tokenizedPaymentMethod"/>.
+    /// Updates the payment source for the provided <paramref name="subscriber"/> using the <paramref name="tokenizedPaymentSource"/>.
     /// The following payment method types are supported: [<see cref="PaymentMethodType.Card"/>, <see cref="PaymentMethodType.BankAccount"/>, <see cref="PaymentMethodType.PayPal"/>].
-    /// For each type, updating the payment method will attempt to establish a new payment method using the token in the <see cref="TokenizedPaymentMethodDTO"/>. Then, it will
-    /// remove the exising payment method(s) linked to the subscriber's customer.
+    /// For each type, updating the payment source will attempt to establish a new payment source using the token in the <see cref="TokenizedPaymentSource"/>. Then, it will
+    /// remove the exising payment source(s) linked to the subscriber's customer.
     /// </summary>
-    /// <param name="subscriber">The subscriber to update the payment method for.</param>
-    /// <param name="tokenizedPaymentMethod">A DTO representing a tokenized payment method.</param>
-    Task UpdatePaymentMethod(
+    /// <param name="subscriber">The subscriber to update the payment source for.</param>
+    /// <param name="tokenizedPaymentSource">An object representing a tokenized payment method.</param>
+    Task UpdatePaymentSource(
         ISubscriber subscriber,
-        TokenizedPaymentMethodDTO tokenizedPaymentMethod);
+        TokenizedPaymentSource tokenizedPaymentSource);
 
     /// <summary>
     /// Updates the tax information for the provided <paramref name="subscriber"/>.

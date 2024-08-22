@@ -11,8 +11,11 @@ using Stripe;
 
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
+using PaymentMethod = Bit.Core.Billing.Models.PaymentMethod;
 
 namespace Bit.Core.Billing.Services.Implementations;
+
+#nullable enable
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
@@ -107,7 +110,7 @@ public class SubscriberService(
         }
     }
 
-    public async Task<PaymentInformationDTO> GetPaymentInformation(
+    public async Task<PaymentMethod> GetPaymentMethod(
         ISubscriber subscriber)
     {
         if (subscriber is not { GatewayCustomerId: not null })
@@ -117,31 +120,24 @@ public class SubscriberService(
             throw new BillingException();
         }
 
-        var customer = await stripeAdapter.CustomerTryGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions
+        var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, new CustomerGetOptions
         {
             Expand = ["default_source", "invoice_settings.default_payment_method", "tax_ids"]
         });
 
-        if (customer == null)
-        {
-            logger.LogError("Could not retrieve Stripe customer for subscriber ({SubscriberID}) when retrieving payment information", subscriber.Id);
-
-            throw new BillingException();
-        }
-
         var accountCredit = customer.Balance * -1 / 100;
 
-        var paymentMethod = await GetPaymentMethodAsync(subscriber.Id, customer);
+        var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
 
         var taxInformation = GetTaxInformation(customer);
 
-        return new PaymentInformationDTO(
+        return new PaymentMethod(
             accountCredit,
             paymentMethod,
             taxInformation);
     }
 
-    public async Task RemovePaymentMethod(
+    public async Task RemovePaymentSource(
         ISubscriber subscriber)
     {
         if (subscriber is not { GatewayCustomerId: not null })
@@ -233,9 +229,9 @@ public class SubscriberService(
         }
     }
 
-    public async Task UpdatePaymentMethod(
+    public async Task UpdatePaymentSource(
         ISubscriber subscriber,
-        TokenizedPaymentMethodDTO tokenizedPaymentMethod)
+        TokenizedPaymentSource tokenizedPaymentSource)
     {
         if (subscriber is not { GatewayCustomerId: not null })
         {
@@ -246,7 +242,7 @@ public class SubscriberService(
 
         var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
 
-        var (type, token) = tokenizedPaymentMethod;
+        var (type, token) = tokenizedPaymentSource;
 
         if (string.IsNullOrEmpty(token))
         {
@@ -352,19 +348,17 @@ public class SubscriberService(
                 }
             case PaymentMethodType.PayPal:
                 {
-                    string braintreeCustomerId;
-
                     if (customer.Metadata != null)
                     {
-                        var hasBraintreeCustomerId = customer.Metadata.TryGetValue(BraintreeCustomerIdKey, out braintreeCustomerId);
+                        var hasBraintreeCustomerId = customer.Metadata.TryGetValue(BraintreeCustomerIdKey, out var existingBraintreeCustomerId);
 
-                        if (hasBraintreeCustomerId)
+                        if (hasBraintreeCustomerId && !string.IsNullOrEmpty(existingBraintreeCustomerId))
                         {
-                            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
+                            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(existingBraintreeCustomerId);
 
                             if (braintreeCustomer == null)
                             {
-                                logger.LogError("Failed to retrieve Braintree customer ({BraintreeCustomerId}) when updating payment method for subscriber ({SubscriberID})", braintreeCustomerId, subscriber.Id);
+                                logger.LogError("Failed to retrieve Braintree customer ({BraintreeCustomerId}) when updating payment method for subscriber ({SubscriberID})", existingBraintreeCustomerId, subscriber.Id);
 
                                 throw new BillingException();
                             }
@@ -375,9 +369,9 @@ public class SubscriberService(
                         }
                     }
 
-                    braintreeCustomerId = await CreateBraintreeCustomerAsync(subscriber, token);
+                    var createdBraintreeCustomerId = await CreateBraintreeCustomerAsync(subscriber, token);
 
-                    await AddBraintreeCustomerIdAsync(customer, braintreeCustomerId);
+                    await AddBraintreeCustomerIdAsync(customer, createdBraintreeCustomerId);
 
                     break;
                 }
@@ -533,7 +527,7 @@ public class SubscriberService(
         throw new BillingException();
     }
 
-    private async Task<MaskedPaymentMethodDTO> GetPaymentMethodAsync(
+    private async Task<PaymentSource?> GetPaymentSourceAsync(
         Guid subscriberId,
         Customer customer)
     {
@@ -545,15 +539,15 @@ public class SubscriberService(
             {
                 var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
 
-                return MaskedPaymentMethodDTO.From(braintreeCustomer);
+                return PaymentSource.From(braintreeCustomer);
             }
         }
 
-        var attachedPaymentMethodDTO = MaskedPaymentMethodDTO.From(customer);
+        var attachedPaymentSource = PaymentSource.From(customer);
 
-        if (attachedPaymentMethodDTO != null)
+        if (attachedPaymentSource != null)
         {
-            return attachedPaymentMethodDTO;
+            return attachedPaymentSource;
         }
 
         /*
@@ -572,10 +566,10 @@ public class SubscriberService(
             Expand = ["payment_method"]
         });
 
-        return MaskedPaymentMethodDTO.From(setupIntent);
+        return PaymentSource.From(setupIntent);
     }
 
-    private static TaxInformation GetTaxInformation(
+    private static TaxInformation? GetTaxInformation(
         Customer customer)
     {
         if (customer.Address == null)
@@ -596,7 +590,7 @@ public class SubscriberService(
     private async Task RemoveBraintreeCustomerIdAsync(
         Customer customer)
     {
-        var metadata = customer.Metadata ?? new Dictionary<string, string>();
+        var metadata = customer.Metadata ?? new Dictionary<string, string?>();
 
         if (metadata.ContainsKey(BraintreeCustomerIdKey))
         {

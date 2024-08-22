@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Billing.Models;
 
-public record PaymentInformationDTO(
+public record PaymentMethod(
     long AccountCredit,
-    MaskedPaymentMethodDTO PaymentMethod,
+    PaymentSource PaymentSource,
     TaxInformation TaxInformation);

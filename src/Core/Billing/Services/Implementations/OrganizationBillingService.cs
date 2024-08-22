@@ -14,7 +14,7 @@ public class OrganizationBillingService(
     IOrganizationRepository organizationRepository,
     IStripeAdapter stripeAdapter) : IOrganizationBillingService
 {
-    public async Task<OrganizationMetadataDTO?> GetMetadata(Guid organizationId)
+    public async Task<OrganizationMetadata?> GetMetadata(Guid organizationId)
     {
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
@@ -32,12 +32,12 @@ public class OrganizationBillingService(
 
         if (customer == null || subscription == null)
         {
-            return OrganizationMetadataDTO.Default();
+            return OrganizationMetadata.Default();
         }
 
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        return new OrganizationMetadataDTO(isOnSecretsManagerStandalone);
+        return new OrganizationMetadata(isOnSecretsManagerStandalone);
     }
 
     private static bool IsOnSecretsManagerStandalone(
