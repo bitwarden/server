@@ -1,88 +1,107 @@
-﻿using Bit.Core.Models.BitStripe;
+﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Models.BitStripe;
 using Stripe;
 
-namespace Bit.Core.Services;
+using TestClockService = Stripe.TestHelpers.TestClockService;
+
+namespace Bit.Core.Services.Implementations;
 
 public class StripeAdapter : IStripeAdapter
 {
-    private readonly Stripe.CustomerService _customerService;
-    private readonly Stripe.SubscriptionService _subscriptionService;
-    private readonly Stripe.InvoiceService _invoiceService;
-    private readonly Stripe.PaymentMethodService _paymentMethodService;
-    private readonly Stripe.TaxRateService _taxRateService;
-    private readonly Stripe.TaxIdService _taxIdService;
-    private readonly Stripe.ChargeService _chargeService;
-    private readonly Stripe.RefundService _refundService;
-    private readonly Stripe.CardService _cardService;
-    private readonly Stripe.BankAccountService _bankAccountService;
-    private readonly Stripe.PriceService _priceService;
-    private readonly Stripe.SetupIntentService _setupIntentService;
-    private readonly Stripe.TestHelpers.TestClockService _testClockService;
+    private readonly BankAccountService _bankAccountService = new();
+    private readonly CardService _cardService = new();
+    private readonly ChargeService _chargeService = new();
+    private readonly CustomerService _customerService = new();
+    private readonly InvoiceService _invoiceService = new();
+    private readonly PaymentMethodService _paymentMethodService = new();
+    private readonly PriceService _priceService = new();
+    private readonly RefundService _refundService = new();
+    private readonly SetupIntentService _setupIntentService = new();
+    private readonly SubscriptionService _subscriptionService = new();
+    private readonly TaxIdService _taxIdService = new();
+    private readonly TaxRateService _taxRateService = new();
+    private readonly TestClockService _testClockService = new();
 
-    public StripeAdapter()
+    #nullable enable
+
+    #region Customers
+
+    public Task<Customer> CustomerCreateAsync(CustomerCreateOptions options)
+        => _customerService.CreateAsync(options);
+
+    public Task<Customer> CustomerDeleteAsync(string id)
+        => _customerService.DeleteAsync(id);
+
+    public Task<Customer> CustomerGetAsync(string id, CustomerGetOptions? options = null)
+        => _customerService.GetAsync(id, options);
+
+    public async Task<List<PaymentMethod>> CustomerListPaymentMethodsAsync(
+        string id,
+        CustomerListPaymentMethodsOptions? options = null)
+        => (await _customerService.ListPaymentMethodsAsync(id, options)).Data;
+
+    public async Task<Customer?> CustomerTryGetAsync(string id, CustomerGetOptions? options = null)
     {
-        _customerService = new Stripe.CustomerService();
-        _subscriptionService = new Stripe.SubscriptionService();
-        _invoiceService = new Stripe.InvoiceService();
-        _paymentMethodService = new Stripe.PaymentMethodService();
-        _taxRateService = new Stripe.TaxRateService();
-        _taxIdService = new Stripe.TaxIdService();
-        _chargeService = new Stripe.ChargeService();
-        _refundService = new Stripe.RefundService();
-        _cardService = new Stripe.CardService();
-        _bankAccountService = new Stripe.BankAccountService();
-        _priceService = new Stripe.PriceService();
-        _setupIntentService = new SetupIntentService();
-        _testClockService = new Stripe.TestHelpers.TestClockService();
+        try
+        {
+            return await CustomerGetAsync(id, options);
+        }
+        catch (StripeException exception) when (exception.ResourceMissing())
+        {
+            return null;
+        }
     }
 
-    public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
+    public Task<Customer> CustomerUpdateAsync(string id, CustomerUpdateOptions options)
+        => _customerService.UpdateAsync(id, options);
+
+    #endregion
+
+    #region Subscriptions
+
+    public Task<Subscription> SubscriptionCancelAsync(string id, SubscriptionCancelOptions? options = null)
+        => _subscriptionService.CancelAsync(id, options);
+
+    public Task<Subscription> SubscriptionCreateAsync(SubscriptionCreateOptions options)
+        =>  _subscriptionService.CreateAsync(options);
+
+    public Task<Subscription> SubscriptionGetAsync(string id, SubscriptionGetOptions? options = null)
+        => _subscriptionService.GetAsync(id, options);
+
+    public async Task<List<Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions options)
     {
-        return _customerService.CreateAsync(options);
+        if (!options.SelectAll)
+        {
+            return (await _subscriptionService.ListAsync(options.ToStripeApiOptions())).Data;
+        }
+
+        options.Limit = 100;
+        var items = new List<Subscription>();
+        await foreach (var i in _subscriptionService.ListAutoPagingAsync(options.ToStripeApiOptions()))
+        {
+            items.Add(i);
+        }
+        return items;
     }
 
-    public Task<Stripe.Customer> CustomerGetAsync(string id, Stripe.CustomerGetOptions options = null)
+    public async Task<Subscription?> SubscriptionTryGetAsync(string id, SubscriptionGetOptions? options = null)
     {
-        return _customerService.GetAsync(id, options);
+        try
+        {
+            return await SubscriptionGetAsync(id, options);
+        }
+        catch (StripeException exception) when (exception.ResourceMissing())
+        {
+            return null;
+        }
     }
 
-    public Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null)
-    {
-        return _customerService.UpdateAsync(id, options);
-    }
+    public Task<Subscription> SubscriptionUpdateAsync(string id, SubscriptionUpdateOptions options)
+        => _subscriptionService.UpdateAsync(id, options);
 
-    public Task<Stripe.Customer> CustomerDeleteAsync(string id)
-    {
-        return _customerService.DeleteAsync(id);
-    }
+    #endregion
 
-    public async Task<List<PaymentMethod>> CustomerListPaymentMethods(string id,
-        CustomerListPaymentMethodsOptions options = null)
-    {
-        var paymentMethods = await _customerService.ListPaymentMethodsAsync(id, options);
-        return paymentMethods.Data;
-    }
-
-    public Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions options)
-    {
-        return _subscriptionService.CreateAsync(options);
-    }
-
-    public Task<Stripe.Subscription> SubscriptionGetAsync(string id, Stripe.SubscriptionGetOptions options = null)
-    {
-        return _subscriptionService.GetAsync(id, options);
-    }
-
-    public Task<Stripe.Subscription> SubscriptionUpdateAsync(string id,
-        Stripe.SubscriptionUpdateOptions options = null)
-    {
-        return _subscriptionService.UpdateAsync(id, options);
-    }
-
-    public Task<Stripe.Subscription> SubscriptionCancelAsync(string Id, Stripe.SubscriptionCancelOptions options = null)
-    {
-        return _subscriptionService.CancelAsync(Id, options);
-    }
+    #nullable disable
 
     public Task<Stripe.Invoice> InvoiceUpcomingAsync(Stripe.UpcomingInvoiceOptions options)
     {
@@ -208,22 +227,6 @@ public class StripeAdapter : IStripeAdapter
     public Task<Stripe.BankAccount> BankAccountDeleteAsync(string customerId, string bankAccount, Stripe.BankAccountDeleteOptions options = null)
     {
         return _bankAccountService.DeleteAsync(customerId, bankAccount, options);
-    }
-
-    public async Task<List<Stripe.Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions options)
-    {
-        if (!options.SelectAll)
-        {
-            return (await _subscriptionService.ListAsync(options.ToStripeApiOptions())).Data;
-        }
-
-        options.Limit = 100;
-        var items = new List<Stripe.Subscription>();
-        await foreach (var i in _subscriptionService.ListAutoPagingAsync(options.ToStripeApiOptions()))
-        {
-            items.Add(i);
-        }
-        return items;
     }
 
     public async Task<Stripe.StripeList<Stripe.Price>> PriceListAsync(Stripe.PriceListOptions options = null)

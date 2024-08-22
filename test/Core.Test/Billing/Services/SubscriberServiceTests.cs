@@ -1187,7 +1187,7 @@ public class SubscriberServiceTests
                 new SetupIntent { Id = "setup_intent_3", Status = "succeeded" }
             ]);
 
-        stripeAdapter.CustomerListPaymentMethods(provider.GatewayCustomerId).Returns([
+        stripeAdapter.CustomerListPaymentMethodsAsync(provider.GatewayCustomerId).Returns([
             new PaymentMethod { Id = "payment_method_1" }
         ]);
 
@@ -1228,7 +1228,7 @@ public class SubscriberServiceTests
                 new SetupIntent { Id = "setup_intent_3", Status = "succeeded" }
             ]);
 
-        stripeAdapter.CustomerListPaymentMethods(provider.GatewayCustomerId).Returns([
+        stripeAdapter.CustomerListPaymentMethodsAsync(provider.GatewayCustomerId).Returns([
             new PaymentMethod { Id = "payment_method_1" }
         ]);
 

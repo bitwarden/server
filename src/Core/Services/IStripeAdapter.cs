@@ -3,18 +3,35 @@ using Stripe;
 
 namespace Bit.Core.Services;
 
+// ReSharper disable InconsistentNaming
 public interface IStripeAdapter
 {
-    Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions customerCreateOptions);
-    Task<Stripe.Customer> CustomerGetAsync(string id, Stripe.CustomerGetOptions options = null);
-    Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null);
-    Task<Stripe.Customer> CustomerDeleteAsync(string id);
-    Task<List<PaymentMethod>> CustomerListPaymentMethods(string id, CustomerListPaymentMethodsOptions options = null);
-    Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions subscriptionCreateOptions);
-    Task<Stripe.Subscription> SubscriptionGetAsync(string id, Stripe.SubscriptionGetOptions options = null);
-    Task<List<Stripe.Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions subscriptionSearchOptions);
-    Task<Stripe.Subscription> SubscriptionUpdateAsync(string id, Stripe.SubscriptionUpdateOptions options = null);
-    Task<Stripe.Subscription> SubscriptionCancelAsync(string Id, Stripe.SubscriptionCancelOptions options = null);
+    #nullable enable
+
+    #region Customers
+
+    Task<Customer> CustomerCreateAsync(CustomerCreateOptions options);
+    Task<Customer> CustomerDeleteAsync(string id);
+    Task<Customer> CustomerGetAsync(string id, CustomerGetOptions? options = null);
+    Task<List<PaymentMethod>> CustomerListPaymentMethodsAsync(string id, CustomerListPaymentMethodsOptions? options = null);
+    Task<Customer?> CustomerTryGetAsync(string id, CustomerGetOptions? options = null);
+    Task<Customer> CustomerUpdateAsync(string id, CustomerUpdateOptions options);
+
+    #endregion
+
+    #region Subscriptions
+
+    Task<Subscription> SubscriptionCancelAsync(string id, SubscriptionCancelOptions? options = null);
+    Task<Subscription> SubscriptionCreateAsync(SubscriptionCreateOptions options);
+    Task<Subscription> SubscriptionGetAsync(string id, SubscriptionGetOptions? options = null);
+    Task<List<Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions options);
+    Task<Subscription?> SubscriptionTryGetAsync(string id, SubscriptionGetOptions? options = null);
+    Task<Subscription> SubscriptionUpdateAsync(string id, SubscriptionUpdateOptions options);
+
+    #endregion
+
+    #nullable disable
+
     Task<Stripe.Invoice> InvoiceUpcomingAsync(Stripe.UpcomingInvoiceOptions options);
     Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options);
     Task<List<Stripe.Invoice>> InvoiceListAsync(StripeInvoiceListOptions options);

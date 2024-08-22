@@ -618,7 +618,7 @@ public class StripePaymentServiceTests
                 { "btCustomerId", "B-123" },
             }
         });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerUpdateAsync(default, default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
@@ -663,7 +663,7 @@ public class StripePaymentServiceTests
                 { "btCustomerId", "B-123" },
             }
         });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerUpdateAsync(default, default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
@@ -711,7 +711,7 @@ public class StripePaymentServiceTests
                 { "btCustomerId", "B-123" },
             }
         });
-        stripeAdapter.CustomerUpdateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        stripeAdapter.CustomerUpdateAsync(default, default).ReturnsForAnyArgs(new Stripe.Customer
         {
             Id = "C-1",
             Metadata = new Dictionary<string, string>
