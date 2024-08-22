@@ -17,7 +17,7 @@ public class ReportRepository(string connectionString, string readOnlyConnection
     }
 
 
-    public async Task<Report?> GetByOrganizationId(Guid organizationId)
+    public async Task<Report?> GetByOrganizationIdAsync(Guid organizationId)
     {
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<Report>(

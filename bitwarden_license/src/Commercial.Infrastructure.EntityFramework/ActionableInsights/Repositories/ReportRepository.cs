@@ -11,7 +11,7 @@ public class ReportRepository(IServiceScopeFactory serviceScopeFactory, IMapper 
     : Repository<Report, Report, Guid>(serviceScopeFactory, mapper, db => db.Report),
         IReportRepository
 {
-    public async Task<Report?> GetByOrganizationId(Guid organizationId)
+    public async Task<Report?> GetByOrganizationIdAsync(Guid organizationId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);

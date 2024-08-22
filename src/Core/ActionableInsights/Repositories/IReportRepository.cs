@@ -6,5 +6,5 @@ namespace Bit.Core.ActionableInsights.Repositories;
 
 public interface IReportRepository : IRepository<Report, Guid>
 {
-    Task<Report?> GetByOrganizationId(Guid organizationId);
+    Task<Report?> GetByOrganizationIdAsync(Guid organizationId);
 }
