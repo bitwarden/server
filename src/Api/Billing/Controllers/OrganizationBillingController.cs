@@ -17,10 +17,11 @@ public class OrganizationBillingController(
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService) : BaseBillingController
 {
-    [HttpGet("metadata")]
-    public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
+    [HttpGet]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> GetBillingAsync(Guid organizationId)
     {
-        if (!await currentContext.AccessMembersTab(organizationId))
+        if (!await currentContext.ViewBillingHistory(organizationId))
         {
             return Error.Unauthorized();
         }
@@ -32,14 +33,9 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var metadata = await organizationBillingService.GetMetadata(organization);
+        var billingInfo = await paymentService.GetBillingAsync(organization);
 
-        if (metadata == null)
-        {
-            return Error.NotFound();
-        }
-
-        var response = OrganizationMetadataResponse.From(metadata);
+        var response = new BillingResponseModel(billingInfo);
 
         return TypedResults.Ok(response);
     }
@@ -64,11 +60,10 @@ public class OrganizationBillingController(
         return TypedResults.Ok(billingInfo);
     }
 
-    [HttpGet]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<IResult> GetBillingAsync(Guid organizationId)
+    [HttpGet("metadata")]
+    public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
-        if (!await currentContext.ViewBillingHistory(organizationId))
+        if (!await currentContext.AccessMembersTab(organizationId))
         {
             return Error.Unauthorized();
         }
@@ -80,9 +75,14 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var billingInfo = await paymentService.GetBillingAsync(organization);
+        var metadata = await organizationBillingService.GetMetadata(organization);
 
-        var response = new BillingResponseModel(billingInfo);
+        if (metadata == null)
+        {
+            return Error.NotFound();
+        }
+
+        var response = OrganizationMetadataResponse.From(metadata);
 
         return TypedResults.Ok(response);
     }
