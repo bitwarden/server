@@ -18,7 +18,7 @@ public class DatabaseDataAttribute : DataAttribute
 {
     public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
-    public string MigrationName { get; set; }
+    public string? MigrationName { get; set; }
 
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
