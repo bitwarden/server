@@ -119,7 +119,7 @@ public class UserLicense : ILicense
 
         if (Issued > DateTime.UtcNow)
         {
-            errorMessages.AppendLine("The license hasn't been issued yet");
+            errorMessages.AppendLine("The license hasn't been issued yet.");
         }
 
         if (Expires < DateTime.UtcNow)

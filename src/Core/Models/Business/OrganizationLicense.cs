@@ -234,12 +234,12 @@ public class OrganizationLicense : ILicense
 
         if (!Enabled)
         {
-            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled");
+            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
         }
 
         if (Issued > DateTime.UtcNow)
         {
-            errorMessages.AppendLine("The license hasn't been issued yet");
+            errorMessages.AppendLine("The license hasn't been issued yet.");
         }
 
         if (Expires < DateTime.UtcNow)
