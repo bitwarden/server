@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 
@@ -34,6 +35,14 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
                 // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
                 o.Type = o.Type.GetFlexibleCollectionsUserType(userPermissions);
+
+                if (userPermissions is not null)
+                {
+                    userPermissions.EditAssignedCollections = false;
+                    userPermissions.DeleteAssignedCollections = false;
+                }
+
+                o.Permissions = CoreHelpers.ClassToJsonData(userPermissions);
 
                 return o;
             });

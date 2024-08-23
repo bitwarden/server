@@ -17,7 +17,7 @@ public class OrganizationUserUserDetailsQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task Get_DowngradesCustomUsers(
+    public async Task Get_DowngradesCustomUsersWithDeprecatedPermissions(
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUserUserDetailsQuery> sutProvider,
         Guid organizationId)
@@ -36,6 +36,10 @@ public class OrganizationUserUserDetailsQueryTests
 
         var customUserResponse = response.First(r => r.Id == organizationUsers.First().Id);
         Assert.Equal(OrganizationUserType.User, customUserResponse.Type);
+
+        var customUserPermissions = customUserResponse.GetPermissions();
+        Assert.False(customUserPermissions.EditAssignedCollections);
+        Assert.False(customUserPermissions.DeleteAssignedCollections);
     }
 
     [Theory]
@@ -54,7 +58,7 @@ public class OrganizationUserUserDetailsQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_SetsDeprecatedCustomRole(
+    public async Task Get_SetsDeprecatedCustomPermissionstoFalse(
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUserUserDetailsQuery> sutProvider,
         Guid organizationId)
@@ -75,6 +79,12 @@ public class OrganizationUserUserDetailsQueryTests
 
         var customUserResponse = response.First(r => r.Id == organizationUsers.First().Id);
         Assert.Equal(OrganizationUserType.Custom, customUserResponse.Type);
+
+        var customUserPermissions = customUserResponse.GetPermissions();
+        Assert.True(customUserPermissions.AccessReports);
+        Assert.True(customUserPermissions.AccessEventLogs);
+        Assert.False(customUserPermissions.EditAssignedCollections);
+        Assert.False(customUserPermissions.DeleteAssignedCollections);
     }
 
     [Theory]
