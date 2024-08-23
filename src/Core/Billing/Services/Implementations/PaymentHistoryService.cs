@@ -1,12 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
-using Stripe;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
@@ -20,30 +18,21 @@ public class PaymentHistoryService(
         int pageSize = 5,
         string startAfter = null)
     {
-        if (subscriber is null ||
-            string.IsNullOrEmpty(subscriber.GatewayCustomerId) ||
-            string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        if (subscriber is not { GatewayCustomerId: not null, GatewaySubscriptionId: not null })
         {
             return null;
         }
 
-        try
+        var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
         {
-            var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
-            {
-                Customer = subscriber.GatewayCustomerId,
-                Subscription = subscriber.GatewaySubscriptionId,
-                Limit = pageSize,
-                StartingAfter = startAfter
-            });
+            Customer = subscriber.GatewayCustomerId,
+            Subscription = subscriber.GatewaySubscriptionId,
+            Limit = pageSize,
+            StartingAfter = startAfter
+        });
 
-            return invoices.Select(invoice => new BillingHistoryInfo.BillingInvoice(invoice));
-        }
-        catch (StripeException exception)
-        {
-            logger.LogError(exception, "An error occurred while listing Stripe invoices");
-            throw new GatewayException("Failed to retrieve current invoices", exception);
-        }
+        return invoices.Select(invoice => new BillingHistoryInfo.BillingInvoice(invoice));
+
     }
 
     public async Task<IEnumerable<BillingHistoryInfo.BillingTransaction>> GetTransactionHistoryAsync(
