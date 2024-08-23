@@ -9,7 +9,6 @@ using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation;
