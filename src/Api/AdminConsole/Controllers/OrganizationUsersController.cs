@@ -156,6 +156,13 @@ public class OrganizationUsersController : Controller
                 var orgUser = new OrganizationUserUserDetailsResponseModel(o,
                     await _userService.TwoFactorIsEnabledAsync(o));
 
+                // Set 'Edit/Delete Assigned Collections' custom permissions to false
+                if (orgUser.Permissions is not null)
+                {
+                    orgUser.Permissions.EditAssignedCollections = false;
+                    orgUser.Permissions.DeleteAssignedCollections = false;
+                }
+
                 return orgUser;
             });
         var responses = await Task.WhenAll(responseTasks);
@@ -684,6 +691,13 @@ public class OrganizationUsersController : Controller
             {
                 var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
                 var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
+
+                // Set 'Edit/Delete Assigned Collections' custom permissions to false
+                if (orgUser.Permissions is not null)
+                {
+                    orgUser.Permissions.EditAssignedCollections = false;
+                    orgUser.Permissions.DeleteAssignedCollections = false;
+                }
 
                 return orgUser;
             });
