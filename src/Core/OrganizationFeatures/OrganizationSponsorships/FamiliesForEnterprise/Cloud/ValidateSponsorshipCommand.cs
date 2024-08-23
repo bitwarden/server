@@ -143,6 +143,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
 
     private async Task CancelSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
     {
+        return;
         if (sponsoredOrganization != null)
         {
             await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
