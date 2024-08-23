@@ -26,7 +26,7 @@ public class BaseRequestValidationContextFake
     public string? IpAddress { get; set; }
 
     public BaseRequestValidationContextFake(
-        ValidatedTokenRequest tokenRequest, 
+        ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext customValidatorRequestContext,
         GrantValidationResult grantResult)
     {
@@ -49,7 +49,7 @@ IBaseRequestValidatorTestWrapper
     * Some of the logic trees call `ValidateContextAsync`. Since this is a test wrapper, we set the return value
     * of ValidateContextAsync() to whatever we need for the specific test case.
     */
-    public bool isValid {get;set;}
+    public bool isValid { get; set; }
     public BaseRequestValidatorTestWrapper(
         UserManager<User> userManager,
         IDeviceRepository deviceRepository,
@@ -125,8 +125,8 @@ IBaseRequestValidatorTestWrapper
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
     {
-            context.GrantResult = new GrantValidationResult(
-                TokenRequestErrors.InvalidGrant, "Sso authentication required.", customResponse);
+        context.GrantResult = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant, "Sso authentication required.", customResponse);
     }
 
     protected override Task SetSuccessResult(
@@ -142,7 +142,7 @@ IBaseRequestValidatorTestWrapper
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
-    {}
+    { }
 
     protected override Task<bool> ValidateContextAsync(
         BaseRequestValidationContextFake context,

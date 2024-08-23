@@ -1,8 +1,6 @@
 ﻿using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
@@ -10,7 +8,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -31,7 +28,6 @@ namespace Bit.Identity.Test.IdentityServer;
 
 public class BaseRequestValidatorTests
 {
-    #region Fields (Fight me 🥊)
     private UserManager<User> _userManager;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IDeviceService _deviceService;
@@ -54,7 +50,6 @@ public class BaseRequestValidatorTests
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
-    #endregion  
 
     public BaseRequestValidatorTests()
     {
@@ -102,12 +97,12 @@ public class BaseRequestValidatorTests
             _userDecryptionOptionsBuilder);
     }
 
-    [Theory, BitAutoData]
     /* Logic path
     ValidateAsync -> _Logger.LogInformation
                  |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
                                           |-> SetErrorResult
     */
+    [Theory, BitAutoData]
     public async Task ValidateAsync_IsBot_UserNotNull_ShouldBuildErrorResult_ShouldLogFailedLoginEvent(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
@@ -132,13 +127,13 @@ public class BaseRequestValidatorTests
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
 
-    [Theory, BitAutoData]
     /* Logic path
     ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
                  |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
                             (self hosted) |-> _logger.LogWarning() 
                                           |-> SetErrorResult
     */
+    [Theory, BitAutoData]
     public async Task ValidateAsync_ContextNotValid_SelfHosted_ShouldBuildErrorResult_ShouldLogWarning(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
@@ -161,12 +156,12 @@ public class BaseRequestValidatorTests
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
 
-    [Theory, BitAutoData]
     /* Logic path
     ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
                  |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync 
                                           |-> SetErrorResult
     */
+    [Theory, BitAutoData]
     public async Task ValidateAsync_ContextNotValid_MaxAttemptLogin_ShouldSendEmail(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
