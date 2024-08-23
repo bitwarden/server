@@ -38,6 +38,8 @@ public class MemberAccessReportResponseModel
     public int GroupsCount { get; set; }
     public int CollectionsCount { get; set; }
     public int TotalItemCount { get; set; }
+    public Guid? UserGuid { get; set; }
+    public bool UsesKeyConnector { get; set; }
     public IEnumerable<MemberAccessReportAccessDetails> AccessDetails { get; set; }
 
     /// <summary>
@@ -120,7 +122,9 @@ public class MemberAccessReportResponseModel
                 Email = user.Email,
                 TwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == user.Id).twoFactorIsEnabled,
                 // Both the user's ResetPasswordKey must be set and the organization can UseResetPassword
-                AccountRecoveryEnabled = !string.IsNullOrEmpty(user.ResetPasswordKey) && orgAbility.UseResetPassword
+                AccountRecoveryEnabled = !string.IsNullOrEmpty(user.ResetPasswordKey) && orgAbility.UseResetPassword,
+                UserGuid = user.Id,
+                UsesKeyConnector = user.UsesKeyConnector
             };
 
             var userAccessDetails = new List<MemberAccessReportAccessDetails>();
