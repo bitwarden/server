@@ -181,25 +181,25 @@ public class SubscriberService(
     {
         ArgumentNullException.ThrowIfNull(subscriber);
 
-        var customer = await GetCustomer(subscriber, new CustomerGetOptions
+        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
         {
-            Expand = ["default_source", "invoice_settings.default_payment_method", "tax_ids"]
+            Expand = ["default_source", "invoice_settings.default_payment_method", "subscriptions", "tax_ids"]
         });
-
-        if (customer == null)
-        {
-            return null;
-        }
 
         var accountCredit = customer.Balance * -1 / 100;
 
         var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
+
+        var subscriptionStatus = customer.Subscriptions
+            .FirstOrDefault(subscription => subscription.Id == subscriber.GatewaySubscriptionId)?
+            .Status;
 
         var taxInformation = GetTaxInformation(customer);
 
         return new PaymentMethod(
             accountCredit,
             paymentMethod,
+            subscriptionStatus,
             taxInformation);
     }
 

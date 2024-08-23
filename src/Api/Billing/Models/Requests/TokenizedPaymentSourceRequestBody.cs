@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Utilities;
+using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 
 namespace Bit.Api.Billing.Models.Requests;
@@ -16,4 +17,6 @@ public class TokenizedPaymentSourceRequestBody
 
     [Required]
     public string Token { get; set; }
+
+    public TokenizedPaymentSource ToDomain() => new (Type, Token);
 }
