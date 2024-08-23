@@ -4,5 +4,5 @@ namespace Bit.Core.Billing.Services;
 
 public interface IOrganizationBillingService
 {
-    Task<OrganizationMetadataDTO> GetMetadata(Guid organizationId);
+    Task<OrganizationMetadata> GetMetadata(Guid organizationId);
 }

@@ -11,6 +11,7 @@ using Stripe;
 
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
+using PaymentMethod = Bit.Core.Billing.Models.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Services.Implementations;
@@ -175,7 +176,7 @@ public class SubscriberService(
         }
     }
 
-    public async Task<PaymentInformationDTO> GetPaymentInformation(
+    public async Task<PaymentMethod> GetPaymentMethod(
         ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
@@ -192,17 +193,17 @@ public class SubscriberService(
 
         var accountCredit = customer.Balance * -1 / 100;
 
-        var paymentMethod = await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
+        var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
 
-        var taxInformation = GetTaxInformationDTOFrom(customer);
+        var taxInformation = GetTaxInformation(customer);
 
-        return new PaymentInformationDTO(
+        return new PaymentMethod(
             accountCredit,
             paymentMethod,
             taxInformation);
     }
 
-    public async Task<MaskedPaymentMethodDTO> GetPaymentMethod(
+    public async Task<PaymentSource> GetPaymentSource(
         ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
@@ -212,7 +213,7 @@ public class SubscriberService(
             Expand = ["default_source", "invoice_settings.default_payment_method"]
         });
 
-        return await GetMaskedPaymentMethodDTOAsync(subscriber.Id, customer);
+        return await GetPaymentSourceAsync(subscriber.Id, customer);
     }
 
     public async Task<Subscription> GetSubscription(
@@ -296,10 +297,10 @@ public class SubscriberService(
 
         var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions { Expand = ["tax_ids"] });
 
-        return GetTaxInformationDTOFrom(customer);
+        return GetTaxInformation(customer);
     }
 
-    public async Task RemovePaymentMethod(
+    public async Task RemovePaymentSource(
         ISubscriber subscriber)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
@@ -391,16 +392,16 @@ public class SubscriberService(
         }
     }
 
-    public async Task UpdatePaymentMethod(
+    public async Task UpdatePaymentSource(
         ISubscriber subscriber,
-        TokenizedPaymentMethodDTO tokenizedPaymentMethod)
+        TokenizedPaymentSource tokenizedPaymentSource)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNull(tokenizedPaymentMethod);
+        ArgumentNullException.ThrowIfNull(tokenizedPaymentSource);
 
         var customer = await GetCustomerOrThrow(subscriber);
 
-        var (type, token) = tokenizedPaymentMethod;
+        var (type, token) = tokenizedPaymentSource;
 
         if (string.IsNullOrEmpty(token))
         {
@@ -678,7 +679,7 @@ public class SubscriberService(
         throw new BillingException();
     }
 
-    private async Task<MaskedPaymentMethodDTO> GetMaskedPaymentMethodDTOAsync(
+    private async Task<PaymentSource> GetPaymentSourceAsync(
         Guid subscriberId,
         Customer customer)
     {
@@ -690,11 +691,11 @@ public class SubscriberService(
             {
                 var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
 
-                return MaskedPaymentMethodDTO.From(braintreeCustomer);
+                return PaymentSource.From(braintreeCustomer);
             }
         }
 
-        var attachedPaymentMethodDTO = MaskedPaymentMethodDTO.From(customer);
+        var attachedPaymentMethodDTO = PaymentSource.From(customer);
 
         if (attachedPaymentMethodDTO != null)
         {
@@ -717,10 +718,10 @@ public class SubscriberService(
             Expand = ["payment_method"]
         });
 
-        return MaskedPaymentMethodDTO.From(setupIntent);
+        return PaymentSource.From(setupIntent);
     }
 
-    private static TaxInformation GetTaxInformationDTOFrom(
+    private static TaxInformation GetTaxInformation(
         Customer customer)
     {
         if (customer.Address == null)

@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 
 namespace Bit.Api.Billing.Models.Requests;
 
-public class TokenizedPaymentMethodRequestBody
+public class TokenizedPaymentSourceRequestBody
 {
     [Required]
     [EnumMatches<PaymentMethodType>(
@@ -13,6 +13,7 @@ public class TokenizedPaymentMethodRequestBody
         PaymentMethodType.PayPal,
         ErrorMessage = "'type' must be BankAccount, Card or PayPal")]
     public PaymentMethodType Type { get; set; }
+
     [Required]
     public string Token { get; set; }
 }
