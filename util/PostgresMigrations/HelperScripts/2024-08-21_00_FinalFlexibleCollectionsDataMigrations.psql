@@ -10,18 +10,18 @@ WHERE
         ("Permissions"::jsonb)->>'editAssignedCollections' = 'true'
         OR ("Permissions"::jsonb)->>'deleteAssignedCollections' = 'true'
     )
-    AND COALESCE(("Permissions"::jsonb)->>'accessEventLogs', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'accessImportExport', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'accessReports', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'createNewCollections', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'editAnyCollection', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'deleteAnyCollection', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'manageGroups', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'managePolicies', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'manageSso', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'manageUsers', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'manageResetPassword', 'true') = 'false'
-    AND COALESCE(("Permissions"::jsonb)->>'manageScim', 'true') = 'false';
+    AND ("Permissions"::jsonb)->>'accessEventLogs' = 'false'
+    AND ("Permissions"::jsonb)->>'accessImportExport' = 'false'
+    AND ("Permissions"::jsonb)->>'accessReports' = 'false'
+    AND ("Permissions"::jsonb)->>'createNewCollections' = 'false'
+    AND ("Permissions"::jsonb)->>'editAnyCollection' = 'false'
+    AND ("Permissions"::jsonb)->>'deleteAnyCollection' = 'false'
+    AND ("Permissions"::jsonb)->>'manageGroups' = 'false'
+    AND ("Permissions"::jsonb)->>'managePolicies' = 'false'
+    AND ("Permissions"::jsonb)->>'manageSso' = 'false'
+    AND ("Permissions"::jsonb)->>'manageUsers' = 'false'
+    AND ("Permissions"::jsonb)->>'manageResetPassword' = 'false'
+    AND ("Permissions"::jsonb)->>'manageScim' = 'false';
 
 -- Remove 'editAssignedCollections' and 'deleteAssignedCollections' properties from Permissions
 UPDATE "OrganizationUser"
