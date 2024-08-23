@@ -8,7 +8,11 @@ on:
       - "main"
       - "rc"
       - "hotfix-rc"
+    paths-ignore:
+      - 'ephemeral-environments/**'
   pull_request:
+    paths-ignore:
+      - 'ephemeral-environments/**'
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
