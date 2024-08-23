@@ -4,7 +4,7 @@ component:
   admin:
     image:
       name: bitwardenprod.azurecr.io/admin
-      tag: "dev"
+      tag: ephemeral-environment-hello-world@sha256:04182756a02647389905fb757cb4eed29f59615658b7f4f54bac1d8e88491795
   api:
     image:
       name: bitwardenprod.azurecr.io/api
@@ -32,7 +32,6 @@ component:
   web:
     image:
       name: bitwardenprod.azurecr.io/web
-
 supportComponents:
   dbMigrator:
     image:
