@@ -15,21 +15,21 @@ public class OrganizationBillingController(
     ICurrentContext currentContext,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
-    IPaymentService paymentService) : Controller
+    IPaymentService paymentService) : BaseBillingController
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
         if (!await currentContext.AccessMembersTab(organizationId))
         {
-            return TypedResults.Unauthorized();
+            return Error.Unauthorized();
         }
 
         var metadata = await organizationBillingService.GetMetadata(organizationId);
 
         if (metadata == null)
         {
-            return TypedResults.NotFound();
+            return Error.NotFound();
         }
 
         var response = OrganizationMetadataResponse.From(metadata);
@@ -42,14 +42,14 @@ public class OrganizationBillingController(
     {
         if (!await currentContext.ViewBillingHistory(organizationId))
         {
-            return TypedResults.Unauthorized();
+            return Error.Unauthorized();
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)
         {
-            return TypedResults.NotFound();
+            return Error.NotFound();
         }
 
         var billingInfo = await paymentService.GetBillingHistoryAsync(organization);
@@ -63,14 +63,14 @@ public class OrganizationBillingController(
     {
         if (!await currentContext.ViewBillingHistory(organizationId))
         {
-            return TypedResults.Unauthorized();
+            return Error.Unauthorized();
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)
         {
-            return TypedResults.NotFound();
+            return Error.NotFound();
         }
 
         var billingInfo = await paymentService.GetBillingAsync(organization);

@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using Xunit;
 
+using static Bit.Api.Test.Billing.Utilities;
+
 namespace Bit.Api.Test.Billing.Controllers;
 
 [ControllerCustomize(typeof(OrganizationBillingController))]
@@ -27,7 +29,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -40,7 +42,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -70,7 +72,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -83,7 +85,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory]

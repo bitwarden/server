@@ -63,7 +63,7 @@ public class ProviderBillingController(
 
         if (reportContent == null)
         {
-            return ServerErrorResponse("We had a problem generating your invoice CSV. Please contact support.");
+            return Error.ServerError("We had a problem generating your invoice CSV. Please contact support.");
         }
 
         return TypedResults.File(
@@ -113,8 +113,7 @@ public class ProviderBillingController(
 
         if (requestBody is not { Country: not null, PostalCode: not null })
         {
-            return TypedResults.BadRequest(
-                new ErrorResponseModel("Country and postal code are required to update your tax information."));
+            return Error.BadRequest("Country and postal code are required to update your tax information.");
         }
 
         var taxInformation = new TaxInformation(
