@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Transaction_ReadByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[Transaction_ReadByUserId]
     @UserId UNIQUEIDENTIFIER,
     @Limit INT,
     @StartAfter DATETIME2 = NULL
