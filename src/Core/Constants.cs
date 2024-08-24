@@ -139,6 +139,7 @@ public static class FeatureFlagKeys
     public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
+    public const string CipherKeyEncryption = "cipher-key-encryption";
 
     public static List<string> GetAllKeys()
     {
@@ -154,7 +155,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { BulkDeviceApproval, "true" }
+            { BulkDeviceApproval, "true" },
+            { CipherKeyEncryption, "true" },
         };
     }
 }
