@@ -41,7 +41,7 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            var userIsManagedByOrg = removeType is OrganizationUserRemovalType.AdminRemoved or OrganizationUserRemovalType.SelfRemoved
+            var userIsManagedByOrg = removeType is OrganizationUserRemovalType.AdminDeleted or OrganizationUserRemovalType.SelfRemoved
                                      && (await _organizationService.GetUsersOrganizationManagementStatusAsync(organizationId, [organizationUserId]))[organizationUserId];
             await DeleteUserWithAccountDeprovisioningAsync(organizationId, organizationUserId, deletingUserId, removeType, userIsManagedByOrg);
         }
@@ -55,6 +55,11 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
     public async Task DeleteUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? deletingUserId,
         OrganizationUserRemovalType removalType = OrganizationUserRemovalType.AdminRemoved)
     {
+        if (removalType == OrganizationUserRemovalType.SelfRemoved)
+        {
+            throw new NotSupportedException("Bulk self removal is not supported.");
+        }
+
         var usersOrganizationManagementStatus = await _organizationService.GetUsersOrganizationManagementStatusAsync(organizationId, organizationUserIds);
         foreach (var organizationUserId in organizationUserIds)
         {
@@ -116,7 +121,7 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
             throw new BadRequestException("Only owners can delete other owners.");
         }
 
-        if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }, includeProvider: true))
+        if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, [orgUser.Id], includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -124,7 +129,7 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
 
     private async Task HandleAdminDeletedRemovalAsync(OrganizationUser orgUser, bool userIsManagedByOrg)
     {
-        if (userIsManagedByOrg)
+        if (!userIsManagedByOrg)
         {
             throw new BadRequestException("Cannot delete the User as it is not managed by the organization.");
         }
