@@ -12,7 +12,7 @@ public interface IDeleteOrganizationUserCommand
     /// <param name="organizationUserId">The ID of the organization user to delete.</param>
     /// <param name="deletingUserId">The ID of the user performing the deletion, if applicable.</param>
     /// <param name="removalType">The type of removal being performed.</param>
-    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, OrganizationUserRemovalType removalType = OrganizationUserRemovalType.AdminRemoved);
+    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, OrganizationUserRemovalType removalType = OrganizationUserRemovalType.AdminRemove);
 
     /// <summary>
     /// Deletes multiple users from an organization.
@@ -21,7 +21,7 @@ public interface IDeleteOrganizationUserCommand
     /// <param name="organizationUserIds">The IDs of the organization users to delete.</param>
     /// <param name="deletingUserId">The ID of the user performing the deletion, if applicable.</param>
     /// <param name="removalType">The type of removal being performed.</param>
-    Task DeleteUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? deletingUserId, OrganizationUserRemovalType removalType = OrganizationUserRemovalType.AdminRemoved);
+    Task DeleteUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? deletingUserId, OrganizationUserRemovalType removalType = OrganizationUserRemovalType.AdminRemove);
 
     /// <summary>
     /// Deletes a single user from an organization using a system user. This method is intended for automated requests.

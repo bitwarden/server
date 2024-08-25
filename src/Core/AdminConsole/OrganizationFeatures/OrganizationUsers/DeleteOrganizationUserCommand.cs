@@ -37,11 +37,12 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
         _featureService = featureService;
     }
 
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, OrganizationUserRemovalType removeType = OrganizationUserRemovalType.AdminRemoved)
+    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, OrganizationUserRemovalType removeType = OrganizationUserRemovalType.AdminRemove)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            var userIsManagedByOrg = removeType is OrganizationUserRemovalType.AdminDeleted or OrganizationUserRemovalType.SelfRemoved
+            // We only need to check if the user is managed by the organization for admin deletions or self-removals
+            var userIsManagedByOrg = removeType is OrganizationUserRemovalType.AdminDelete or OrganizationUserRemovalType.SelfRemove
                                      && (await _organizationService.GetUsersOrganizationManagementStatusAsync(organizationId, [organizationUserId]))[organizationUserId];
             await DeleteUserWithAccountDeprovisioningAsync(organizationId, organizationUserId, deletingUserId, removeType, userIsManagedByOrg);
         }
@@ -53,9 +54,9 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
     }
 
     public async Task DeleteUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? deletingUserId,
-        OrganizationUserRemovalType removalType = OrganizationUserRemovalType.AdminRemoved)
+        OrganizationUserRemovalType removalType = OrganizationUserRemovalType.AdminRemove)
     {
-        if (removalType == OrganizationUserRemovalType.SelfRemoved)
+        if (removalType == OrganizationUserRemovalType.SelfRemove)
         {
             throw new NotSupportedException("Bulk self removal is not supported.");
         }
@@ -88,18 +89,18 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
     {
         var orgUser = await GetAndValidateDeleteUserAsync(organizationId, organizationUserId);
 
-        await ValidateDeleteUserPermissionsAsync(organizationId, orgUser, deletingUserId);
+        await ValidateUserDeletionAsync(organizationId, orgUser, deletingUserId);
 
         switch (removeType)
         {
-            case OrganizationUserRemovalType.AdminRemoved:
+            case OrganizationUserRemovalType.AdminRemove:
                 await RepositoryDeleteOrganizationUserAsync(orgUser);
                 break;
-            case OrganizationUserRemovalType.AdminDeleted:
-                await HandleAdminDeletedRemovalAsync(orgUser, userIsManagedByOrg);
+            case OrganizationUserRemovalType.AdminDelete:
+                await HandleAdminDeleteAsync(orgUser, userIsManagedByOrg);
                 break;
-            case OrganizationUserRemovalType.SelfRemoved:
-                await HandleSelfRemovedRemovalAsync(orgUser, userIsManagedByOrg);
+            case OrganizationUserRemovalType.SelfRemove:
+                await HandleSelfRemoveAsync(orgUser, userIsManagedByOrg);
                 break;
             default:
                 throw new NotSupportedException("Removal type not supported.");
@@ -108,7 +109,7 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
         await _eventService.LogOrganizationUserEventAsync(orgUser, (EventType)removeType);
     }
 
-    private async Task ValidateDeleteUserPermissionsAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId)
+    private async Task ValidateUserDeletionAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId)
     {
         if (deletingUserId.HasValue && orgUser.UserId == deletingUserId.Value)
         {
@@ -127,7 +128,7 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
         }
     }
 
-    private async Task HandleAdminDeletedRemovalAsync(OrganizationUser orgUser, bool userIsManagedByOrg)
+    private async Task HandleAdminDeleteAsync(OrganizationUser orgUser, bool userIsManagedByOrg)
     {
         if (!userIsManagedByOrg)
         {
@@ -150,7 +151,7 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
         }
     }
 
-    private async Task HandleSelfRemovedRemovalAsync(OrganizationUser orgUser, bool userIsManagedByOrg)
+    private async Task HandleSelfRemoveAsync(OrganizationUser orgUser, bool userIsManagedByOrg)
     {
         if (userIsManagedByOrg)
         {

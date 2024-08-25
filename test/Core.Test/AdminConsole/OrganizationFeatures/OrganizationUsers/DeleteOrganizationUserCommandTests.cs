@@ -81,7 +81,7 @@ public class DeleteOrganizationUserCommandTests
     {
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, true, true);
 
-        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminRemoved);
+        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminRemove);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id));
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id), EventType.OrganizationUser_Removed);
@@ -97,7 +97,7 @@ public class DeleteOrganizationUserCommandTests
         organizationUser.UserId = Guid.NewGuid();
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, true, true);
 
-        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDeleted);
+        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDelete);
 
         await sutProvider.GetDependency<IUserService>().Received(1).DeleteAsync(Arg.Is<User>(u => u.Id == organizationUser.UserId));
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id), EventType.OrganizationUser_Deleted);
@@ -113,7 +113,7 @@ public class DeleteOrganizationUserCommandTests
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, true, true);
         organizationUser.UserId = null;
 
-        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDeleted);
+        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDelete);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id));
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id), EventType.OrganizationUser_Deleted);
@@ -129,7 +129,7 @@ public class DeleteOrganizationUserCommandTests
         organizationUser.UserId = Guid.NewGuid();
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, true, true);
 
-        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDeleted);
+        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDelete);
 
         await sutProvider.GetDependency<IUserService>().Received(1).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id), EventType.OrganizationUser_Deleted);
@@ -145,7 +145,7 @@ public class DeleteOrganizationUserCommandTests
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, true, true);
         organizationUser.UserId = null;
 
-        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDeleted);
+        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDelete);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id));
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id), EventType.OrganizationUser_Deleted);
@@ -161,7 +161,7 @@ public class DeleteOrganizationUserCommandTests
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, true, true);
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDeleted));
+            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDelete));
     }
 
     [Theory]
@@ -174,7 +174,7 @@ public class DeleteOrganizationUserCommandTests
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, false, true);
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDeleted));
+            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId, OrganizationUserRemovalType.AdminDelete));
     }
 
     [Theory]
@@ -186,7 +186,7 @@ public class DeleteOrganizationUserCommandTests
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, true, true);
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, organizationUser.UserId, OrganizationUserRemovalType.SelfRemoved));
+            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, organizationUser.UserId, OrganizationUserRemovalType.SelfRemove));
     }
 
     [Theory]
@@ -197,7 +197,7 @@ public class DeleteOrganizationUserCommandTests
     {
         SetupAccountDeprovisioningCommonMocks(sutProvider, organizationUser, false, true);
 
-        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId: null, OrganizationUserRemovalType.SelfRemoved);
+        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId: null, OrganizationUserRemovalType.SelfRemove);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id));
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id), EventType.OrganizationUser_Left);
