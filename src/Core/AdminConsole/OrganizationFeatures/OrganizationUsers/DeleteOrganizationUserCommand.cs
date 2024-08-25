@@ -41,15 +41,13 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            // If the user is being deleted by an admin or the user is leaving the organization then we need to check if the user is managed by the organization
             var userIsManagedByOrg = removeType is OrganizationUserRemovalType.AdminRemoved or OrganizationUserRemovalType.SelfRemoved
-                                       && (await _organizationService.GetUsersOrganizationManagementStatusAsync(organizationId, [organizationUserId]))[organizationUserId];
-            await DeleteUserAsync_vNext(organizationId, organizationUserId, deletingUserId, removeType, userIsManagedByOrg);
+                                     && (await _organizationService.GetUsersOrganizationManagementStatusAsync(organizationId, [organizationUserId]))[organizationUserId];
+            await DeleteUserWithAccountDeprovisioningAsync(organizationId, organizationUserId, deletingUserId, removeType, userIsManagedByOrg);
         }
         else
         {
-            await ValidateDeleteUserAsync(organizationId, organizationUserId);
-
+            await GetAndValidateDeleteUserAsync(organizationId, organizationUserId);
             await _organizationService.DeleteUserAsync(organizationId, organizationUserId, deletingUserId);
         }
     }
@@ -60,33 +58,53 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
         var usersOrganizationManagementStatus = await _organizationService.GetUsersOrganizationManagementStatusAsync(organizationId, organizationUserIds);
         foreach (var organizationUserId in organizationUserIds)
         {
-            await DeleteUserAsync_vNext(organizationId, organizationUserId, deletingUserId, removalType, usersOrganizationManagementStatus[organizationUserId]);
+            await DeleteUserWithAccountDeprovisioningAsync(organizationId, organizationUserId, deletingUserId, removalType, usersOrganizationManagementStatus[organizationUserId]);
         }
     }
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, EventSystemUser eventSystemUser)
     {
-        await ValidateDeleteUserAsync(organizationId, organizationUserId);
-
+        await GetAndValidateDeleteUserAsync(organizationId, organizationUserId);
         await _organizationService.DeleteUserAsync(organizationId, organizationUserId, eventSystemUser);
     }
 
-    private async Task<OrganizationUser> ValidateDeleteUserAsync(Guid organizationId, Guid organizationUserId)
+    private async Task<OrganizationUser> GetAndValidateDeleteUserAsync(Guid organizationId, Guid organizationUserId)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
         {
             throw new NotFoundException("User not found.");
         }
-
         return orgUser;
     }
 
-    private async Task DeleteUserAsync_vNext(Guid organizationId, Guid organizationUserId, Guid? deletingUserId,
+    private async Task DeleteUserWithAccountDeprovisioningAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId,
         OrganizationUserRemovalType removeType, bool userIsManagedByOrg)
     {
-        var orgUser = await ValidateDeleteUserAsync(organizationId, organizationUserId);
+        var orgUser = await GetAndValidateDeleteUserAsync(organizationId, organizationUserId);
 
+        await ValidateDeleteUserPermissionsAsync(organizationId, orgUser, deletingUserId);
+
+        switch (removeType)
+        {
+            case OrganizationUserRemovalType.AdminRemoved:
+                await RepositoryDeleteOrganizationUserAsync(orgUser);
+                break;
+            case OrganizationUserRemovalType.AdminDeleted:
+                await HandleAdminDeletedRemovalAsync(orgUser, userIsManagedByOrg);
+                break;
+            case OrganizationUserRemovalType.SelfRemoved:
+                await HandleSelfRemovedRemovalAsync(orgUser, userIsManagedByOrg);
+                break;
+            default:
+                throw new NotSupportedException("Removal type not supported.");
+        }
+
+        await _eventService.LogOrganizationUserEventAsync(orgUser, (EventType)removeType);
+    }
+
+    private async Task ValidateDeleteUserPermissionsAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId)
+    {
         if (deletingUserId.HasValue && orgUser.UserId == deletingUserId.Value)
         {
             throw new BadRequestException("You cannot remove yourself.");
@@ -98,50 +116,43 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
             throw new BadRequestException("Only owners can delete other owners.");
         }
 
-        if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true))
+        if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
+    }
 
-        switch (removeType)
+    private async Task HandleAdminDeletedRemovalAsync(OrganizationUser orgUser, bool userIsManagedByOrg)
+    {
+        if (userIsManagedByOrg)
         {
-            case OrganizationUserRemovalType.AdminRemoved:
-                await RepositoryDeleteOrganizationUserAsync(orgUser);
-                break;
-            case OrganizationUserRemovalType.AdminDeleted:
-                if (userIsManagedByOrg)
-                {
-                    throw new BadRequestException("Cannot delete the User as it is not managed by the organization.");
-                }
-
-                if (orgUser.Status is not (OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked))
-                {
-                    throw new BadRequestException("Cannot delete the User as it is not Confirmed or Revoked.");
-                }
-
-                if (orgUser.UserId.HasValue)
-                {
-                    var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
-                    await _userService.DeleteAsync(user);
-                }
-                else
-                {
-                    await RepositoryDeleteOrganizationUserAsync(orgUser);
-                }
-                break;
-            case OrganizationUserRemovalType.SelfRemoved:
-                if (userIsManagedByOrg)
-                {
-                    throw new BadRequestException("Cannot leave the organization as the User is managed by the organization.");
-                }
-
-                await RepositoryDeleteOrganizationUserAsync(orgUser);
-                break;
-            default:
-                throw new NotSupportedException("Removal type not supported.");
+            throw new BadRequestException("Cannot delete the User as it is not managed by the organization.");
         }
 
-        await _eventService.LogOrganizationUserEventAsync(orgUser, (EventType)removeType);
+        if (orgUser.Status is not (OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked))
+        {
+            throw new BadRequestException("Cannot delete the User as it is not Confirmed or Revoked.");
+        }
+
+        if (orgUser.UserId.HasValue)
+        {
+            var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
+            await _userService.DeleteAsync(user);
+        }
+        else
+        {
+            await RepositoryDeleteOrganizationUserAsync(orgUser);
+        }
+    }
+
+    private async Task HandleSelfRemovedRemovalAsync(OrganizationUser orgUser, bool userIsManagedByOrg)
+    {
+        if (userIsManagedByOrg)
+        {
+            throw new BadRequestException("Cannot leave the organization as the User is managed by the organization.");
+        }
+
+        await RepositoryDeleteOrganizationUserAsync(orgUser);
     }
 
     private async Task RepositoryDeleteOrganizationUserAsync(OrganizationUser orgUser)
