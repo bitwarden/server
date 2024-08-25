@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240812231350_OrganizationUserAccessAllDefaultValue")]
+    [Migration("20240826231350_OrganizationUserAccessAllDefaultValue")]
     partial class OrganizationUserAccessAllDefaultValue
     {
         /// <inheritdoc />
