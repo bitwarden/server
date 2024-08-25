@@ -2012,7 +2012,7 @@ public class OrganizationService : IOrganizationService
         return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
     }
 
-    private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
+    public async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
     {
         var devices = await GetUserDeviceIdsAsync(userId);
         await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
