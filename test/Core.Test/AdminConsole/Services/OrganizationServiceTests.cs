@@ -1109,7 +1109,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, systemUser: null, invites);
 
-        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
             .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
                 update.SmSeats == organization.SmSeats + invitedSmUsers &&
                 !update.SmServiceAccountsChanged &&
@@ -1152,7 +1152,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         // OrgUser is reverted
         // Note: we don't know what their guids are so comparing length is the best we can do
         var invitedEmails = invites.SelectMany(i => i.invite.Emails);
-        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteManyAsync(
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteManyAsync(
             Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == invitedEmails.Count()));
 
         Received.InOrder(() =>

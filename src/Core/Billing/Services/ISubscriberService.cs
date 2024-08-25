@@ -90,7 +90,7 @@ public interface ISubscriberService
         SubscriptionGetOptions subscriptionGetOptions = null);
 
     /// <summary>
-    /// Retrieves the <see cref="subscriber"/>'s tax information using their Stripe <see cref="Stripe.Customer"/>'s <see cref="Stripe.Customer.Address"/>.
+    /// Retrieves the <paramref name="subscriber"/>'s tax information using their Stripe <see cref="Stripe.Customer"/>'s <see cref="Stripe.Customer.Address"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the tax information for.</param>
     /// <returns>A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s tax information.</returns>
