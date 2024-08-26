@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
+CREATE OR sALTER PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
     @Name NVARCHAR(50),
     @OwnerEmail NVARCHAR(256),
     @Skip INT = 0,
@@ -9,7 +9,7 @@ BEGIN
     SET NOCOUNT ON
     DECLARE @NameLikeSearch NVARCHAR(55) = '%' + @Name + '%'
     DECLARE @OwnerLikeSearch NVARCHAR(55) = @OwnerEmail + '%'
-        
+
     IF @OwnerEmail IS NOT NULL
     BEGIN
         SELECT
@@ -44,3 +44,4 @@ BEGIN
         FETCH NEXT @Take ROWS ONLY
     END
 END
+GO
