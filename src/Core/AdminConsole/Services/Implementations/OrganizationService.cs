@@ -1777,7 +1777,6 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task ImportAsync(Guid organizationId,
-        Guid? importingUserId,
         IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers,
         IEnumerable<string> removeUserExternalIds,

@@ -50,7 +50,6 @@ public class OrganizationController : Controller
 
         await _organizationService.ImportAsync(
             _currentContext.OrganizationId.Value,
-            null,
             model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
             model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
             model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
