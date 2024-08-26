@@ -714,8 +714,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.Key = key;
+        user.LastPasswordChangeDate = user.RevisionDate;
         user.ForcePasswordReset = true;
+        user.Key = key;
 
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());

@@ -27,7 +27,6 @@ public class ProfileResponseModel : ResponseModel
         EmailVerified = user.EmailVerified;
         Premium = user.Premium;
         PremiumFromOrganization = premiumFromOrganization;
-        MasterPasswordHint = string.IsNullOrWhiteSpace(user.MasterPasswordHint) ? null : user.MasterPasswordHint;
         Culture = user.Culture;
         TwoFactorEnabled = twoFactorEnabled;
         Key = user.Key;
@@ -53,7 +52,6 @@ public class ProfileResponseModel : ResponseModel
     public bool EmailVerified { get; set; }
     public bool Premium { get; set; }
     public bool PremiumFromOrganization { get; set; }
-    public string MasterPasswordHint { get; set; }
     public string Culture { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public string Key { get; set; }
