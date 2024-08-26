@@ -77,7 +77,15 @@ public class CollectController : Controller
                     }
                     if (cipher == null)
                     {
-                        continue;
+                        // When the user cannot access the cipher directly, check if the organization allows for
+                        // admin/owners access to all collections and the user can access the cipher from that perspective.
+                        var org = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
+                        cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value);
+
+                        if(!org.AllowAdminAccessToAllCollectionItems || cipher == null)
+                        {
+                            continue;
+                        }
                     }
                     if (!ciphersCache.ContainsKey(eventModel.CipherId.Value))
                     {
