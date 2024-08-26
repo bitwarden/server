@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -128,7 +129,7 @@ public class SyncControllerTests
         // Asserts
         // Assert that methods are called
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -215,7 +216,7 @@ public class SyncControllerTests
         // Assert that methods are called
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -292,7 +293,7 @@ public class SyncControllerTests
         // Assert that methods are called
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -356,7 +357,7 @@ public class SyncControllerTests
         }
 
         await userService.ReceivedWithAnyArgs(1)
-            .TwoFactorIsEnabledAsync(default);
+            .TwoFactorIsEnabledAsync(default(ITwoFactorProvidersUser));
         await userService.ReceivedWithAnyArgs(1)
             .HasPremiumFromOrganization(default);
     }

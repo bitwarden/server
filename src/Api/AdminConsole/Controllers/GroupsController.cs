@@ -4,7 +4,6 @@ using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -126,8 +125,8 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        // Flexible Collections - check the user has permission to grant access to the collections for the new group
-        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) && model.Collections?.Any() == true)
+        // Check the user has permission to grant access to the collections for the new group
+        if (model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
@@ -149,31 +148,6 @@ public class GroupsController : Controller
     [HttpPut("{id}")]
     [HttpPost("{id}")]
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
-    {
-        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
-        {
-            // Use new Flexible Collections v1 logic
-            return await Put_vNext(orgId, id, model);
-        }
-
-        // Pre-Flexible Collections v1 logic follows
-        var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
-
-        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization,
-            model.Collections.Select(c => c.ToSelectionReadOnly()).ToList(), model.Users);
-        return new GroupResponseModel(group);
-    }
-
-    /// <summary>
-    /// Put logic for Flexible Collections v1
-    /// </summary>
-    private async Task<GroupResponseModel> Put_vNext(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         if (!await _currentContext.ManageGroups(orgId))
         {

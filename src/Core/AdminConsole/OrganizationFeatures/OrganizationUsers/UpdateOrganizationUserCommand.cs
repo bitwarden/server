@@ -92,11 +92,6 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        if (user.AccessAll)
-        {
-            throw new BadRequestException("The AccessAll property has been deprecated by collection enhancements. Assign the user to collections instead.");
-        }
-
         if (collectionAccess?.Count > 0)
         {
             var invalidAssociations = collectionAccess.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));

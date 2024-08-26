@@ -10,6 +10,8 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class EmergencyAccessRepository : Repository<Core.Auth.Entities.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
@@ -35,7 +37,7 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         await base.DeleteAsync(emergencyAccess);
     }
 
-    public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
