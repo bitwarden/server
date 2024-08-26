@@ -1970,7 +1970,11 @@ public class OrganizationService : IOrganizationService
                     await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
                         existingExternalUsersIdDict,
                         existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
+
                 }
+
+                await _eventService.LogGroupEventsAsync(
+                    updateGroups.Select(g => (g, EventType.Group_Updated, eventSystemUser, (DateTime?)DateTime.UtcNow)));
             }
         }
 
