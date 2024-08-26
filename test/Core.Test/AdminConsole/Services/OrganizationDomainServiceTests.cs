@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Services.Implementations;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -7,7 +8,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.AdminConsole.Services;
 
 [SutProviderCustomize]
 public class OrganizationDomainServiceTests

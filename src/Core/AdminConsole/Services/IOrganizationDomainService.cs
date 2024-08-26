@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Services;
+﻿namespace Bit.Core.AdminConsole.Services;
 
 public interface IOrganizationDomainService
 {

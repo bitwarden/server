@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.Services.Implementations;
 
 public class OrganizationDomainService : IOrganizationDomainService
 {
