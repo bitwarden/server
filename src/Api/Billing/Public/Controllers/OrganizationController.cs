@@ -19,17 +19,20 @@ public class OrganizationController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly ILogger<OrganizationController> _logger;
 
     public OrganizationController(
         IOrganizationService organizationService,
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
-        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        ILogger<OrganizationController> logger)
     {
         _organizationService = organizationService;
         _currentContext = currentContext;
         _organizationRepository = organizationRepository;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _logger = logger;
     }
 
     /// <summary>
@@ -58,6 +61,7 @@ public class OrganizationController : Controller
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Unhandled error while updating the subscription");
             return StatusCode(500, new { Message = "An error occurred while updating the subscription." });
         }
     }

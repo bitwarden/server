@@ -16,7 +16,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         : base(serviceScopeFactory, mapper, db => db.Project)
     { }
 
-    public override async Task<Core.SecretsManager.Entities.Project> GetByIdAsync(Guid id)
+    public override async Task<Core.SecretsManager.Entities.Project?> GetByIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

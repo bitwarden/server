@@ -327,7 +327,9 @@ public class EmergencyAccessService : IEmergencyAccessService
 
         var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
 
-        grantor.MasterPassword = _passwordHasher.HashPassword(grantor, newMasterPasswordHash);
+        await _userService.UpdatePasswordHash(grantor, newMasterPasswordHash);
+        grantor.RevisionDate = DateTime.UtcNow;
+        grantor.LastPasswordChangeDate = grantor.RevisionDate;
         grantor.Key = key;
         // Disable TwoFactor providers since they will otherwise block logins
         grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
