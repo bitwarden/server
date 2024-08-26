@@ -1781,7 +1781,7 @@ public class OrganizationService : IOrganizationService
         IEnumerable<ImportedOrganizationUser> newUsers,
         IEnumerable<string> removeUserExternalIds,
         bool overwriteExisting,
-        EventSystemUser? eventSystemUser = null
+        EventSystemUser eventSystemUser
     )
     {
         var organization = await GetOrgById(organizationId);
@@ -1905,7 +1905,7 @@ public class OrganizationService : IOrganizationService
                 }
             }
 
-            var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, systemUser: null, userInvites);
+            var invitedUsers = await InviteUsersAsync(organizationId, invitingUserId: null, systemUser: eventSystemUser, userInvites);
             foreach (var invitedUser in invitedUsers)
             {
                 existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
@@ -1942,7 +1942,7 @@ public class OrganizationService : IOrganizationService
             }
 
             await _eventService.LogGroupEventsAsync(
-                savedGroups.Select(g => (g, EventType.Group_Created, eventSystemUser, (DateTime?)DateTime.UtcNow)));
+                savedGroups.Select(g => (g, EventType.Group_Created, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
 
             var updateGroups = existingExternalGroups
                 .Where(g => groupsDict.ContainsKey(g.ExternalId))
@@ -1973,18 +1973,11 @@ public class OrganizationService : IOrganizationService
                 }
 
                 await _eventService.LogGroupEventsAsync(
-                    updateGroups.Select(g => (g, EventType.Group_Updated, eventSystemUser, (DateTime?)DateTime.UtcNow)));
+                    updateGroups.Select(g => (g, EventType.Group_Updated, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
             }
         }
 
-        if (eventSystemUser != null)
-        {
-            await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser.Value, e.d)));
-        }
-        else
-        {
-            await _eventService.LogOrganizationUserEventsAsync(events);
-        }
+        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser, e.d)));
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
