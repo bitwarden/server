@@ -1233,7 +1233,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<bool>("AccessAll")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("boolean");
@@ -1280,11 +1282,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("UserId", "OrganizationId", "Status")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "OrganizationId", "Status"), new[] { "AccessAll" });
 
                     b.ToTable("OrganizationUser", (string)null);
                 });

@@ -45,21 +45,6 @@ public class OrganizationsController(
     ISubscriberService subscriberService)
     : Controller
 {
-    [HttpGet("{id:guid}/billing-status")]
-    public async Task<OrganizationBillingStatusResponseModel> GetBillingStatus(Guid id)
-    {
-        if (!await currentContext.EditPaymentMethods(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(id);
-
-        var risksSubscriptionFailure = await paymentService.RisksSubscriptionFailure(organization);
-
-        return new OrganizationBillingStatusResponseModel(organization, risksSubscriptionFailure);
-    }
-
     [HttpGet("{id:guid}/subscription")]
     public async Task<OrganizationSubscriptionResponseModel> GetSubscription(Guid id)
     {
