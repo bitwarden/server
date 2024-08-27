@@ -5,6 +5,7 @@ using Bit.Core;
 using DbUp;
 using DbUp.Helpers;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Migrator;
@@ -14,13 +15,14 @@ public class DbMigrator
     private readonly string _connectionString;
     private readonly ILogger<DbMigrator> _logger;
     private readonly bool _skipDatabasePreparation;
-
+    private readonly IHostEnvironment _hostingEnvironment;
     public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
         bool skipDatabasePreparation = false)
     {
         _connectionString = connectionString;
         _logger = logger ?? CreateLogger();
         _skipDatabasePreparation = skipDatabasePreparation;
+        _hostingEnvironment = hostingEnvironment;
     }
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
@@ -123,6 +125,27 @@ public class DbMigrator
                 s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
             .WithTransaction()
             .WithExecutionTimeout(new TimeSpan(0, 5, 0));
+
+        if (_hostingEnvironment != null && _hostingEnvironment.IsProduction())
+        {
+            builder = builder.WithTransactionPerScript();
+        }
+        else
+        {
+            builder = builder.WithTransaction();
+        }
+
+        if (_hostingEnvironment != null && _hostingEnvironment.IsProduction())
+        {
+            builder = builder.WithExecutionTimeout(new TimeSpan(0, 10, 0))
+                             .WithTransactionPerScript();
+        }
+        else
+        {
+            builder = builder.WithExecutionTimeout(new TimeSpan(0, 5, 0))
+                             .WithTransaction();
+        }
+
 
         if (repeatable)
         {
