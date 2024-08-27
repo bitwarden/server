@@ -66,7 +66,7 @@ public class DataTableBuilderTests
                     NullableByteEnum = ByteEnum.Zero,
                 },
                 new TestItem
-                { 
+                {
                     Id = int.MaxValue,
                     Name = null,
                     DeletedDate = null,
