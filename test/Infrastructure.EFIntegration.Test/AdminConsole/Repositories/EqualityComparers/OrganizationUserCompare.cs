@@ -10,7 +10,6 @@ public class OrganizationUserCompare : IEqualityComparer<OrganizationUser>
         return x.Email == y.Email &&
             x.Status == y.Status &&
             x.Type == y.Type &&
-            x.AccessAll == y.AccessAll &&
             x.ExternalId == y.ExternalId &&
             x.Permissions == y.Permissions;
     }

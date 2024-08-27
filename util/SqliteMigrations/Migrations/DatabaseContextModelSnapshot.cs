@@ -1217,7 +1217,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("AccessAll")
-                        .HasColumnType("INTEGER");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("INTEGER");
@@ -1263,10 +1265,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("UserId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("UserId", "OrganizationId", "Status")
-                        .HasAnnotation("Npgsql:IndexInclude", new[] { "AccessAll" })
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("OrganizationUser", (string)null);
