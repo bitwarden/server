@@ -18,5 +18,5 @@ public class TokenizedPaymentSourceRequestBody
     [Required]
     public string Token { get; set; }
 
-    public TokenizedPaymentSource ToDomain() => new (Type, Token);
+    public TokenizedPaymentSource ToDomain() => new(Type, Token);
 }

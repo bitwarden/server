@@ -15,7 +15,7 @@ public class TaxInformationRequestBody
     public string City { get; set; }
     public string State { get; set; }
 
-    public TaxInformation ToDomain() => new (
+    public TaxInformation ToDomain() => new(
         Country,
         PostalCode,
         TaxId,
