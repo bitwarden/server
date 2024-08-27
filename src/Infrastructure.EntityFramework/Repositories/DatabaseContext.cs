@@ -105,6 +105,9 @@ public class DatabaseContext : DbContext
 
         // Shadow property configurations
         eGroup.Property<bool>("AccessAll").HasDefaultValue(false);
+        builder.Entity<OrganizationUser>()
+            .Property<bool>("AccessAll")
+            .HasDefaultValue(false);
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
