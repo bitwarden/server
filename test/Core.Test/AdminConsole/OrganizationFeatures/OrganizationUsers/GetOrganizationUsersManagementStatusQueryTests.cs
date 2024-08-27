@@ -2,7 +2,9 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -33,9 +35,9 @@ public class GetOrganizationUsersManagementStatusQueryTests
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility(organization));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
@@ -56,9 +58,9 @@ public class GetOrganizationUsersManagementStatusQueryTests
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility(organization));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
@@ -80,9 +82,9 @@ public class GetOrganizationUsersManagementStatusQueryTests
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility(organization));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
