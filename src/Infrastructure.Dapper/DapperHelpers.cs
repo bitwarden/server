@@ -52,6 +52,13 @@ public class DataTableBuilder<T>
 
             // Unwrap possible Nullable<T>
             var type = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
+            
+            // This needs to be after unwrapping the `Nullable` since enums can be nullable
+            if (type.IsEnum)
+            {
+                // Get the backing type of the enum
+                type = Enum.GetUnderlyingType(type);
+            }
 
             if (!columnBuilders.TryAdd(propertyInfo.Name, (type, columnExpression.Compile())))
             {

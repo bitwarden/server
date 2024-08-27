@@ -13,12 +13,29 @@ public class DataTableBuilderTests
         // Nullable value type
         public DateTime? DeletedDate { get; set; }
         public object? ObjectProp { get; set; }
+        public DefaultEnum DefaultEnum { get; set; }
+        public DefaultEnum? NullableDefaultEnum { get; set; }
+        public ByteEnum ByteEnum { get; set; }
+        public ByteEnum? NullableByteEnum { get; set; }
 
         public int Method()
         {
             throw new NotImplementedException();
         }
     }
+
+    public enum DefaultEnum
+    {
+        Zero,
+        One,
+    }
+
+    public enum ByteEnum : byte
+    {
+        Zero,
+        One,
+    }
+
     [Fact]
     public void DataTableBuilder_Works()
     {
@@ -28,13 +45,37 @@ public class DataTableBuilderTests
                 i => i.Name,
                 i => i.DeletedDate,
                 i => i.ObjectProp,
+                i => i.DefaultEnum,
+                i => i.NullableDefaultEnum,
+                i => i.ByteEnum,
+                i => i.NullableByteEnum,
             ]
         );
 
         var table = dtb.Build(
             [
-                new TestItem { Id = 4, Name = "Test", DeletedDate = new DateTime(2024, 8, 8), ObjectProp = 1 },
-                new TestItem { Id = int.MaxValue, Name = null, DeletedDate = null, ObjectProp = "Hi" },
+                new TestItem
+                {
+                    Id = 4,
+                    Name = "Test",
+                    DeletedDate = new DateTime(2024, 8, 8),
+                    ObjectProp = 1,
+                    DefaultEnum = DefaultEnum.One,
+                    NullableDefaultEnum = DefaultEnum.Zero,
+                    ByteEnum = ByteEnum.One,
+                    NullableByteEnum = ByteEnum.Zero,
+                },
+                new TestItem
+                { 
+                    Id = int.MaxValue,
+                    Name = null,
+                    DeletedDate = null,
+                    ObjectProp = "Hi",
+                    DefaultEnum = DefaultEnum.Zero,
+                    NullableDefaultEnum = null,
+                    ByteEnum = ByteEnum.Zero,
+                    NullableByteEnum = null,
+                },
             ]
         );
 
@@ -60,6 +101,26 @@ public class DataTableBuilderTests
             {
                 Assert.Equal("ObjectProp", column.ColumnName);
                 Assert.Equal(typeof(object), column.DataType);
+            },
+            column =>
+            {
+                Assert.Equal("DefaultEnum", column.ColumnName);
+                Assert.Equal(typeof(int), column.DataType);
+            },
+            column =>
+            {
+                Assert.Equal("NullableDefaultEnum", column.ColumnName);
+                Assert.Equal(typeof(int), column.DataType);
+            },
+            column =>
+            {
+                Assert.Equal("ByteEnum", column.ColumnName);
+                Assert.Equal(typeof(byte), column.DataType);
+            },
+            column =>
+            {
+                Assert.Equal("NullableByteEnum", column.ColumnName);
+                Assert.Equal(typeof(byte), column.DataType);
             }
         );
 
@@ -73,7 +134,11 @@ public class DataTableBuilderTests
                     item => Assert.Equal(4, item),
                     item => Assert.Equal("Test", item),
                     item => Assert.Equal(new DateTime(2024, 8, 8), item),
-                    item => Assert.Equal(1, item)
+                    item => Assert.Equal(1, item),
+                    item => Assert.Equal((int)DefaultEnum.One, item),
+                    item => Assert.Equal((int)DefaultEnum.Zero, item),
+                    item => Assert.Equal((byte)ByteEnum.One, item),
+                    item => Assert.Equal((byte)ByteEnum.Zero, item)
                 );
             },
             row =>
@@ -83,7 +148,11 @@ public class DataTableBuilderTests
                     item => Assert.Equal(int.MaxValue, item),
                     item => Assert.Equal(DBNull.Value, item),
                     item => Assert.Equal(DBNull.Value, item),
-                    item => Assert.Equal("Hi", item)
+                    item => Assert.Equal("Hi", item),
+                    item => Assert.Equal((int)DefaultEnum.Zero, item),
+                    item => Assert.Equal(DBNull.Value, item),
+                    item => Assert.Equal((byte)ByteEnum.Zero, item),
+                    item => Assert.Equal(DBNull.Value, item)
                 );
             }
         );
