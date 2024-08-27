@@ -1,4 +1,4 @@
-CREATE OR sALTER PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
     @Name NVARCHAR(50),
     @OwnerEmail NVARCHAR(256),
     @Skip INT = 0,
