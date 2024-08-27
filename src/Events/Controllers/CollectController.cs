@@ -82,7 +82,7 @@ public class CollectController : Controller
                         var org = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value);
 
-                        if(!org.AllowAdminAccessToAllCollectionItems || cipher == null)
+                        if (!org.AllowAdminAccessToAllCollectionItems || cipher == null)
                         {
                             continue;
                         }
