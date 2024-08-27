@@ -1,4 +1,5 @@
-﻿namespace Bit.Core.NotificationCenter.Models.Filter;
+﻿#nullable enable
+namespace Bit.Core.NotificationCenter.Models.Filter;
 
 public class NotificationStatusFilter
 {
