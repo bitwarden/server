@@ -22,7 +22,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     IResourceOwnerPasswordValidator
 {
     private UserManager<User> _userManager;
-    private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IAuthRequestRepository _authRequestRepository;
@@ -55,7 +54,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
               tokenDataFactory, featureService, ssoConfigRepository, userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
-        _userService = userService;
         _currentContext = currentContext;
         _captchaValidationService = captchaValidationService;
         _authRequestRepository = authRequestRepository;

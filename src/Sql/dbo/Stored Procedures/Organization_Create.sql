@@ -51,8 +51,8 @@
     @MaxAutoscaleSmSeats INT= null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCreationDeletion BIT = 1,
-    @AllowAdminAccessToAllCollectionItems BIT = 1
+    @LimitCollectionCreationDeletion BIT = 0,
+    @AllowAdminAccessToAllCollectionItems BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON

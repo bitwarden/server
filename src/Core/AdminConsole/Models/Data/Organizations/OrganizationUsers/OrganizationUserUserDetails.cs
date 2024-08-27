@@ -19,7 +19,6 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     public bool? Premium { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
-    public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
     public string ExternalId { get; set; }
     public string SsoExternalId { get; set; }

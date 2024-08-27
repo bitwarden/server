@@ -255,7 +255,7 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
-    public async Task SignUp_EnablesFlexibleCollectionsFeatures
+    public async Task SignUp_AssignsOwnerToDefaultCollection
         (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.Plan = planType;
@@ -271,13 +271,7 @@ public class OrganizationServiceTests
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
 
-        // Assert: AccessAll is not used
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
-            Arg.Is<OrganizationUser>(o =>
-                o.UserId == signup.Owner.Id &&
-                o.AccessAll == false));
-
-        // Assert: created a Can Manage association for the default collection instead
+        // Assert: created a Can Manage association for the default collection
         Assert.NotNull(orgUserId);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).CreateAsync(
             Arg.Any<Collection>(),
@@ -1115,7 +1109,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, systemUser: null, invites);
 
-        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
             .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
                 update.SmSeats == organization.SmSeats + invitedSmUsers &&
                 !update.SmServiceAccountsChanged &&
@@ -1158,7 +1152,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         // OrgUser is reverted
         // Note: we don't know what their guids are so comparing length is the best we can do
         var invitedEmails = invites.SelectMany(i => i.invite.Emails);
-        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteManyAsync(
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteManyAsync(
             Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == invitedEmails.Count()));
 
         Received.InOrder(() =>
@@ -1479,6 +1473,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
         orgUser.UserId = user.Id;
         orgUser.Type = orgUserType;
+        orgUser.AccessSecretsManager = false;
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
         organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value).Returns(1);
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
@@ -1567,6 +1562,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         orgUser.Status = OrganizationUserStatusType.Accepted;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
         orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
+        orgUser.AccessSecretsManager = true;
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
         organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
@@ -1575,7 +1571,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, true);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 
@@ -1833,22 +1829,28 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory]
     [PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually)]
-    [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2)]
-    [BitAutoData("Cannot set max seat autoscaling below seat count", 4, -1, 6)]
-    public async Task Enterprise_UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
-        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
+    [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2, 2)]
+    [BitAutoData("Cannot set max seat autoscaling below seat count", 4, -1, 6, 6)]
+    public async Task Enterprise_UpdateMaxSeatAutoscaling_BadInputThrows(string expectedMessage,
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats,
+            currentMaxAutoscaleSeats, organization, sutProvider);
     [Theory]
     [FreeOrganizationCustomize]
-    [BitAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
-    public async Task Free_UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
-        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
+    [BitAutoData("Your plan does not allow seat autoscaling", 10, 0, null, null)]
+    public async Task Free_UpdateMaxSeatAutoscaling_BadInputThrows(string expectedMessage,
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats,
+            currentMaxAutoscaleSeats, organization, sutProvider);
 
     private async Task UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
     {
         organization.Seats = currentSeats;
+        organization.MaxAutoscaleSeats = currentMaxAutoscaleSeats;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,
