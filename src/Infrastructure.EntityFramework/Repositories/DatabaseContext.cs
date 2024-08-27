@@ -102,6 +102,12 @@ public class DatabaseContext : DbContext
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
+        // Shadow property configurations
+        eGroup.Property<bool>("AccessAll").HasDefaultValue(false);
+        builder.Entity<OrganizationUser>()
+            .Property<bool>("AccessAll")
+            .HasDefaultValue(false);
+
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();

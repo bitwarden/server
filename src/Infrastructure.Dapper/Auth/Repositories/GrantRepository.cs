@@ -7,6 +7,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class GrantRepository : BaseRepository, IGrantRepository
@@ -19,7 +21,7 @@ public class GrantRepository : BaseRepository, IGrantRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<IGrant> GetByKeyAsync(string key)
+    public async Task<IGrant?> GetByKeyAsync(string key)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

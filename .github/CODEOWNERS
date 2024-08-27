@@ -38,6 +38,8 @@ src/Identity @bitwarden/team-auth-dev
 bitwarden_license/src/Scim @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
+src/Events @bitwarden/team-admin-console-dev
+src/EventsProcessor @bitwarden/team-admin-console-dev
 
 # Billing team
 **/*billing* @bitwarden/team-billing-dev
