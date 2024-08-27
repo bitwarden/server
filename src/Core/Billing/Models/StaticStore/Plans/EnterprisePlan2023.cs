@@ -31,6 +31,7 @@ public record Enterprise2023Plan : Plan
         HasResetPassword = true;
         UsersGetPremium = true;
         HasCustomPermissions = true;
+        HasOrganizationDomains = true;
 
         UpgradeSortOrder = 4;
         DisplaySortOrder = 4;
