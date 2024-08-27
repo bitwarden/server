@@ -1,4 +1,4 @@
-﻿using Bit.Core.Context;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -79,6 +79,11 @@ public class CollectController : Controller
                     {
                         // When the user cannot access the cipher directly, check if the organization allows for
                         // admin/owners access to all collections and the user can access the cipher from that perspective.
+                        if (!eventModel.OrganizationId.HasValue)
+                        {
+                            continue;
+                        }
+
                         var org = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value);
 
