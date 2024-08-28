@@ -1,4 +1,4 @@
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -19,19 +19,22 @@ public class CollectController : Controller
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IFeatureService _featureService;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectController(
         ICurrentContext currentContext,
         IEventService eventService,
         ICipherRepository cipherRepository,
         IOrganizationRepository organizationRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IApplicationCacheService applicationCacheService)
     {
         _currentContext = currentContext;
         _eventService = eventService;
         _cipherRepository = cipherRepository;
         _organizationRepository = organizationRepository;
         _featureService = featureService;
+        _applicationCacheService = applicationCacheService;
     }
 
     [HttpPost]
@@ -84,10 +87,16 @@ public class CollectController : Controller
                             continue;
                         }
 
-                        var org = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
+                        var org = _currentContext.GetOrganization(eventModel.OrganizationId.Value);
+                        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(eventModel.OrganizationId.Value);
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value);
 
-                        if (!org.AllowAdminAccessToAllCollectionItems || cipher == null)
+                        var cipherBelongsToOrg = cipher.OrganizationId == eventModel.OrganizationId;
+                        var customOrgAllowsAnyCollection = org is { Type: OrganizationUserType.Custom, Permissions.EditAnyCollection: true };
+                        var orgAllowsOwnerAdminAccess = orgAbility is { AllowAdminAccessToAllCollectionItems: true } && org is
+                        { Type: OrganizationUserType.Admin or OrganizationUserType.Owner };
+
+                        if (!cipherBelongsToOrg || !(customOrgAllowsAnyCollection || orgAllowsOwnerAdminAccess))
                         {
                             continue;
                         }
