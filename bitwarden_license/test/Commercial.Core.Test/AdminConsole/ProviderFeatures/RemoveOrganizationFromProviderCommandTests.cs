@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -156,6 +157,9 @@ public class RemoveOrganizationFromProviderCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
             .Returns(false);
 
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .Returns(GetSubscription(organization.GatewaySubscriptionId));
+
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -169,7 +173,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
                 options.DaysUntilDue == 30));
 
-        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentMethod(organization);
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentSource(organization);
 
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
 
@@ -262,4 +266,25 @@ public class RemoveOrganizationFromProviderCommandTests
                 provider.Name,
                 Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
     }
+
+    private static Subscription GetSubscription(string subscriptionId) =>
+        new()
+        {
+            Id = subscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new()
+                    {
+                        Id = "sub_item_123",
+                        Price = new Price()
+                        {
+                            Id = "2023-enterprise-org-seat-annually"
+                        }
+                    }
+                }
+            }
+        };
 }

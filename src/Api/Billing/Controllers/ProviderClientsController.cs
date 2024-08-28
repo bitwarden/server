@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Billing.Models.Requests;
-using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Services;
@@ -16,41 +15,31 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderClientsController(
     ICurrentContext currentContext,
     IFeatureService featureService,
-    ILogger<ProviderClientsController> logger,
+    ILogger<BaseProviderController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IUserService userService) : Controller
+    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
 {
     [HttpPost]
     public async Task<IResult> CreateAsync(
         [FromRoute] Guid providerId,
         [FromBody] CreateClientOrganizationRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
-            return TypedResults.NotFound();
-        }
-
-        var user = await userService.GetUserByPrincipalAsync(User);
-
-        if (user == null)
-        {
-            return TypedResults.Unauthorized();
-        }
-
-        if (!currentContext.ManageProviderOrganizations(providerId))
-        {
-            return TypedResults.Unauthorized();
-        }
-
-        var provider = await providerRepository.GetByIdAsync(providerId);
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
-            return TypedResults.NotFound();
+            return result;
+        }
+
+        var user = await UserService.GetUserByPrincipalAsync(User);
+
+        if (user == null)
+        {
+            return Error.Unauthorized();
         }
 
         var organizationSignup = new OrganizationSignup
@@ -74,13 +63,6 @@ public class ProviderClientsController(
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
 
-        if (clientOrganization == null)
-        {
-            logger.LogError("Newly created client organization ({ID}) could not be found", providerOrganization.OrganizationId);
-
-            return TypedResults.Problem();
-        }
-
         await providerBillingService.ScaleSeats(
             provider,
             requestBody.PlanType,
@@ -103,33 +85,21 @@ public class ProviderClientsController(
         [FromRoute] Guid providerOrganizationId,
         [FromBody] UpdateClientOrganizationRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
-            return TypedResults.NotFound();
-        }
+        var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
 
-        if (!currentContext.ProviderProviderAdmin(providerId))
+        if (provider == null)
         {
-            return TypedResults.Unauthorized();
+            return result;
         }
-
-        var provider = await providerRepository.GetByIdAsync(providerId);
 
         var providerOrganization = await providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
 
-        if (provider == null || providerOrganization == null)
+        if (providerOrganization == null)
         {
-            return TypedResults.NotFound();
+            return Error.NotFound();
         }
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
-
-        if (clientOrganization == null)
-        {
-            logger.LogError("The client organization ({OrganizationID}) represented by provider organization ({ProviderOrganizationID}) could not be found.", providerOrganization.OrganizationId, providerOrganization.Id);
-
-            return TypedResults.Problem();
-        }
 
         if (clientOrganization.Seats != requestBody.AssignedSeats)
         {

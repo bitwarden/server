@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
@@ -99,8 +100,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseCustomPermissions = e.UseCustomPermissions,
                 UsePolicies = e.UsePolicies,
                 LimitCollectionCreationDeletion = e.LimitCollectionCreationDeletion,
-                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                FlexibleCollections = e.FlexibleCollections
+                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems
             }).ToListAsync();
         }
     }

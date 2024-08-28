@@ -1,9 +1,6 @@
 #!/usr/bin/env pwsh
 # Creates the vault_dev database, and runs all the migrations.
 
-# Due to azure-edge-sql not containing the mssql-tools on ARM, we manually use
-#  the mssql-tools container which runs under x86_64.
-
 param(
   [switch]$all,
   [switch]$postgres,
@@ -30,21 +27,17 @@ if ($all -or $postgres -or $mysql -or $sqlite) {
 
 if ($all -or $mssql) {
   function Get-UserSecrets {
-    return dotnet user-secrets list --json --project ../src/Api | ConvertFrom-Json
+    # The dotnet cli command sometimes adds //BEGIN and //END comments to the output, Where-Object removes comments
+    # to ensure a valid json
+    return dotnet user-secrets list --json --project ../src/Api | Where-Object { $_ -notmatch "^//" } | ConvertFrom-Json
   }
 
   if ($selfhost) {
     $msSqlConnectionString = $(Get-UserSecrets).'dev:selfHostOverride:globalSettings:sqlServer:connectionString'
     $envName = "self-host"
-
-    Write-Output "Migrating your migrations to use MsSqlMigratorUtility (if needed)"
-    ./migrate_migration_record.ps1 -s
   } else {
     $msSqlConnectionString = $(Get-UserSecrets).'globalSettings:sqlServer:connectionString'
     $envName = "cloud"
-
-    Write-Output "Migrating your migrations to use MsSqlMigratorUtility (if needed)"
-    ./migrate_migration_record.ps1
   }
 
   Write-Host "Starting Microsoft SQL Server Migrations for $envName"

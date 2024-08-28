@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -14,11 +13,11 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationCollectionEnhancements.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -53,7 +52,6 @@ public class OrganizationsController : Controller
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IOrganizationEnableCollectionEnhancementsCommand _organizationEnableCollectionEnhancementsCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
@@ -74,7 +72,6 @@ public class OrganizationsController : Controller
         IFeatureService featureService,
         GlobalSettings globalSettings,
         IPushNotificationService pushNotificationService,
-        IOrganizationEnableCollectionEnhancementsCommand organizationEnableCollectionEnhancementsCommand,
         IProviderRepository providerRepository,
         IProviderBillingService providerBillingService,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory)
@@ -94,7 +91,6 @@ public class OrganizationsController : Controller
         _featureService = featureService;
         _globalSettings = globalSettings;
         _pushNotificationService = pushNotificationService;
-        _organizationEnableCollectionEnhancementsCommand = organizationEnableCollectionEnhancementsCommand;
         _providerRepository = providerRepository;
         _providerBillingService = providerBillingService;
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
@@ -315,31 +311,6 @@ public class OrganizationsController : Controller
         await _organizationService.DeleteAsync(organization);
     }
 
-    [HttpPost("{id}/import")]
-    public async Task Import(string id, [FromBody] ImportOrganizationUsersRequestModel model)
-    {
-        if (!_globalSettings.SelfHosted && !model.LargeImport &&
-            (model.Groups.Count() > 2000 || model.Users.Count(u => !u.Deleted) > 2000))
-        {
-            throw new BadRequestException("You cannot import this much data at once.");
-        }
-
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.OrganizationAdmin(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User);
-        await _organizationService.ImportAsync(
-            orgIdGuid,
-            userId.Value,
-            model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
-            model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-            model.Users.Where(u => u.Deleted).Select(u => u.ExternalId),
-            model.OverwriteExisting);
-    }
-
     [HttpPost("{id}/api-key")]
     public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody] OrganizationApiKeyRequestModel model)
     {
@@ -359,7 +330,7 @@ public class OrganizationsController : Controller
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
             var plan = StaticStore.GetPlan(organization.PlanType);
-            if (plan.Product != ProductType.Enterprise)
+            if (plan.ProductTier != ProductTierType.Enterprise)
             {
                 throw new NotFoundException();
             }
@@ -542,54 +513,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (!organization.FlexibleCollections)
-        {
-            throw new BadRequestException("Organization does not have collection enhancements enabled");
-        }
-
-        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-
-        if (!v1Enabled)
-        {
-            // V1 is disabled, ensure V1 setting doesn't change
-            model.AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        }
-
         await _organizationService.UpdateAsync(model.ToOrganization(organization), eventType: EventType.Organization_CollectionManagement_Updated);
         return new OrganizationResponseModel(organization);
-    }
-
-    /// <summary>
-    /// Migrates user, collection, and group data to the new Flexible Collections permissions scheme,
-    /// then sets organization.FlexibleCollections to true to enable these new features for the organization.
-    /// This is irreversible.
-    /// </summary>
-    /// <param name="organizationId"></param>
-    /// <exception cref="NotFoundException"></exception>
-    [HttpPost("{id}/enable-collection-enhancements")]
-    [RequireFeature(FeatureFlagKeys.FlexibleCollectionsMigration)]
-    public async Task EnableCollectionEnhancements(Guid id)
-    {
-        if (!await _currentContext.OrganizationOwner(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationEnableCollectionEnhancementsCommand.EnableCollectionEnhancements(organization);
-
-        // Force a vault sync for all owners and admins of the organization so that changes show immediately
-        // Custom users are intentionally not handled as they are likely to be less impacted and we want to limit simultaneous syncs
-        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, null);
-        await Task.WhenAll(orgUsers
-            .Where(ou => ou.UserId.HasValue &&
-                         ou.Status == OrganizationUserStatusType.Confirmed &&
-                         ou.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
-            .Select(ou => _pushNotificationService.PushSyncOrganizationsAsync(ou.UserId.Value)));
     }
 }

@@ -13,9 +13,9 @@ using Azure.Storage.Queues.Models;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.Settings;
 using IdentityModel;
@@ -388,6 +388,8 @@ public static class CoreHelpers
     /// <returns>Base64 standard formatted string</returns>
     public static string TransformFromBase64Url(string input)
     {
+        // TODO: .NET 9 Ships Base64Url in box, investigate replacing this usage with that
+        // Ref: https://github.com/dotnet/runtime/pull/102364
         var output = input;
         // 62nd char of encoding
         output = output.Replace('-', '+');
@@ -700,12 +702,6 @@ public static class CoreHelpers
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationAdmin, org.Id.ToString()));
                         }
                         break;
-                    case Enums.OrganizationUserType.Manager:
-                        foreach (var org in group)
-                        {
-                            claims.Add(new KeyValuePair<string, string>(Claims.OrganizationManager, org.Id.ToString()));
-                        }
-                        break;
                     case Enums.OrganizationUserType.User:
                         foreach (var org in group)
                         {
@@ -875,5 +871,41 @@ public static class CoreHelpers
     public static string ReplaceWhiteSpace(string input, string newValue)
     {
         return _whiteSpaceRegex.Replace(input, newValue);
+    }
+
+    public static string RedactEmailAddress(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var emailParts = email.Split('@');
+
+        string shownPart;
+        if (emailParts[0].Length > 2 && emailParts[0].Length <= 4)
+        {
+            shownPart = emailParts[0].Substring(0, 1);
+        }
+        else if (emailParts[0].Length > 4)
+        {
+            shownPart = emailParts[0].Substring(0, 2);
+        }
+        else
+        {
+            shownPart = string.Empty;
+        }
+
+        string redactedPart;
+        if (emailParts[0].Length > 4)
+        {
+            redactedPart = new string('*', emailParts[0].Length - 2);
+        }
+        else
+        {
+            redactedPart = new string('*', emailParts[0].Length - shownPart.Length);
+        }
+
+        return $"{shownPart}{redactedPart}@{emailParts[1]}";
     }
 }

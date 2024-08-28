@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using Bit.Commercial.Core.Billing;
+using Bit.Commercial.Core.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -8,11 +10,13 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
-using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -20,8 +24,8 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using CsvHelper;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
 using static Bit.Core.Test.Billing.Utilities;
@@ -83,7 +87,7 @@ public class ProviderBillingServiceTests
     {
         organization.PlanType = PlanType.FamiliesAnnually;
 
-        await ThrowsContactSupportAsync(() =>
+        await ThrowsBillingExceptionAsync(() =>
             sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
     }
 
@@ -101,7 +105,7 @@ public class ProviderBillingServiceTests
             new() { Id = Guid.NewGuid(), PlanType = PlanType.TeamsMonthly, ProviderId = provider.Id }
         });
 
-        await ThrowsContactSupportAsync(() =>
+        await ThrowsBillingExceptionAsync(() =>
             sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
     }
 
@@ -183,6 +187,71 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AssignSeatsToClientOrganization_BelowToAbove_NotProviderAdmin_ContactSupport(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.Seats = 10;
+
+        organization.PlanType = PlanType.TeamsMonthly;
+
+        // Scale up 10 seats
+        const int seats = 20;
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                PlanType = PlanType.TeamsMonthly,
+                ProviderId = provider.Id,
+                PurchasedSeats = 0,
+                // 100 minimum
+                SeatMinimum = 100,
+                AllocatedSeats = 95
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                PlanType = PlanType.EnterpriseMonthly,
+                ProviderId = provider.Id,
+                PurchasedSeats = 0,
+                SeatMinimum = 500,
+                AllocatedSeats = 0
+            }
+        };
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
+
+        // 95 seats currently assigned with a seat minimum of 100
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 60
+            },
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = teamsMonthlyPlan.Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 35
+            }
+        ]);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(false);
+
+        await ThrowsBillingExceptionAsync(() =>
+            sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
+    }
+
+    [Theory, BitAutoData]
     public async Task AssignSeatsToClientOrganization_BelowToAbove_Succeeds(
         Provider provider,
         Organization organization,
@@ -242,6 +311,8 @@ public class ProviderBillingServiceTests
                 Seats = 35
             }
         ]);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
 
         await sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats);
 
@@ -422,107 +493,6 @@ public class ProviderBillingServiceTests
 
     #endregion
 
-    #region CreateCustomer
-
-    [Theory, BitAutoData]
-    public async Task CreateCustomer_NullProvider_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        TaxInfo taxInfo) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.CreateCustomer(null, taxInfo));
-
-    [Theory, BitAutoData]
-    public async Task CreateCustomer_NullTaxInfo_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.CreateCustomer(provider, null));
-
-    [Theory, BitAutoData]
-    public async Task CreateCustomer_MissingCountry_ContactSupport(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider,
-        TaxInfo taxInfo)
-    {
-        taxInfo.BillingAddressCountry = null;
-
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.CreateCustomer(provider, taxInfo));
-
-        await sutProvider.GetDependency<IStripeAdapter>()
-            .DidNotReceiveWithAnyArgs()
-            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateCustomer_MissingPostalCode_ContactSupport(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider,
-        TaxInfo taxInfo)
-    {
-        taxInfo.BillingAddressCountry = null;
-
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.CreateCustomer(provider, taxInfo));
-
-        await sutProvider.GetDependency<IStripeAdapter>()
-            .DidNotReceiveWithAnyArgs()
-            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateCustomer_Success(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider,
-        TaxInfo taxInfo)
-    {
-        provider.Name = "MSP";
-
-        taxInfo.BillingAddressCountry = "AD";
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-                o.Address.Country == taxInfo.BillingAddressCountry &&
-                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                o.Address.City == taxInfo.BillingAddressCity &&
-                o.Address.State == taxInfo.BillingAddressState &&
-                o.Coupon == "msp-discount-35" &&
-                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
-                o.Email == provider.BillingEmail &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
-                o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
-            .Returns(new Customer
-            {
-                Id = "customer_id",
-                Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
-            });
-
-        await sutProvider.Sut.CreateCustomer(provider, taxInfo);
-
-        await stripeAdapter.Received(1).CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-            o.Address.Country == taxInfo.BillingAddressCountry &&
-            o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-            o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-            o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-            o.Address.City == taxInfo.BillingAddressCity &&
-            o.Address.State == taxInfo.BillingAddressState &&
-            o.Coupon == "msp-discount-35" &&
-            o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
-            o.Email == provider.BillingEmail &&
-            o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-            o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
-            o.Metadata["region"] == "" &&
-            o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-            o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber));
-
-        await sutProvider.GetDependency<IProviderRepository>()
-            .ReplaceAsync(Arg.Is<Provider>(p => p.GatewayCustomerId == "customer_id"));
-    }
-
-    #endregion
-
     #region CreateCustomerForClientOrganization
 
     [Theory, BitAutoData]
@@ -636,13 +606,79 @@ public class ProviderBillingServiceTests
 
     #endregion
 
+    #region GenerateClientInvoiceReport
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_NullInvoiceId_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GenerateClientInvoiceReport(null));
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_NoInvoiceItems_ReturnsNull(
+        string invoiceId,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns([]);
+
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+
+        Assert.Null(reportContent);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GenerateClientInvoiceReport_Succeeds(
+        string invoiceId,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        var clientId = Guid.NewGuid();
+
+        var invoiceItems = new List<ProviderInvoiceItem>
+        {
+            new ()
+            {
+                ClientId = clientId,
+                ClientName = "Client 1",
+                AssignedSeats = 50,
+                UsedSeats = 30,
+                PlanName = "Teams (Monthly)",
+                Total = 500
+            }
+        };
+
+        sutProvider.GetDependency<IProviderInvoiceItemRepository>().GetByInvoiceId(invoiceId).Returns(invoiceItems);
+
+        var reportContent = await sutProvider.Sut.GenerateClientInvoiceReport(invoiceId);
+
+        using var memoryStream = new MemoryStream(reportContent);
+
+        using var streamReader = new StreamReader(memoryStream);
+
+        using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
+
+        var records = csvReader.GetRecords<ProviderClientInvoiceReportRow>().ToList();
+
+        Assert.Single(records);
+
+        var record = records.First();
+
+        Assert.Equal(clientId.ToString(), record.Id);
+        Assert.Equal("Client 1", record.Client);
+        Assert.Equal(50, record.Assigned);
+        Assert.Equal(30, record.Used);
+        Assert.Equal(20, record.Remaining);
+        Assert.Equal("Teams (Monthly)", record.Plan);
+        Assert.Equal("$500.00", record.Total);
+    }
+
+    #endregion
+
     #region GetAssignedSeatTotalForPlanOrThrow
 
     [Theory, BitAutoData]
     public async Task GetAssignedSeatTotalForPlanOrThrow_NullProvider_ContactSupport(
         Guid providerId,
         SutProvider<ProviderBillingService> sutProvider)
-        => await ThrowsContactSupportAsync(() =>
+        => await ThrowsBillingExceptionAsync(() =>
             sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly));
 
     [Theory, BitAutoData]
@@ -655,9 +691,8 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).Returns(provider);
 
-        await ThrowsContactSupportAsync(
-            () => sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly),
-            internalMessage: "Consolidated billing does not support reseller-type providers");
+        await ThrowsBillingExceptionAsync(
+            () => sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly));
     }
 
     [Theory, BitAutoData]
@@ -701,156 +736,100 @@ public class ProviderBillingServiceTests
 
     #endregion
 
-    #region GetSubscriptionData
+    #region SetupCustomer
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionData_NullProvider_ReturnsNull(
+    public async Task SetupCustomer_NullProvider_ThrowsArgumentNullException(
         SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId)
+        TaxInfo taxInfo) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupCustomer(null, taxInfo));
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_NullTaxInfo_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupCustomer(provider, null));
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_MissingCountry_ContactSupport(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo)
     {
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        taxInfo.BillingAddressCountry = null;
 
-        providerRepository.GetByIdAsync(providerId).ReturnsNull();
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo));
 
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
-
-        Assert.Null(subscriptionData);
-
-        await providerRepository.Received(1).GetByIdAsync(providerId);
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionData_NullSubscription_ReturnsNull(
+    public async Task SetupCustomer_MissingPostalCode_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId,
-        Provider provider)
+        Provider provider,
+        TaxInfo taxInfo)
     {
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        taxInfo.BillingAddressCountry = null;
 
-        providerRepository.GetByIdAsync(providerId).Returns(provider);
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo));
 
-        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
-
-        subscriberService.GetSubscription(provider).ReturnsNull();
-
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
-
-        Assert.Null(subscriptionData);
-
-        await providerRepository.Received(1).GetByIdAsync(providerId);
-
-        await subscriberService.Received(1).GetSubscription(
-            provider,
-            Arg.Is<SubscriptionGetOptions>(
-                options => options.Expand.Count == 1 && options.Expand.First() == "customer"));
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceiveWithAnyArgs()
+            .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionData_Success(
+    public async Task SetupCustomer_Success(
         SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId,
-        Provider provider)
+        Provider provider,
+        TaxInfo taxInfo)
     {
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        provider.Name = "MSP";
 
-        providerRepository.GetByIdAsync(providerId).Returns(provider);
+        taxInfo.BillingAddressCountry = "AD";
 
-        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        var subscription = new Subscription();
-
-        subscriberService.GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(
-            options => options.Expand.Count == 1 && options.Expand.First() == "customer")).Returns(subscription);
-
-        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
-
-        var enterprisePlan = new ProviderPlan
+        var expected = new Customer
         {
-            Id = Guid.NewGuid(),
-            ProviderId = providerId,
-            PlanType = PlanType.EnterpriseMonthly,
-            SeatMinimum = 100,
-            PurchasedSeats = 0,
-            AllocatedSeats = 0
+            Id = "customer_id",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         };
 
-        var teamsPlan = new ProviderPlan
-        {
-            Id = Guid.NewGuid(),
-            ProviderId = providerId,
-            PlanType = PlanType.TeamsMonthly,
-            SeatMinimum = 50,
-            PurchasedSeats = 10,
-            AllocatedSeats = 60
-        };
+        stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
+                o.Address.Country == taxInfo.BillingAddressCountry &&
+                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
+                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
+                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
+                o.Address.City == taxInfo.BillingAddressCity &&
+                o.Address.State == taxInfo.BillingAddressState &&
+                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Email == provider.BillingEmail &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.Metadata["region"] == "" &&
+                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
+                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+            .Returns(expected);
 
-        var providerPlans = new List<ProviderPlan> { enterprisePlan, teamsPlan, };
+        var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo);
 
-        providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
-
-        var subscriptionData = await sutProvider.Sut.GetSubscriptionDTO(providerId);
-
-        Assert.NotNull(subscriptionData);
-
-        Assert.Equivalent(subscriptionData.Subscription, subscription);
-
-        Assert.Equal(2, subscriptionData.ProviderPlans.Count);
-
-        var configuredEnterprisePlan =
-            subscriptionData.ProviderPlans.FirstOrDefault(configuredPlan =>
-                configuredPlan.PlanType == PlanType.EnterpriseMonthly);
-
-        var configuredTeamsPlan =
-            subscriptionData.ProviderPlans.FirstOrDefault(configuredPlan =>
-                configuredPlan.PlanType == PlanType.TeamsMonthly);
-
-        Compare(enterprisePlan, configuredEnterprisePlan);
-
-        Compare(teamsPlan, configuredTeamsPlan);
-
-        await providerRepository.Received(1).GetByIdAsync(providerId);
-
-        await subscriberService.Received(1).GetSubscription(
-            provider,
-            Arg.Is<SubscriptionGetOptions>(
-                options => options.Expand.Count == 1 && options.Expand.First() == "customer"));
-
-        await providerPlanRepository.Received(1).GetByProviderId(providerId);
-
-        return;
-
-        void Compare(ProviderPlan providerPlan, ConfiguredProviderPlanDTO configuredProviderPlan)
-        {
-            Assert.NotNull(configuredProviderPlan);
-            Assert.Equal(providerPlan.Id, configuredProviderPlan.Id);
-            Assert.Equal(providerPlan.ProviderId, configuredProviderPlan.ProviderId);
-            Assert.Equal(providerPlan.SeatMinimum!.Value, configuredProviderPlan.SeatMinimum);
-            Assert.Equal(providerPlan.PurchasedSeats!.Value, configuredProviderPlan.PurchasedSeats);
-            Assert.Equal(providerPlan.AllocatedSeats!.Value, configuredProviderPlan.AssignedSeats);
-        }
+        Assert.Equivalent(expected, actual);
     }
 
     #endregion
 
-    #region StartSubscription
+    #region SetupSubscription
 
     [Theory, BitAutoData]
-    public async Task StartSubscription_NullProvider_ThrowsArgumentNullException(
+    public async Task SetupSubscription_NullProvider_ThrowsArgumentNullException(
         SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.StartSubscription(null));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupSubscription(null));
 
     [Theory, BitAutoData]
-    public async Task StartSubscription_AlreadyHasGatewaySubscriptionId_ContactSupport(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider)
-    {
-        provider.GatewaySubscriptionId = "subscription_id";
-
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
-    }
-
-    [Theory, BitAutoData]
-    public async Task StartSubscription_NoProviderPlans_ContactSupport(
+    public async Task SetupSubscription_NoProviderPlans_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
     {
@@ -865,7 +844,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(new List<ProviderPlan>());
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -873,7 +852,7 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task StartSubscription_NoProviderTeamsPlan_ContactSupport(
+    public async Task SetupSubscription_NoProviderTeamsPlan_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
     {
@@ -890,7 +869,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -898,7 +877,7 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task StartSubscription_NoProviderEnterprisePlan_ContactSupport(
+    public async Task SetupSubscription_NoProviderEnterprisePlan_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
     {
@@ -915,7 +894,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -923,7 +902,7 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task StartSubscription_SubscriptionIncomplete_ThrowsBillingException(
+    public async Task SetupSubscription_SubscriptionIncomplete_ThrowsBillingException(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
     {
@@ -937,8 +916,24 @@ public class ProviderBillingServiceTests
 
         var providerPlans = new List<ProviderPlan>
         {
-            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 100 },
-            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 100 }
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            }
         };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -948,14 +943,11 @@ public class ProviderBillingServiceTests
             .Returns(
                 new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Incomplete });
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.StartSubscription(provider));
-
-        await sutProvider.GetDependency<IProviderRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<Provider>(p => p.GatewaySubscriptionId == "subscription_id"));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
     }
 
     [Theory, BitAutoData]
-    public async Task StartSubscription_Succeeds(
+    public async Task SetupSubscription_Succeeds(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
     {
@@ -969,8 +961,24 @@ public class ProviderBillingServiceTests
 
         var providerPlans = new List<ProviderPlan>
         {
-            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 100 },
-            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 100 }
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            }
         };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
@@ -979,6 +987,8 @@ public class ProviderBillingServiceTests
         var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
         var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
 
+        var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
+
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>
                 sub.AutomaticTax.Enabled == true &&
@@ -986,125 +996,335 @@ public class ProviderBillingServiceTests
                 sub.Customer == "customer_id" &&
                 sub.DaysUntilDue == 30 &&
                 sub.Items.Count == 2 &&
-                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeSeatPlanId &&
+                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeProviderPortalSeatPlanId &&
                 sub.Items.ElementAt(0).Quantity == 100 &&
-                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeSeatPlanId &&
+                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeProviderPortalSeatPlanId &&
                 sub.Items.ElementAt(1).Quantity == 100 &&
                 sub.Metadata["providerId"] == provider.Id.ToString() &&
                 sub.OffSession == true &&
-                sub.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations)).Returns(new Subscription
-                {
-                    Id = "subscription_id",
-                    Status = StripeConstants.SubscriptionStatus.Active
-                });
+                sub.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations)).Returns(expected);
 
-        await sutProvider.Sut.StartSubscription(provider);
+        var actual = await sutProvider.Sut.SetupSubscription(provider);
 
-        await sutProvider.GetDependency<IProviderRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<Provider>(p => p.GatewaySubscriptionId == "subscription_id"));
+        Assert.Equivalent(expected, actual);
     }
 
     #endregion
 
-    #region GetPaymentInformationAsync
-    [Theory, BitAutoData]
-    public async Task GetPaymentInformationAsync_NullProvider_ReturnsNull(
-        SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId)
-    {
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(providerId).ReturnsNull();
-
-        var paymentService = sutProvider.GetDependency<ISubscriberService>();
-        paymentService.GetTaxInformationAsync(Arg.Any<Provider>()).ReturnsNull();
-        paymentService.GetPaymentMethodAsync(Arg.Any<Provider>()).ReturnsNull();
-
-        var sut = sutProvider.Sut;
-
-        var paymentInfo = await sut.GetPaymentInformationAsync(providerId);
-
-        Assert.Null(paymentInfo);
-        await providerRepository.Received(1).GetByIdAsync(providerId);
-        await paymentService.DidNotReceive().GetTaxInformationAsync(Arg.Any<Provider>());
-        await paymentService.DidNotReceive().GetPaymentMethodAsync(Arg.Any<Provider>());
-    }
+    #region UpdateSeatMinimums
 
     [Theory, BitAutoData]
-    public async Task GetPaymentInformationAsync_NullSubscription_ReturnsNull(
-        SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId,
-        Provider provider)
-    {
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-
-        providerRepository.GetByIdAsync(providerId).Returns(provider);
-
-        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
-
-        subscriberService.GetTaxInformationAsync(provider).ReturnsNull();
-        subscriberService.GetPaymentMethodAsync(provider).ReturnsNull();
-
-        var paymentInformation = await sutProvider.Sut.GetPaymentInformationAsync(providerId);
-
-        Assert.Null(paymentInformation);
-        await providerRepository.Received(1).GetByIdAsync(providerId);
-        await subscriberService.Received(1).GetTaxInformationAsync(provider);
-        await subscriberService.Received(1).GetPaymentMethodAsync(provider);
-    }
+    public async Task UpdateSeatMinimums_NullProvider_ThrowsArgumentNullException(
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdateSeatMinimums(null, 0, 0));
 
     [Theory, BitAutoData]
-    public async Task GetPaymentInformationAsync_ResellerProvider_ThrowContactSupport(
-        SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId,
-        Provider provider)
-    {
-        provider.Id = providerId;
-        provider.Type = ProviderType.Reseller;
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(providerId).Returns(provider);
-
-        var exception = await Assert.ThrowsAsync<BillingException>(
-            () => sutProvider.Sut.GetPaymentInformationAsync(providerId));
-
-        Assert.Equal("Consolidated billing does not support reseller-type providers", exception.Message);
-    }
+    public async Task UpdateSeatMinimums_NegativeSeatMinimum_ThrowsBadRequestException(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider) =>
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSeatMinimums(provider, -10, 100));
 
     [Theory, BitAutoData]
-    public async Task GetPaymentInformationAsync_Success_ReturnsProviderPaymentInfoDTO(
-        SutProvider<ProviderBillingService> sutProvider,
-        Guid providerId,
-        Provider provider)
+    public async Task UpdateSeatMinimums_NoPurchasedSeats_AllocatedHigherThanIncomingMinimum_UpdatesPurchasedSeats_SyncsStripeWithNewSeatMinimum(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
     {
-        provider.Id = providerId;
-        provider.Type = ProviderType.Msp;
-        var taxInformation = new TaxInfo { TaxIdNumber = "12345" };
-        var paymentMethod = new PaymentMethod
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+
+        const string enterpriseLineItemId = "enterprise_line_item_id";
+        const string teamsLineItemId = "teams_line_item_id";
+
+        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+
+        var subscription = new Subscription
         {
-            Id = "pm_test123",
-            Type = "card",
-            Card = new PaymentMethodCard
+            Items = new StripeList<SubscriptionItem>
             {
-                Brand = "visa",
-                Last4 = "4242",
-                ExpMonth = 12,
-                ExpYear = 2024
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = enterpriseLineItemId,
+                        Price = new Price { Id = enterprisePriceId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = teamsLineItemId,
+                        Price = new Price { Id = teamsPriceId }
+                    }
+                ]
             }
         };
-        var billingInformation = new BillingInfo { PaymentSource = new BillingInfo.BillingSource(paymentMethod) };
 
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(providerId).Returns(provider);
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
 
-        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
-        subscriberService.GetTaxInformationAsync(provider).Returns(taxInformation);
-        subscriberService.GetPaymentMethodAsync(provider).Returns(billingInformation.PaymentSource);
+        var providerPlans = new List<ProviderPlan>
+        {
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 0, AllocatedSeats = 20 },
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0, AllocatedSeats = 25 }
+        };
 
-        var result = await sutProvider.Sut.GetPaymentInformationAsync(providerId);
+        providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(billingInformation.PaymentSource, result.billingSource);
-        Assert.Equal(taxInformation, result.taxInfo);
+        await sutProvider.Sut.UpdateSeatMinimums(provider, 30, 20);
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 30));
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly && providerPlan.SeatMinimum == 20 && providerPlan.PurchasedSeats == 5));
+
+        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(
+                options =>
+                    options.Items.Count == 2 &&
+                    options.Items.ElementAt(0).Id == enterpriseLineItemId &&
+                    options.Items.ElementAt(0).Quantity == 30 &&
+                    options.Items.ElementAt(1).Id == teamsLineItemId &&
+                    options.Items.ElementAt(1).Quantity == 25));
     }
+
+    [Theory, BitAutoData]
+    public async Task UpdateSeatMinimums_NoPurchasedSeats_AllocatedLowerThanIncomingMinimum_SyncsStripeWithNewSeatMinimum(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+
+        const string enterpriseLineItemId = "enterprise_line_item_id";
+        const string teamsLineItemId = "teams_line_item_id";
+
+        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = enterpriseLineItemId,
+                        Price = new Price { Id = enterprisePriceId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = teamsLineItemId,
+                        Price = new Price { Id = teamsPriceId }
+                    }
+                ]
+            }
+        };
+
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 0, AllocatedSeats = 40 },
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0, AllocatedSeats = 15 }
+        };
+
+        providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
+
+        await sutProvider.Sut.UpdateSeatMinimums(provider, 70, 50);
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 70));
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly && providerPlan.SeatMinimum == 50));
+
+        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(
+                options =>
+                    options.Items.Count == 2 &&
+                    options.Items.ElementAt(0).Id == enterpriseLineItemId &&
+                    options.Items.ElementAt(0).Quantity == 70 &&
+                    options.Items.ElementAt(1).Id == teamsLineItemId &&
+                    options.Items.ElementAt(1).Quantity == 50));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateSeatMinimums_PurchasedSeats_NewMinimumLessThanTotal_UpdatesPurchasedSeats(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+
+        const string enterpriseLineItemId = "enterprise_line_item_id";
+        const string teamsLineItemId = "teams_line_item_id";
+
+        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = enterpriseLineItemId,
+                        Price = new Price { Id = enterprisePriceId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = teamsLineItemId,
+                        Price = new Price { Id = teamsPriceId }
+                    }
+                ]
+            }
+        };
+
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 20 },
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 50, PurchasedSeats = 20 }
+        };
+
+        providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
+
+        await sutProvider.Sut.UpdateSeatMinimums(provider, 60, 60);
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 60 && providerPlan.PurchasedSeats == 10));
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly && providerPlan.SeatMinimum == 60 && providerPlan.PurchasedSeats == 10));
+
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateSeatMinimums_PurchasedSeats_NewMinimumGreaterThanTotal_ClearsPurchasedSeats_SyncsStripeWithNewSeatMinimum(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+
+        const string enterpriseLineItemId = "enterprise_line_item_id";
+        const string teamsLineItemId = "teams_line_item_id";
+
+        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = enterpriseLineItemId,
+                        Price = new Price { Id = enterprisePriceId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = teamsLineItemId,
+                        Price = new Price { Id = teamsPriceId }
+                    }
+                ]
+            }
+        };
+
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 20 },
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 50, PurchasedSeats = 20 }
+        };
+
+        providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
+
+        await sutProvider.Sut.UpdateSeatMinimums(provider, 80, 80);
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 80 && providerPlan.PurchasedSeats == 0));
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly && providerPlan.SeatMinimum == 80 && providerPlan.PurchasedSeats == 0));
+
+        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(
+                options =>
+                    options.Items.Count == 2 &&
+                    options.Items.ElementAt(0).Id == enterpriseLineItemId &&
+                    options.Items.ElementAt(0).Quantity == 80 &&
+                    options.Items.ElementAt(1).Id == teamsLineItemId &&
+                    options.Items.ElementAt(1).Quantity == 80));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateSeatMinimums_SinglePlanTypeUpdate_Succeeds(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+
+        const string enterpriseLineItemId = "enterprise_line_item_id";
+        const string teamsLineItemId = "teams_line_item_id";
+
+        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = enterpriseLineItemId,
+                        Price = new Price { Id = enterprisePriceId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = teamsLineItemId,
+                        Price = new Price { Id = teamsPriceId }
+                    }
+                ]
+            }
+        };
+
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 0 },
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0 }
+        };
+
+        providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
+
+        await sutProvider.Sut.UpdateSeatMinimums(provider, 70, 30);
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 70));
+
+        await providerPlanRepository.DidNotReceive().ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly));
+
+        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(
+                options =>
+                    options.Items.Count == 1 &&
+                    options.Items.ElementAt(0).Id == enterpriseLineItemId &&
+                    options.Items.ElementAt(0).Quantity == 70));
+    }
+
     #endregion
 }

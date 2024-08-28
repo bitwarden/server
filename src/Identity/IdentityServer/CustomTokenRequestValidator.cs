@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Diagnostics;
+using System.Security.Claims;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
@@ -13,6 +14,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
+using HandlebarsDotNet;
 using IdentityModel;
 using Microsoft.AspNetCore.Identity;
 
@@ -57,6 +59,18 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
+        Debug.Assert(context.Result is not null);
+        if (context.Result.ValidatedRequest.GrantType == "refresh_token")
+        {
+            // Force legacy users to the web for migration
+            if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
+                context.Result.ValidatedRequest.ClientId != "web")
+            {
+                await FailAuthForLegacyUserAsync(null, context);
+                return;
+            }
+        }
+
         string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
             || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
@@ -70,6 +84,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
             }
 
+
             return;
         }
 
@@ -80,6 +95,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     protected async override Task<bool> ValidateContextAsync(CustomTokenRequestValidationContext context,
         CustomValidatorRequestContext validatorContext)
     {
+        Debug.Assert(context.Result is not null);
         var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
                     ?? context.Result.ValidatedRequest.ClientClaims
                         ?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
@@ -94,6 +110,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     protected override Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
         List<Claim> claims, Dictionary<string, object> customResponse)
     {
+        Debug.Assert(context.Result is not null);
         context.Result.CustomResponse = customResponse;
         if (claims?.Any() ?? false)
         {
@@ -143,14 +160,16 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         return Task.CompletedTask;
     }
 
-    protected override ClaimsPrincipal GetSubject(CustomTokenRequestValidationContext context)
+    protected override ClaimsPrincipal? GetSubject(CustomTokenRequestValidationContext context)
     {
+        Debug.Assert(context.Result is not null);
         return context.Result.ValidatedRequest.Subject;
     }
 
     protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
+        Debug.Assert(context.Result is not null);
         context.Result.Error = "invalid_grant";
         context.Result.ErrorDescription = "Two factor required.";
         context.Result.IsError = true;
@@ -160,6 +179,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     protected override void SetSsoResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
+        Debug.Assert(context.Result is not null);
         context.Result.Error = "invalid_grant";
         context.Result.ErrorDescription = "Single Sign on required.";
         context.Result.IsError = true;
@@ -169,6 +189,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     protected override void SetErrorResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
+        Debug.Assert(context.Result is not null);
         context.Result.Error = "invalid_grant";
         context.Result.IsError = true;
         context.Result.CustomResponse = customResponse;

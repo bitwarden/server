@@ -3,6 +3,7 @@ using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -25,9 +26,7 @@ public class UsersController : Controller
     private readonly IAccessControlService _accessControlService;
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
-
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public UsersController(
         IUserRepository userRepository,
@@ -36,7 +35,8 @@ public class UsersController : Controller
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
         ICurrentContext currentContext,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -45,6 +45,7 @@ public class UsersController : Controller
         _accessControlService = accessControlService;
         _currentContext = currentContext;
         _featureService = featureService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -62,6 +63,12 @@ public class UsersController : Controller
 
         var skip = (page - 1) * count;
         var users = await _userRepository.SearchAsync(email, skip, count);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            TempData["UsersTwoFactorIsEnabled"] = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id));
+        }
+
         return View(new UsersModel
         {
             Items = users as List<User>,
@@ -80,7 +87,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         return View(new UserViewModel(user, ciphers));
     }
 
@@ -93,9 +100,10 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(user);
-        return View(new UserEditModel(user, ciphers, billingInfo, _globalSettings));
+        var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
+        return View(new UserEditModel(user, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
     }
 
     [HttpPost]

@@ -1,9 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -23,23 +21,15 @@ public class ProvidersController : Controller
     private readonly IProviderService _providerService;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
-    private readonly ILogger<ProvidersController> _logger;
-    private readonly IProviderBillingService _providerBillingService;
 
     public ProvidersController(IUserService userService, IProviderRepository providerRepository,
-        IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings,
-        IFeatureService featureService, ILogger<ProvidersController> logger,
-        IProviderBillingService providerBillingService)
+        IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings)
     {
         _userService = userService;
         _providerRepository = providerRepository;
         _providerService = providerService;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
-        _featureService = featureService;
-        _logger = logger;
-        _providerBillingService = providerBillingService;
     }
 
     [HttpGet("{id:guid}")]
@@ -94,12 +84,8 @@ public class ProvidersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
 
-        var response =
-            await _providerService.CompleteSetupAsync(model.ToProvider(provider), userId, model.Token, model.Key);
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
-            var taxInfo = new TaxInfo
+        var taxInfo = model.TaxInfo != null
+            ? new TaxInfo
             {
                 BillingAddressCountry = model.TaxInfo.Country,
                 BillingAddressPostalCode = model.TaxInfo.PostalCode,
@@ -108,20 +94,12 @@ public class ProvidersController : Controller
                 BillingAddressLine2 = model.TaxInfo.Line2,
                 BillingAddressCity = model.TaxInfo.City,
                 BillingAddressState = model.TaxInfo.State
-            };
-
-            try
-            {
-                await _providerBillingService.CreateCustomer(provider, taxInfo);
-
-                await _providerBillingService.StartSubscription(provider);
             }
-            catch
-            {
-                // We don't want to trap the user on the setup page, so we'll let this go through but the provider will be in an un-billable state.
-                _logger.LogError("Failed to create subscription for provider with ID {ID} during setup", provider.Id);
-            }
-        }
+            : null;
+
+        var response =
+            await _providerService.CompleteSetupAsync(model.ToProvider(provider), userId, model.Token, model.Key,
+                taxInfo);
 
         return new ProviderResponseModel(response);
     }

@@ -137,6 +137,12 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         }
         else if (organization.IsStripeEnabled())
         {
+            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+            if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
+            {
+                return;
+            }
+
             await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Coupon = string.Empty,
@@ -149,7 +155,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 DaysUntilDue = 30
             });
 
-            await _subscriberService.RemovePaymentMethod(organization);
+            await _subscriberService.RemovePaymentSource(organization);
         }
 
         await _mailService.SendProviderUpdatePaymentMethod(
