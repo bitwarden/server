@@ -23,7 +23,7 @@ public class GetOrganizationUsersManagementStatusQuery : IGetOrganizationUsersMa
         {
             // Users can only be managed by an enabled Organization that is enabled and can have organization domains
             var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-            if (organizationAbility is { Enabled: true, HasOrganizationDomains: true })
+            if (organizationAbility is { Enabled: true, UseSso: true })
             {
                 // Get all organization users with claimed domains by the organization
                 var organizationUsersWithClaimedDomain = await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
