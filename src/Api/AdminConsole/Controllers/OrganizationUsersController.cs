@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -50,6 +51,8 @@ public class OrganizationUsersController : Controller
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IEventService _eventService;
+    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -69,7 +72,9 @@ public class OrganizationUsersController : Controller
         IApplicationCacheService applicationCacheService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IEventService eventService,
+        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -89,6 +94,8 @@ public class OrganizationUsersController : Controller
         _featureService = featureService;
         _ssoConfigRepository = ssoConfigRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _eventService = eventService;
+        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
     }
 
     [HttpGet("{id}")]
@@ -507,7 +514,7 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
-    public async Task Delete(string orgId, string id)
+    public async Task Remove(string orgId, string id)
     {
         var orgGuidId = new Guid(orgId);
         if (!await _currentContext.ManageUsers(orgGuidId))
@@ -516,12 +523,12 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.DeleteUserAsync(orgGuidId, new Guid(id), userId.Value);
+        await _organizationService.RemoveUserAsync(orgGuidId, new Guid(id), userId.Value);
     }
 
     [HttpDelete("")]
     [HttpPost("delete")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDelete(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRemove(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         var orgGuidId = new Guid(orgId);
         if (!await _currentContext.ManageUsers(orgGuidId))
@@ -530,8 +537,117 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
+        var result = await _organizationService.RemoveUsersAsync(orgGuidId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
+            new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    [HttpDelete("{id}/delete-account")]
+    [HttpPost("{id}/delete-account")]
+    public async Task DeleteAccount(Guid orgId, Guid id, [FromBody] SecretVerificationRequestModel model)
+    {
+        if (!await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var currentUser = await _userService.GetUserByPrincipalAsync(User);
+        if (currentUser == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        var orgUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (orgUser == null || orgUser.OrganizationId != orgId || !orgUser.UserId.HasValue)
+        {
+            throw new NotFoundException();
+        }
+
+        var userToDelete = await _userService.GetUserByIdAsync(orgUser.UserId.Value);
+        if (userToDelete == null)
+        {
+            throw new NotFoundException();
+        }
+
+        // Check if the user is managed by the organization
+        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, [orgUser.UserId.Value]);
+        if (!managementStatus.TryGetValue(orgUser.UserId.Value, out var isManaged) || !isManaged)
+        {
+            throw new BadRequestException("User is not managed by the organization.");
+        }
+
+        await _userService.DeleteAsync(userToDelete);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Deleted);
+    }
+
+    [HttpDelete("delete-account")]
+    [HttpPost("delete-account")]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> DeleteAccount(Guid orgId, [FromBody] SecureOrganizationUserBulkRequestModel model)
+    {
+        if (!await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var currentUser = await _userService.GetUserByPrincipalAsync(User);
+        if (currentUser == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        var orgUsers = await _organizationUserRepository.GetManyAsync(model.Ids);
+        var results = new List<Tuple<Core.Entities.OrganizationUser, string>>();
+
+        // Get management status for all users at once
+        var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId.Value).ToList();
+        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, userIds);
+
+        foreach (var orgUser in orgUsers)
+        {
+            if (orgUser.OrganizationId != orgId || !orgUser.UserId.HasValue)
+            {
+                results.Add(Tuple.Create(orgUser, "Invalid organization user."));
+                continue;
+            }
+
+            if (!managementStatus.TryGetValue(orgUser.UserId.Value, out var isManaged) || !isManaged)
+            {
+                results.Add(Tuple.Create(orgUser, "User is not managed by the organization."));
+                continue;
+            }
+
+            try
+            {
+                var userToDelete = await _userService.GetUserByIdAsync(orgUser.UserId.Value);
+                if (userToDelete == null)
+                {
+                    results.Add(Tuple.Create(orgUser, "User not found."));
+                    continue;
+                }
+
+                await _userService.DeleteAsync(userToDelete);
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Deleted);
+                results.Add(Tuple.Create(orgUser, ""));
+            }
+            catch (Exception e)
+            {
+                results.Add(Tuple.Create(orgUser, e.Message));
+            }
+        }
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
 

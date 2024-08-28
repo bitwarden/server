@@ -243,7 +243,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _organizationService.DeleteUserAsync(_currentContext.OrganizationId.Value, id, null);
+        await _organizationService.RemoveUserAsync(_currentContext.OrganizationId.Value, id, null);
         return new OkResult();
     }
 

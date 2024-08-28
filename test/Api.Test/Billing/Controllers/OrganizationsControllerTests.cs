@@ -117,8 +117,8 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-        await _organizationService.DeleteUserAsync(orgId, user.Id);
-        await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
+        await _organizationService.RemoveUserAsync(orgId, user.Id);
+        await _organizationService.Received(1).RemoveUserAsync(orgId, user.Id);
     }
 
     [Theory, AutoData]
