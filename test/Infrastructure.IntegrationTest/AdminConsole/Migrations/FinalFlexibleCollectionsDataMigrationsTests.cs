@@ -183,11 +183,12 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         // Run data migration
         migrationTester.ApplyMigration();
 
-        // Assert that the user kept the Admin type and no changes were made to the permissions
+        // Assert that the user remained unchanged
         var migratedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(migratedOrgUser);
         Assert.Equal(orgUser.Id, migratedOrgUser.Id);
-        Assert.Equal(orgUser.Type, migratedOrgUser.Type);
+        Assert.Equal(OrganizationUserType.Custom, orgUser.Type);
+        Assert.Equal(OrganizationUserType.Custom, migratedOrgUser.Type);
         Assert.NotNull(migratedOrgUser.Permissions);
         // Assert that the permissions remain unchanged by comparing JSON data, ignoring the order of properties
         Assert.True(JToken.DeepEquals(JObject.Parse(orgUser.Permissions), JObject.Parse(migratedOrgUser.Permissions)));
