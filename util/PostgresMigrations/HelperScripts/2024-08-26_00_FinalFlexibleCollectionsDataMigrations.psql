@@ -5,6 +5,8 @@ SET
     "Permissions" = NULL
 WHERE
     "Type" = 4
+    AND "Permissions" IS NOT NULL
+    AND "Permissions" ~ '^\s*\{.*\}\s*$'  -- Check if Permissions is a valid JSON object
     AND jsonb_typeof("Permissions"::jsonb) = 'object'
     AND (
         ("Permissions"::jsonb)->>'editAssignedCollections' = 'true'
@@ -29,4 +31,5 @@ SET
     "Permissions" = "Permissions"::jsonb - 'editAssignedCollections' - 'deleteAssignedCollections'
 WHERE
     "Permissions" IS NOT NULL
+    AND "Permissions" ~ '^\s*\{.*\}\s*$'  -- Check if Permissions is a valid JSON object
     AND jsonb_typeof("Permissions"::jsonb) = 'object';
