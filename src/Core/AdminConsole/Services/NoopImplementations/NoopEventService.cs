@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
@@ -89,23 +90,23 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-    public Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null)
+    public Task LogOrganizationUserEventAsync<T>(T organizationUser, EventType type, DateTime? date = null) where T : IOrganizationUser
     {
         return Task.FromResult(0);
     }
 
-    public Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-        EventSystemUser systemUser, DateTime? date = null)
+    public Task LogOrganizationUserEventAsync<T>(T organizationUser, EventType type,
+        EventSystemUser systemUser, DateTime? date = null) where T : IOrganizationUser
     {
         return Task.FromResult(0);
     }
 
-    public Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
+    public Task LogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, DateTime?)> events) where T : IOrganizationUser
     {
         return Task.FromResult(0);
     }
 
-    public Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events)
+    public Task LogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, EventSystemUser, DateTime?)> events) where T : IOrganizationUser
     {
         return Task.FromResult(0);
     }
