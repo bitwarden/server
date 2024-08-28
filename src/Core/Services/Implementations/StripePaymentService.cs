@@ -206,6 +206,100 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    public async Task<string> PurchaseOrganizationWithoutPaymentMethod(Organization org, StaticStore.Plan plan, short additionalStorageGb,
+        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
+        int additionalSmSeats = 0, int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false)
+    {
+        var stripeCustomerMetadata = new Dictionary<string, string>
+        {
+            { "region", _globalSettings.BaseServiceUri.CloudRegion }
+        };
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
+        , additionalSmSeats, additionalServiceAccount);
+
+        Customer customer = null;
+        Subscription subscription;
+        try
+        {
+            var customerCreateOptions = new CustomerCreateOptions
+            {
+                Description = org.DisplayBusinessName(),
+                Email = org.BillingEmail,
+                Metadata = stripeCustomerMetadata,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = org.SubscriberType(),
+                            Value = GetFirstThirtyCharacters(org.SubscriberName()),
+                        }
+                    ],
+                },
+                Coupon = signupIsFromSecretsManagerTrial
+                    ? SecretsManagerStandaloneDiscountId
+                    : provider
+                        ? ProviderDiscountId
+                        : null,
+                Address = new AddressOptions
+                {
+                    Country = taxInfo?.BillingAddressCountry,
+                    PostalCode = taxInfo?.BillingAddressPostalCode,
+                    // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name instead.
+                    Line1 = taxInfo?.BillingAddressLine1 ?? string.Empty,
+                    Line2 = taxInfo?.BillingAddressLine2,
+                    City = taxInfo?.BillingAddressCity,
+                    State = taxInfo?.BillingAddressState,
+                },
+                TaxIdData = taxInfo?.HasTaxId != true
+                    ? null
+                    :
+                    [
+                        new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber, }
+                    ],
+            };
+
+            customerCreateOptions.AddExpand("tax");
+
+            customer = await _stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            subCreateOptions.AddExpand("latest_invoice.payment_intent");
+            subCreateOptions.Customer = customer.Id;
+
+            if (CustomerHasTaxLocationVerified(customer))
+            {
+                subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+            }
+
+            subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating customer, walking back operation.");
+            if (customer != null)
+            {
+                await _stripeAdapter.CustomerDeleteAsync(customer.Id);
+            }
+
+            throw;
+        }
+
+        org.Gateway = GatewayType.Stripe;
+        org.GatewayCustomerId = customer.Id;
+        org.GatewaySubscriptionId = subscription.Id;
+
+        if (subscription.Status == "incomplete" &&
+            subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+        {
+            org.Enabled = false;
+            return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+        }
+
+        org.Enabled = true;
+        org.ExpirationDate = subscription.CurrentPeriodEnd;
+        return null;
+    }
+
     private async Task ChangeOrganizationSponsorship(
         Organization org,
         OrganizationSponsorship sponsorship,
