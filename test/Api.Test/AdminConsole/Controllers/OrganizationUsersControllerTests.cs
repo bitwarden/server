@@ -1,10 +1,12 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
@@ -296,6 +298,119 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccount_WhenUserIsManaged_DeletesUser(
+        Guid orgId,
+        Guid userId,
+        User user,
+        OrganizationUser orgUser,
+        SecretVerificationRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, model.Secret).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(userId).Returns(orgUser);
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId.Value).Returns(user);
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(orgId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { { orgUser.UserId.Value, true } });
+
+        await sutProvider.Sut.DeleteAccount(orgId, userId, model);
+
+        await sutProvider.GetDependency<IUserService>().Received(1).DeleteAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccount_WhenUserIsNotManaged_ThrowsBadRequestException(
+        Guid orgId,
+        Guid userId,
+        User user,
+        OrganizationUser orgUser,
+        SecretVerificationRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, model.Secret).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(userId).Returns(orgUser);
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId.Value).Returns(user);
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(orgId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { { orgUser.UserId.Value, false } });
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.DeleteAccount(orgId, userId, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccountBulk_DeletesManagedUsers(
+        Guid orgId,
+        User currentUser,
+        List<OrganizationUser> orgUsers,
+        SecureOrganizationUserBulkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(currentUser, model.Secret).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+
+        var managementStatus = orgUsers.ToDictionary(ou => ou.UserId.Value, _ => true);
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(orgId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(managementStatus);
+
+        foreach (var orgUser in orgUsers)
+        {
+            var user = new User { Id = orgUser.UserId.Value };
+            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId.Value).Returns(user);
+        }
+
+        var result = await sutProvider.Sut.DeleteAccount(orgId, model);
+
+        Assert.Equal(orgUsers.Count, result.Data.Count());
+        Assert.All(result.Data, r => Assert.Empty(r.Error));
+        await sutProvider.GetDependency<IUserService>().Received(orgUsers.Count).DeleteAsync(Arg.Any<User>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccountBulk_OnlyFirstUserManaged(
+        Guid orgId,
+        User currentUser,
+        List<OrganizationUser> orgUsers,
+        SecureOrganizationUserBulkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(currentUser, model.Secret).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+
+        // Only the first user is managed
+        var managementStatus = orgUsers.ToDictionary(ou => ou.UserId.Value, ou => ou == orgUsers.First());
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(orgId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(managementStatus);
+
+        foreach (var orgUser in orgUsers)
+        {
+            var user = new User { Id = orgUser.UserId.Value };
+            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId.Value).Returns(user);
+        }
+
+        var result = await sutProvider.Sut.DeleteAccount(orgId, model);
+
+        Assert.Equal(orgUsers.Count, result.Data.Count());
+        Assert.Single(result.Data.Where(r => string.IsNullOrEmpty(r.Error)));
+        Assert.Equal(orgUsers.Count - 1, result.Data.Count(r => r.Error == "User is not managed by the organization."));
+        await sutProvider.GetDependency<IUserService>().Received(1).DeleteAsync(Arg.Any<User>());
     }
 
     private void Get_Setup(OrganizationAbility organizationAbility,
