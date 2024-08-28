@@ -21,7 +21,7 @@ public class UsersController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IGetUsersListQuery _getUsersListQuery;
-    private readonly IDeleteOrganizationUserCommand _deleteOrganizationUserCommand;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IPatchUserCommand _patchUserCommand;
     private readonly IPostUserCommand _postUserCommand;
     private readonly ILogger<UsersController> _logger;
@@ -31,7 +31,7 @@ public class UsersController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IGetUsersListQuery getUsersListQuery,
-        IDeleteOrganizationUserCommand deleteOrganizationUserCommand,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IPatchUserCommand patchUserCommand,
         IPostUserCommand postUserCommand,
         ILogger<UsersController> logger)
@@ -40,7 +40,7 @@ public class UsersController : Controller
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _getUsersListQuery = getUsersListQuery;
-        _deleteOrganizationUserCommand = deleteOrganizationUserCommand;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _patchUserCommand = patchUserCommand;
         _postUserCommand = postUserCommand;
         _logger = logger;
@@ -120,7 +120,7 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        await _deleteOrganizationUserCommand.DeleteUserAsync(organizationId, id, EventSystemUser.SCIM);
+        await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, id, EventSystemUser.SCIM);
         return new NoContentResult();
     }
 }
