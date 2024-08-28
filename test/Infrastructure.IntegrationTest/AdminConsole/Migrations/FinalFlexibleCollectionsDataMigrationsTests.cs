@@ -193,6 +193,59 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         Assert.True(JToken.DeepEquals(JObject.Parse(orgUser.Permissions), JObject.Parse(migratedOrgUser.Permissions)));
     }
 
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
+    public async Task RunMigration_HandlesNull(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IMigrationTesterService migrationTester)
+    {
+        // Setup data
+        var orgUser = await SetupData(
+            userRepository, organizationRepository, organizationUserRepository, OrganizationUserType.Custom,
+            editAssignedCollections: false, deleteAssignedCollections: false, accessEventLogs: false);
+
+        orgUser.Permissions = null;
+        await organizationUserRepository.ReplaceAsync(orgUser);
+
+        // Run data migration
+        migrationTester.ApplyMigration();
+
+        // Assert no changes
+        var migratedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(migratedOrgUser);
+        Assert.Equal(orgUser.Id, migratedOrgUser.Id);
+        Assert.Equal(orgUser.Type, migratedOrgUser.Type);
+        Assert.Null(migratedOrgUser.Permissions);
+    }
+
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
+    public async Task RunMigration_HandlesNullString(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IMigrationTesterService migrationTester)
+    {
+        // Setup data
+        var orgUser = await SetupData(
+            userRepository, organizationRepository, organizationUserRepository, OrganizationUserType.Custom,
+            editAssignedCollections: false, deleteAssignedCollections: false, accessEventLogs: false);
+
+        // We haven't tracked down the source of this yet but it does occur in our cloud database
+        orgUser.Permissions = "NULL";
+        await organizationUserRepository.ReplaceAsync(orgUser);
+
+        // Run data migration
+        migrationTester.ApplyMigration();
+
+        // Assert no changes
+        var migratedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(migratedOrgUser);
+        Assert.Equal(orgUser.Id, migratedOrgUser.Id);
+        Assert.Equal(orgUser.Type, migratedOrgUser.Type);
+        Assert.Null(migratedOrgUser.Permissions);
+    }
+
     private async Task<OrganizationUser> SetupData(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
