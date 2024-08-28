@@ -243,7 +243,33 @@ public class FinalFlexibleCollectionsDataMigrationsTests
         Assert.NotNull(migratedOrgUser);
         Assert.Equal(orgUser.Id, migratedOrgUser.Id);
         Assert.Equal(orgUser.Type, migratedOrgUser.Type);
-        Assert.Null(migratedOrgUser.Permissions);
+        Assert.Equal("NULL", migratedOrgUser.Permissions);
+    }
+
+    [DatabaseTheory, DatabaseData(MigrationName = _migrationName)]
+    public async Task RunMigration_HandlesNonJsonValues(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IMigrationTesterService migrationTester)
+    {
+        // Setup data
+        var orgUser = await SetupData(
+            userRepository, organizationRepository, organizationUserRepository, OrganizationUserType.Custom,
+            editAssignedCollections: false, deleteAssignedCollections: false, accessEventLogs: false);
+
+        orgUser.Permissions = "asdfasdfasfd";
+        await organizationUserRepository.ReplaceAsync(orgUser);
+
+        // Run data migration
+        migrationTester.ApplyMigration();
+
+        // Assert no changes
+        var migratedOrgUser = await organizationUserRepository.GetByIdAsync(orgUser.Id);
+        Assert.NotNull(migratedOrgUser);
+        Assert.Equal(orgUser.Id, migratedOrgUser.Id);
+        Assert.Equal(orgUser.Type, migratedOrgUser.Type);
+        Assert.Equal("asdfasdfasfd", migratedOrgUser.Permissions);
     }
 
     private async Task<OrganizationUser> SetupData(
