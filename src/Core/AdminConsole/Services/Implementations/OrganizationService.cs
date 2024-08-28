@@ -21,6 +21,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -1776,11 +1777,12 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task ImportAsync(Guid organizationId,
-        Guid? importingUserId,
         IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers,
         IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting)
+        bool overwriteExisting,
+        EventSystemUser eventSystemUser
+    )
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -1800,16 +1802,24 @@ public class OrganizationService : IOrganizationService
 
         // Users
 
+        var events = new List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)>();
+
         // Remove Users
         if (removeUserExternalIds?.Any() ?? false)
         {
-            var removeUsersSet = new HashSet<string>(removeUserExternalIds);
             var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
-
-            await _organizationUserRepository.DeleteManyAsync(removeUsersSet
+            var removeUsersSet = new HashSet<string>(removeUserExternalIds)
                 .Except(newUsersSet)
                 .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
-                .Select(u => existingUsersDict[u].Id));
+                .Select(u => existingUsersDict[u]);
+
+            await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
+            events.AddRange(removeUsersSet.Select(u => (
+              u,
+              EventType.OrganizationUser_Removed,
+              (DateTime?)DateTime.UtcNow
+              ))
+            );
         }
 
         if (overwriteExisting)
@@ -1820,6 +1830,12 @@ public class OrganizationService : IOrganizationService
                 !newUsersSet.Contains(u.ExternalId) &&
                 existingExternalUsersIdDict.ContainsKey(u.ExternalId));
             await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
+            events.AddRange(usersToDelete.Select(u => (
+              u,
+              EventType.OrganizationUser_Removed,
+              (DateTime?)DateTime.UtcNow
+              ))
+            );
             foreach (var deletedUser in usersToDelete)
             {
                 existingExternalUsersIdDict.Remove(deletedUser.ExternalId);
@@ -1889,7 +1905,7 @@ public class OrganizationService : IOrganizationService
                 }
             }
 
-            var invitedUsers = await InviteUsersAsync(organizationId, importingUserId, systemUser: null, userInvites);
+            var invitedUsers = await InviteUsersAsync(organizationId, invitingUserId: null, systemUser: eventSystemUser, userInvites);
             foreach (var invitedUser in invitedUsers)
             {
                 existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
@@ -1913,16 +1929,20 @@ public class OrganizationService : IOrganizationService
 
             var newGroups = groups
                 .Where(g => !existingExternalGroupsDict.ContainsKey(g.Group.ExternalId))
-                .Select(g => g.Group);
+                .Select(g => g.Group).ToList();
 
+            var savedGroups = new List<Group>();
             foreach (var group in newGroups)
             {
                 group.CreationDate = group.RevisionDate = DateTime.UtcNow;
 
-                await _groupRepository.CreateAsync(group);
+                savedGroups.Add(await _groupRepository.CreateAsync(group));
                 await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
                     existingExternalUsersIdDict);
             }
+
+            await _eventService.LogGroupEventsAsync(
+                savedGroups.Select(g => (g, EventType.Group_Created, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
 
             var updateGroups = existingExternalGroups
                 .Where(g => groupsDict.ContainsKey(g.ExternalId))
@@ -1949,10 +1969,15 @@ public class OrganizationService : IOrganizationService
                     await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
                         existingExternalUsersIdDict,
                         existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
+
                 }
+
+                await _eventService.LogGroupEventsAsync(
+                    updateGroups.Select(g => (g, EventType.Group_Updated, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
             }
         }
 
+        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser, e.d)));
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }

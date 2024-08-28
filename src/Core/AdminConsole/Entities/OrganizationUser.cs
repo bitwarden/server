@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
@@ -8,7 +9,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
 
-public class OrganizationUser : ITableObject<Guid>, IExternal
+public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }

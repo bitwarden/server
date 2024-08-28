@@ -21,7 +21,6 @@ public class OrganizationAbility
         UseResetPassword = organization.UseResetPassword;
         UseCustomPermissions = organization.UseCustomPermissions;
         UsePolicies = organization.UsePolicies;
-        HasOrganizationDomains = Utilities.StaticStore.GetPlan(organization.PlanType).HasOrganizationDomains;
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
     }
@@ -38,7 +37,6 @@ public class OrganizationAbility
     public bool UseResetPassword { get; set; }
     public bool UseCustomPermissions { get; set; }
     public bool UsePolicies { get; set; }
-    public bool HasOrganizationDomains { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
 }

@@ -1,11 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -26,12 +24,15 @@ public class GetOrganizationUsersManagementStatusQueryTests
         Assert.Empty(result);
     }
 
-    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.EnterpriseAnnually)]
-    public async Task GetUsersOrganizationManagementStatusAsync_WithEnterprisePlan_Success(
+    [Theory, BitAutoData]
+    public async Task GetUsersOrganizationManagementStatusAsync_WithUseSsoEnabled_Success(
         Organization organization,
         ICollection<OrganizationUser> usersWithClaimedDomain,
         SutProvider<GetOrganizationUsersManagementStatusQuery> sutProvider)
     {
+        organization.Enabled = true;
+        organization.UseSso = true;
+
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
 
@@ -49,12 +50,15 @@ public class GetOrganizationUsersManagementStatusQueryTests
         Assert.False(result[userIdWithoutClaimedDomain]);
     }
 
-    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.TeamsAnnually)]
-    public async Task GetUsersOrganizationManagementStatusAsync_WithoutEnterprisePlan_ReturnsAllFalse(
+    [Theory, BitAutoData]
+    public async Task GetUsersOrganizationManagementStatusAsync_WithUseSsoDisabled_ReturnsAllFalse(
         Organization organization,
         ICollection<OrganizationUser> usersWithClaimedDomain,
         SutProvider<GetOrganizationUsersManagementStatusQuery> sutProvider)
     {
+        organization.Enabled = true;
+        organization.UseSso = false;
+
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
 
@@ -71,7 +75,7 @@ public class GetOrganizationUsersManagementStatusQueryTests
         Assert.All(result, r => Assert.False(r.Value));
     }
 
-    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.EnterpriseAnnually)]
+    [Theory, BitAutoData]
     public async Task GetUsersOrganizationManagementStatusAsync_WithDisabledOrganization_ReturnsAllFalse(
         Organization organization,
         ICollection<OrganizationUser> usersWithClaimedDomain,

@@ -63,9 +63,9 @@ public interface IOrganizationService
     Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
-    Task ImportAsync(Guid organizationId, Guid? importingUserId, IEnumerable<ImportedGroup> groups,
+    Task ImportAsync(Guid organizationId, IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting);
+        bool overwriteExisting, EventSystemUser eventSystemUser);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
     Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
     Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId);

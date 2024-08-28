@@ -26,7 +26,6 @@ public abstract record Plan
     public bool HasResetPassword { get; protected init; }
     public bool UsersGetPremium { get; protected init; }
     public bool HasCustomPermissions { get; protected init; }
-    public bool HasOrganizationDomains { get; protected init; }
     public int UpgradeSortOrder { get; protected init; }
     public int DisplaySortOrder { get; protected init; }
     public int? LegacyYear { get; protected init; }

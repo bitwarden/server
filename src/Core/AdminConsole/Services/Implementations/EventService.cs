@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
@@ -229,27 +230,27 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(e);
     }
 
-    public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-        DateTime? date = null) =>
-        await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, null, date) });
+    public async Task LogOrganizationUserEventAsync<T>(T organizationUser, EventType type,
+        DateTime? date = null) where T : IOrganizationUser =>
+        await CreateLogOrganizationUserEventsAsync(new (T, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, null, date) });
 
-    public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-        EventSystemUser systemUser, DateTime? date = null) =>
-        await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, systemUser, date) });
+    public async Task LogOrganizationUserEventAsync<T>(T organizationUser, EventType type,
+        EventSystemUser systemUser, DateTime? date = null) where T : IOrganizationUser =>
+        await CreateLogOrganizationUserEventsAsync(new (T, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, systemUser, date) });
 
-    public async Task LogOrganizationUserEventsAsync(
-        IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
+    public async Task LogOrganizationUserEventsAsync<T>(
+        IEnumerable<(T, EventType, DateTime?)> events) where T : IOrganizationUser
     {
         await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)null, e.Item3)));
     }
 
-    public async Task LogOrganizationUserEventsAsync(
-        IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events)
+    public async Task LogOrganizationUserEventsAsync<T>(
+        IEnumerable<(T, EventType, EventSystemUser, DateTime?)> events) where T : IOrganizationUser
     {
         await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)e.Item3, e.Item4)));
     }
 
-    private async Task CreateLogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser?, DateTime?)> events)
+    private async Task CreateLogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, EventSystemUser?, DateTime?)> events) where T : IOrganizationUser
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
