@@ -22,8 +22,6 @@ public class SubscriberService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter) : ISubscriberService
 {
-
-
     public async Task CancelSubscription(
         ISubscriber subscriber,
         OffboardingSurveyResponse offboardingSurveyResponse,

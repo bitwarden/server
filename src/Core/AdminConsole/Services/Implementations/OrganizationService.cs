@@ -770,7 +770,7 @@ public class OrganizationService : IOrganizationService
 
             return (organization, orgUser, defaultCollection);
         }
-        catch (Exception ex)
+        catch
         {
             if (withPayment)
             {
