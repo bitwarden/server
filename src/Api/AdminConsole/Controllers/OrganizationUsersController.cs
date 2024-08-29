@@ -506,8 +506,8 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
-    public async Task Delete(string orgId, string id)
+    [HttpPost("{id}/remove")]
+    public async Task Remove(string orgId, string id)
     {
         var orgGuidId = new Guid(orgId);
         if (!await _currentContext.ManageUsers(orgGuidId))
@@ -520,8 +520,8 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpDelete("")]
-    [HttpPost("delete")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDelete(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    [HttpPost("remove")]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRemove(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         var orgGuidId = new Guid(orgId);
         if (!await _currentContext.ManageUsers(orgGuidId))
