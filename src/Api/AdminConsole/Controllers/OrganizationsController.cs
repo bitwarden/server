@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -310,31 +309,6 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.DeleteAsync(organization);
-    }
-
-    [HttpPost("{id}/import")]
-    public async Task Import(string id, [FromBody] ImportOrganizationUsersRequestModel model)
-    {
-        if (!_globalSettings.SelfHosted && !model.LargeImport &&
-            (model.Groups.Count() > 2000 || model.Users.Count(u => !u.Deleted) > 2000))
-        {
-            throw new BadRequestException("You cannot import this much data at once.");
-        }
-
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.OrganizationAdmin(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User);
-        await _organizationService.ImportAsync(
-            orgIdGuid,
-            userId.Value,
-            model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
-            model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-            model.Users.Where(u => u.Deleted).Select(u => u.ExternalId),
-            model.OverwriteExisting);
     }
 
     [HttpPost("{id}/api-key")]
