@@ -150,7 +150,6 @@ public class BaseRequestValidatorTests
         await _sut.ValidateAsync(context);
 
         // Assert
-        //? This is smelly, but the test suite wouldn't pass the IpAddress in properly so we just check for this message
         _logger.Received(1).LogWarning(Constants.BypassFiltersEventId, "Failed login attempt. ");
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);

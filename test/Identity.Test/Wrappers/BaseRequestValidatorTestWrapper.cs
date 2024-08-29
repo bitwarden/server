@@ -23,7 +23,6 @@ public class BaseRequestValidationContextFake
     public ValidatedTokenRequest ValidatedTokenRequest;
     public CustomValidatorRequestContext CustomValidatorRequestContext;
     public GrantValidationResult GrantResult;
-    public string? IpAddress { get; set; }
 
     public BaseRequestValidationContextFake(
         ValidatedTokenRequest tokenRequest,

@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation;
 
-public class ResourceOwnerRequestValidationTests : IClassFixture<IdentityApplicationFactory>
+public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplicationFactory>
 {
     private const string DefaultPassword = "master_password_hash";
     private const string DefaultUsername = "test@email.qa";
@@ -22,7 +22,7 @@ public class ResourceOwnerRequestValidationTests : IClassFixture<IdentityApplica
     private readonly UserManager<User> _userManager;
     private readonly IAuthRequestRepository _authRequestRepository;
 
-    public ResourceOwnerRequestValidationTests(IdentityApplicationFactory factory)
+    public ResourceOwnerPasswordValidatorTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
 
@@ -143,7 +143,6 @@ public class ResourceOwnerRequestValidationTests : IClassFixture<IdentityApplica
         var expectedAuthRequest = await _authRequestRepository.GetManyByUserIdAsync(user.Id);
         Assert.NotEmpty(expectedAuthRequest);
 
-        var authRequestId = expectedAuthRequest.First().Id;
         // Act
         var context = await _factory.Server.PostAsync("/connect/token",
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -214,7 +213,6 @@ public class ResourceOwnerRequestValidationTests : IClassFixture<IdentityApplica
         Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
     }
 
-    #region Private methods
     private async Task EnsureUserCreatedAsync(IdentityApplicationFactory factory = null)
     {
         factory ??= _factory;
@@ -271,5 +269,4 @@ public class ResourceOwnerRequestValidationTests : IClassFixture<IdentityApplica
             ResponseDate = responseDate,
         };
     }
-    #endregion
 }
