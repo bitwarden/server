@@ -16,6 +16,8 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -222,6 +224,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped<IPaymentService, StripePaymentService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
+        services.AddSingleton<IOrganizationSubscriptionService, OrganizationSubscriptionService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<ILookupClient>(_ =>

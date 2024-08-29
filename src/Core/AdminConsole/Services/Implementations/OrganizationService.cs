@@ -70,7 +70,7 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly ISubscriberService _subscriberService;
+    private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -105,7 +105,7 @@ public class OrganizationService : IOrganizationService
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        ISubscriberService subscriberService)
+        IOrganizationSubscriptionService organizationSubscriptionService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -139,7 +139,7 @@ public class OrganizationService : IOrganizationService
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _subscriberService = subscriberService;
+        _organizationSubscriptionService = organizationSubscriptionService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -589,7 +589,7 @@ public class OrganizationService : IOrganizationService
             }
             else
             {
-                await _subscriberService.PurchaseOrganizationWithoutPaymentMethod(organization, plan, signup.AdditionalSeats,
+                await _organizationSubscriptionService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
                     signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
                     signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
             }

@@ -159,7 +159,7 @@ public class OrganizationsController : Controller
 
     [HttpPost("")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<OrganizationResponseModel> Post([FromBody] OrganizationCreateRequestModel model)
+    public async Task<OrganizationResponseModel> Post([FromBody] OrganizationCreateRequestBase model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)

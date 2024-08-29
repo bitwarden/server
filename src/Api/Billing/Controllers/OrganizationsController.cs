@@ -176,22 +176,6 @@ public class OrganizationsController(
         await organizationService.UpdateSubscription(id, model.SeatAdjustment, model.MaxAutoscaleSeats);
     }
 
-    [HttpPost("subscribe-without-payment-method")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<OrganizationResponseModel> Post([FromBody] OrganizationCreateRequestModel model)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var organizationSignup = model.ToOrganizationSignup(user);
-        var result = await organizationService.SignUpAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Item1);
-    }
-
-
     [HttpPost("{id:guid}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
