@@ -106,7 +106,7 @@ public class SyncController : Controller
 
     private ICollection<CipherDetails> FilterSSHKeys(ICollection<CipherDetails> ciphers)
     {
-        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion)
+        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion && _currentContext.DeviceType != DeviceType.Android && _currentContext.DeviceType != DeviceType.iOS && _currentContext.DeviceType != DeviceType.AndroidAmazon)
         {
             return ciphers;
         }
