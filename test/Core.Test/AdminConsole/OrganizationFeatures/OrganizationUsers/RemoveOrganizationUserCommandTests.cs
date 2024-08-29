@@ -12,11 +12,11 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
-public class DeleteOrganizationUserCommandTests
+public class RemoveOrganizationUserCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task DeleteUser_Success(SutProvider<DeleteOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
+    public async Task RemoveUser_Success(SutProvider<RemoveOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)
@@ -26,21 +26,21 @@ public class DeleteOrganizationUserCommandTests
                 OrganizationId = organizationId
             });
 
-        await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, null);
+        await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, null);
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).DeleteUserAsync(organizationId, organizationUserId, null);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteUser_NotFound_Throws(SutProvider<DeleteOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
+    public async Task RemoveUser_NotFound_Throws(SutProvider<RemoveOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
     {
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, null));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, null));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteUser_MismatchingOrganizationId_Throws(SutProvider<DeleteOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
+    public async Task RemoveUser_MismatchingOrganizationId_Throws(SutProvider<RemoveOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)
@@ -50,12 +50,12 @@ public class DeleteOrganizationUserCommandTests
                 OrganizationId = Guid.NewGuid()
             });
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, null));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, null));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteUser_WithEventSystemUser_Success(SutProvider<DeleteOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId, EventSystemUser eventSystemUser)
+    public async Task RemoveUser_WithEventSystemUser_Success(SutProvider<RemoveOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId, EventSystemUser eventSystemUser)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)
@@ -65,7 +65,7 @@ public class DeleteOrganizationUserCommandTests
                 OrganizationId = organizationId
             });
 
-        await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, eventSystemUser);
+        await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, eventSystemUser);
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).DeleteUserAsync(organizationId, organizationUserId, eventSystemUser);
     }

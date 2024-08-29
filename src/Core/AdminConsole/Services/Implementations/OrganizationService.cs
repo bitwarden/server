@@ -1591,14 +1591,14 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
+    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
     }
 
-    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
+    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId,
         EventSystemUser systemUser)
     {
