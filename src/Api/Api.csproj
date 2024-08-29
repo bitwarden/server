@@ -32,6 +32,8 @@
   </Choose>
 
   <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="8.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="8.0.0" />
     <PackageReference Include="Azure.Messaging.EventGrid" Version="4.24.1" />

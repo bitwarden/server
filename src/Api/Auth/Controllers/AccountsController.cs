@@ -601,7 +601,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("premium")]
-    public async Task<PaymentResponseModel> PostPremium(PremiumRequestModel model)
+    public async Task<PaymentResponseModel> PostPremium([FromBody] PremiumRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)

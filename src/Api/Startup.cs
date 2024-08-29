@@ -169,6 +169,9 @@ public class Startup
             .AddScoped<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>,
                 WebAuthnLoginKeyRotationValidator>();
 
+        //services.TryAddEnumerable( ServiceDescriptor.Transient<IApiDescriptionProvider, AllGroupApiDescriptionProvider>() );
+
+
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
@@ -194,6 +197,8 @@ public class Startup
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
+
+
         // MVC
         services.AddMvc(config =>
         {
@@ -201,6 +206,27 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
+        services.AddApiVersioning(options =>
+            {
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                //options.ApiVersionReader = new HeaderApiVersionReader( "x-ms-version" );
+            }).AddMvc()
+            .AddApiExplorer(
+                options =>
+                {
+                    // add the versioned api explorer, which also adds IApiVersionDescriptionProvider service
+                    // note: the specified format code will format the version as "'v'major[.minor][-status]"
+                    options.GroupNameFormat = "'v'VVV";
+
+                    // note: this option is only necessary when versioning by url segment. the SubstitutionFormat
+                    // can also be used to control the format of the API version in route templates
+                    options.SubstituteApiVersionInUrl = true;
+                })
+            .EnableApiVersionBinding();
+        services.AddProblemDetails();
+
+        services.AddEndpointsApiExplorer();
+        //services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
         services.AddSwagger(globalSettings);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
@@ -290,7 +316,7 @@ public class Startup
             {
                 config.DocumentTitle = "Bitwarden API Documentation";
                 config.RoutePrefix = "docs";
-                config.SwaggerEndpoint($"{globalSettings.BaseServiceUri.Api}/specs/public/swagger.json",
+                config.SwaggerEndpoint($"{globalSettings.BaseServiceUri.Api}/specs/internal/swagger.json",
                     "Bitwarden Public API");
                 config.OAuthClientId("accountType.id");
                 config.OAuthClientSecret("secretKey");
