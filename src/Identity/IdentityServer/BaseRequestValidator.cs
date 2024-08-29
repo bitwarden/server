@@ -610,7 +610,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (ValidateFailedAuthEmailConditions(unknownDevice, user))
         {
-            if (twoFactorInvalid) //Todo need test path for here
+            if (twoFactorInvalid)
             {
                 await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
             }
