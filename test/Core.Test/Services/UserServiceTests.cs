@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -14,7 +13,6 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -278,11 +276,12 @@ public class UserServiceTests
             .VerifyHashedPassword(user, "hashed_test_password", secret);
     }
 
-    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.EnterpriseAnnually)]
-    public async Task IsManagedByAnyOrganizationAsync_WithManagingEnabledEnterpriseOrganization_ReturnsTrue(
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithManagingEnabledOrganization_ReturnsTrue(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = true;
+        organization.UseSso = true;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByClaimedUserDomainAsync(userId)
@@ -292,13 +291,12 @@ public class UserServiceTests
         Assert.True(result);
     }
 
-    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.EnterpriseAnnually)]
-    public async Task IsManagedByAnyOrganizationAsync_WithManagingDisabledEnterpriseOrganization_ReturnsFalse(
-        PlanType planType,
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithManagingDisabledOrganization_ReturnsFalse(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = false;
-        organization.PlanType = planType;
+        organization.UseSso = true;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByClaimedUserDomainAsync(userId)
@@ -308,13 +306,12 @@ public class UserServiceTests
         Assert.False(result);
     }
 
-    [Theory, BitAutoData, OrganizationCustomize(PlanType = PlanType.TeamsAnnually)]
-    public async Task IsManagedByAnyOrganizationAsync_WithManagingEnabledTeamsOrganization_ReturnsFalse(
-        PlanType planType,
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithOrganizationUseSsoFalse_ReturnsFalse(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = true;
-        organization.PlanType = planType;
+        organization.UseSso = false;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByClaimedUserDomainAsync(userId)

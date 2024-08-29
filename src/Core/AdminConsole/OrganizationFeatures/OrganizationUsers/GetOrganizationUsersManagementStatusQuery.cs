@@ -21,7 +21,7 @@ public class GetOrganizationUsersManagementStatusQuery : IGetOrganizationUsersMa
     {
         if (organizationUserIds.Any())
         {
-            // Users can only be managed by an enabled Organization that is enabled and can have organization domains
+            // Users can only be managed by an Organization that is enabled and can have organization domains
             var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
             if (organizationAbility is { Enabled: true, UseSso: true })
             {

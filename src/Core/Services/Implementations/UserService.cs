@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1247,14 +1246,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
     {
+        // Users can only be managed by an Organization that is enabled and can have organization domains
         var organization = await _organizationRepository.GetByClaimedUserDomainAsync(userId);
-        if (organization is { Enabled: true })
-        {
-            var plan = StaticStore.GetPlan(organization.PlanType);
-            return plan.ProductTier == ProductTierType.Enterprise;
-        }
-
-        return false;
+        return organization is { Enabled: true, UseSso: true };
     }
 
     /// <inheritdoc cref="IsLegacyUser(string)"/>
