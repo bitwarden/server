@@ -372,7 +372,7 @@ public class OrganizationUsersControllerTests
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId.Value).Returns(user);
         }
 
-        var result = await sutProvider.Sut.DeleteAccount(orgId, model);
+        var result = await sutProvider.Sut.BulkDeleteAccount(orgId, model);
 
         Assert.Equal(orgUsers.Count, result.Data.Count());
         Assert.All(result.Data, r => Assert.Empty(r.Error));
@@ -405,7 +405,7 @@ public class OrganizationUsersControllerTests
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId.Value).Returns(user);
         }
 
-        var result = await sutProvider.Sut.DeleteAccount(orgId, model);
+        var result = await sutProvider.Sut.BulkDeleteAccount(orgId, model);
 
         Assert.Equal(orgUsers.Count, result.Data.Count());
         Assert.Single(result.Data.Where(r => string.IsNullOrEmpty(r.Error)));
