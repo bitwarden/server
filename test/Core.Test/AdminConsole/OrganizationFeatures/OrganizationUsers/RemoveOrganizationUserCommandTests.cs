@@ -28,7 +28,7 @@ public class RemoveOrganizationUserCommandTests
 
         await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, null);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).DeleteUserAsync(organizationId, organizationUserId, null);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).RemoveUserAsync(organizationId, organizationUserId, null);
     }
 
     [Theory]
@@ -67,6 +67,6 @@ public class RemoveOrganizationUserCommandTests
 
         await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, eventSystemUser);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).DeleteUserAsync(organizationId, organizationUserId, eventSystemUser);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).RemoveUserAsync(organizationId, organizationUserId, eventSystemUser);
     }
 }

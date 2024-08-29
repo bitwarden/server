@@ -516,7 +516,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.DeleteUserAsync(orgGuidId, new Guid(id), userId.Value);
+        await _organizationService.RemoveUserAsync(orgGuidId, new Guid(id), userId.Value);
     }
 
     [HttpDelete("")]
@@ -530,7 +530,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
+        var result = await _organizationService.RemoveUsersAsync(orgGuidId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
