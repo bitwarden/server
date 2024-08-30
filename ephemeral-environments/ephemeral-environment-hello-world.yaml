@@ -4,7 +4,6 @@ component:
   admin:
     image:
       name: bitwardenprod.azurecr.io/admin
-      tag: ephemeral-environment-hello-world@sha256:21d14c2a962317e12e99e36045edf1404f77a0f2dc30c03f1eec6e71c3b9d4de
   api:
     image:
       name: bitwardenprod.azurecr.io/api
