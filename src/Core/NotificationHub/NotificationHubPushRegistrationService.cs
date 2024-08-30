@@ -191,7 +191,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         request.Content = new StringContent(content, Encoding.UTF8, "application/json");
         var response = await client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
-        if (response.IsSuccessStatusCode)
+        if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning("Web push registration failed: {Response}", body);
         }
