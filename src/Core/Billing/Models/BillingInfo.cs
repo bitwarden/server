@@ -12,7 +12,7 @@ public class BillingInfo
     {
         public BillingSource() { }
 
-        public BillingSource(PaymentMethod method)
+        public BillingSource(Stripe.PaymentMethod method)
         {
             if (method.Card == null)
             {

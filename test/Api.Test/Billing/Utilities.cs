@@ -35,27 +35,27 @@ public static class Utilities
         Assert.Equal("Unauthorized.", response.Value.Message);
     }
 
-    public static void ConfigureStableAdminInputs<T>(
+    public static void ConfigureStableProviderAdminInputs<T>(
         Provider provider,
         SutProvider<T> sutProvider) where T : BaseProviderController
     {
-        ConfigureBaseInputs(provider, sutProvider);
+        ConfigureBaseProviderInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id)
             .Returns(true);
     }
 
-    public static void ConfigureStableServiceUserInputs<T>(
+    public static void ConfigureStableProviderServiceUserInputs<T>(
         Provider provider,
         SutProvider<T> sutProvider) where T : BaseProviderController
     {
-        ConfigureBaseInputs(provider, sutProvider);
+        ConfigureBaseProviderInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ICurrentContext>().ProviderUser(provider.Id)
             .Returns(true);
     }
 
-    private static void ConfigureBaseInputs<T>(
+    private static void ConfigureBaseProviderInputs<T>(
         Provider provider,
         SutProvider<T> sutProvider) where T : BaseProviderController
     {
