@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Migration.Models;
@@ -229,15 +230,10 @@ public class ProviderMigrator(
 
             var customer = await providerBillingService.SetupCustomer(provider, taxInfo);
 
-            var sampleOrganizationCustomer = await stripeAdapter.CustomerGetAsync(sampleOrganization.GatewayCustomerId);
-
-            if (!string.IsNullOrEmpty(sampleOrganizationCustomer.Discount?.Coupon?.Id))
+            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
             {
-                await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
-                {
-                    Coupon = sampleOrganizationCustomer.Discount.Coupon.Id
-                });
-            }
+                Coupon = StripeConstants.CouponIDs.MSPDiscount35
+            });
 
             provider.GatewayCustomerId = customer.Id;
 
@@ -306,14 +302,23 @@ public class ProviderMigrator(
         var organizationCustomers =
             await Task.WhenAll(organizations.Select(organization => stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId)));
 
-        var credit = organizationCustomers.Sum(customer => customer.Balance);
+        var organizationCancellationCredit = organizationCustomers.Sum(customer => customer.Balance);
+
+        var legacyOrganizations = organizations.Where(organization =>
+            organization.PlanType is
+                PlanType.EnterpriseAnnually2020 or
+                PlanType.EnterpriseMonthly2020 or
+                PlanType.TeamsAnnually2020 or
+                PlanType.TeamsMonthly2020);
+
+        var legacyOrganizationCredit = legacyOrganizations.Sum(organization => organization.Seats ?? 0);
 
         await stripeAdapter.CustomerUpdateAsync(provider.GatewayCustomerId, new CustomerUpdateOptions
         {
-            Balance = credit
+            Balance = organizationCancellationCredit + legacyOrganizationCredit
         });
 
-        logger.LogInformation("CB: Applied {Credit} credit to provider ({ProviderID})", credit, provider.Id);
+        logger.LogInformation("CB: Applied {Credit} credit to provider ({ProviderID})", organizationCancellationCredit, provider.Id);
 
         await migrationTrackerCache.UpdateTrackingStatus(provider.Id, ProviderMigrationProgress.CreditApplied);
     }

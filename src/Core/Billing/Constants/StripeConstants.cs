@@ -18,6 +18,7 @@ public static class StripeConstants
 
     public static class CouponIDs
     {
+        public const string MSPDiscount35 = "msp-discount-35";
         public const string SecretsManagerStandalone = "sm-standalone";
     }
 
