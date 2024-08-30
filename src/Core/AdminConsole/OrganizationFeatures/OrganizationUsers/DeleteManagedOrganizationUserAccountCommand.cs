@@ -39,8 +39,8 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             throw new BadRequestException("Invalid organization user.");
         }
 
-        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { orgUser.UserId.Value });
-        if (!managementStatus.TryGetValue(orgUser.UserId.Value, out var isManaged) || !isManaged)
+        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { orgUser.Id });
+        if (!managementStatus.TryGetValue(organizationUserId, out var isManaged) || !isManaged)
         {
             throw new BadRequestException("User is not managed by the organization.");
         }
@@ -59,8 +59,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     {
         var results = new List<(OrganizationUser, string)>();
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
-        var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId.Value).ToList();
-        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, userIds);
+        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
 
         foreach (var orgUser in orgUsers)
         {
@@ -70,7 +69,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                 continue;
             }
 
-            if (!managementStatus.TryGetValue(orgUser.UserId.Value, out var isManaged) || !isManaged)
+            if (!managementStatus.TryGetValue(orgUser.Id, out var isManaged) || !isManaged)
             {
                 results.Add((orgUser, "User is not managed by the organization."));
                 continue;
