@@ -8,7 +8,7 @@ namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
 internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCredentialCommand
 {
-    public const int MaxCredentialsPerUser = 5;
+    public const int MaxCredentialsPerUser = 10;
 
     private readonly IFido2 _fido2;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
