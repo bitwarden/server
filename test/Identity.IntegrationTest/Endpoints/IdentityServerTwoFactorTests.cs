@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -78,6 +78,8 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 Name = "Test Org",
                 Use2fa = true,
                 TwoFactorProviders = orgTwoFactor,
+                BillingEmail = "billing-email@example.com",
+                Plan = "Enterprise",
             });
 
             await _factory.Services.GetService<IOrganizationUserRepository>()

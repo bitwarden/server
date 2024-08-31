@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 
@@ -14,6 +15,20 @@ public class NoopMailService : IMailService
     }
 
     public Task SendVerifyEmailEmailAsync(string email, Guid userId, string hint)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendRegistrationVerificationEmailAsync(string email, string hint)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendTrialInitiationSignupEmailAsync(
+        string email,
+        string token,
+        ProductTierType productTier,
+        IEnumerable<ProductType> products)
     {
         return Task.FromResult(0);
     }
@@ -270,5 +285,11 @@ public class NoopMailService : IMailService
     }
 
     public Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token) => throw new NotImplementedException();
+
+    public Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
+    {
+        return Task.FromResult(0);
+    }
+    public Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent) => throw new NotImplementedException();
 }
 

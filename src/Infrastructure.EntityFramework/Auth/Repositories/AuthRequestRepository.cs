@@ -8,6 +8,8 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, AuthRequest, Guid>, IAuthRequestRepository
@@ -25,7 +27,7 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
             var expiredRequests = await dbContext.AuthRequests
                 .Where(a => (a.Type != AuthRequestType.AdminApproval && a.CreationDate.AddSeconds(userRequestExpiration.TotalSeconds) < DateTime.UtcNow)
                     || (a.Type == AuthRequestType.AdminApproval && a.Approved != true && a.CreationDate.AddSeconds(adminRequestExpiration.TotalSeconds) < DateTime.UtcNow)
-                    || (a.Type == AuthRequestType.AdminApproval && a.Approved == true && a.ResponseDate.Value.AddSeconds(afterAdminApprovalExpiration.TotalSeconds) < DateTime.UtcNow))
+                    || (a.Type == AuthRequestType.AdminApproval && a.Approved == true && a.ResponseDate!.Value.AddSeconds(afterAdminApprovalExpiration.TotalSeconds) < DateTime.UtcNow))
                 .ToListAsync();
             dbContext.AuthRequests.RemoveRange(expiredRequests);
             return await dbContext.SaveChangesAsync();
@@ -67,6 +69,31 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
                                              select ar).ProjectTo<OrganizationAdminAuthRequest>(Mapper.ConfigurationProvider).ToListAsync();
 
             return orgUserAuthRequests;
+        }
+    }
+
+    public async Task UpdateManyAsync(IEnumerable<Core.Auth.Entities.AuthRequest> authRequests)
+    {
+        if (!authRequests.Any())
+        {
+            return;
+        }
+
+        var entities = new List<AuthRequest>();
+        foreach (var authRequest in authRequests)
+        {
+            if (!authRequest.Id.Equals(default))
+            {
+                var entity = Mapper.Map<AuthRequest>(authRequest);
+                entities.Add(entity);
+            }
+        }
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            dbContext.UpdateRange(entities);
+            await dbContext.SaveChangesAsync();
         }
     }
 }

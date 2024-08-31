@@ -46,6 +46,17 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
                                   from cg in cg_g.DefaultIfEmpty()
                                   select new { c, cu, cg };
 
+        // Subqueries to determine if a collection is managed by a user or group.
+        var activeUserManageRights = from cu in dbContext.CollectionUsers
+                                     join ou in dbContext.OrganizationUsers
+                                         on cu.OrganizationUserId equals ou.Id
+                                     where cu.Manage
+                                     select cu.CollectionId;
+
+        var activeGroupManageRights = from cg in dbContext.CollectionGroups
+                                      where cg.Manage
+                                      select cg.CollectionId;
+
         if (_organizationId.HasValue)
         {
             baseCollectionQuery = baseCollectionQuery.Where(x => x.c.OrganizationId == _organizationId);
@@ -71,6 +82,7 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
             HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false,
             Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,
             Assigned = x.cu != null || x.cg != null,
+            Unmanaged = !activeUserManageRights.Contains(x.c.Id) && !activeGroupManageRights.Contains(x.c.Id),
         });
     }
 

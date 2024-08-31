@@ -25,7 +25,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using File = System.IO.File;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -289,89 +288,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
 
-    public async Task<IdentityResult> RegisterUserAsync(User user, string masterPassword,
-        string token, Guid? orgUserId)
+    public async Task<IdentityResult> CreateUserAsync(User user)
     {
-        var tokenValid = false;
-        if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
-        {
-            // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-            var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-                _orgUserInviteTokenDataFactory, token, orgUserId.Value, user.Email);
-
-            tokenValid = newTokenValid ||
-                          CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
-                              user.Email, orgUserId.Value, _globalSettings);
-        }
-
-        if (_globalSettings.DisableUserRegistration && !tokenValid)
-        {
-            throw new BadRequestException("Open registration has been disabled by the system administrator.");
-        }
-
-        if (orgUserId.HasValue)
-        {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
-            if (orgUser != null)
-            {
-                var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
-                    PolicyType.TwoFactorAuthentication);
-                if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
-                {
-                    user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-                    {
-
-                        [TwoFactorProviderType.Email] = new TwoFactorProvider
-                        {
-                            MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                            Enabled = true
-                        }
-                    });
-                    SetTwoFactorProvider(user, TwoFactorProviderType.Email);
-                }
-            }
-        }
-
-        user.ApiKey = CoreHelpers.SecureRandomString(30);
-        var result = await base.CreateAsync(user, masterPassword);
-        if (result == IdentityResult.Success)
-        {
-            if (!string.IsNullOrEmpty(user.ReferenceData))
-            {
-                var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
-                if (referenceData.TryGetValue("initiationPath", out var value))
-                {
-                    var initiationPath = value.ToString();
-                    await SendAppropriateWelcomeEmailAsync(user, initiationPath);
-                    if (!string.IsNullOrEmpty(initiationPath))
-                    {
-                        await _referenceEventService.RaiseEventAsync(
-                            new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
-                            {
-                                SignupInitiationPath = initiationPath
-                            });
-
-                        return result;
-                    }
-                }
-            }
-
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
-        }
-
-        return result;
+        return await CreateAsync(user);
     }
 
-    public async Task<IdentityResult> RegisterUserAsync(User user)
+    public async Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash)
     {
-        var result = await base.CreateAsync(user);
-        if (result == IdentityResult.Success)
-        {
-            await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
-        }
-
-        return result;
+        return await CreateAsync(user, masterPasswordHash);
     }
 
     public async Task SendMasterPasswordHintAsync(string email)
@@ -401,9 +325,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
-        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "2faEmail:" + email);
-
+        var token = await base.GenerateTwoFactorTokenAsync(user,
+            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
         await _mailService.SendTwoFactorEmailAsync(email, token);
     }
 
@@ -416,8 +339,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
-        return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "2faEmail:" + email, token);
+        return await base.VerifyTwoFactorTokenAsync(user,
+            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), token);
     }
 
     public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
@@ -799,8 +722,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.Key = key;
+        user.LastPasswordChangeDate = user.RevisionDate;
         user.ForcePasswordReset = true;
+        user.Key = key;
 
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
@@ -976,9 +900,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 throw new BadRequestException("Invalid license.");
             }
 
-            if (!license.CanUse(user))
+            if (!license.CanUse(user, out var exceptionMessage))
             {
-                throw new BadRequestException("This license is not valid for this user.");
+                throw new BadRequestException(exceptionMessage);
             }
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -1045,9 +969,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        if (!license.CanUse(user))
+        if (!license.CanUse(user, out var exceptionMessage))
         {
-            throw new BadRequestException("This license is not valid for this user.");
+            throw new BadRequestException(exceptionMessage);
         }
 
         var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -1313,6 +1237,28 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
+    public async Task<bool> IsLegacyUser(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        var user = await FindByIdAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        return IsLegacyUser(user);
+    }
+
+    /// <inheritdoc cref="IsLegacyUser(string)"/>
+    public static bool IsLegacyUser(User user)
+    {
+        return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
+    }
+
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
@@ -1406,7 +1352,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             "otp:" + user.Email, token);
     }
 
-    public async Task<bool> VerifySecretAsync(User user, string secret)
+    public async Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false)
     {
         bool isVerified;
         if (user.HasMasterPassword())
@@ -1417,6 +1363,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             // does still have a password we will allow the use of OTP.
             isVerified = await CheckPasswordAsync(user, secret) ||
                 await VerifyOTPAsync(user, secret);
+        }
+        else if (isSettingMFA)
+        {
+            // this is temporary to allow users to view their MFA settings without invalidating email TOTP
+            // Will be removed with PM-9925
+            isVerified = true;
         }
         else
         {

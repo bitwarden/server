@@ -4,4 +4,8 @@
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="32.0.3" />
+  </ItemGroup>
+
 </Project>

@@ -3,9 +3,10 @@ using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -22,19 +23,43 @@ public class OrganizationEditModel : OrganizationViewModel
     {
         Provider = provider;
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
-        PlanType = Core.Enums.PlanType.TeamsMonthly;
-        Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+        PlanType = Core.Billing.Enums.PlanType.TeamsMonthly;
+        Plan = Core.Billing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
         LicenseKey = RandomLicenseKey;
     }
 
-    public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
-        IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
-        IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
-        GlobalSettings globalSettings, int secrets, int projects, int serviceAccounts, int occupiedSmSeats)
-        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies, secrets, projects,
-            serviceAccounts, occupiedSmSeats)
+    public OrganizationEditModel(
+        Organization org,
+        Provider provider,
+        IEnumerable<OrganizationUserUserDetails> orgUsers,
+        IEnumerable<Cipher> ciphers,
+        IEnumerable<Collection> collections,
+        IEnumerable<Group> groups,
+        IEnumerable<Policy> policies,
+        BillingInfo billingInfo,
+        BillingHistoryInfo billingHistoryInfo,
+        IEnumerable<OrganizationConnection> connections,
+        GlobalSettings globalSettings,
+        int secrets,
+        int projects,
+        int serviceAccounts,
+        int occupiedSmSeats)
+        : base(
+            org,
+            provider,
+            connections,
+            orgUsers,
+            ciphers,
+            collections,
+            groups,
+            policies,
+            secrets,
+            projects,
+            serviceAccounts,
+            occupiedSmSeats)
     {
         BillingInfo = billingInfo;
+        BillingHistoryInfo = billingHistoryInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
         Name = org.DisplayName();
@@ -73,6 +98,7 @@ public class OrganizationEditModel : OrganizationViewModel
     }
 
     public BillingInfo BillingInfo { get; set; }
+    public BillingHistoryInfo BillingHistoryInfo { get; set; }
     public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
     public string FourteenDayExpirationDate => DateTime.Now.AddDays(14).ToString("yyyy-MM-ddTHH:mm");
     public string BraintreeMerchantId { get; set; }
@@ -153,31 +179,91 @@ public class OrganizationEditModel : OrganizationViewModel
      * This is mapped manually below to provide some type safety in case the plan objects change
      * Add mappings for individual properties as you need them
      */
-    public IEnumerable<Dictionary<string, object>> GetPlansHelper() =>
+    public object GetPlansHelper() =>
         StaticStore.Plans
             .Where(p => p.SupportsSecretsManager)
-            .Select(p => new Dictionary<string, object>
+            .Select(p =>
             {
-                { "type", p.Type },
-                { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
+                var plan = new
+                {
+                    Type = p.Type,
+                    ProductTier = p.ProductTier,
+                    Name = p.Name,
+                    IsAnnual = p.IsAnnual,
+                    NameLocalizationKey = p.NameLocalizationKey,
+                    DescriptionLocalizationKey = p.DescriptionLocalizationKey,
+                    CanBeUsedByBusiness = p.CanBeUsedByBusiness,
+                    TrialPeriodDays = p.TrialPeriodDays,
+                    HasSelfHost = p.HasSelfHost,
+                    HasPolicies = p.HasPolicies,
+                    HasGroups = p.HasGroups,
+                    HasDirectory = p.HasDirectory,
+                    HasEvents = p.HasEvents,
+                    HasTotp = p.HasTotp,
+                    Has2fa = p.Has2fa,
+                    HasApi = p.HasApi,
+                    HasSso = p.HasSso,
+                    HasKeyConnector = p.HasKeyConnector,
+                    HasScim = p.HasScim,
+                    HasResetPassword = p.HasResetPassword,
+                    UsersGetPremium = p.UsersGetPremium,
+                    HasCustomPermissions = p.HasCustomPermissions,
+                    UpgradeSortOrder = p.UpgradeSortOrder,
+                    DisplaySortOrder = p.DisplaySortOrder,
+                    LegacyYear = p.LegacyYear,
+                    Disabled = p.Disabled,
+                    SupportsSecretsManager = p.SupportsSecretsManager,
+                    PasswordManager =
+                        new
+                        {
+                            StripePlanId = p.PasswordManager?.StripePlanId,
+                            StripeSeatPlanId = p.PasswordManager?.StripeSeatPlanId,
+                            StripeProviderPortalSeatPlanId = p.PasswordManager?.StripeProviderPortalSeatPlanId,
+                            BasePrice = p.PasswordManager?.BasePrice,
+                            SeatPrice = p.PasswordManager?.SeatPrice,
+                            ProviderPortalSeatPrice = p.PasswordManager?.ProviderPortalSeatPrice,
+                            AllowSeatAutoscale = p.PasswordManager?.AllowSeatAutoscale,
+                            HasAdditionalSeatsOption = p.PasswordManager?.HasAdditionalSeatsOption,
+                            MaxAdditionalSeats = p.PasswordManager?.MaxAdditionalSeats,
+                            BaseSeats = p.PasswordManager?.BaseSeats,
+                            HasPremiumAccessOption = p.PasswordManager?.HasPremiumAccessOption,
+                            StripePremiumAccessPlanId = p.PasswordManager?.StripePremiumAccessPlanId,
+                            PremiumAccessOptionPrice = p.PasswordManager?.PremiumAccessOptionPrice,
+                            MaxSeats = p.PasswordManager?.MaxSeats,
+                            BaseStorageGb = p.PasswordManager?.BaseStorageGb,
+                            HasAdditionalStorageOption = p.PasswordManager?.HasAdditionalStorageOption,
+                            AdditionalStoragePricePerGb = p.PasswordManager?.AdditionalStoragePricePerGb,
+                            StripeStoragePlanId = p.PasswordManager?.StripeStoragePlanId,
+                            MaxAdditionalStorage = p.PasswordManager?.MaxAdditionalStorage,
+                            MaxCollections = p.PasswordManager?.MaxCollections
+                        },
+                    SecretsManager = new
+                    {
+                        MaxServiceAccounts = p.SecretsManager?.MaxServiceAccounts,
+                        AllowServiceAccountsAutoscale = p.SecretsManager?.AllowServiceAccountsAutoscale,
+                        StripeServiceAccountPlanId = p.SecretsManager?.StripeServiceAccountPlanId,
+                        AdditionalPricePerServiceAccount = p.SecretsManager?.AdditionalPricePerServiceAccount,
+                        BaseServiceAccount = p.SecretsManager?.BaseServiceAccount,
+                        MaxAdditionalServiceAccount = p.SecretsManager?.MaxAdditionalServiceAccount,
+                        HasAdditionalServiceAccountOption = p.SecretsManager?.HasAdditionalServiceAccountOption,
+                        StripeSeatPlanId = p.SecretsManager?.StripeSeatPlanId,
+                        HasAdditionalSeatsOption = p.SecretsManager?.HasAdditionalSeatsOption,
+                        BasePrice = p.SecretsManager?.BasePrice,
+                        SeatPrice = p.SecretsManager?.SeatPrice,
+                        BaseSeats = p.SecretsManager?.BaseSeats,
+                        MaxSeats = p.SecretsManager?.MaxSeats,
+                        MaxAdditionalSeats = p.SecretsManager?.MaxAdditionalSeats,
+                        AllowSeatAutoscale = p.SecretsManager?.AllowSeatAutoscale,
+                        MaxProjects = p.SecretsManager?.MaxProjects
+                    }
+                };
+                return plan;
             });
 
-    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsSignupEnabled, bool flexibleCollectionsV1Enabled)
+    public Organization CreateOrganization(Provider provider)
     {
         BillingEmail = provider.BillingEmail;
-
-        var newOrg = new Organization
-        {
-            // This feature flag indicates that new organizations should be automatically onboarded to
-            // Flexible Collections enhancements
-            FlexibleCollections = flexibleCollectionsSignupEnabled,
-            // These collection management settings smooth the migration for existing organizations by disabling some FC behavior.
-            // If the organization is onboarded to Flexible Collections on signup, we turn them OFF to enable all new behaviour.
-            // If the organization is NOT onboarded now, they will have to be migrated later, so they default to ON to limit FC changes on migration.
-            LimitCollectionCreationDeletion = !flexibleCollectionsSignupEnabled,
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
-        };
-        return ToOrganization(newOrg);
+        return ToOrganization(new Organization());
     }
 
     public Organization ToOrganization(Organization existingOrganization)

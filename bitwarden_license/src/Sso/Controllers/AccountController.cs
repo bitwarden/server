@@ -8,6 +8,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -51,6 +52,7 @@ public class AccountController : Controller
     private readonly Core.Services.IEventService _eventService;
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IRegisterUserCommand _registerUserCommand;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -70,7 +72,8 @@ public class AccountController : Controller
         IGlobalSettings globalSettings,
         Core.Services.IEventService eventService,
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
-        IOrganizationDomainRepository organizationDomainRepository)
+        IOrganizationDomainRepository organizationDomainRepository,
+        IRegisterUserCommand registerUserCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -90,6 +93,7 @@ public class AccountController : Controller
         _globalSettings = globalSettings;
         _dataProtector = dataProtector;
         _organizationDomainRepository = organizationDomainRepository;
+        _registerUserCommand = registerUserCommand;
     }
 
     [HttpGet]
@@ -483,7 +487,8 @@ public class AccountController : Controller
             if (orgUser.Status == OrganizationUserStatusType.Invited)
             {
                 // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.DisplayName()));
+                // This allows us to enroll them in MP reset if required
+                throw new Exception(_i18nService.T("AcceptInviteBeforeUsingSSO", organization.DisplayName()));
             }
 
             // Accepted or Confirmed - create SSO link and return;
@@ -497,7 +502,6 @@ public class AccountController : Controller
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var initialSeatCount = organization.Seats.Value;
             var availableSeats = initialSeatCount - occupiedSeats;
-            var prorationDate = DateTime.UtcNow;
             if (availableSeats < 1)
             {
                 try
@@ -507,13 +511,13 @@ public class AccountController : Controller
                         throw new Exception("Cannot autoscale on self-hosted instance.");
                     }
 
-                    await _organizationService.AutoAddSeatsAsync(organization, 1, prorationDate);
+                    await _organizationService.AutoAddSeatsAsync(organization, 1);
                 }
                 catch (Exception e)
                 {
                     if (organization.Seats.Value != initialSeatCount)
                     {
-                        await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
+                        await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value);
                     }
                     _logger.LogInformation(e, "SSO auto provisioning failed");
                     throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
@@ -538,7 +542,7 @@ public class AccountController : Controller
             EmailVerified = emailVerified,
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
-        await _userService.RegisterUserAsync(user);
+        await _registerUserCommand.RegisterUser(user);
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
         var twoFactorPolicy =

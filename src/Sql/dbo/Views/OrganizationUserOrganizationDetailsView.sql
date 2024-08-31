@@ -3,6 +3,7 @@ AS
 SELECT
     OU.[UserId],
     OU.[OrganizationId],
+    OU.[Id] OrganizationUserId,
     O.[Name],
     O.[Enabled],
     O.[PlanType],
@@ -46,8 +47,7 @@ SELECT
     O.[SmSeats],
     O.[SmServiceAccounts],
     O.[LimitCollectionCreationDeletion],
-    O.[AllowAdminAccessToAllCollectionItems],
-    O.[FlexibleCollections]
+    O.[AllowAdminAccessToAllCollectionItems]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

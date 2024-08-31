@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 
 namespace Bit.Core.SecretsManager.Repositories.Noop;
 
@@ -45,12 +46,12 @@ public class NoopSecretRepository : ISecretRepository
         return Task.FromResult(null as Secret);
     }
 
-    public Task<Secret> CreateAsync(Secret secret)
+    public Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
     {
         return Task.FromResult(null as Secret);
     }
 
-    public Task<Secret> UpdateAsync(Secret secret)
+    public Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
     {
         return Task.FromResult(null as Secret);
     }
@@ -80,12 +81,24 @@ public class NoopSecretRepository : ISecretRepository
         return Task.FromResult((false, false));
     }
 
+    public Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToSecretsAsync(IEnumerable<Guid> ids,
+        Guid userId, AccessClientType accessType)
+    {
+        return Task.FromResult(null as Dictionary<Guid, (bool Read, bool Write)>);
+    }
+
     public Task EmptyTrash(DateTime nowTime, uint deleteAfterThisNumberOfDays)
     {
         return Task.FromResult(0);
     }
 
     public Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId, Guid userId,
+        AccessClientType accessType)
     {
         return Task.FromResult(0);
     }

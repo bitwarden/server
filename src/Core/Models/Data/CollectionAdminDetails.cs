@@ -7,11 +7,16 @@ namespace Bit.Core.Models.Data;
 /// </summary>
 public class CollectionAdminDetails : CollectionDetails
 {
-    public IEnumerable<CollectionAccessSelection>? Groups { get; set; } = new List<CollectionAccessSelection>();
-    public IEnumerable<CollectionAccessSelection>? Users { get; set; } = new List<CollectionAccessSelection>();
+    public IEnumerable<CollectionAccessSelection> Groups { get; set; } = [];
+    public IEnumerable<CollectionAccessSelection> Users { get; set; } = [];
 
     /// <summary>
     /// Flag for whether the user has been explicitly assigned to the collection either directly or through a group.
     /// </summary>
     public bool Assigned { get; set; }
+
+    /// <summary>
+    /// Flag for whether a collection is managed by an active user or group.
+    /// </summary>
+    public bool Unmanaged { get; set; }
 }

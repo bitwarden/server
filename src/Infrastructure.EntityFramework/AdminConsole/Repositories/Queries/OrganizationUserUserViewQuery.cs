@@ -24,7 +24,6 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             Premium = x.u.Premium,
             Status = x.ou.Status,
             Type = x.ou.Type,
-            AccessAll = x.ou.AccessAll,
             ExternalId = x.ou.ExternalId,
             SsoExternalId = x.su.ExternalId,
             Permissions = x.ou.Permissions,

@@ -38,10 +38,6 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
-
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -58,8 +54,7 @@ public class CipherService : ICipherService
         IPolicyService policyService,
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext,
-        IFeatureService featureService)
+        ICurrentContext currentContext)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -76,7 +71,6 @@ public class CipherService : ICipherService
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
-        _featureService = featureService;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -430,10 +424,10 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, useFlexibleCollections: UseFlexibleCollections);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
 
-            await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, UseFlexibleCollections);
+            await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
         var events = deletingCiphers.Select(c =>
@@ -485,7 +479,7 @@ public class CipherService : ICipherService
             }
         }
 
-        await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId, UseFlexibleCollections);
+        await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId);
         // push
         await _pushService.PushSyncCiphersAsync(movingUserId);
     }
@@ -585,11 +579,11 @@ public class CipherService : ICipherService
                     originalCipher.SetAttachments(originalAttachments);
                 }
 
-                var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(sharingUserId, originalCipher.Id, UseFlexibleCollections);
+                var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(sharingUserId, originalCipher.Id);
                 var currentCollectionIdsForCipher = currentCollectionsForCipher.Select(c => c.CollectionId).ToList();
                 currentCollectionIdsForCipher.RemoveAll(id => collectionIds.Contains(id));
 
-                await _collectionCipherRepository.UpdateCollectionsAsync(originalCipher.Id, sharingUserId, currentCollectionIdsForCipher, UseFlexibleCollections);
+                await _collectionCipherRepository.UpdateCollectionsAsync(originalCipher.Id, sharingUserId, currentCollectionIdsForCipher);
                 await _cipherRepository.ReplaceAsync(originalCipher);
             }
 
@@ -634,7 +628,7 @@ public class CipherService : ICipherService
 
         await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
         await _collectionCipherRepository.UpdateCollectionsForCiphersAsync(cipherIds, sharingUserId,
-            organizationId, collectionIds, UseFlexibleCollections);
+            organizationId, collectionIds);
 
         var events = cipherInfos.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c.cipher, EventType.Cipher_Shared, null));
@@ -675,7 +669,7 @@ public class CipherService : ICipherService
             {
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
-            await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds, UseFlexibleCollections);
+            await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
         }
 
         await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_UpdatedCollections);
@@ -788,15 +782,12 @@ public class CipherService : ICipherService
             {
                 collection.SetNewId();
                 newCollections.Add(collection);
-                if (org.FlexibleCollections)
+                newCollectionUsers.Add(new CollectionUser
                 {
-                    newCollectionUsers.Add(new CollectionUser
-                    {
-                        CollectionId = collection.Id,
-                        OrganizationUserId = importingOrgUser.Id,
-                        Manage = true
-                    });
-                }
+                    CollectionId = collection.Id,
+                    OrganizationUserId = importingOrgUser.Id,
+                    Manage = true
+                });
             }
         }
 
@@ -875,10 +866,10 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, useFlexibleCollections: UseFlexibleCollections);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
 
-            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, UseFlexibleCollections);
+            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
         var events = deletingCiphers.Select(c =>
@@ -941,10 +932,10 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId, useFlexibleCollections: UseFlexibleCollections);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId);
             restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
 
-            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId, UseFlexibleCollections);
+            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId);
         }
 
         var events = restoringCiphers.Select(c =>
@@ -979,7 +970,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: true);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true);
             orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId);
         }
 
