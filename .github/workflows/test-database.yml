@@ -9,7 +9,7 @@ on:
       - "rc"
       - "hotfix-rc"
     paths:
-      - ".github/workflows/infrastructure-tests.yml" # This file
+      - ".github/workflows/test-database.yml" # This file
       - "src/Sql/**" # SQL Server Database Changes
       - "util/Migrator/**" # New SQL Server Migrations
       - "util/MySqlMigrations/**" # Changes to MySQL
@@ -20,7 +20,7 @@ on:
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
   pull_request:
     paths:
-      - ".github/workflows/infrastructure-tests.yml" # This file
+      - ".github/workflows/test-database.yml" # This file
       - "src/Sql/**" # SQL Server Database Changes
       - "util/Migrator/**" # New SQL Server Migrations
       - "util/MySqlMigrations/**" # Changes to MySQL
@@ -55,6 +55,24 @@ jobs:
       # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
       - name: Sleep
         run: sleep 15s
+      
+      - name: Checking pending model changes (MySQL)
+        working-directory: "util/MySqlMigrations"
+        run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
+
+      - name: Checking pending model changes (Postgres)
+        working-directory: "util/PostgresMigrations"
+        run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:PostgreSql:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
+
+      - name: Checking pending model changes (SQLite)
+        working-directory: "util/SqliteMigrations"
+        run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:Sqlite:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "Data Source=${{ runner.temp }}/test.db"
 
       - name: Migrate SQL Server
         run: 'dotnet run --project util/MsSqlMigratorUtility/ "$CONN_STR"'
