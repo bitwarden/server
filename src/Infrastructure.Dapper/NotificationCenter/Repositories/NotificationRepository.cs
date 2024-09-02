@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System.Data;
 using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Settings;
@@ -22,60 +23,29 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
     {
     }
 
-    public async Task<IEnumerable<Notification>> GetByUserIdAsync(Guid userId, NotificationFilter notificationFilter)
+    public async Task<IEnumerable<Notification>> GetByUserIdAsync(Guid userId, ClientType clientType)
+    {
+        return await GetByUserIdAndStatusAsync(userId, clientType, new NotificationStatusFilter());
+    }
+
+    public async Task<IEnumerable<Notification>> GetByUserIdAndStatusAsync(Guid userId,
+        ClientType clientType, NotificationStatusFilter statusFilter)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         IEnumerable<Notification> results;
-        if (notificationFilter.OrganizationIds != null && notificationFilter.OrganizationIds.Any())
+        if (statusFilter.Read != null || statusFilter.Deleted != null)
         {
             results = await connection.QueryAsync<Notification>(
-                "[dbo].[Notification_ReadByUserIdAndOrganizations]",
-                new
-                {
-                    UserId = userId,
-                    notificationFilter.ClientType,
-                    OrganizationIds = notificationFilter.OrganizationIds.ToGuidIdArrayTVP()
-                },
+                "[dbo].[Notification_ReadByUserIdAndStatus]",
+                new { UserId = userId, ClientType = clientType, statusFilter.Read, statusFilter.Deleted },
                 commandType: CommandType.StoredProcedure);
         }
         else
         {
             results = await connection.QueryAsync<Notification>(
                 "[dbo].[Notification_ReadByUserId]",
-                new { UserId = userId, notificationFilter.ClientType },
-                commandType: CommandType.StoredProcedure);
-        }
-
-        return results.ToList();
-    }
-
-    public async Task<IEnumerable<Notification>> GetByUserIdAndStatusAsync(Guid userId,
-        NotificationFilter notificationFilter,
-        NotificationStatusFilter statusFilter)
-    {
-        await using var connection = new SqlConnection(ConnectionString);
-
-        IEnumerable<Notification> results;
-        if (notificationFilter.OrganizationIds != null && notificationFilter.OrganizationIds.Any())
-        {
-            results = await connection.QueryAsync<Notification>(
-                "[dbo].[Notification_ReadByUserIdAndOrganizationsAndStatus]",
-                new
-                {
-                    UserId = userId,
-                    notificationFilter.ClientType,
-                    OrganizationIds = notificationFilter.OrganizationIds.ToGuidIdArrayTVP(),
-                    statusFilter.Read,
-                    statusFilter.Deleted
-                },
-                commandType: CommandType.StoredProcedure);
-        }
-        else
-        {
-            results = await connection.QueryAsync<Notification>(
-                "[dbo].[Notification_ReadByUserIdAndStatus]",
-                new { UserId = userId, notificationFilter.ClientType, statusFilter.Read, statusFilter.Deleted },
+                new { UserId = userId, ClientType = clientType },
                 commandType: CommandType.StoredProcedure);
         }
 

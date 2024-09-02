@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[NotificationId_ReadByNotificationIdAndUserId]
+CREATE PROCEDURE [dbo].[NotificationStatus_ReadByNotificationIdAndUserId]
     @NotificationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER
 AS

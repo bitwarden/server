@@ -10,37 +10,33 @@ public interface INotificationRepository : IRepository<Notification, Guid>
 {
     /// <summary>
     /// Get notifications for a user with the given filter.
-    /// Includes global notifications and excludes those with status (read or deleted).
+    /// Includes global notifications and notifications with status.
     /// </summary>
     /// <param name="userId">User Id</param>
-    /// <param name="notificationFilter">
-    /// Filter for notifications.
-    /// Always includes notifications with <see cref="ClientType.All"/>.
-    /// Includes organizations notifications when <see cref="NotificationFilter.OrganizationIds"/> is provided.
+    /// <param name="clientType">
+    /// Filter for notifications by client type. Always includes notifications with <see cref="ClientType.All"/>.
     /// </param>
     /// <returns>
     /// Ordered by priority (highest to lowest) and creation date (descending).
     /// </returns>
-    Task<IEnumerable<Notification>> GetByUserIdAsync(Guid userId, NotificationFilter notificationFilter);
+    Task<IEnumerable<Notification>> GetByUserIdAsync(Guid userId, ClientType clientType);
 
     /// <summary>
     /// Get notifications for a user with the given filters.
     /// Includes global notifications.
     /// </summary>
     /// <param name="userId">User Id</param>
-    /// <param name="notificationFilter">
-    /// Filter for notifications.
-    /// Always includes notifications with <see cref="ClientType.All"/>.
-    /// Includes organizations notifications when <see cref="NotificationFilter.OrganizationIds"/> is provided.
+    /// <param name="clientType">
+    /// Filter for notifications by client type. Always includes notifications with <see cref="ClientType.All"/>.
     /// </param>
     /// <param name="statusFilter">
     /// Filters notifications by status.
     /// If both <see cref="NotificationStatusFilter.Read"/> and <see cref="NotificationStatusFilter.Deleted"/>
-    /// are false, includes notifications without a status.
+    /// are not set, includes notifications without a status.
     /// </param>
     /// <returns>
     /// Ordered by priority (highest to lowest) and creation date (descending).
     /// </returns>
-    Task<IEnumerable<Notification>> GetByUserIdAndStatusAsync(Guid userId, NotificationFilter notificationFilter,
+    Task<IEnumerable<Notification>> GetByUserIdAndStatusAsync(Guid userId, ClientType clientType,
         NotificationStatusFilter statusFilter);
 }

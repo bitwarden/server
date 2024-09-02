@@ -9,37 +9,24 @@ BEGIN
 
     SELECT [Notification].*
     FROM [dbo].[Notification]
-    LEFT JOIN [NotificationStatus] ON [Notification].[Id] = [NotificationStatus].[NotificationId]
-    WHERE (
-            (
-                [ClientType] = @ClientType
-                AND [Notification].UserId = @UserId
-                )
-            OR [Global] = 1
-            )
-        AND (
-            [NotificationStatus].UserId IS NULL
-            OR [NotificationStatus].UserId = @UserId
-            )
-        AND (
-            (
-                @Read = 0
-                AND [NotificationStatus].[ReadDate] IS NULL
-                )
-            OR (
-                @Read = 1
-                AND [NotificationStatus].[ReadDate] IS NOT NULL
-                )
-            )
-        AND (
-            (
-                @Deleted = 0
-                AND [NotificationStatus].[DeletedDate] IS NULL
-                )
-            OR (
-                @Deleted = 1
-                AND [NotificationStatus].[DeletedDate] IS NOT NULL
-                )
-            )
-    ORDER BY [CreationDate] DESC
+             LEFT JOIN [dbo].[OrganizationUser] ON [Notification].[OrganizationId] = [OrganizationUser].[OrganizationId]
+        AND [OrganizationUser].[UserId] = @UserId
+             JOIN [dbo].[NotificationStatus] ON [Notification].[Id] = [NotificationStatus].[NotificationId]
+        AND [NotificationStatus].[UserId] = @UserId
+    WHERE [ClientType] IN (0, CASE WHEN @ClientType != 0 THEN @ClientType END)
+      AND ([Global] = 1
+        OR ([Notification].[UserId] = @UserId
+            AND ([Notification].[OrganizationId] IS NULL
+                OR [OrganizationUser].[OrganizationId] IS NOT NULL))
+        OR ([Notification].[UserId] IS NULL
+            AND [OrganizationUser].[OrganizationId] IS NOT NULL))
+      AND (@Read IS NULL
+        OR IIF((@Read = 1 AND [NotificationStatus].[ReadDate] IS NOT NULL) OR
+               (@Read = 0 AND [NotificationStatus].[ReadDate] IS NULL),
+               1, 0) = 1
+        OR @Deleted IS NULL
+        OR IIF((@Deleted = 1 AND [NotificationStatus].[DeletedDate] IS NOT NULL) OR
+               (@Deleted = 0 AND [NotificationStatus].[DeletedDate] IS NULL),
+               1, 0) = 1)
+    ORDER BY [Priority], [Notification].[CreationDate] DESC
 END

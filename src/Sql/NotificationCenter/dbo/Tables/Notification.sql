@@ -17,8 +17,8 @@ CREATE TABLE [dbo].[Notification]
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Notification_CreationDate]
-    ON [dbo].[Notification]([CreationDate] DESC);
+CREATE NONCLUSTERED INDEX [IX_Notification_Priority_CreationDate_ClientType_Global_UserId_OrganizationId]
+    ON [dbo].[Notification]([Priority], [CreationDate] DESC, [ClientType], [Global], [UserId], [OrganizationId]);
 
 
 GO

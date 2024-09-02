@@ -26,7 +26,7 @@ public class NotificationStatusRepository : BaseRepository, INotificationStatusR
         await using var connection = new SqlConnection(ConnectionString);
 
         return await connection.QueryFirstOrDefaultAsync<NotificationStatus>(
-            "[dbo].[NotificationStatus_GetByNotificationIdAndUserId]",
+            "[dbo].[NotificationStatus_ReadByNotificationIdAndUserId]",
             new { NotificationId = notificationId, UserId = userId },
             commandType: CommandType.StoredProcedure);
     }

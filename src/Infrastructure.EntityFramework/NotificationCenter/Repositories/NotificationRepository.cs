@@ -19,22 +19,35 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
     }
 
     public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetByUserIdAsync(Guid userId,
-        NotificationFilter notificationFilter)
+        ClientType clientType)
     {
-        var statusFilter = new NotificationStatusFilter { Read = false, Deleted = false };
-        return await GetByUserIdAndStatusAsync(userId, notificationFilter, statusFilter);
+        return await GetByUserIdAndStatusAsync(userId, clientType, new NotificationStatusFilter());
     }
 
     public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetByUserIdAndStatusAsync(Guid userId,
-        NotificationFilter notificationFilter, NotificationStatusFilter statusFilter)
+        ClientType clientType, NotificationStatusFilter statusFilter)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var notificationStatusQuery =
-            BuildNotificationQueryWithStatusFilter(dbContext, userId, notificationFilter, statusFilter);
+        var notificationQuery = BuildNotificationQuery(dbContext, userId, clientType);
 
-        var notifications = await notificationStatusQuery
+        if (statusFilter.Read != null || statusFilter.Deleted != null)
+        {
+            notificationQuery = from n in notificationQuery
+                                join ns in dbContext.NotificationStatuses on n.Id equals ns.NotificationId
+                                where
+                                    ns.UserId == userId &&
+                                    (
+                                        statusFilter.Read == null ||
+                                        (statusFilter.Read == true ? ns.ReadDate != null : ns.ReadDate == null) ||
+                                        statusFilter.Deleted == null ||
+                                        (statusFilter.Deleted == true ? ns.DeletedDate != null : ns.DeletedDate == null)
+                                    )
+                                select n;
+        }
+
+        var notifications = await notificationQuery
             .OrderBy(n => n.Priority)
             .ThenByDescending(n => n.CreationDate)
             .ToListAsync();
@@ -43,64 +56,30 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
     }
 
     private static IQueryable<Notification> BuildNotificationQuery(DatabaseContext dbContext, Guid userId,
-        NotificationFilter notificationFilter)
+        ClientType clientType)
     {
         var clientTypes = new[] { ClientType.All };
-        if (notificationFilter.ClientType != ClientType.All)
+        if (clientType != ClientType.All)
         {
-            clientTypes = [ClientType.All, notificationFilter.ClientType];
+            clientTypes = [ClientType.All, clientType];
         }
 
-        if (notificationFilter.OrganizationIds != null && notificationFilter.OrganizationIds.Any())
-        {
-            return dbContext.Notifications
-                .Where(n =>
-                    clientTypes.Contains(n.ClientType) &&
-                    (
-                        n.UserId == userId ||
-                        n.Global == true ||
-                        (
-                            n.OrganizationId != null &&
-                            notificationFilter.OrganizationIds.Contains(n.OrganizationId.Value) &&
-                            (
-                                n.UserId == userId ||
-                                n.UserId == null
-                            )
-                        )
-                    )
-                );
-        }
-
-        return dbContext.Notifications
-            .Where(n =>
-                clientTypes.Contains(n.ClientType) &&
-                (
-                    n.UserId == userId ||
-                    n.Global == true
-                )
-            );
-    }
-
-    private static IQueryable<Notification> BuildNotificationQueryWithStatusFilter(
-        DatabaseContext dbContext, Guid userId, NotificationFilter notificationFilter,
-        NotificationStatusFilter statusFilter)
-    {
-        var notificationQuery = BuildNotificationQuery(dbContext, userId, notificationFilter);
-
-        return from n in notificationQuery
-               join ns in dbContext.NotificationStatuses on n.Id equals ns.NotificationId into grouping
-               from ns in grouping.DefaultIfEmpty()
+        return from n in dbContext.Notifications
+               join ou in dbContext.OrganizationUsers.Where(ou => ou.UserId == userId)
+                   on n.OrganizationId equals ou.OrganizationId into grouping
+               from ou in grouping.DefaultIfEmpty()
                where
+                   clientTypes.Contains(n.ClientType) &&
                    (
-                       ns == null &&
-                       !statusFilter.Read &&
-                       !statusFilter.Deleted
-                   ) ||
-                   (
-                       ns != null &&
-                       ns.UserId == userId &&
-                       (statusFilter.Read ? ns.ReadDate != null : ns.ReadDate == null) &&
-                       (statusFilter.Deleted ? ns.DeletedDate != null : ns.DeletedDate == null)
+                       n.Global ||
+                       (
+                           n.UserId == userId &&
+                           (n.OrganizationId == null || ou != null)
+                       ) ||
+                       (
+                           n.UserId == null &&
+                           ou != null
+                       )
                    )
                select n;
     }
