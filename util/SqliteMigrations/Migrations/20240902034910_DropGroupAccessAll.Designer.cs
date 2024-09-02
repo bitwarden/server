@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240827034910_DropGroupAccessAll")]
+    [Migration("20240902034910_DropGroupAccessAll")]
     partial class DropGroupAccessAll
     {
         /// <inheritdoc />

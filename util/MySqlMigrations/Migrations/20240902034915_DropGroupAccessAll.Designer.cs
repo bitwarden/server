@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240827034915_DropGroupAccessAll")]
+    [Migration("20240902034915_DropGroupAccessAll")]
     partial class DropGroupAccessAll
     {
         /// <inheritdoc />

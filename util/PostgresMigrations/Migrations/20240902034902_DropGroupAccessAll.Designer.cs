@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240827034902_DropGroupAccessAll")]
+    [Migration("20240902034902_DropGroupAccessAll")]
     partial class DropGroupAccessAll
     {
         /// <inheritdoc />
