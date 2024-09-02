@@ -16,7 +16,7 @@
   "devDependencies": {
     "css-loader": "7.1.2",
     "expose-loader": "5.0.0",
-    "mini-css-extract-plugin": "2.9.0",
+    "mini-css-extract-plugin": "2.9.1",
     "sass": "1.77.8",
     "sass-loader": "16.0.0",
     "webpack": "5.94.0",
