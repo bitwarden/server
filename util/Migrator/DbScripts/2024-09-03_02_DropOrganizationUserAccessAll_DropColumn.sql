@@ -1,4 +1,4 @@
--- Finalise removal of Group.AccessAll column
+-- Finalise removal of OrganizationUser.AccessAll column
 -- Drop the column
 
 /****************************************************************
@@ -13,6 +13,14 @@
 PRINT N'Dropping index IX_OrganizationUser_UserIdOrganizationIdStatus...';
 DROP INDEX IF EXISTS [IX_OrganizationUser_UserIdOrganizationIdStatus]
     ON [dbo].[OrganizationUser];
+
+-- Drop default constraint
+IF OBJECT_ID('[dbo].[DF_OrganizationUser_AccessAll]', 'D') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[OrganizationUser]
+    DROP CONSTRAINT [DF_OrganizationUser_AccessAll];
+END
+GO
 
 -- Drop the column
 IF COL_LENGTH('[dbo].[OrganizationUser]', 'AccessAll') IS NOT NULL

@@ -1,4 +1,4 @@
--- Finalise removal of Group.AccessAll column
+-- Finalise removal of OrganizationUser.AccessAll column
 -- Remove the column from sprocs
 
 -- Drop old sprocs and type
