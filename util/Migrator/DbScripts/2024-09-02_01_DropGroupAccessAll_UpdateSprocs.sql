@@ -1,22 +1,4 @@
 -- Finalise removal of Group.AccessAll column
--- Drop the column
-
-IF COL_LENGTH('[dbo].[Group]', 'AccessAll') IS NOT NULL
-BEGIN
-    ALTER TABLE
-        [dbo].[Group]
-    DROP COLUMN
-        [AccessAll]
-END
-GO
-
--- Refresh views
-IF OBJECT_ID('[dbo].[GroupView]') IS NOT NULL
-    BEGIN
-        EXECUTE sp_refreshsqlmodule N'[dbo].[GroupView]';
-    END
-GO
-
 -- Remove the column from sprocs
 
 CREATE OR ALTER PROCEDURE [dbo].[Group_Create]
