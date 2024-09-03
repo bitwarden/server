@@ -3,12 +3,12 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Billing.Models;
 
-public record MaskedPaymentMethodDTO(
+public record PaymentSource(
     PaymentMethodType Type,
     string Description,
     bool NeedsVerification)
 {
-    public static MaskedPaymentMethodDTO From(Stripe.Customer customer)
+    public static PaymentSource From(Stripe.Customer customer)
     {
         var defaultPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod;
 
@@ -25,7 +25,7 @@ public record MaskedPaymentMethodDTO(
         };
     }
 
-    public static MaskedPaymentMethodDTO From(Stripe.SetupIntent setupIntent)
+    public static PaymentSource From(Stripe.SetupIntent setupIntent)
     {
         if (!setupIntent.IsUnverifiedBankAccount())
         {
@@ -36,13 +36,13 @@ public record MaskedPaymentMethodDTO(
 
         var description = $"{bankAccount.BankName}, *{bankAccount.Last4}";
 
-        return new MaskedPaymentMethodDTO(
+        return new PaymentSource(
             PaymentMethodType.BankAccount,
             description,
             true);
     }
 
-    public static MaskedPaymentMethodDTO From(Braintree.Customer customer)
+    public static PaymentSource From(Braintree.Customer customer)
     {
         var defaultPaymentMethod = customer.DefaultPaymentMethod;
 
@@ -55,7 +55,7 @@ public record MaskedPaymentMethodDTO(
         {
             case Braintree.PayPalAccount payPalAccount:
                 {
-                    return new MaskedPaymentMethodDTO(
+                    return new PaymentSource(
                         PaymentMethodType.PayPal,
                         payPalAccount.Email,
                         false);
@@ -67,14 +67,14 @@ public record MaskedPaymentMethodDTO(
                     var description =
                         $"{creditCard.CardType}, *{creditCard.LastFour}, {paddedExpirationMonth}/{creditCard.ExpirationYear}";
 
-                    return new MaskedPaymentMethodDTO(
+                    return new PaymentSource(
                         PaymentMethodType.Card,
                         description,
                         false);
                 }
             case Braintree.UsBankAccount bankAccount:
                 {
-                    return new MaskedPaymentMethodDTO(
+                    return new PaymentSource(
                         PaymentMethodType.BankAccount,
                         $"{bankAccount.BankName}, *{bankAccount.Last4}",
                         false);
@@ -86,18 +86,18 @@ public record MaskedPaymentMethodDTO(
         }
     }
 
-    private static MaskedPaymentMethodDTO FromStripeBankAccountPaymentMethod(
+    private static PaymentSource FromStripeBankAccountPaymentMethod(
         Stripe.PaymentMethodUsBankAccount bankAccount)
     {
         var description = $"{bankAccount.BankName}, *{bankAccount.Last4}";
 
-        return new MaskedPaymentMethodDTO(
+        return new PaymentSource(
             PaymentMethodType.BankAccount,
             description,
             false);
     }
 
-    private static MaskedPaymentMethodDTO FromStripeCardPaymentMethod(Stripe.PaymentMethodCard card)
+    private static PaymentSource FromStripeCardPaymentMethod(Stripe.PaymentMethodCard card)
         => new(
             PaymentMethodType.Card,
             GetCardDescription(card.Brand, card.Last4, card.ExpMonth, card.ExpYear),
@@ -105,7 +105,7 @@ public record MaskedPaymentMethodDTO(
 
     #region Legacy Source Payments
 
-    private static MaskedPaymentMethodDTO FromStripeLegacyPaymentSource(Stripe.IPaymentSource paymentSource)
+    private static PaymentSource FromStripeLegacyPaymentSource(Stripe.IPaymentSource paymentSource)
         => paymentSource switch
         {
             Stripe.BankAccount bankAccount => FromStripeBankAccountLegacySource(bankAccount),
@@ -114,7 +114,7 @@ public record MaskedPaymentMethodDTO(
             _ => null
         };
 
-    private static MaskedPaymentMethodDTO FromStripeBankAccountLegacySource(Stripe.BankAccount bankAccount)
+    private static PaymentSource FromStripeBankAccountLegacySource(Stripe.BankAccount bankAccount)
     {
         var status = bankAccount.Status switch
         {
@@ -128,19 +128,19 @@ public record MaskedPaymentMethodDTO(
 
         var needsVerification = bankAccount.Status is "new" or "validated";
 
-        return new MaskedPaymentMethodDTO(
+        return new PaymentSource(
             PaymentMethodType.BankAccount,
             description,
             needsVerification);
     }
 
-    private static MaskedPaymentMethodDTO FromStripeCardLegacySource(Stripe.Card card)
+    private static PaymentSource FromStripeCardLegacySource(Stripe.Card card)
         => new(
             PaymentMethodType.Card,
             GetCardDescription(card.Brand, card.Last4, card.ExpMonth, card.ExpYear),
             false);
 
-    private static MaskedPaymentMethodDTO FromStripeSourceCardLegacySource(Stripe.SourceCard card)
+    private static PaymentSource FromStripeSourceCardLegacySource(Stripe.SourceCard card)
         => new(
             PaymentMethodType.Card,
             GetCardDescription(card.Brand, card.Last4, card.ExpMonth, card.ExpYear),

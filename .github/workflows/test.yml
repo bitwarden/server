@@ -49,7 +49,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+        uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
 
       - name: Print environment
         run: |
@@ -69,7 +69,7 @@ jobs:
 
       - name: Report test results
         uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
-        if: ${{ needs.check-test-secrets.outputs.available == 'true' }} && always()
+        if: ${{ needs.check-test-secrets.outputs.available == 'true' && !cancelled() }}
         with:
           name: Test Results
           path: "**/*-test-results.trx"

@@ -113,21 +113,43 @@ public class UserLicense : ILicense
         }
     }
 
-    public bool CanUse(User user)
+    public bool CanUse(User user, out string exception)
     {
-        if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
+        var errorMessages = new StringBuilder();
+
+        if (Issued > DateTime.UtcNow)
         {
-            return false;
+            errorMessages.AppendLine("The license hasn't been issued yet.");
         }
 
-        if (Version == 1)
+        if (Expires < DateTime.UtcNow)
         {
-            return user.EmailVerified && user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
+            errorMessages.AppendLine("The license has expired.");
         }
-        else
+
+        if (Version != 1)
         {
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
+
+        if (!user.EmailVerified)
+        {
+            errorMessages.AppendLine("The user's email is not verified.");
+        }
+
+        if (!user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase))
+        {
+            errorMessages.AppendLine("The user's email does not match the license email.");
+        }
+
+        if (errorMessages.Length > 0)
+        {
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
+            return false;
+        }
+
+        exception = "";
+        return true;
     }
 
     public bool VerifyData(User user)
@@ -144,10 +166,8 @@ public class UserLicense : ILicense
                 user.Premium == Premium &&
                 user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
         }
-        else
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
+
+        throw new NotSupportedException($"Version {Version} is not supported.");
     }
 
     public bool VerifySignature(X509Certificate2 certificate)
