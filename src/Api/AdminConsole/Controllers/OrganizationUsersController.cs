@@ -1,5 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -50,6 +51,7 @@ public class OrganizationUsersController : Controller
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IDeleteManagedOrganizationUserAccountCommand _deleteManagedOrganizationUserAccountCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -69,7 +71,8 @@ public class OrganizationUsersController : Controller
         IApplicationCacheService applicationCacheService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -89,6 +92,7 @@ public class OrganizationUsersController : Controller
         _featureService = featureService;
         _ssoConfigRepository = ssoConfigRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _deleteManagedOrganizationUserAccountCommand = deleteManagedOrganizationUserAccountCommand;
     }
 
     [HttpGet("{id}")]
@@ -533,6 +537,30 @@ public class OrganizationUsersController : Controller
         var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    [HttpDelete("{id}/delete-account")]
+    [HttpPost("{id}/delete-account")]
+    public async Task DeleteAccount(Guid orgId, Guid id, [FromBody] SecretVerificationRequestModel model)
+    {
+        if (!await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var currentUser = await _userService.GetUserByPrincipalAsync(User);
+        if (currentUser == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id);
     }
 
     [HttpPatch("{id}/revoke")]
