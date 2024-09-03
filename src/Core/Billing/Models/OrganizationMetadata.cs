@@ -1,8 +1,8 @@
 ﻿namespace Bit.Core.Billing.Models;
 
-public record OrganizationMetadataDTO(
+public record OrganizationMetadata(
     bool IsOnSecretsManagerStandalone)
 {
-    public static OrganizationMetadataDTO Default() => new(
+    public static OrganizationMetadata Default() => new(
         IsOnSecretsManagerStandalone: default);
 }

@@ -27,7 +27,7 @@ internal class Program
         bool success;
         if (!string.IsNullOrWhiteSpace(folderName))
         {
-            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, folderName, dryRun);
+            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, folderName, dryRun: dryRun);
         }
         else
         {
