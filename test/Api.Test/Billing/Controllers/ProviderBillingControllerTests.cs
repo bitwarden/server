@@ -107,7 +107,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         var invoices = new List<Invoice>
         {
@@ -187,7 +187,7 @@ public class ProviderBillingControllerTests
         string invoiceId,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
             .ReturnsNull();
@@ -208,7 +208,7 @@ public class ProviderBillingControllerTests
         string invoiceId,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         var reportContent = "Report"u8.ToArray();
 
@@ -301,7 +301,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -432,7 +432,7 @@ public class ProviderBillingControllerTests
         TaxInformationRequestBody requestBody,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         requestBody.Country = null;
 
@@ -451,7 +451,7 @@ public class ProviderBillingControllerTests
         TaxInformationRequestBody requestBody,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
 

@@ -12,10 +12,6 @@ public class OrganizationUserEntityTypeConfiguration : IEntityTypeConfiguration<
             .Property(ou => ou.Id)
             .ValueGeneratedNever();
 
-        NpgsqlIndexBuilderExtensions.IncludeProperties(
-            builder.HasIndex(ou => new { ou.UserId, ou.OrganizationId, ou.Status }).IsClustered(false),
-            ou => ou.AccessAll);
-
         builder
             .HasIndex(ou => ou.OrganizationId)
             .IsClustered(false);
