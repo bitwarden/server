@@ -33,7 +33,7 @@ public class ProviderClientsControllerTests
         CreateClientOrganizationRequestBody requestBody,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
 
@@ -48,7 +48,7 @@ public class ProviderClientsControllerTests
         CreateClientOrganizationRequestBody requestBody,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         var user = new User();
 
@@ -99,7 +99,7 @@ public class ProviderClientsControllerTests
         UpdateClientOrganizationRequestBody requestBody,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
             .ReturnsNull();
@@ -118,7 +118,7 @@ public class ProviderClientsControllerTests
         Organization organization,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
             .Returns(providerOrganization);
@@ -149,7 +149,7 @@ public class ProviderClientsControllerTests
         Organization organization,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
             .Returns(providerOrganization);
