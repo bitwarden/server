@@ -1,0 +1,11 @@
+{
+    "profiles": {
+        "Proxy": {
+            "commandName": "Project",
+            "applicationUrl": "http://localhost:5005",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    }
+}
