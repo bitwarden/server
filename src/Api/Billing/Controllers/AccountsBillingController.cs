@@ -43,7 +43,7 @@ public class AccountsBillingController(
     }
 
     [HttpGet("invoices")]
-    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid organizationId, [FromQuery] string startAfter = null)
+    public async Task<IResult> GetInvoicesAsync([FromQuery] string startAfter = null)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -60,7 +60,7 @@ public class AccountsBillingController(
     }
 
     [HttpGet("transactions")]
-    public async Task<IResult> GetTransactionsAsync([FromRoute] Guid organizationId, [FromQuery] DateTime? startAfter = null)
+    public async Task<IResult> GetTransactionsAsync([FromQuery] DateTime? startAfter = null)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
