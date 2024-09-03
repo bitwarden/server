@@ -563,6 +563,33 @@ public class OrganizationUsersController : Controller
         await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id);
     }
 
+    [HttpDelete("delete-account")]
+    [HttpPost("delete-account")]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] SecureOrganizationUserBulkRequestModel model)
+    {
+        if (!await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var currentUser = await _userService.GetUserByPrincipalAsync(User);
+        if (currentUser == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids);
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
+            new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
     [HttpPatch("{id}/revoke")]
     [HttpPut("{id}/revoke")]
     public async Task RevokeAsync(Guid orgId, Guid id)
