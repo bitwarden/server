@@ -18,8 +18,8 @@ public class NotificationEntityTypeConfiguration : IEntityTypeConfiguration<Noti
             .IsClustered();
 
         builder
-            .HasIndex(n => new { n.Priority, n.CreationDate, n.ClientType, n.Global, n.UserId, n.OrganizationId })
-            .IsDescending(false, true, false, false, false, false)
+            .HasIndex(n => new { n.ClientType, n.Global, n.UserId, n.OrganizationId, n.Priority, n.CreationDate, })
+            .IsDescending(false, false, false, false, false, true)
             .IsClustered(false);
 
         builder

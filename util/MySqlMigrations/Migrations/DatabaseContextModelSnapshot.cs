@@ -1636,8 +1636,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("Priority", "CreationDate", "ClientType", "Global", "UserId", "OrganizationId")
-                        .IsDescending(false, true, false, false, false, false)
+                    b.HasIndex("ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate")
+                        .IsDescending(false, false, false, false, false, true)
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Notification", (string)null);

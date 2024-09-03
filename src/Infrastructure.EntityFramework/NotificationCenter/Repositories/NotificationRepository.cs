@@ -71,12 +71,18 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
                where
                    clientTypes.Contains(n.ClientType) &&
                    (
-                       n.Global ||
                        (
+                           n.Global &&
+                           n.UserId == null &&
+                           n.OrganizationId == null
+                       ) ||
+                       (
+                           !n.Global &&
                            n.UserId == userId &&
                            (n.OrganizationId == null || ou != null)
                        ) ||
                        (
+                           !n.Global &&
                            n.UserId == null &&
                            ou != null
                        )

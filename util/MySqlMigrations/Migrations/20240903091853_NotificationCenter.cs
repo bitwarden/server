@@ -71,15 +71,15 @@ public partial class NotificationCenter : Migration
             .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateIndex(
+            name: "IX_Notification_ClientType_Global_UserId_OrganizationId_Priorit~",
+            table: "Notification",
+            columns: new[] { "ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate" },
+            descending: new[] { false, false, false, false, false, true });
+
+        migrationBuilder.CreateIndex(
             name: "IX_Notification_OrganizationId",
             table: "Notification",
             column: "OrganizationId");
-
-        migrationBuilder.CreateIndex(
-            name: "IX_Notification_Priority_CreationDate_ClientType_Global_UserId_~",
-            table: "Notification",
-            columns: new[] { "Priority", "CreationDate", "ClientType", "Global", "UserId", "OrganizationId" },
-            descending: new[] { false, true, false, false, false, false });
 
         migrationBuilder.CreateIndex(
             name: "IX_Notification_UserId",
