@@ -33,6 +33,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
 
+
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
