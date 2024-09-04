@@ -506,8 +506,8 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
-    public async Task Delete(string orgId, string id)
+    [HttpPost("{id}/remove")]
+    public async Task Remove(string orgId, string id)
     {
         var orgGuidId = new Guid(orgId);
         if (!await _currentContext.ManageUsers(orgGuidId))
@@ -516,12 +516,12 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.DeleteUserAsync(orgGuidId, new Guid(id), userId.Value);
+        await _organizationService.RemoveUserAsync(orgGuidId, new Guid(id), userId.Value);
     }
 
     [HttpDelete("")]
-    [HttpPost("delete")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDelete(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    [HttpPost("remove")]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRemove(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         var orgGuidId = new Guid(orgId);
         if (!await _currentContext.ManageUsers(orgGuidId))
@@ -530,7 +530,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
+        var result = await _organizationService.RemoveUsersAsync(orgGuidId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
