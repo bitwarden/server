@@ -152,3 +152,31 @@ jobs:
 
       - name: Log out of Docker
         run: docker logout
+
+  update-deployment:
+    name: Update Deployment Status
+    runs-on: ubuntu-22.04
+    needs:
+      - setup
+      - publish-docker
+    if: ${{ always() && inputs.publish_type != 'Dry Run' }}
+    steps:
+      - name: Check if any job failed
+        if: contains(needs.*.result, 'failure')
+        run: exit 1
+
+      - name: Update deployment status to Success
+        if: ${{ inputs.publish_type != 'Dry Run' && success() }}
+        uses: chrnorm/deployment-status@9a72af4586197112e0491ea843682b5dc280d806 # v2.0.3
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'success'
+          deployment-id: ${{ needs.setup.outputs.deployment-id }}
+
+      - name: Update deployment status to Failure
+        if: ${{ inputs.publish_type != 'Dry Run' && failure() }}
+        uses: chrnorm/deployment-status@9a72af4586197112e0491ea843682b5dc280d806 # v2.0.3
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'failure'
+          deployment-id: ${{ needs.setup.outputs.deployment-id }}
