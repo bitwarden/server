@@ -231,7 +231,7 @@ public class OrganizationsController : Controller
         }
 
 
-        await _organizationService.DeleteUserAsync(orgGuidId, user.Id);
+        await _organizationService.RemoveUserAsync(orgGuidId, user.Id);
     }
 
     [HttpDelete("{id}")]

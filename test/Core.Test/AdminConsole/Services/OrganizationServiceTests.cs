@@ -1182,7 +1182,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_InvalidUser(OrganizationUser organizationUser, OrganizationUser deletingUser,
+    public async Task RemoveUser_InvalidUser(OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -1190,24 +1190,24 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUserAsync(Guid.NewGuid(), organizationUser.Id, deletingUser.UserId));
+            () => sutProvider.Sut.RemoveUserAsync(Guid.NewGuid(), organizationUser.Id, deletingUser.UserId));
         Assert.Contains("User not valid.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_RemoveYourself(OrganizationUser deletingUser, SutProvider<OrganizationService> sutProvider)
+    public async Task RemoveUser_RemoveYourself(OrganizationUser deletingUser, SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         organizationUserRepository.GetByIdAsync(deletingUser.Id).Returns(deletingUser);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, deletingUser.Id, deletingUser.UserId));
+            () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, deletingUser.Id, deletingUser.UserId));
         Assert.Contains("You cannot remove yourself.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_NonOwnerRemoveOwner(
+    public async Task RemoveUser_NonOwnerRemoveOwner(
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1220,12 +1220,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         currentContext.OrganizationAdmin(deletingUser.OrganizationId).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
+            () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
         Assert.Contains("Only owners can delete other owners.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_LastOwner(
+    public async Task RemoveUser_LastOwner(
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
         OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1238,12 +1238,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(new[] { organizationUser });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, null));
+            () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, null));
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_Success(
+    public async Task RemoveUser_Success(
         OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1258,13 +1258,13 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(new[] { deletingUser, organizationUser });
         currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
+        await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_WithEventSystemUser_Success(
+    public async Task RemoveUser_WithEventSystemUser_Success(
         OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser, EventSystemUser eventSystemUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1279,13 +1279,13 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(new[] { deletingUser, organizationUser });
         currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, eventSystemUser);
+        await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, eventSystemUser);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_FilterInvalid(OrganizationUser organizationUser, OrganizationUser deletingUser,
+    public async Task RemoveUsers_FilterInvalid(OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -1294,12 +1294,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId));
+            () => sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId));
         Assert.Contains("Users invalid.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_RemoveYourself(
+    public async Task RemoveUsers_RemoveYourself(
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1310,12 +1310,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
         organizationUserRepository.GetManyByOrganizationAsync(default, default).ReturnsForAnyArgs(new[] { orgUser });
 
-        var result = await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+        var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
         Assert.Contains("You cannot remove yourself.", result[0].Item2);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_NonOwnerRemoveOwner(
+    public async Task RemoveUsers_NonOwnerRemoveOwner(
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser orgUser2,
@@ -1329,12 +1329,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
         organizationUserRepository.GetManyByOrganizationAsync(default, default).ReturnsForAnyArgs(new[] { orgUser2 });
 
-        var result = await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+        var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
         Assert.Contains("Only owners can delete other owners.", result[0].Item2);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_LastOwner(
+    public async Task RemoveUsers_LastOwner(
         [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -1346,12 +1346,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyByOrganizationAsync(orgUser.OrganizationId, OrganizationUserType.Owner).Returns(organizationUsers);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUsersAsync(orgUser.OrganizationId, organizationUserIds, null));
+            () => sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, organizationUserIds, null));
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_Success(
+    public async Task RemoveUsers_Success(
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1, OrganizationUser orgUser2,
         SutProvider<OrganizationService> sutProvider)
@@ -1368,7 +1368,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(new[] { deletingUser, orgUser1 });
         currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+        await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
     }
 
     [Theory, BitAutoData]

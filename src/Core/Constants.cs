@@ -140,6 +140,7 @@ public static class FeatureFlagKeys
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
     public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
+    public const string PersistPopupView = "persist-popup-view";
 
     public static List<string> GetAllKeys()
     {
