@@ -891,9 +891,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 throw new BadRequestException("Invalid license.");
             }
 
-            if (!license.CanUse(user))
+            if (!license.CanUse(user, out var exceptionMessage))
             {
-                throw new BadRequestException("This license is not valid for this user.");
+                throw new BadRequestException(exceptionMessage);
             }
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -960,9 +960,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        if (!license.CanUse(user))
+        if (!license.CanUse(user, out var exceptionMessage))
         {
-            throw new BadRequestException("This license is not valid for this user.");
+            throw new BadRequestException(exceptionMessage);
         }
 
         var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -1298,7 +1298,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
-            await organizationService.DeleteUserAsync(p.OrganizationId, user.Id);
+            await organizationService.RemoveUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                 organization.DisplayName(), user.Email);

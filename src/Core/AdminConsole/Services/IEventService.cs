@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
@@ -18,10 +19,10 @@ public interface IEventService
     Task LogGroupEventAsync(Group group, EventType type, EventSystemUser systemUser, DateTime? date = null);
     Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, EventSystemUser? systemUser, DateTime? date)> events);
     Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null);
-    Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null);
-    Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, EventSystemUser systemUser, DateTime? date = null);
-    Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events);
-    Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events);
+    Task LogOrganizationUserEventAsync<T>(T organizationUser, EventType type, DateTime? date = null) where T : IOrganizationUser;
+    Task LogOrganizationUserEventAsync<T>(T organizationUser, EventType type, EventSystemUser systemUser, DateTime? date = null) where T : IOrganizationUser;
+    Task LogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, DateTime?)> events) where T : IOrganizationUser;
+    Task LogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, EventSystemUser, DateTime?)> events) where T : IOrganizationUser;
     Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null);
     Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null);
     Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events);

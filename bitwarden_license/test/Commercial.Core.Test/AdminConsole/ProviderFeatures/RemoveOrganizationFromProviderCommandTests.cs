@@ -173,7 +173,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
                 options.DaysUntilDue == 30));
 
-        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentMethod(organization);
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentSource(organization);
 
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
 
