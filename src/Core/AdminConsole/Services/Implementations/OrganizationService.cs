@@ -1591,15 +1591,15 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
+    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
+    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
     }
 
-    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId,
+    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
+    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId,
         EventSystemUser systemUser)
     {
         var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null);
@@ -1640,7 +1640,7 @@ public class OrganizationService : IOrganizationService
         return orgUser;
     }
 
-    public async Task DeleteUserAsync(Guid organizationId, Guid userId)
+    public async Task RemoveUserAsync(Guid organizationId, Guid userId)
     {
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
         if (orgUser == null)
@@ -1662,7 +1662,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
+    public async Task<List<Tuple<OrganizationUser, string>>> RemoveUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUsersId,
         Guid? deletingUserId)
     {
