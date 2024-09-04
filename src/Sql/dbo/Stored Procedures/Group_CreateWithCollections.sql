@@ -2,7 +2,6 @@ CREATE PROCEDURE [dbo].[Group_CreateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(100),
-    @AccessAll BIT = 0,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
@@ -11,7 +10,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Group_Create] @Id, @OrganizationId, @Name, @AccessAll, @ExternalId, @CreationDate, @RevisionDate
+    EXEC [dbo].[Group_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT

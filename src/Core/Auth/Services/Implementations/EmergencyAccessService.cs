@@ -341,7 +341,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         {
             if (o.Type != OrganizationUserType.Owner)
             {
-                await _organizationService.DeleteUserAsync(o.OrganizationId, grantor.Id);
+                await _organizationService.RemoveUserAsync(o.OrganizationId, grantor.Id);
             }
         }
     }
