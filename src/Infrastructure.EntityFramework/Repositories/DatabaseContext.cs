@@ -103,7 +103,6 @@ public class DatabaseContext : DbContext
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
         // Shadow property configurations
-        eGroup.Property<bool>("AccessAll").HasDefaultValue(false);
         builder.Entity<OrganizationUser>()
             .Property<bool>("AccessAll")
             .HasDefaultValue(false);
