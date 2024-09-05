@@ -2,7 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
 public abstract class CancelSponsorshipCommand
 {

@@ -1,7 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business.Tokenables;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;

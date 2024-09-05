@@ -1,7 +1,7 @@
 ﻿using Bit.Api.Models.Request.Organizations;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;

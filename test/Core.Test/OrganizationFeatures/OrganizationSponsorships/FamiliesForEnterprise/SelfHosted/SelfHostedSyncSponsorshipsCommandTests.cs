@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.Models.OrganizationConnectionConfigs;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;

@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 
 public interface ISelfHostedSyncSponsorshipsCommand
 {

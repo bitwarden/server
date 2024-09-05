@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 
 public interface ICreateSponsorshipCommand
 {

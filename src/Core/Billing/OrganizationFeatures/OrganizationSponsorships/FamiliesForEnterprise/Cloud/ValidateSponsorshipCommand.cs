@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Entities;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 
 public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSponsorshipCommand
 {
@@ -91,7 +91,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(existingSponsorship.PlanSponsorshipType.Value);
+        var sponsoredPlan = Core.Utilities.StaticStore.GetSponsoredPlan(existingSponsorship.PlanSponsorshipType.Value);
 
         var sponsoringOrganization = await _organizationRepository
             .GetByIdAsync(existingSponsorship.SponsoringOrganizationId.Value);
@@ -103,7 +103,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
+        var sponsoringOrgPlan = Core.Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
 
         if (OrgDisabledForMoreThanGracePeriod(sponsoringOrganization))
         {

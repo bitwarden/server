@@ -1,13 +1,13 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 
-public class SelfHostedRevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
+public class CloudRevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
 {
-    public SelfHostedRevokeSponsorshipCommand(
+    public CloudRevokeSponsorshipCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
     {
@@ -20,7 +20,7 @@ public class SelfHostedRevokeSponsorshipCommand : CancelSponsorshipCommand, IRev
             throw new BadRequestException("You are not currently sponsoring an organization.");
         }
 
-        if (sponsorship.LastSyncDate == null)
+        if (sponsorship.SponsoredOrganizationId == null)
         {
             await base.DeleteSponsorshipAsync(sponsorship);
         }
