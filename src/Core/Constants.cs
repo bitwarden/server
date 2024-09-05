@@ -142,6 +142,7 @@ public static class FeatureFlagKeys
     public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
     public const string PersistPopupView = "persist-popup-view";
     public const string CipherKeyEncryption = "cipher-key-encryption";
+    public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
 
     public static List<string> GetAllKeys()
     {

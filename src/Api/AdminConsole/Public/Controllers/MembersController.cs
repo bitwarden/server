@@ -226,24 +226,24 @@ public class MembersController : Controller
     }
 
     /// <summary>
-    /// Delete a member.
+    /// Remove a member.
     /// </summary>
     /// <remarks>
-    /// Permanently deletes a member from the organization. This cannot be undone.
+    /// Permanently removes a member from the organization. This cannot be undone.
     /// The user account will still remain. The user is only removed from the organization.
     /// </remarks>
-    /// <param name="id">The identifier of the member to be deleted.</param>
+    /// <param name="id">The identifier of the member to be removed.</param>
     [HttpDelete("{id}")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Remove(Guid id)
     {
         var user = await _organizationUserRepository.GetByIdAsync(id);
         if (user == null || user.OrganizationId != _currentContext.OrganizationId)
         {
             return new NotFoundResult();
         }
-        await _organizationService.DeleteUserAsync(_currentContext.OrganizationId.Value, id, null);
+        await _organizationService.RemoveUserAsync(_currentContext.OrganizationId.Value, id, null);
         return new OkResult();
     }
 
