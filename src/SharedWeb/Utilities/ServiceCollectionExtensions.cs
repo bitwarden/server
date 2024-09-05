@@ -537,31 +537,7 @@ public static class ServiceCollectionExtensions
     public static void UseDefaultMiddleware(this IApplicationBuilder app,
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
-        string GetHeaderValue(HttpContext httpContext, string header)
-        {
-            if (httpContext.Request.Headers.ContainsKey(header))
-            {
-                return httpContext.Request.Headers[header];
-            }
-            return null;
-        }
-
-        // Add version information to response headers
-        app.Use(async (httpContext, next) =>
-        {
-            using (LogContext.PushProperty("IPAddress", httpContext.GetIpAddress(globalSettings)))
-            using (LogContext.PushProperty("UserAgent", GetHeaderValue(httpContext, "user-agent")))
-            using (LogContext.PushProperty("DeviceType", GetHeaderValue(httpContext, "device-type")))
-            using (LogContext.PushProperty("Origin", GetHeaderValue(httpContext, "origin")))
-            {
-                httpContext.Response.OnStarting((state) =>
-                {
-                    httpContext.Response.Headers.Append("Server-Version", AssemblyHelpers.GetVersion());
-                    return Task.FromResult(0);
-                }, null);
-                await next.Invoke();
-            }
-        });
+        app.UseMiddleware<RequestLoggingMiddleware>();
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
