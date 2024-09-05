@@ -19,7 +19,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         : base(serviceScopeFactory, mapper, db => db.Secret)
     { }
 
-    public override async Task<Core.SecretsManager.Entities.Secret> GetByIdAsync(Guid id)
+    public override async Task<Core.SecretsManager.Entities.Secret?> GetByIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

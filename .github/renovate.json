@@ -41,12 +41,6 @@
       "reviewers": ["team:team-auth-dev"]
     },
     {
-      "matchPackageNames": ["bootstrap"],
-      "matchUpdateTypes": ["major"],
-      "description": "Lock bootstrap major versions due to ASP.NET conflicts",
-      "enabled": false
-    },
-    {
       "matchPackageNames": [
         "AspNetCoreRateLimit",
         "AspNetCoreRateLimit.Redis",

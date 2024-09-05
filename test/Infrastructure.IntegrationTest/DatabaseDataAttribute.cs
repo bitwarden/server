@@ -3,6 +3,8 @@ using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.IntegrationTest.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +18,7 @@ public class DatabaseDataAttribute : DataAttribute
 {
     public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
+    public string? MigrationName { get; set; }
 
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
@@ -74,6 +77,12 @@ public class DatabaseDataAttribute : DataAttribute
                     o.SchemaName = "dbo";
                     o.TableName = "Cache";
                 });
+
+                if (!string.IsNullOrEmpty(MigrationName))
+                {
+                    AddSqlMigrationTester(dapperSqlServerCollection, database.ConnectionString, MigrationName);
+                }
+
                 yield return dapperSqlServerCollection.BuildServiceProvider();
             }
             else
@@ -84,6 +93,12 @@ public class DatabaseDataAttribute : DataAttribute
                 efCollection.AddPasswordManagerEFRepositories(SelfHosted);
                 efCollection.AddSingleton(database);
                 efCollection.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+
+                if (!string.IsNullOrEmpty(MigrationName))
+                {
+                    AddEfMigrationTester(efCollection, database.Type, MigrationName);
+                }
+
                 yield return efCollection.BuildServiceProvider();
             }
         }
@@ -98,5 +113,19 @@ public class DatabaseDataAttribute : DataAttribute
         {
             services.AddSingleton<TimeProvider, FakeTimeProvider>();
         }
+    }
+
+    private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
+    {
+        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(sp => new SqlMigrationTesterService(connectionString, migrationName));
+    }
+
+    private void AddEfMigrationTester(IServiceCollection services, SupportedDatabaseProviders databaseType, string migrationName)
+    {
+        services.AddSingleton<IMigrationTesterService, EfMigrationTesterService>(sp =>
+        {
+            var dbContext = sp.GetRequiredService<DatabaseContext>();
+            return new EfMigrationTesterService(dbContext, databaseType, migrationName);
+        });
     }
 }
