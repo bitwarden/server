@@ -91,14 +91,19 @@ public class StripeController : Controller
     /// </returns>
     private string PickStripeWebhookSecret(string webhookBody)
     {
-        var versionContainer = JsonSerializer.Deserialize<StripeWebhookVersionContainer>(webhookBody);
+        var deliveryContainer = JsonSerializer.Deserialize<StripeWebhookDeliveryContainer>(webhookBody);
 
-        return versionContainer.ApiVersion switch
+        _logger.LogInformation("Picking webhook secret for Stripe event ({EventID}) | API Version: {ApiVersion} | Causing Request ID: {RequestID}",
+            deliveryContainer.Id,
+            deliveryContainer.ApiVersion,
+            deliveryContainer.Request.Id);
+
+        return deliveryContainer.ApiVersion switch
         {
             "2024-06-20" => _billingSettings.StripeWebhookSecret20240620,
             "2023-10-16" => _billingSettings.StripeWebhookSecret20231016,
             "2022-08-01" => _billingSettings.StripeWebhookSecret,
-            _ => HandleDefault(versionContainer.ApiVersion)
+            _ => HandleDefault(deliveryContainer.ApiVersion)
         };
 
         string HandleDefault(string version)
