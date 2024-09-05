@@ -52,8 +52,7 @@ public class OrganizationServiceTests
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Guid userId,
-        Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
+    public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
     {
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
@@ -93,7 +92,7 @@ public class OrganizationServiceTests
                 }
             );
 
-        await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
+        await sutProvider.Sut.ImportAsync(org.Id, null, newUsers, null, false, EventSystemUser.PublicApi);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
@@ -112,7 +111,7 @@ public class OrganizationServiceTests
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
             events.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IReferenceEventService>().Received(1)
             .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
@@ -121,8 +120,7 @@ public class OrganizationServiceTests
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task OrgImportCreateNewUsersAndMarryExistingUser(SutProvider<OrganizationService> sutProvider,
-        Guid userId, Organization org, List<OrganizationUserUserDetails> existingUsers,
+    public async Task OrgImportCreateNewUsersAndMarryExistingUser(SutProvider<OrganizationService> sutProvider, Organization org, List<OrganizationUserUserDetails> existingUsers,
         List<ImportedOrganizationUser> newUsers)
     {
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
@@ -168,7 +166,7 @@ public class OrganizationServiceTests
                 }
             );
 
-        await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
+        await sutProvider.Sut.ImportAsync(org.Id, null, newUsers, null, false, EventSystemUser.PublicApi);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
@@ -191,7 +189,7 @@ public class OrganizationServiceTests
 
         // Sent events
         await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
             events.Where(e => e.Item2 == EventType.OrganizationUser_Invited).Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IReferenceEventService>().Received(1)
             .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
@@ -255,7 +253,7 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually)]
-    public async Task SignUp_EnablesFlexibleCollectionsFeatures
+    public async Task SignUp_AssignsOwnerToDefaultCollection
         (PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.Plan = planType;
@@ -271,13 +269,7 @@ public class OrganizationServiceTests
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
 
-        // Assert: AccessAll is not used
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
-            Arg.Is<OrganizationUser>(o =>
-                o.UserId == signup.Owner.Id &&
-                o.AccessAll == false));
-
-        // Assert: created a Can Manage association for the default collection instead
+        // Assert: created a Can Manage association for the default collection
         Assert.NotNull(orgUserId);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).CreateAsync(
             Arg.Any<Collection>(),
@@ -1190,7 +1182,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_InvalidUser(OrganizationUser organizationUser, OrganizationUser deletingUser,
+    public async Task RemoveUser_InvalidUser(OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -1198,24 +1190,24 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUserAsync(Guid.NewGuid(), organizationUser.Id, deletingUser.UserId));
+            () => sutProvider.Sut.RemoveUserAsync(Guid.NewGuid(), organizationUser.Id, deletingUser.UserId));
         Assert.Contains("User not valid.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_RemoveYourself(OrganizationUser deletingUser, SutProvider<OrganizationService> sutProvider)
+    public async Task RemoveUser_RemoveYourself(OrganizationUser deletingUser, SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         organizationUserRepository.GetByIdAsync(deletingUser.Id).Returns(deletingUser);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, deletingUser.Id, deletingUser.UserId));
+            () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, deletingUser.Id, deletingUser.UserId));
         Assert.Contains("You cannot remove yourself.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_NonOwnerRemoveOwner(
+    public async Task RemoveUser_NonOwnerRemoveOwner(
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1228,12 +1220,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         currentContext.OrganizationAdmin(deletingUser.OrganizationId).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
+            () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
         Assert.Contains("Only owners can delete other owners.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_LastOwner(
+    public async Task RemoveUser_LastOwner(
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
         OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1246,12 +1238,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(new[] { organizationUser });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, null));
+            () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, null));
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_Success(
+    public async Task RemoveUser_Success(
         OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1266,13 +1258,13 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(new[] { deletingUser, organizationUser });
         currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
+        await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUser_WithEventSystemUser_Success(
+    public async Task RemoveUser_WithEventSystemUser_Success(
         OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser, EventSystemUser eventSystemUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1287,13 +1279,13 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(new[] { deletingUser, organizationUser });
         currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, eventSystemUser);
+        await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, eventSystemUser);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_FilterInvalid(OrganizationUser organizationUser, OrganizationUser deletingUser,
+    public async Task RemoveUsers_FilterInvalid(OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -1302,12 +1294,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId));
+            () => sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId));
         Assert.Contains("Users invalid.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_RemoveYourself(
+    public async Task RemoveUsers_RemoveYourself(
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         OrganizationUser deletingUser,
         SutProvider<OrganizationService> sutProvider)
@@ -1318,12 +1310,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
         organizationUserRepository.GetManyByOrganizationAsync(default, default).ReturnsForAnyArgs(new[] { orgUser });
 
-        var result = await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+        var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
         Assert.Contains("You cannot remove yourself.", result[0].Item2);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_NonOwnerRemoveOwner(
+    public async Task RemoveUsers_NonOwnerRemoveOwner(
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser orgUser2,
@@ -1337,12 +1329,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
         organizationUserRepository.GetManyByOrganizationAsync(default, default).ReturnsForAnyArgs(new[] { orgUser2 });
 
-        var result = await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+        var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
         Assert.Contains("Only owners can delete other owners.", result[0].Item2);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_LastOwner(
+    public async Task RemoveUsers_LastOwner(
         [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -1354,12 +1346,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationUserRepository.GetManyByOrganizationAsync(orgUser.OrganizationId, OrganizationUserType.Owner).Returns(organizationUsers);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteUsersAsync(orgUser.OrganizationId, organizationUserIds, null));
+            () => sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, organizationUserIds, null));
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteUsers_Success(
+    public async Task RemoveUsers_Success(
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1, OrganizationUser orgUser2,
         SutProvider<OrganizationService> sutProvider)
@@ -1376,7 +1368,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(new[] { deletingUser, orgUser1 });
         currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+        await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
     }
 
     [Theory, BitAutoData]
@@ -1479,6 +1471,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
         orgUser.UserId = user.Id;
         orgUser.Type = orgUserType;
+        orgUser.AccessSecretsManager = false;
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
         organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value).Returns(1);
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
@@ -1567,6 +1560,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         orgUser.Status = OrganizationUserStatusType.Accepted;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
         orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
+        orgUser.AccessSecretsManager = true;
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
         organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
@@ -1575,7 +1569,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, true);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 
@@ -1833,22 +1827,28 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
     [Theory]
     [PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually)]
-    [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2)]
-    [BitAutoData("Cannot set max seat autoscaling below seat count", 4, -1, 6)]
-    public async Task Enterprise_UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
-        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
+    [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2, 2)]
+    [BitAutoData("Cannot set max seat autoscaling below seat count", 4, -1, 6, 6)]
+    public async Task Enterprise_UpdateMaxSeatAutoscaling_BadInputThrows(string expectedMessage,
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats,
+            currentMaxAutoscaleSeats, organization, sutProvider);
     [Theory]
     [FreeOrganizationCustomize]
-    [BitAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
-    public async Task Free_UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
-        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
+    [BitAutoData("Your plan does not allow seat autoscaling", 10, 0, null, null)]
+    public async Task Free_UpdateMaxSeatAutoscaling_BadInputThrows(string expectedMessage,
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+        => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats,
+            currentMaxAutoscaleSeats, organization, sutProvider);
 
     private async Task UpdateSubscription_BadInputThrows(string expectedMessage,
-        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
+        int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, int? currentMaxAutoscaleSeats,
+        Organization organization, SutProvider<OrganizationService> sutProvider)
     {
         organization.Seats = currentSeats;
+        organization.MaxAutoscaleSeats = currentMaxAutoscaleSeats;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,

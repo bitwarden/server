@@ -2,7 +2,6 @@
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(100),
-    @AccessAll BIT = 0,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -15,7 +14,6 @@ BEGIN
         [Id],
         [OrganizationId],
         [Name],
-        [AccessAll],
         [ExternalId],
         [CreationDate],
         [RevisionDate]
@@ -25,7 +23,6 @@ BEGIN
         @Id,
         @OrganizationId,
         @Name,
-        @AccessAll,
         @ExternalId,
         @CreationDate,
         @RevisionDate
