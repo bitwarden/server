@@ -48,6 +48,9 @@ public class StripeEventProcessor : IStripeEventProcessor
 
     public async Task ProcessEventAsync(Event parsedEvent)
     {
+        _logger.LogInformation("Processing Stripe event ({EventID}) with type {EventType}", parsedEvent.Id,
+            parsedEvent.Type);
+
         switch (parsedEvent.Type)
         {
             case HandledStripeWebhook.SubscriptionDeleted:

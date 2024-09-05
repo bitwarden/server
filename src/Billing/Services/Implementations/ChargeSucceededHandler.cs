@@ -31,6 +31,8 @@ public class ChargeSucceededHandler : IChargeSucceededHandler
     /// <param name="parsedEvent"></param>
     public async Task HandleAsync(Event parsedEvent)
     {
+        _logger.LogInformation("Handling Stripe charge.succeeded event ({EventID})", parsedEvent.Id);
+
         var charge = await _stripeEventService.GetCharge(parsedEvent);
         var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
         if (existingTransaction is not null)
@@ -56,6 +58,7 @@ public class ChargeSucceededHandler : IChargeSucceededHandler
         try
         {
             await _transactionRepository.CreateAsync(transaction);
+            _logger.LogInformation("Stripe charge.succeeded event ({EventID}) was successfully processed", parsedEvent.Id);
         }
         catch (SqlException e) when (e.Number == 547)
         {

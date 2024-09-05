@@ -49,10 +49,11 @@ public class StripeController : Controller
         if (StripeConfiguration.ApiVersion != parsedEvent.ApiVersion)
         {
             _logger.LogWarning(
-                "Stripe {WebhookType} webhook's API version ({WebhookAPIVersion}) does not match SDK API Version ({SDKAPIVersion})",
+                "Stripe {WebhookType} webhook's API version ({WebhookAPIVersion}) does not match SDK API Version ({SDKAPIVersion}) for event ({EventID})",
                 parsedEvent.Type,
                 parsedEvent.ApiVersion,
-                StripeConfiguration.ApiVersion);
+                StripeConfiguration.ApiVersion,
+                parsedEvent.Id);
 
             return new OkResult();
         }
@@ -72,6 +73,7 @@ public class StripeController : Controller
         // If the customer and server cloud regions don't match, early return 200 to avoid unnecessary errors
         if (!await _stripeEventService.ValidateCloudRegion(parsedEvent))
         {
+            _logger.LogWarning("Cloud region validation failed for event ({EventID})", parsedEvent.Id);
             return new OkResult();
         }
 
@@ -122,7 +124,7 @@ public class StripeController : Controller
 
         if (string.IsNullOrEmpty(webhookSecret))
         {
-            _logger.LogDebug("Unable to parse event. No webhook secret.");
+            _logger.LogWarning("Unable to parse event. Could not pick webhook secret based on event's API version.");
             return null;
         }
 
@@ -137,7 +139,7 @@ public class StripeController : Controller
             return parsedEvent;
         }
 
-        _logger.LogDebug("Stripe-Signature request header doesn't match configured Stripe webhook secret");
+        _logger.LogError("Stripe-Signature request header doesn't match configured Stripe webhook secret");
         return null;
     }
 }
