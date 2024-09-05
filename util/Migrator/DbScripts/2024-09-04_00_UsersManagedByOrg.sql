@@ -1,3 +1,24 @@
+IF NOT EXISTS(SELECT name
+FROM sys.indexes
+WHERE name = 'IX_OrganizationDomain_OrganizationIdVerifiedDate')
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_OrganizationIdVerifiedDate]
+        ON [dbo].[OrganizationDomain] ([OrganizationId],[VerifiedDate])
+        WITH (ONLINE = ON);
+END
+GO
+
+IF NOT EXISTS(SELECT name
+FROM sys.indexes
+WHERE name = 'IX_OrganizationDomain_VerifiedDate')
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_VerifiedDate]
+        ON [dbo].[OrganizationDomain] ([VerifiedDate])
+        INCLUDE ([OrganizationId],[DomainName])
+        WITH (ONLINE = ON);
+END
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains]
     @OrganizationId UNIQUEIDENTIFIER
 AS
