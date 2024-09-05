@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;

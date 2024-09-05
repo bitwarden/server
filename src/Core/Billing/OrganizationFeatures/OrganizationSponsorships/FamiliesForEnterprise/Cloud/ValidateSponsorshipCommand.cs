@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

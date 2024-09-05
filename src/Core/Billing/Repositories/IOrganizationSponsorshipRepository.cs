@@ -1,8 +1,9 @@
-﻿using Bit.Core.Entities;
+﻿#nullable enable
 
-#nullable enable
+using Bit.Core.Entities;
+using Bit.Core.Repositories;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.Billing.Repositories;
 
 public interface IOrganizationSponsorshipRepository : IRepository<OrganizationSponsorship, Guid>
 {

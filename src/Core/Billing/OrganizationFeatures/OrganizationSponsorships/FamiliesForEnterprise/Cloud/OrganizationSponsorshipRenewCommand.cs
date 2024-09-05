@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-using Bit.Core.Repositories;
+using Bit.Core.Billing.Repositories;
 
 namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 

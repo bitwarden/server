@@ -1,12 +1,13 @@
-﻿using AutoMapper;
-using Bit.Core.Repositories;
+﻿#nullable enable
+
+using AutoMapper;
+using Bit.Core.Billing.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-#nullable enable
-
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Billing.Repositories;
 
 public class OrganizationSponsorshipRepository : Repository<Core.Entities.OrganizationSponsorship, OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
 {

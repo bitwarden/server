@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Infrastructure.Dapper.Billing.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
@@ -16,9 +17,9 @@ public class OrganizationSponsorshipRepositoryTests
         OrganizationSponsorship organizationSponsorship, Organization sponsoringOrg,
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,
-        SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
+        OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
         OrganizationSponsorshipCompare equalityComparer,
-        List<EfRepo.OrganizationSponsorshipRepository> suts)
+        List<EntityFramework.Billing.Repositories.OrganizationSponsorshipRepository> suts)
     {
         organizationSponsorship.SponsoredOrganizationId = null;
 
@@ -51,8 +52,8 @@ public class OrganizationSponsorshipRepositoryTests
         OrganizationSponsorship replaceOrganizationSponsorship, Organization sponsoringOrg,
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,
-        SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
-        OrganizationSponsorshipCompare equalityComparer, List<EfRepo.OrganizationSponsorshipRepository> suts)
+        OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
+        OrganizationSponsorshipCompare equalityComparer, List<EntityFramework.Billing.Repositories.OrganizationSponsorshipRepository> suts)
     {
         postOrganizationSponsorship.SponsoredOrganizationId = null;
         replaceOrganizationSponsorship.SponsoredOrganizationId = null;
@@ -93,8 +94,8 @@ public class OrganizationSponsorshipRepositoryTests
         Organization sponsoringOrg,
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,
-        SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
-        List<EfRepo.OrganizationSponsorshipRepository> suts)
+        OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
+        List<EntityFramework.Billing.Repositories.OrganizationSponsorshipRepository> suts)
     {
         organizationSponsorship.SponsoredOrganizationId = null;
 

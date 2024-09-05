@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Entities;
-using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

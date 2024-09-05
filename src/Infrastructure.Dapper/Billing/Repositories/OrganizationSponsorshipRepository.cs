@@ -1,13 +1,14 @@
-﻿using System.Data;
+﻿#nullable enable
+
+using System.Data;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Entities;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-#nullable enable
-
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.Billing.Repositories;
 
 public class OrganizationSponsorshipRepository : Repository<OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
 {

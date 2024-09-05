@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.IdentityServer;
