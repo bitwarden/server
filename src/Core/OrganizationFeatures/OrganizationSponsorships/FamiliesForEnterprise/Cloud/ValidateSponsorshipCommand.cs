@@ -143,27 +143,27 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
 
     private async Task CancelSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
     {
-        return;
-        if (sponsoredOrganization != null)
-        {
-            await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
-            await _organizationRepository.UpsertAsync(sponsoredOrganization);
-
-            try
-            {
-                if (sponsorship != null)
-                {
-                    await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
-                        sponsoredOrganization.BillingEmailAddress(),
-                        sponsorship.ValidUntil ?? DateTime.UtcNow.AddDays(15));
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error sending Family sponsorship removed email.");
-            }
-        }
-        await base.DeleteSponsorshipAsync(sponsorship);
+        return; // this is intentional
+        // if (sponsoredOrganization != null)
+        // {
+        //     await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
+        //     await _organizationRepository.UpsertAsync(sponsoredOrganization);
+        //
+        //     try
+        //     {
+        //         if (sponsorship != null)
+        //         {
+        //             await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
+        //                 sponsoredOrganization.BillingEmailAddress(),
+        //                 sponsorship.ValidUntil ?? DateTime.UtcNow.AddDays(15));
+        //         }
+        //     }
+        //     catch (Exception e)
+        //     {
+        //         _logger.LogError(e, "Error sending Family sponsorship removed email.");
+        //     }
+        // }
+        // await base.DeleteSponsorshipAsync(sponsorship);
     }
 
     /// <summary>
