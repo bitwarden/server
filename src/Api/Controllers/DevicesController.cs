@@ -252,8 +252,8 @@ public class DevicesController : Controller
             throw new BadRequestException("Please provide a device identifier");
         }
 
-        _logger.LogError("User {id} has a device key, but didn't receive decryption keys for device {device}", userId,
-            deviceId);
+        _logger.LogError("User {id} has a device key, but didn't receive decryption keys for device {device} of type {deviceType}", userId,
+            deviceId, _currentContext.DeviceType);
     }
 
 }
