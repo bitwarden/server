@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
 
 public interface ICloudGetOrganizationLicenseQuery
 {

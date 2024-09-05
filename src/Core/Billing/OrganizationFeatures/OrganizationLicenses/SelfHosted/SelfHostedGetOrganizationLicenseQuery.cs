@@ -1,16 +1,16 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.SelfHosted;
 
 public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseQuery
 {
