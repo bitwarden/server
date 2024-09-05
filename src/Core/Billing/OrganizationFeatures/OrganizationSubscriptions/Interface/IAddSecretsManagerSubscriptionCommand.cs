@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions.Interface;
 
 /// <summary>
 /// This is only for adding SM to an existing organization

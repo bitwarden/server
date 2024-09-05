@@ -1,7 +1,7 @@
-﻿using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+﻿using Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions;
 
 public static class OrganizationSubscriptionServiceCollectionExtensions
 {

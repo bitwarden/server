@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Context;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;

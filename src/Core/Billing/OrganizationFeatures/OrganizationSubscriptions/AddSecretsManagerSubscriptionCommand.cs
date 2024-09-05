@@ -2,13 +2,13 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions;
 
 public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscriptionCommand
 {

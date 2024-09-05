@@ -5,11 +5,11 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -18,7 +18,7 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions;
 
 public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 {
@@ -300,7 +300,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     }
 
     private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,
-        Models.StaticStore.Plan newSecretsManagerPlan)
+        Core.Models.StaticStore.Plan newSecretsManagerPlan)
     {
         var newPlanSmSeats = (short)(newSecretsManagerPlan.SecretsManager.BaseSeats +
                                      (newSecretsManagerPlan.SecretsManager.HasAdditionalSeatsOption

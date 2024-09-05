@@ -27,11 +27,11 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions;
 
 
 #if !OSS

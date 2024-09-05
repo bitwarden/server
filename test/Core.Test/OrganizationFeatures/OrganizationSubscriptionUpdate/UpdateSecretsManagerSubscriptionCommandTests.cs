@@ -1,9 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
