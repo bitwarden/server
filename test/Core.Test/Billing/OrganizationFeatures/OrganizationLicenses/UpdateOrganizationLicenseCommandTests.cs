@@ -12,7 +12,7 @@ using NSubstitute;
 using Xunit;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
 
 [SutProviderCustomize]
 public class UpdateOrganizationLicenseCommandTests

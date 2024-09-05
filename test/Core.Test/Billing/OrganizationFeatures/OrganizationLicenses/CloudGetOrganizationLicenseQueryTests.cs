@@ -13,7 +13,7 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
 
 [SubscriptionInfoCustomize]
 [OrganizationLicenseCustomize]

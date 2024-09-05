@@ -15,7 +15,7 @@ using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
 [SutProviderCustomize]
 public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase

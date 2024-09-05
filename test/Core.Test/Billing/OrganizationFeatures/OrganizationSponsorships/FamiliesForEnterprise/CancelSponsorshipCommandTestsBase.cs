@@ -6,7 +6,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using NSubstitute;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
 public abstract class CancelSponsorshipCommandTestsBase : FamiliesForEnterpriseTestsBase
 {

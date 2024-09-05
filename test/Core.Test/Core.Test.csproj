@@ -29,4 +29,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Utilities\data\embeddedResource.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Billing\OrganizationFeatures\" />
+  </ItemGroup>
 </Project>

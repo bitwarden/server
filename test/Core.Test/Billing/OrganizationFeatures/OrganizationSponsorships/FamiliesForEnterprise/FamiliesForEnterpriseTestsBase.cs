@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
 public abstract class FamiliesForEnterpriseTestsBase
 {

@@ -13,7 +13,7 @@ using NSubstitute;
 using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
 [SutProviderCustomize]
 public class UpgradeOrganizationPlanCommandTests

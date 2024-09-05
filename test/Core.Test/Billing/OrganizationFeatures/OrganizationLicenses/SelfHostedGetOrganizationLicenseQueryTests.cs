@@ -12,7 +12,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
 
 [SutProviderCustomize]
 public class SelfHostedGetOrganizationLicenseQueryTests

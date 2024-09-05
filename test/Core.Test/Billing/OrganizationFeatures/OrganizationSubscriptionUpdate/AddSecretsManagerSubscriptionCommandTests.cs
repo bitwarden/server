@@ -14,7 +14,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationSubscriptionUpdate;
 [SutProviderCustomize]
 public class AddSecretsManagerSubscriptionCommandTests
 {
