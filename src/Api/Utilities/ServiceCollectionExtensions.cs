@@ -2,6 +2,7 @@
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core.IdentityServer;
+using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Health;
@@ -101,5 +102,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrganizationUserAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, NotificationAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, NotificationStatusAuthorizationHandler>();
     }
 }

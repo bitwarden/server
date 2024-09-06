@@ -21,4 +21,26 @@ public static class DeviceTypes
         DeviceType.MacOsCLI,
         DeviceType.LinuxCLI,
     };
+
+    public static IReadOnlyCollection<DeviceType> BrowserExtensionTypes { get; } = new[]
+    {
+        DeviceType.ChromeExtension,
+        DeviceType.FirefoxExtension,
+        DeviceType.OperaExtension,
+        DeviceType.EdgeExtension,
+        DeviceType.VivaldiExtension,
+        DeviceType.SafariExtension
+    };
+
+    public static IReadOnlyCollection<DeviceType> BrowserTypes { get; } = new[]
+    {
+        DeviceType.ChromeBrowser,
+        DeviceType.FirefoxBrowser,
+        DeviceType.OperaBrowser,
+        DeviceType.EdgeBrowser,
+        DeviceType.IEBrowser,
+        DeviceType.UnknownBrowser,
+        DeviceType.SafariBrowser,
+        DeviceType.VivaldiBrowser
+    };
 }
