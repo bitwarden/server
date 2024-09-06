@@ -37,6 +37,7 @@ public class StripeController : Controller
     {
         if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.StripeWebhookKey))
         {
+            _logger.LogError("Stripe webhook key did not match key saved in configuration");
             return new BadRequestResult();
         }
 
@@ -100,16 +101,32 @@ public class StripeController : Controller
 
         return deliveryContainer.ApiVersion switch
         {
-            "2024-06-20" => _billingSettings.StripeWebhookSecret20240620,
-            "2023-10-16" => _billingSettings.StripeWebhookSecret20231016,
-            "2022-08-01" => _billingSettings.StripeWebhookSecret,
-            _ => HandleDefault(deliveryContainer.ApiVersion)
+            "2024-06-20" => HandleVersionFound("2024-06-20", _billingSettings.StripeWebhookSecret20240620),
+            "2023-10-16" => HandleVersionFound("2023-10-16", _billingSettings.StripeWebhookSecret20231016),
+            "2022-08-01" => HandleVersionFound("2022-08-01", _billingSettings.StripeWebhookSecret),
+            _ => HandleVersionNotFound(deliveryContainer.ApiVersion)
         };
 
-        string HandleDefault(string version)
+        string HandleVersionFound(string version, string secret)
+        {
+            if (!string.IsNullOrEmpty(secret))
+            {
+                var truncatedSecret = secret[..12];
+
+                _logger.LogInformation("Picked webhook secret ({TruncatedSecret}...) for API version {ApiVersion}", truncatedSecret, version);
+
+                return secret;
+            }
+
+            _logger.LogError("Stripe webhook contained API version {APIVersion}, but no webhook secret is configured for that version", version);
+
+            return null;
+        }
+
+        string HandleVersionNotFound(string version)
         {
             _logger.LogWarning(
-                "Stripe webhook contained an recognized 'api_version': {ApiVersion}",
+                "Stripe webhook contained an unrecognized 'api_version': {ApiVersion}",
                 version);
 
             return null;
@@ -129,7 +146,7 @@ public class StripeController : Controller
 
         if (string.IsNullOrEmpty(webhookSecret))
         {
-            _logger.LogWarning("Unable to parse event. Could not pick webhook secret based on event's API version.");
+            _logger.LogWarning("Failed to pick webhook secret based on event's API version");
             return null;
         }
 
