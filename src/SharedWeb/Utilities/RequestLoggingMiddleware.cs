@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
