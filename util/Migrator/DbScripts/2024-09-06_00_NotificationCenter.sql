@@ -11,7 +11,7 @@ IF OBJECT_ID('[dbo].[Notification]') IS NULL
             [ClientType] TINYINT NOT NULL,
             [UserId] UNIQUEIDENTIFIER NULL,
             [OrganizationId] UNIQUEIDENTIFIER NULL,
-            [Title] NVARCHAR (MAX) NULL,
+            [Title] NVARCHAR (256) NULL,
             [Body] NVARCHAR (MAX) NULL,
             [CreationDate] DATETIME2 (7) NOT NULL,
             [RevisionDate] DATETIME2 (7) NOT NULL,
@@ -60,7 +60,7 @@ CREATE PROCEDURE [dbo].[Notification_Create]
     @ClientType TINYINT,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @Title NVARCHAR(MAX),
+    @Title NVARCHAR(256),
     @Body NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -199,7 +199,7 @@ CREATE PROCEDURE [dbo].[Notification_Update]
     @ClientType TINYINT,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @Title NVARCHAR(MAX),
+    @Title NVARCHAR(256),
     @Body NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)

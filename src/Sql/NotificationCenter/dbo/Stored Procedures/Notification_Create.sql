@@ -5,7 +5,7 @@ CREATE PROCEDURE [dbo].[Notification_Create]
     @ClientType TINYINT,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @Title NVARCHAR(MAX),
+    @Title NVARCHAR(256),
     @Body NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
