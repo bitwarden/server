@@ -854,7 +854,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("CollectionGroups");
+                    b.ToTable("CollectionGroups", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
@@ -878,7 +878,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationUserId");
 
-                    b.ToTable("CollectionUsers");
+                    b.ToTable("CollectionUsers", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
@@ -1588,76 +1588,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("User", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("Body")
-                        .HasColumnType("longtext");
-
-                    b.Property<byte>("ClientType")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("Global")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<byte>("Priority")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Title")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("UserId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate")
-                        .IsDescending(false, false, false, false, true, true)
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("Notification", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.NotificationStatus", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("NotificationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("ReadDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("UserId", "NotificationId")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("NotificationId");
-
-                    b.ToTable("NotificationStatus", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1921,7 +1851,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("SecretsId");
 
-                    b.ToTable("ProjectSecret");
+                    b.ToTable("ProjectSecret", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupProjectAccessPolicy", b =>
@@ -2446,40 +2376,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
 
                     b.Navigation("Provider");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("Organization");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.NotificationStatus", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", "Notification")
-                        .WithMany()
-                        .HasForeignKey("NotificationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Notification");
 
                     b.Navigation("User");
                 });
