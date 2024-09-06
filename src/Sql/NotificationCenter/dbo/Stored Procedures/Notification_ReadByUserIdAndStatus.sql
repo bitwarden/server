@@ -28,5 +28,5 @@ BEGIN
         OR IIF((@Deleted = 1 AND [NotificationStatus].[DeletedDate] IS NOT NULL) OR
                (@Deleted = 0 AND [NotificationStatus].[DeletedDate] IS NULL),
                1, 0) = 1)
-    ORDER BY [Priority], [Notification].[CreationDate] DESC
+    ORDER BY [Priority] DESC, [Notification].[CreationDate] DESC
 END

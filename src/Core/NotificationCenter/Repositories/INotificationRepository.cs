@@ -9,19 +9,6 @@ namespace Bit.Core.NotificationCenter.Repositories;
 public interface INotificationRepository : IRepository<Notification, Guid>
 {
     /// <summary>
-    /// Get notifications for a user with the given filter.
-    /// Includes global notifications and notifications with status.
-    /// </summary>
-    /// <param name="userId">User Id</param>
-    /// <param name="clientType">
-    /// Filter for notifications by client type. Always includes notifications with <see cref="ClientType.All"/>.
-    /// </param>
-    /// <returns>
-    /// Ordered by priority (highest to lowest) and creation date (descending).
-    /// </returns>
-    Task<IEnumerable<Notification>> GetByUserIdAsync(Guid userId, ClientType clientType);
-
-    /// <summary>
     /// Get notifications for a user with the given filters.
     /// Includes global notifications.
     /// </summary>
@@ -38,5 +25,5 @@ public interface INotificationRepository : IRepository<Notification, Guid>
     /// Ordered by priority (highest to lowest) and creation date (descending).
     /// </returns>
     Task<IEnumerable<Notification>> GetByUserIdAndStatusAsync(Guid userId, ClientType clientType,
-        NotificationStatusFilter statusFilter);
+        NotificationStatusFilter? statusFilter);
 }

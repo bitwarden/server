@@ -25,14 +25,14 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
     }
 
     public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetByUserIdAndStatusAsync(Guid userId,
-        ClientType clientType, NotificationStatusFilter statusFilter)
+        ClientType clientType, NotificationStatusFilter? statusFilter)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
         var notificationQuery = BuildNotificationQuery(dbContext, userId, clientType);
 
-        if (statusFilter.Read != null || statusFilter.Deleted != null)
+        if (statusFilter != null && (statusFilter.Read != null || statusFilter.Deleted != null))
         {
             notificationQuery = from n in notificationQuery
                                 join ns in dbContext.NotificationStatuses on n.Id equals ns.NotificationId
@@ -48,7 +48,7 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
         }
 
         var notifications = await notificationQuery
-            .OrderBy(n => n.Priority)
+            .OrderByDescending(n => n.Priority)
             .ThenByDescending(n => n.CreationDate)
             .ToListAsync();
 

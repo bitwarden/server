@@ -17,5 +17,5 @@ BEGIN
                 OR [OrganizationUser].[OrganizationId] IS NOT NULL))
         OR ([Notification].[UserId] IS NULL
             AND [OrganizationUser].[OrganizationId] IS NOT NULL))
-    ORDER BY [Priority], [Notification].[CreationDate] DESC
+    ORDER BY [Priority] DESC, [Notification].[CreationDate] DESC
 END

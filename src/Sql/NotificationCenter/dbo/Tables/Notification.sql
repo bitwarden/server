@@ -6,19 +6,19 @@ CREATE TABLE [dbo].[Notification]
     [ClientType] TINYINT NOT NULL,
     [UserId] UNIQUEIDENTIFIER NULL,
     [OrganizationId] UNIQUEIDENTIFIER NULL,
-    [Title] NVARCHAR (MAX) NULL,
+    [Title] NVARCHAR (256) NULL,
     [Body] NVARCHAR (MAX) NULL,
     [CreationDate] DATETIME2 (7) NOT NULL,
     [RevisionDate] DATETIME2 (7) NOT NULL,
     CONSTRAINT [PK_Notification] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
+    CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 
 
 GO
 CREATE NONCLUSTERED INDEX [IX_Notification_Priority_CreationDate_ClientType_Global_UserId_OrganizationId]
-    ON [dbo].[Notification]([Priority], [CreationDate] DESC, [ClientType], [Global], [UserId], [OrganizationId]);
+    ON [dbo].[Notification]([Priority] DESC, [CreationDate] DESC, [ClientType], [Global], [UserId], [OrganizationId]);
 
 
 GO

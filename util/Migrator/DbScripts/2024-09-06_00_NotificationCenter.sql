@@ -16,12 +16,12 @@ IF OBJECT_ID('[dbo].[Notification]') IS NULL
             [CreationDate] DATETIME2 (7) NOT NULL,
             [RevisionDate] DATETIME2 (7) NOT NULL,
             CONSTRAINT [PK_Notification] PRIMARY KEY CLUSTERED ([Id] ASC),
-            CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
-            CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE
+            CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
+            CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
         );
 
         CREATE NONCLUSTERED INDEX [IX_Notification_Priority_CreationDate_ClientType_Global_UserId_OrganizationId]
-            ON [dbo].[Notification]([Priority], [CreationDate] DESC, [ClientType], [Global], [UserId], [OrganizationId]);
+            ON [dbo].[Notification]([Priority] DESC, [CreationDate] DESC, [ClientType], [Global], [UserId], [OrganizationId]);
 
         CREATE NONCLUSTERED INDEX [IX_Notification_UserId]
             ON [dbo].[Notification]([UserId] ASC) WHERE UserId IS NOT NULL;
@@ -41,7 +41,7 @@ IF OBJECT_ID('[dbo].[NotificationStatus]') IS NULL
             [ReadDate] DATETIME2 (7) NULL,
             [DeletedDate] DATETIME2 (7) NULL,
             CONSTRAINT [PK_NotificationStatus] PRIMARY KEY CLUSTERED ([NotificationId] ASC, [UserId] ASC),
-            CONSTRAINT [FK_NotificationStatus_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE
+            CONSTRAINT [FK_NotificationStatus_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
         );
     END
 GO
@@ -95,25 +95,6 @@ BEGIN
 END
 GO
 
--- Stored Procedure: DeleteById
-IF OBJECT_ID('[dbo].[Notification_DeleteById]') IS NOT NULL
-    BEGIN
-        DROP PROCEDURE [dbo].[Notification_DeleteById]
-    END
-GO
-
-CREATE PROCEDURE [dbo].[Notification_DeleteById]
-@Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    DELETE
-    FROM [dbo].[Notification]
-    WHERE [Id] = @Id
-END
-GO
-
 -- Stored Procedure: ReadById
 IF OBJECT_ID('[dbo].[Notification_ReadById]') IS NOT NULL
     BEGIN
@@ -159,7 +140,7 @@ BEGIN
                 OR [OrganizationUser].[OrganizationId] IS NOT NULL))
         OR ([Notification].[UserId] IS NULL
             AND [OrganizationUser].[OrganizationId] IS NOT NULL))
-    ORDER BY [Priority], [Notification].[CreationDate] DESC
+    ORDER BY [Priority] DESC, [Notification].[CreationDate] DESC
 END
 GO
 
@@ -200,7 +181,7 @@ BEGIN
         OR IIF((@Deleted = 1 AND [NotificationStatus].[DeletedDate] IS NOT NULL) OR
                (@Deleted = 0 AND [NotificationStatus].[DeletedDate] IS NULL),
                1, 0) = 1)
-    ORDER BY [Priority], [Notification].[CreationDate] DESC
+    ORDER BY [Priority] DESC, [Notification].[CreationDate] DESC
 END
 GO
 
@@ -288,7 +269,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT *
+    SELECT TOP 1 *
     FROM [dbo].[NotificationStatus]
     WHERE [NotificationId] = @NotificationId
       AND [UserId] = @UserId

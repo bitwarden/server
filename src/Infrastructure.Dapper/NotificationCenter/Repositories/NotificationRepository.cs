@@ -23,18 +23,13 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
     {
     }
 
-    public async Task<IEnumerable<Notification>> GetByUserIdAsync(Guid userId, ClientType clientType)
-    {
-        return await GetByUserIdAndStatusAsync(userId, clientType, new NotificationStatusFilter());
-    }
-
     public async Task<IEnumerable<Notification>> GetByUserIdAndStatusAsync(Guid userId,
-        ClientType clientType, NotificationStatusFilter statusFilter)
+        ClientType clientType, NotificationStatusFilter? statusFilter)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         IEnumerable<Notification> results;
-        if (statusFilter.Read != null || statusFilter.Deleted != null)
+        if (statusFilter != null && (statusFilter.Read != null || statusFilter.Deleted != null))
         {
             results = await connection.QueryAsync<Notification>(
                 "[dbo].[Notification_ReadByUserIdAndStatus]",

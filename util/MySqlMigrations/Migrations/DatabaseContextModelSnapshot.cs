@@ -1630,7 +1630,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate")
-                        .IsDescending(false, false, false, false, false, true)
+                        .IsDescending(false, false, false, false, true, true)
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Notification", (string)null);
