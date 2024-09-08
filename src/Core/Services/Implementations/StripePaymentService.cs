@@ -712,6 +712,11 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Subscription not found.");
         }
 
+        if (sub.Status == SubscriptionStatuses.Canceled)
+        {
+            throw new BadRequestException("You do not have an active subscription. Reinstate your subscription to make changes.");
+        }
+
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
