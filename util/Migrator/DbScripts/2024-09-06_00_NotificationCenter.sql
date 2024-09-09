@@ -46,6 +46,36 @@ IF OBJECT_ID('[dbo].[NotificationStatus]') IS NULL
     END
 GO
 
+-- View Notification
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'NotificationView')
+    BEGIN
+        DROP VIEW [dbo].[NotificationView]
+    END
+GO
+
+CREATE VIEW [dbo].[NotificationView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Notification]
+GO
+
+-- View NotificationStatus
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'NotificationStatusView')
+    BEGIN
+        DROP VIEW [dbo].[NotificationStatusView]
+    END
+GO
+
+CREATE VIEW [dbo].[NotificationStatusView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[NotificationStatus]
+GO
+
 -- Stored Procedures: Create
 IF OBJECT_ID('[dbo].[Notification_Create]') IS NOT NULL
     BEGIN
@@ -109,7 +139,7 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT *
-    FROM [dbo].[Notification]
+    FROM [dbo].[NotificationView]
     WHERE [Id] = @Id
 END
 GO
@@ -128,19 +158,19 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT [Notification].*
-    FROM [dbo].[Notification]
+    SELECT n.*
+    FROM [dbo].[NotificationView] n
              LEFT JOIN
-         [dbo].[OrganizationUser] ON [Notification].[OrganizationId] = [OrganizationUser].[OrganizationId]
-             AND [OrganizationUser].[UserId] = @UserId
+         [dbo].[OrganizationUserView] ou ON n.[OrganizationId] = ou.[OrganizationId]
+             AND ou.[UserId] = @UserId
     WHERE [ClientType] IN (0, CASE WHEN @ClientType != 0 THEN @ClientType END)
       AND ([Global] = 1
-        OR ([Notification].[UserId] = @UserId
-            AND ([Notification].[OrganizationId] IS NULL
-                OR [OrganizationUser].[OrganizationId] IS NOT NULL))
-        OR ([Notification].[UserId] IS NULL
-            AND [OrganizationUser].[OrganizationId] IS NOT NULL))
-    ORDER BY [Priority] DESC, [Notification].[CreationDate] DESC
+        OR (n.[UserId] = @UserId
+            AND (n.[OrganizationId] IS NULL
+                OR ou.[OrganizationId] IS NOT NULL))
+        OR (n.[UserId] IS NULL
+            AND ou.[OrganizationId] IS NOT NULL))
+    ORDER BY [Priority] DESC, n.[CreationDate] DESC
 END
 GO
 
@@ -160,28 +190,28 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT [Notification].*
-    FROM [dbo].[Notification]
-             LEFT JOIN [dbo].[OrganizationUser] ON [Notification].[OrganizationId] = [OrganizationUser].[OrganizationId]
-        AND [OrganizationUser].[UserId] = @UserId
-             JOIN [dbo].[NotificationStatus] ON [Notification].[Id] = [NotificationStatus].[NotificationId]
-        AND [NotificationStatus].[UserId] = @UserId
+    SELECT n.*
+    FROM [dbo].[NotificationView] n
+             LEFT JOIN [dbo].[OrganizationUserView] ou ON n.[OrganizationId] = ou.[OrganizationId]
+        AND ou.[UserId] = @UserId
+             JOIN [dbo].[NotificationStatusView] ns ON n.[Id] = ns.[NotificationId]
+        AND ns.[UserId] = @UserId
     WHERE [ClientType] IN (0, CASE WHEN @ClientType != 0 THEN @ClientType END)
       AND ([Global] = 1
-        OR ([Notification].[UserId] = @UserId
-            AND ([Notification].[OrganizationId] IS NULL
-                OR [OrganizationUser].[OrganizationId] IS NOT NULL))
-        OR ([Notification].[UserId] IS NULL
-            AND [OrganizationUser].[OrganizationId] IS NOT NULL))
+        OR (n.[UserId] = @UserId
+            AND (n.[OrganizationId] IS NULL
+                OR ou.[OrganizationId] IS NOT NULL))
+        OR (n.[UserId] IS NULL
+            AND ou.[OrganizationId] IS NOT NULL))
       AND (@Read IS NULL
-        OR IIF((@Read = 1 AND [NotificationStatus].[ReadDate] IS NOT NULL) OR
-               (@Read = 0 AND [NotificationStatus].[ReadDate] IS NULL),
+        OR IIF((@Read = 1 AND ns.[ReadDate] IS NOT NULL) OR
+               (@Read = 0 AND ns.[ReadDate] IS NULL),
                1, 0) = 1
         OR @Deleted IS NULL
-        OR IIF((@Deleted = 1 AND [NotificationStatus].[DeletedDate] IS NOT NULL) OR
-               (@Deleted = 0 AND [NotificationStatus].[DeletedDate] IS NULL),
+        OR IIF((@Deleted = 1 AND ns.[DeletedDate] IS NOT NULL) OR
+               (@Deleted = 0 AND ns.[DeletedDate] IS NULL),
                1, 0) = 1)
-    ORDER BY [Priority] DESC, [Notification].[CreationDate] DESC
+    ORDER BY [Priority] DESC, n.[CreationDate] DESC
 END
 GO
 
@@ -270,7 +300,7 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT TOP 1 *
-    FROM [dbo].[NotificationStatus]
+    FROM [dbo].[NotificationStatusView]
     WHERE [NotificationId] = @NotificationId
       AND [UserId] = @UserId
 END

@@ -6,7 +6,7 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT TOP 1 *
-    FROM [dbo].[NotificationStatus]
+    FROM [dbo].[NotificationStatusView]
     WHERE [NotificationId] = @NotificationId
         AND [UserId] = @UserId
 END

@@ -5,17 +5,17 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT [Notification].*
-    FROM [dbo].[Notification]
+    SELECT n.*
+    FROM [dbo].[NotificationView] n
              LEFT JOIN
-         [dbo].[OrganizationUser] ON [Notification].[OrganizationId] = [OrganizationUser].[OrganizationId]
-             AND [OrganizationUser].[UserId] = @UserId
+         [dbo].[OrganizationUserView] ou ON n.[OrganizationId] = ou.[OrganizationId]
+             AND ou.[UserId] = @UserId
     WHERE [ClientType] IN (0, CASE WHEN @ClientType != 0 THEN @ClientType END)
       AND ([Global] = 1
-        OR ([Notification].[UserId] = @UserId
-            AND ([Notification].[OrganizationId] IS NULL
-                OR [OrganizationUser].[OrganizationId] IS NOT NULL))
-        OR ([Notification].[UserId] IS NULL
-            AND [OrganizationUser].[OrganizationId] IS NOT NULL))
-    ORDER BY [Priority] DESC, [Notification].[CreationDate] DESC
+        OR (n.[UserId] = @UserId
+            AND (n.[OrganizationId] IS NULL
+                OR ou.[OrganizationId] IS NOT NULL))
+        OR (n.[UserId] IS NULL
+            AND ou.[OrganizationId] IS NOT NULL))
+    ORDER BY [Priority] DESC, n.[CreationDate] DESC
 END

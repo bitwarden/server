@@ -5,6 +5,6 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT *
-    FROM [dbo].[Notification]
+    FROM [dbo].[NotificationView]
     WHERE [Id] = @Id
 END
