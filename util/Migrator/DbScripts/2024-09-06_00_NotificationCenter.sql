@@ -5,30 +5,31 @@ IF OBJECT_ID('[dbo].[Notification]') IS NULL
     BEGIN
         CREATE TABLE [dbo].[Notification]
         (
-            [Id] UNIQUEIDENTIFIER NOT NULL,
-            [Priority] TINYINT NOT NULL,
-            [Global] BIT NOT NULL,
-            [ClientType] TINYINT NOT NULL,
-            [UserId] UNIQUEIDENTIFIER NULL,
+            [Id]             UNIQUEIDENTIFIER NOT NULL,
+            [Priority]       TINYINT          NOT NULL,
+            [Global]         BIT              NOT NULL,
+            [ClientType]     TINYINT          NOT NULL,
+            [UserId]         UNIQUEIDENTIFIER NULL,
             [OrganizationId] UNIQUEIDENTIFIER NULL,
-            [Title] NVARCHAR (256) NULL,
-            [Body] NVARCHAR (MAX) NULL,
-            [CreationDate] DATETIME2 (7) NOT NULL,
-            [RevisionDate] DATETIME2 (7) NOT NULL,
+            [Title]          NVARCHAR(256)    NULL,
+            [Body]           NVARCHAR(MAX)    NULL,
+            [CreationDate]   DATETIME2(7)     NOT NULL,
+            [RevisionDate]   DATETIME2(7)     NOT NULL,
             CONSTRAINT [PK_Notification] PRIMARY KEY CLUSTERED ([Id] ASC),
             CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
             CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
         );
 
         CREATE NONCLUSTERED INDEX [IX_Notification_Priority_CreationDate_ClientType_Global_UserId_OrganizationId]
-            ON [dbo].[Notification]([Priority] DESC, [CreationDate] DESC, [ClientType], [Global], [UserId], [OrganizationId]);
+            ON [dbo].[Notification] ([Priority] DESC, [CreationDate] DESC, [ClientType], [Global], [UserId],
+                                     [OrganizationId]);
 
         CREATE NONCLUSTERED INDEX [IX_Notification_UserId]
-            ON [dbo].[Notification]([UserId] ASC) WHERE UserId IS NOT NULL;
+            ON [dbo].[Notification] ([UserId] ASC) WHERE UserId IS NOT NULL;
 
         CREATE NONCLUSTERED INDEX [IX_Notification_OrganizationId]
-            ON [dbo].[Notification]([OrganizationId] ASC) WHERE OrganizationId IS NOT NULL;
-END
+            ON [dbo].[Notification] ([OrganizationId] ASC) WHERE OrganizationId IS NOT NULL;
+    END
 GO
 
 -- Table NotificationStatus
@@ -37,9 +38,9 @@ IF OBJECT_ID('[dbo].[NotificationStatus]') IS NULL
         CREATE TABLE [dbo].[NotificationStatus]
         (
             [NotificationId] UNIQUEIDENTIFIER NOT NULL,
-            [UserId] UNIQUEIDENTIFIER NOT NULL,
-            [ReadDate] DATETIME2 (7) NULL,
-            [DeletedDate] DATETIME2 (7) NULL,
+            [UserId]         UNIQUEIDENTIFIER NOT NULL,
+            [ReadDate]       DATETIME2(7)     NULL,
+            [DeletedDate]    DATETIME2(7)     NULL,
             CONSTRAINT [PK_NotificationStatus] PRIMARY KEY CLUSTERED ([NotificationId] ASC, [UserId] ASC),
             CONSTRAINT [FK_NotificationStatus_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
         );
@@ -47,7 +48,9 @@ IF OBJECT_ID('[dbo].[NotificationStatus]') IS NULL
 GO
 
 -- View Notification
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'NotificationView')
+IF EXISTS(SELECT *
+          FROM sys.views
+          WHERE [Name] = 'NotificationView')
     BEGIN
         DROP VIEW [dbo].[NotificationView]
     END
@@ -55,14 +58,14 @@ GO
 
 CREATE VIEW [dbo].[NotificationView]
 AS
-SELECT
-    *
-FROM
-    [dbo].[Notification]
+SELECT *
+FROM [dbo].[Notification]
 GO
 
 -- View NotificationStatus
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'NotificationStatusView')
+IF EXISTS(SELECT *
+          FROM sys.views
+          WHERE [Name] = 'NotificationStatusView')
     BEGIN
         DROP VIEW [dbo].[NotificationStatusView]
     END
@@ -70,10 +73,8 @@ GO
 
 CREATE VIEW [dbo].[NotificationStatusView]
 AS
-SELECT
-    *
-FROM
-    [dbo].[NotificationStatus]
+SELECT *
+FROM [dbo].[NotificationStatus]
 GO
 
 -- Stored Procedures: Create
@@ -98,30 +99,26 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[Notification] (
-        [Id],
-        [Priority],
-        [Global],
-        [ClientType],
-        [UserId],
-        [OrganizationId],
-        [Title],
-        [Body],
-        [CreationDate],
-        [RevisionDate]
-    )
-    VALUES (
-               @Id,
-               @Priority,
-               @Global,
-               @ClientType,
-               @UserId,
-               @OrganizationId,
-               @Title,
-               @Body,
-               @CreationDate,
-               @RevisionDate
-           )
+    INSERT INTO [dbo].[Notification] ([Id],
+                                      [Priority],
+                                      [Global],
+                                      [ClientType],
+                                      [UserId],
+                                      [OrganizationId],
+                                      [Title],
+                                      [Body],
+                                      [CreationDate],
+                                      [RevisionDate])
+    VALUES (@Id,
+            @Priority,
+            @Global,
+            @ClientType,
+            @UserId,
+            @OrganizationId,
+            @Title,
+            @Body,
+            @CreationDate,
+            @RevisionDate)
 END
 GO
 
@@ -132,8 +129,7 @@ IF OBJECT_ID('[dbo].[Notification_ReadById]') IS NOT NULL
     END
 GO
 
-CREATE PROCEDURE [dbo].[Notification_ReadById]
-@Id UNIQUEIDENTIFIER
+CREATE PROCEDURE [dbo].[Notification_ReadById] @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -173,14 +169,16 @@ BEGIN
                 OR ou.[OrganizationId] IS NOT NULL))
         OR (n.[UserId] IS NULL
             AND ou.[OrganizationId] IS NOT NULL))
-      AND ((@Read IS NULL
-        OR IIF((@Read = 1 AND ns.[ReadDate] IS NOT NULL) OR
-               (@Read = 0 AND ns.[ReadDate] IS NULL),
-               1, 0) = 1)
-        OR (@Deleted IS NULL
-            OR IIF((@Deleted = 1 AND ns.[DeletedDate] IS NOT NULL) OR
-                   (@Deleted = 0 AND ns.[DeletedDate] IS NULL),
-                   1, 0) = 1))
+      AND ((@Read IS NULL AND @Deleted IS NULL)
+        OR (ns.[NotificationId] IS NOT NULL
+            AND ((@Read IS NULL
+                OR IIF((@Read = 1 AND ns.[ReadDate] IS NOT NULL) OR
+                       (@Read = 0 AND ns.[ReadDate] IS NULL),
+                       1, 0) = 1)
+                OR (@Deleted IS NULL
+                    OR IIF((@Deleted = 1 AND ns.[DeletedDate] IS NOT NULL) OR
+                           (@Deleted = 0 AND ns.[DeletedDate] IS NULL),
+                           1, 0) = 1))))
     ORDER BY [Priority] DESC, n.[CreationDate] DESC
 END
 GO
@@ -208,15 +206,15 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE [dbo].[Notification]
-    SET [Priority] = @Priority,
-        [Global] = @Global,
-        [ClientType] = @ClientType,
-        [UserId] = @UserId,
+    SET [Priority]       = @Priority,
+        [Global]         = @Global,
+        [ClientType]     = @ClientType,
+        [UserId]         = @UserId,
         [OrganizationId] = @OrganizationId,
-        [Title] = @Title,
-        [Body] = @Body,
-        [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [Title]          = @Title,
+        [Body]           = @Body,
+        [CreationDate]   = @CreationDate,
+        [RevisionDate]   = @RevisionDate
     WHERE [Id] = @Id
 END
 GO
@@ -240,18 +238,14 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[NotificationStatus] (
-        [NotificationId],
-        [UserId],
-        [ReadDate],
-        [DeletedDate]
-    )
-    VALUES (
-               @NotificationId,
-               @UserId,
-               @ReadDate,
-               @DeletedDate
-           )
+    INSERT INTO [dbo].[NotificationStatus] ([NotificationId],
+                                            [UserId],
+                                            [ReadDate],
+                                            [DeletedDate])
+    VALUES (@NotificationId,
+            @UserId,
+            @ReadDate,
+            @DeletedDate)
 END
 GO
 
@@ -293,7 +287,7 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE [dbo].[NotificationStatus]
-    SET [ReadDate] = @ReadDate,
+    SET [ReadDate]    = @ReadDate,
         [DeletedDate] = @DeletedDate
     WHERE [NotificationId] = @NotificationId
       AND [UserId] = @UserId

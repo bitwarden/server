@@ -20,13 +20,15 @@ BEGIN
                 OR ou.[OrganizationId] IS NOT NULL))
         OR (n.[UserId] IS NULL
             AND ou.[OrganizationId] IS NOT NULL))
-      AND ((@Read IS NULL
-        OR IIF((@Read = 1 AND ns.[ReadDate] IS NOT NULL) OR
-               (@Read = 0 AND ns.[ReadDate] IS NULL),
-               1, 0) = 1)
-        OR (@Deleted IS NULL
-            OR IIF((@Deleted = 1 AND ns.[DeletedDate] IS NOT NULL) OR
-                   (@Deleted = 0 AND ns.[DeletedDate] IS NULL),
-                   1, 0) = 1))
+      AND ((@Read IS NULL AND @Deleted IS NULL)
+        OR (ns.[NotificationId] IS NOT NULL
+            AND ((@Read IS NULL
+                OR IIF((@Read = 1 AND ns.[ReadDate] IS NOT NULL) OR
+                       (@Read = 0 AND ns.[ReadDate] IS NULL),
+                       1, 0) = 1)
+                OR (@Deleted IS NULL
+                    OR IIF((@Deleted = 1 AND ns.[DeletedDate] IS NOT NULL) OR
+                           (@Deleted = 0 AND ns.[DeletedDate] IS NULL),
+                           1, 0) = 1))))
     ORDER BY [Priority] DESC, n.[CreationDate] DESC
 END
