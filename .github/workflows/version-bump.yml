@@ -62,8 +62,7 @@ jobs:
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-gpg-private-key,
-            github-gpg-private-key-passphrase,
-            github-pat-bitwarden-devops-bot-repo-scope"
+            github-gpg-private-key-passphrase"
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4 # v6.1.0
@@ -167,13 +166,21 @@ jobs:
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           PR_BRANCH: ${{ steps.create-branch.outputs.name }}
-        run: git push -u origin $PR_BRANCH
+        run: git push -u origin $
+
+      - name: Generate GH App token
+        uses: actions/create-github-app-token@3378cda945da322a8db4b193e19d46352ebe2de5 # v1.10.4
+        id: app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_KEY }}
+          owner: ${{ github.repository_owner }}
 
       - name: Create version PR
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         id: create-pr
         env:
-          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_BRANCH: ${{ steps.create-branch.outputs.name }}
           TITLE: "Bump version to ${{ steps.set-final-version-output.outputs.version }}"
         run: |
@@ -204,7 +211,7 @@ jobs:
       - name: Merge PR
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
-          GH_TOKEN: ${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
 
