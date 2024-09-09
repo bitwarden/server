@@ -6,12 +6,12 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
-public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
+public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
 
-    public DeleteOrganizationUserCommand(
+    public RemoveOrganizationUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService
     )
@@ -20,18 +20,18 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
         _organizationService = organizationService;
     }
 
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
+    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         await ValidateDeleteUserAsync(organizationId, organizationUserId);
 
-        await _organizationService.DeleteUserAsync(organizationId, organizationUserId, deletingUserId);
+        await _organizationService.RemoveUserAsync(organizationId, organizationUserId, deletingUserId);
     }
 
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, EventSystemUser eventSystemUser)
+    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, EventSystemUser eventSystemUser)
     {
         await ValidateDeleteUserAsync(organizationId, organizationUserId);
 
-        await _organizationService.DeleteUserAsync(organizationId, organizationUserId, eventSystemUser);
+        await _organizationService.RemoveUserAsync(organizationId, organizationUserId, eventSystemUser);
     }
 
     private async Task ValidateDeleteUserAsync(Guid organizationId, Guid organizationUserId)
