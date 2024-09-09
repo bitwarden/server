@@ -11,7 +11,7 @@ public class CustomAutoDataAttribute : AutoDataAttribute
 
     public CustomAutoDataAttribute(params ICustomization[] customizations) : base(() =>
     {
-        var fixture = new Fixture();
+        var fixture = new Fixture().WithAutoNSubstitutions();
         foreach (var customization in customizations)
         {
             fixture.Customize(customization);
