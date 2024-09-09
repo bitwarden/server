@@ -23,6 +23,16 @@ public interface ISubscriberService
         bool cancelImmediately);
 
     /// <summary>
+    /// Creates a Braintree <see cref="Braintree.Customer"/> for the provided <paramref name="subscriber"/> while attaching the provided <paramref name="paymentMethodNonce"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber to create a Braintree customer for.</param>
+    /// <param name="paymentMethodNonce">A nonce representing the PayPal payment method the customer will use for payments.</param>
+    /// <returns>The <see cref="Braintree.Customer.Id"/> of the created Braintree customer.</returns>
+    Task<string> CreateBraintreeCustomer(
+        ISubscriber subscriber,
+        string paymentMethodNonce);
+
+    /// <summary>
     /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the Stripe customer for.</param>
