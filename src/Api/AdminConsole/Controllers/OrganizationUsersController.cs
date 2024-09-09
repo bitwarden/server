@@ -53,6 +53,7 @@ public class OrganizationUsersController : Controller
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IOrganizationUserUserMiniDetailsQuery _organizationUserUserMiniDetailsQuery;
 
 
     public OrganizationUsersController(
@@ -74,7 +75,8 @@ public class OrganizationUsersController : Controller
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IOrganizationUserUserMiniDetailsQuery organizationUserUserMiniDetailsQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -95,6 +97,7 @@ public class OrganizationUsersController : Controller
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _organizationUserUserMiniDetailsQuery = organizationUserUserMiniDetailsQuery;
     }
 
     [HttpGet("{id}")]
@@ -124,6 +127,14 @@ public class OrganizationUsersController : Controller
         }
 
         return response;
+    }
+
+    [HttpGet("mini-user-details")]
+    public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> Get(Guid orgId)
+    {
+        var organizationUsers = await _organizationUserUserMiniDetailsQuery.Get(orgId);
+        return new ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>(
+            organizationUsers.Select(ou => new OrganizationUserUserMiniDetailsResponseModel(ou)));
     }
 
     [HttpGet("")]
