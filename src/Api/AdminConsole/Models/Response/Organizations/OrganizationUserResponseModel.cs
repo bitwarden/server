@@ -29,7 +29,8 @@ public class OrganizationUserResponseModel : ResponseModel
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
     }
 
-    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
+    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser,
+        string obj = "organizationUser")
         : base(obj)
     {
         if (organizationUser == null)
@@ -104,7 +105,6 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
     }
-
 
     public string Name { get; set; }
     public string Email { get; set; }

@@ -231,7 +231,7 @@ public class OrganizationsController : Controller
         }
 
 
-        await _organizationService.DeleteUserAsync(orgGuidId, user.Id);
+        await _organizationService.RemoveUserAsync(orgGuidId, user.Id);
     }
 
     [HttpDelete("{id}")]
@@ -434,7 +434,7 @@ public class OrganizationsController : Controller
         return new OrganizationPublicKeyResponseModel(org);
     }
 
-    [Obsolete("TDL-136 Renamed to public-key (2023.8), left for backwards compatability with older clients.")]
+    [Obsolete("TDL-136 Renamed to public-key (2023.8), left for backwards compatibility with older clients.")]
     [HttpGet("{id}/keys")]
     public async Task<OrganizationPublicKeyResponseModel> GetKeys(string id)
     {

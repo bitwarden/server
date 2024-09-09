@@ -52,4 +52,10 @@ public static class StripeConstants
         public const string Unpaid = "unpaid";
         public const string Paused = "paused";
     }
+
+    public static class ValidateTaxLocationTiming
+    {
+        public const string Deferred = "deferred";
+        public const string Immediately = "immediately";
+    }
 }
