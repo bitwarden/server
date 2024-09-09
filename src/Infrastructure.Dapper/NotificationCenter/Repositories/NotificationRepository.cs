@@ -28,21 +28,10 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
     {
         await using var connection = new SqlConnection(ConnectionString);
 
-        IEnumerable<Notification> results;
-        if (statusFilter != null && (statusFilter.Read != null || statusFilter.Deleted != null))
-        {
-            results = await connection.QueryAsync<Notification>(
-                "[dbo].[Notification_ReadByUserIdAndStatus]",
-                new { UserId = userId, ClientType = clientType, statusFilter.Read, statusFilter.Deleted },
-                commandType: CommandType.StoredProcedure);
-        }
-        else
-        {
-            results = await connection.QueryAsync<Notification>(
-                "[dbo].[Notification_ReadByUserId]",
-                new { UserId = userId, ClientType = clientType },
-                commandType: CommandType.StoredProcedure);
-        }
+        var results = await connection.QueryAsync<Notification>(
+            "[dbo].[Notification_ReadByUserIdAndStatus]",
+            new { UserId = userId, ClientType = clientType, statusFilter?.Read, statusFilter?.Deleted },
+            commandType: CommandType.StoredProcedure);
 
         return results.ToList();
     }
