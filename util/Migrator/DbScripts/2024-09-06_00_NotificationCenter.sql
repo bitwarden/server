@@ -164,7 +164,7 @@ BEGIN
     FROM [dbo].[NotificationView] n
              LEFT JOIN [dbo].[OrganizationUserView] ou ON n.[OrganizationId] = ou.[OrganizationId]
         AND ou.[UserId] = @UserId
-             JOIN [dbo].[NotificationStatusView] ns ON n.[Id] = ns.[NotificationId]
+             LEFT JOIN [dbo].[NotificationStatusView] ns ON n.[Id] = ns.[NotificationId]
         AND ns.[UserId] = @UserId
     WHERE [ClientType] IN (0, CASE WHEN @ClientType != 0 THEN @ClientType END)
       AND ([Global] = 1
@@ -173,14 +173,14 @@ BEGIN
                 OR ou.[OrganizationId] IS NOT NULL))
         OR (n.[UserId] IS NULL
             AND ou.[OrganizationId] IS NOT NULL))
-      AND (@Read IS NULL
+      AND ((@Read IS NULL
         OR IIF((@Read = 1 AND ns.[ReadDate] IS NOT NULL) OR
                (@Read = 0 AND ns.[ReadDate] IS NULL),
-               1, 0) = 1
-        OR @Deleted IS NULL
-        OR IIF((@Deleted = 1 AND ns.[DeletedDate] IS NOT NULL) OR
-               (@Deleted = 0 AND ns.[DeletedDate] IS NULL),
                1, 0) = 1)
+        OR (@Deleted IS NULL
+            OR IIF((@Deleted = 1 AND ns.[DeletedDate] IS NOT NULL) OR
+                   (@Deleted = 0 AND ns.[DeletedDate] IS NULL),
+                   1, 0) = 1))
     ORDER BY [Priority] DESC, n.[CreationDate] DESC
 END
 GO
