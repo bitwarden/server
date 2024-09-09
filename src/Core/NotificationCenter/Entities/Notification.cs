@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.Utilities;
@@ -13,6 +14,7 @@ public class Notification : ITableObject<Guid>
     public ClientType ClientType { get; set; }
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
+    [MaxLength(256)]
     public string? Title { get; set; }
     public string? Body { get; set; }
     public DateTime CreationDate { get; set; }

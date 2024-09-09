@@ -1604,6 +1604,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UserId")

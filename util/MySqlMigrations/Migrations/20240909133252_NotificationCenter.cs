@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class NotificationCenter : Migration
@@ -14,16 +14,18 @@ public partial class NotificationCenter : Migration
             name: "Notification",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                Priority = table.Column<byte>(type: "INTEGER", nullable: false),
-                Global = table.Column<bool>(type: "INTEGER", nullable: false),
-                ClientType = table.Column<byte>(type: "INTEGER", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Title = table.Column<string>(type: "TEXT", nullable: true),
-                Body = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                Priority = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                Global = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                ClientType = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                UserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                OrganizationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                Title = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: true)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                Body = table.Column<string>(type: "longtext", nullable: true)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {
@@ -38,16 +40,17 @@ public partial class NotificationCenter : Migration
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id");
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateTable(
             name: "NotificationStatus",
             columns: table => new
             {
-                NotificationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                ReadDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                DeletedDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                NotificationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                ReadDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                DeletedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
             },
             constraints: table =>
             {
@@ -64,10 +67,11 @@ public partial class NotificationCenter : Migration
                     principalTable: "User",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            });
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateIndex(
-            name: "IX_Notification_ClientType_Global_UserId_OrganizationId_Priority_CreationDate",
+            name: "IX_Notification_ClientType_Global_UserId_OrganizationId_Priorit~",
             table: "Notification",
             columns: new[] { "ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate" },
             descending: new[] { false, false, false, false, true, true });

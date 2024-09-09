@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations;
+namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class NotificationCenter : Migration
@@ -14,16 +14,16 @@ public partial class NotificationCenter : Migration
             name: "Notification",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "uuid", nullable: false),
-                Priority = table.Column<byte>(type: "smallint", nullable: false),
-                Global = table.Column<bool>(type: "boolean", nullable: false),
-                ClientType = table.Column<byte>(type: "smallint", nullable: false),
-                UserId = table.Column<Guid>(type: "uuid", nullable: true),
-                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
-                Title = table.Column<string>(type: "text", nullable: true),
-                Body = table.Column<string>(type: "text", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                Priority = table.Column<byte>(type: "INTEGER", nullable: false),
+                Global = table.Column<bool>(type: "INTEGER", nullable: false),
+                ClientType = table.Column<byte>(type: "INTEGER", nullable: false),
+                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
+                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
+                Title = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                Body = table.Column<string>(type: "TEXT", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
             },
             constraints: table =>
             {
@@ -44,10 +44,10 @@ public partial class NotificationCenter : Migration
             name: "NotificationStatus",
             columns: table => new
             {
-                NotificationId = table.Column<Guid>(type: "uuid", nullable: false),
-                UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                ReadDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                DeletedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                NotificationId = table.Column<Guid>(type: "TEXT", nullable: false),
+                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                ReadDate = table.Column<DateTime>(type: "TEXT", nullable: true),
+                DeletedDate = table.Column<DateTime>(type: "TEXT", nullable: true)
             },
             constraints: table =>
             {
@@ -67,7 +67,7 @@ public partial class NotificationCenter : Migration
             });
 
         migrationBuilder.CreateIndex(
-            name: "IX_Notification_ClientType_Global_UserId_OrganizationId_Priori~",
+            name: "IX_Notification_ClientType_Global_UserId_OrganizationId_Priority_CreationDate",
             table: "Notification",
             columns: new[] { "ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate" },
             descending: new[] { false, false, false, false, true, true });
