@@ -79,7 +79,7 @@ public class Startup
                 MaxAge = TimeSpan.FromDays(7)
             };
 
-            context.Response.Headers.Add("Content-Security-Policy", "default-src *; script-src 'none'");
+            context.Response.Headers.Add("Content-Security-Policy", "default-src 'self'; script-src 'none'");
 
             await next();
         });
