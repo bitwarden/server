@@ -2,23 +2,19 @@
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 
-public class OrganizationUserUserMiniDetailsOperationRequirement : OrganizationOperationRequirement
-{
-    public OrganizationUserUserMiniDetailsOperationRequirement(string name, Guid organizationId) : base(name, organizationId)
-    { }
-}
+public class OrganizationUserUserMiniDetailsOperationRequirement : OperationAuthorizationRequirement;
 
 public static class OrganizationUserUserMiniDetailsOperations
 {
-    public static OrganizationUserUserMiniDetailsOperationRequirement ReadAllForOrganization(Guid organizationId) =>
-        new(nameof(ReadAllForOrganization), organizationId);
+    public static readonly OrganizationUserUserMiniDetailsOperationRequirement ReadAll = new() { Name = nameof(ReadAll)};
 }
 
 public class OrganizationUserUserMiniDetailsAuthorizationHandler :
-    AuthorizationHandler<OrganizationUserUserMiniDetailsOperationRequirement>
+    AuthorizationHandler<OrganizationUserUserMiniDetailsOperationRequirement, OrganizationIdResource>
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICurrentContext _currentContext;
@@ -32,14 +28,14 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        OrganizationUserUserMiniDetailsOperationRequirement requirement)
+        OrganizationUserUserMiniDetailsOperationRequirement requirement, OrganizationIdResource organizationId)
     {
         var authorized = false;
 
         switch (requirement)
         {
-            case not null when requirement.Name == nameof(OrganizationUserUserMiniDetailsOperations.ReadAllForOrganization):
-                authorized = await CanReadAllForOrganization(requirement);
+            case not null when requirement.Name == nameof(OrganizationUserUserMiniDetailsOperations.ReadAll):
+                authorized = await CanReadAllForOrganization(organizationId);
                 break;
         }
 
@@ -49,9 +45,9 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
         }
     }
 
-    private async Task<bool> CanReadAllForOrganization(OrganizationUserUserMiniDetailsOperationRequirement requirement)
+    private async Task<bool> CanReadAllForOrganization(Guid organizationId)
     {
-        var organization = _currentContext.GetOrganization(requirement.OrganizationId);
+        var organization = _currentContext.GetOrganization(organizationId);
 
         // Most admin types need this for administrative functionality
         if (organization is { Type: OrganizationUserType.Owner } or
@@ -74,7 +70,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
             }
         }
 
-        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
             return true;
         }
