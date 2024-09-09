@@ -129,8 +129,8 @@ public class OrganizationUsersController : Controller
         return response;
     }
 
-    [HttpGet("mini-user-details")]
-    public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> Get(Guid orgId)
+    [HttpGet("mini-details")]
+    public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
         var organizationUsers = await _organizationUserUserMiniDetailsQuery.Get(orgId);
         return new ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>(
