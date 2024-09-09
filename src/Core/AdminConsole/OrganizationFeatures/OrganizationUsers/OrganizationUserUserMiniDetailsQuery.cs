@@ -35,6 +35,7 @@ public class OrganizationUserUserMiniDetailsQuery : IOrganizationUserUserMiniDet
             throw new NotFoundException();
         }
 
-        return await _organizationUserRepository.GetMiniDetailsByOrganizationIdAsync(orgId);
+        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId);
+        return organizationUserUserDetails.Select(ou => new OrganizationUserUserMiniDetails(ou));
     }
 }

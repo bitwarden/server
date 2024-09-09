@@ -21,7 +21,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers);
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
-    Task<IEnumerable<OrganizationUserUserMiniDetails>> GetMiniDetailsByOrganizationIdAsync(Guid organizationId);
     Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id);
     Task<Tuple<OrganizationUserUserDetails?, ICollection<CollectionAccessSelection>>>
         GetDetailsByIdWithCollectionsAsync(Guid id);
