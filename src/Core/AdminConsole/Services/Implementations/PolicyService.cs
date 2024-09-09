@@ -293,7 +293,7 @@ public class PolicyService : IPolicyService
                                     "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
                             }
 
-                            await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
                                 savingUserId);
                             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                                 org.DisplayName(), orgUser.Email);
@@ -309,7 +309,7 @@ public class PolicyService : IPolicyService
                                     && ou.OrganizationId != org.Id
                                     && ou.Status != OrganizationUserStatusType.Invited))
                         {
-                            await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
                                 savingUserId);
                             await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                                 org.DisplayName(), orgUser.Email);
@@ -350,7 +350,7 @@ public class PolicyService : IPolicyService
                                     "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
                             }
 
-                            await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
                                 savingUserId);
                             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                                 org.DisplayName(), orgUser.Email);
@@ -366,7 +366,7 @@ public class PolicyService : IPolicyService
                                     && ou.OrganizationId != org.Id
                                     && ou.Status != OrganizationUserStatusType.Invited))
                         {
-                            await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
                                 savingUserId);
                             await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                                 org.DisplayName(), orgUser.Email);
