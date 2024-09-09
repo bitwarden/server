@@ -8,6 +8,8 @@ using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class MultiServicePushNotificationService : IPushNotificationService
@@ -161,14 +163,14 @@ public class MultiServicePushNotificationService : IPushNotificationService
     }
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId));
         return Task.FromResult(0);
     }
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId));
         return Task.FromResult(0);

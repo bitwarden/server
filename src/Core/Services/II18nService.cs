@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Localization;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public interface II18nService

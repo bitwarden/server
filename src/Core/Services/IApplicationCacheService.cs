@@ -3,6 +3,8 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Data.Organizations;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public interface IApplicationCacheService

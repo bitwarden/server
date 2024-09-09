@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Services;
+﻿#nullable enable
+
+namespace Bit.Core.Services;
 
 public interface IFeatureService
 {
@@ -30,7 +32,7 @@ public interface IFeatureService
     /// <param name="key">The key of the feature to check.</param>
     /// <param name="defaultValue">The default value for the feature.</param>
     /// <returns>The feature variation value.</returns>
-    string GetStringVariation(string key, string defaultValue = null);
+    string GetStringVariation(string key, string? defaultValue = null);
 
     /// <summary>
     /// Gets all feature values.

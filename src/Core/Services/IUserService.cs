@@ -7,14 +7,16 @@ using Bit.Core.Models.Business;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public interface IUserService
 {
     Guid? GetProperUserId(ClaimsPrincipal principal);
-    Task<User> GetUserByIdAsync(string userId);
-    Task<User> GetUserByIdAsync(Guid userId);
-    Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal);
+    Task<User?> GetUserByIdAsync(string userId);
+    Task<User?> GetUserByIdAsync(Guid userId);
+    Task<User?> GetUserByPrincipalAsync(ClaimsPrincipal principal);
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
     Task<IdentityResult> CreateUserAsync(User user);
@@ -47,7 +49,7 @@ public interface IUserService
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
     Task SendDeleteConfirmationAsync(string email);
-    Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
+    Task<Tuple<bool, string?>> SignUpPremiumAsync(User user, string paymentToken,
         PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
         TaxInfo taxInfo);
     Task UpdateLicenseAsync(User user, UserLicense license);
@@ -60,7 +62,7 @@ public interface IUserService
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task DisablePremiumAsync(User user, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
-    Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
+    Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo? subscriptionInfo = null,
         int? version = null);
     Task<bool> CheckPasswordAsync(User user, string password);
     Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
@@ -73,7 +75,7 @@ public interface IUserService
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
         bool validatePassword = true, bool refreshStamp = true);
     Task RotateApiKeyAsync(User user);
-    string GetUserName(ClaimsPrincipal principal);
+    string? GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);

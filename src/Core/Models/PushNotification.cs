@@ -1,10 +1,12 @@
 ﻿using Bit.Core.Enums;
 
+#nullable enable
+
 namespace Bit.Core.Models;
 
 public class PushNotificationData<T>
 {
-    public PushNotificationData(PushType type, T payload, string contextId)
+    public PushNotificationData(PushType type, T payload, string? contextId)
     {
         Type = type;
         Payload = payload;
@@ -13,7 +15,7 @@ public class PushNotificationData<T>
 
     public PushType Type { get; set; }
     public T Payload { get; set; }
-    public string ContextId { get; set; }
+    public string? ContextId { get; set; }
 }
 
 public class SyncCipherPushNotification
@@ -21,7 +23,7 @@ public class SyncCipherPushNotification
     public Guid Id { get; set; }
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
-    public IEnumerable<Guid> CollectionIds { get; set; }
+    public IEnumerable<Guid>? CollectionIds { get; set; }
     public DateTime RevisionDate { get; set; }
 }
 

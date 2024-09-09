@@ -1,9 +1,12 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
+
+#nullable enable
 
 namespace Bit.Core.Services;
 
@@ -15,7 +18,7 @@ public abstract class BaseIdentityClientService : IDisposable
     private readonly string _identityClientSecret;
     protected readonly ILogger<BaseIdentityClientService> _logger;
 
-    private JsonDocument _decodedToken;
+    private JsonDocument? _decodedToken;
     private DateTime? _nextAuthAttempt = null;
 
     public BaseIdentityClientService(
@@ -44,16 +47,16 @@ public abstract class BaseIdentityClientService : IDisposable
 
     protected HttpClient Client { get; private set; }
     protected HttpClient IdentityClient { get; private set; }
-    protected string AccessToken { get; private set; }
+    protected string? AccessToken { get; private set; }
 
     protected Task SendAsync(HttpMethod method, string path) =>
         SendAsync<object>(method, path, null);
 
-    protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel) =>
+    protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest? requestModel) =>
         SendAsync<TRequest, object>(method, path, requestModel, false);
 
-    protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path,
-        TRequest requestModel, bool hasJsonResult)
+    protected async Task<TResult?> SendAsync<TRequest, TResult>(HttpMethod method, string path,
+        TRequest? requestModel, bool hasJsonResult)
     {
         var fullRequestPath = string.Concat(Client.BaseAddress, path);
 
@@ -65,7 +68,7 @@ public abstract class BaseIdentityClientService : IDisposable
             return default;
         }
 
-        var message = new TokenHttpRequestMessage(requestModel, AccessToken)
+        var message = new TokenHttpRequestMessage(requestModel, AccessToken!)
         {
             Method = method,
             RequestUri = new Uri(fullRequestPath)
@@ -94,6 +97,7 @@ public abstract class BaseIdentityClientService : IDisposable
         }
     }
 
+    [MemberNotNullWhen(true, nameof(AccessToken))]
     protected async Task<bool> HandleTokenStateAsync()
     {
         if (_nextAuthAttempt.HasValue && DateTime.UtcNow < _nextAuthAttempt.Value)
@@ -121,7 +125,7 @@ public abstract class BaseIdentityClientService : IDisposable
             })
         };
 
-        HttpResponseMessage response = null;
+        HttpResponseMessage? response = null;
         try
         {
             response = await IdentityClient.SendAsync(requestMessage);
@@ -158,7 +162,14 @@ public abstract class BaseIdentityClientService : IDisposable
         var content = await response.Content.ReadAsStreamAsync();
         using var jsonDocument = await JsonDocument.ParseAsync(content);
 
-        AccessToken = jsonDocument.RootElement.GetProperty("access_token").GetString();
+        var accessToken = jsonDocument.RootElement.GetProperty("access_token").GetString();
+
+        if (accessToken == null)
+        {
+            return false;
+        }
+
+        AccessToken = accessToken;
         return true;
     }
 
@@ -169,7 +180,7 @@ public abstract class BaseIdentityClientService : IDisposable
             Headers.Add("Authorization", $"Bearer {token}");
         }
 
-        public TokenHttpRequestMessage(object requestObject, string token)
+        public TokenHttpRequestMessage(object? requestObject, string token)
             : this(token)
         {
             if (requestObject != null)

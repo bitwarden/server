@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class NotificationHubPushNotificationService : IPushNotificationService
@@ -63,7 +65,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -218,8 +220,8 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await SendPayloadToUserAsync(orgId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
     }
 
-    public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null)
     {
         var tag = BuildTag($"template:payload_userId:{SanitizeTagInput(userId)}", identifier);
         await SendPayloadAsync(tag, type, payload);
@@ -230,7 +232,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     }
 
     public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         var tag = BuildTag($"template:payload && organizationId:{SanitizeTagInput(orgId)}", identifier);
         await SendPayloadAsync(tag, type, payload);
@@ -240,7 +242,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         }
     }
 
-    private string GetContextIdentifier(bool excludeCurrentContext)
+    private string? GetContextIdentifier(bool excludeCurrentContext)
     {
         if (!excludeCurrentContext)
         {
@@ -252,7 +254,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         return currentContext?.DeviceIdentifier;
     }
 
-    private string BuildTag(string tag, string identifier)
+    private string BuildTag(string tag, string? identifier)
     {
         if (!string.IsNullOrWhiteSpace(identifier))
         {

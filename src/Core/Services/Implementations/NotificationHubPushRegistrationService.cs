@@ -6,6 +6,8 @@ using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
@@ -47,7 +49,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         addHub(NotificationHubType.Android);
     }
 
-    public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
+    public async Task CreateOrUpdateRegistrationAsync(string? pushToken, string deviceId, string userId,
         string identifier, DeviceType type)
     {
         if (string.IsNullOrWhiteSpace(pushToken))
@@ -72,7 +74,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             installation.Tags.Add("deviceIdentifier:" + identifier);
         }
 
-        string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
+        string? payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
         switch (type)
         {
             case DeviceType.Android:
@@ -124,7 +126,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
+    private void BuildInstallationTemplate(Installation installation, string templateId, string? templateBody,
         string userId, string identifier)
     {
         if (templateBody == null)

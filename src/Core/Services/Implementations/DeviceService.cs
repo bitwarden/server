@@ -4,6 +4,8 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class DeviceService : IDeviceService

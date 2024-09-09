@@ -3,6 +3,8 @@ using Bit.Core.Enums;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class NoopPushNotificationService : IPushNotificationService
@@ -83,7 +85,7 @@ public class NoopPushNotificationService : IPushNotificationService
     }
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         return Task.FromResult(0);
     }
@@ -99,7 +101,7 @@ public class NoopPushNotificationService : IPushNotificationService
     }
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         return Task.FromResult(0);
     }

@@ -16,7 +16,7 @@ public interface ICurrentContext
 {
     HttpContext HttpContext { get; set; }
     Guid? UserId { get; set; }
-    User User { get; set; }
+    User? User { get; set; }
     string DeviceIdentifier { get; set; }
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }

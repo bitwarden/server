@@ -4,13 +4,15 @@ using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
-    private readonly string _replyDomain;
+    private readonly string? _replyDomain;
     private readonly string _replyEmail;
 
     public MailKitSmtpMailDeliveryService(

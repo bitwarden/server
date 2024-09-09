@@ -3,6 +3,8 @@ using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public abstract class AzureQueueService<T>

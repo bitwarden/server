@@ -3,6 +3,8 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class MultiServiceMailDeliveryService : IMailDeliveryService

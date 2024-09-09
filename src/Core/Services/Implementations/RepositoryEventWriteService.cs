@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class RepositoryEventWriteService : IEventWriteService

@@ -1,9 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Diagnostics.CodeAnalysis;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+
+#nullable enable
 
 namespace Bit.Core.Services;
 
@@ -12,10 +15,10 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
     private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
-    private IDictionary<Guid, OrganizationAbility> _orgAbilities;
+    private IDictionary<Guid, OrganizationAbility>? _orgAbilities;
     private TimeSpan _orgAbilitiesRefreshInterval = TimeSpan.FromMinutes(10);
 
-    private IDictionary<Guid, ProviderAbility> _providerAbilities;
+    private IDictionary<Guid, ProviderAbility>? _providerAbilities;
 
     public InMemoryApplicationCacheService(
         IOrganizationRepository organizationRepository, IProviderRepository providerRepository)
@@ -30,14 +33,12 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         return _orgAbilities;
     }
 
-#nullable enable
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid organizationId)
     {
         (await GetOrganizationAbilitiesAsync())
             .TryGetValue(organizationId, out var organizationAbility);
         return organizationAbility;
     }
-#nullable disable
 
     public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
@@ -95,10 +96,13 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         return Task.FromResult(0);
     }
 
+    // [MemberNotNull] doesn't work in async methods: https://github.com/dotnet/csharplang/discussions/5657
+#pragma warning disable CS8774
+    [MemberNotNull(nameof(_orgAbilities))]
     private async Task InitOrganizationAbilitiesAsync()
     {
         var now = DateTime.UtcNow;
-        if (_orgAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
+        if (_orgAbilities is null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
         {
             var abilities = await _organizationRepository.GetManyAbilitiesAsync();
             _orgAbilities = abilities.ToDictionary(a => a.Id);
@@ -106,6 +110,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         }
     }
 
+    [MemberNotNull(nameof(_providerAbilities))]
     private async Task InitProviderAbilitiesAsync()
     {
         var now = DateTime.UtcNow;
@@ -116,4 +121,5 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
             _lastOrgAbilityRefresh = now;
         }
     }
+#pragma warning restore CS8774
 }
