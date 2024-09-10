@@ -1,23 +1,33 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Sales;
 
 namespace Bit.Core.Billing.Services;
 
 public interface IOrganizationBillingService
 {
     /// <summary>
+    /// <para>Establishes the billing configuration for a Bitwarden <see cref="Organization"/> using the provided <paramref name="sale"/>.</para>
+    /// <para>
+    /// The method first checks to see if the
+    /// provided <see cref="BitwardenOrganizationSale.Organization"/> already has a Stripe <see cref="Stripe.Customer"/> using the <see cref="Organization.GatewayCustomerId"/>.
+    /// If it doesn't, the method creates one using the <paramref name="sale"/>'s <see cref="BitwardenOrganizationSale.CustomerSetup"/>. The method then creates a Stripe <see cref="Stripe.Subscription"/>
+    /// for the created or existing customer using the provided <see cref="BitwardenOrganizationSale.SubscriptionSetup"/>.
+    /// </para>
+    /// </summary>
+    /// <param name="sale">The purchase details necessary to establish the Stripe entities responsible for billing the organization.</param>
+    /// <example>
+    /// <code>
+    /// var sale = BitwardenOrganizationSale.From(organization, organizationSignup);
+    /// await organizationBillingService.Finalize(sale);
+    /// </code>
+    /// </example>
+    Task Finalize(BitwardenOrganizationSale sale);
+
+    /// <summary>
     /// Retrieve metadata about the organization represented bsy the provided <paramref name="organizationId"/>.
     /// </summary>
     /// <param name="organizationId">The ID of the organization to retrieve metadata for.</param>
     /// <returns>An <see cref="OrganizationMetadata"/> record.</returns>
     Task<OrganizationMetadata> GetMetadata(Guid organizationId);
-
-    /// <summary>
-    /// Purchase a subscription for the provided <paramref name="organization"/> using the provided <paramref name="organizationSubscriptionPurchase"/>.
-    /// If successful, a Stripe <see cref="Stripe.Customer"/> and <see cref="Stripe.Subscription"/> will be created for the organization and the
-    /// organization will be enabled.
-    /// </summary>
-    /// <param name="organization">The organization to purchase a subscription for.</param>
-    /// <param name="organizationSubscriptionPurchase">The purchase information for the organization's subscription.</param>
-    Task PurchaseSubscription(Organization organization, OrganizationSubscriptionPurchase organizationSubscriptionPurchase);
 }
