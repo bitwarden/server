@@ -89,7 +89,8 @@ public class OrganizationBillingService(
             var customer = await CreateCustomerAsync(organization,
                 new CustomerSetup
                 {
-                    TokenizedPaymentSource = tokenizedPaymentSource, TaxInformation = taxInformation,
+                    TokenizedPaymentSource = tokenizedPaymentSource,
+                    TaxInformation = taxInformation,
                 });
 
             organization.Gateway = GatewayType.Stripe;

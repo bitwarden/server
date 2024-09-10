@@ -8,7 +8,7 @@ namespace Bit.Core.Billing.Models.Sales;
 
 public class OrganizationSale
 {
-    private OrganizationSale() {}
+    private OrganizationSale() { }
 
     public void Deconstruct(
         out Organization organization,
@@ -26,20 +26,20 @@ public class OrganizationSale
 
     public static OrganizationSale From(
         Organization organization,
-        OrganizationSignup signup) => new ()
-    {
-        Organization = organization,
-        CustomerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null,
-        SubscriptionSetup = GetSubscriptionSetup(signup)
-    };
+        OrganizationSignup signup) => new()
+        {
+            Organization = organization,
+            CustomerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null,
+            SubscriptionSetup = GetSubscriptionSetup(signup)
+        };
 
     public static OrganizationSale From(
         Organization organization,
         OrganizationUpgrade upgrade) => new()
-    {
-        Organization = organization,
-        SubscriptionSetup = GetSubscriptionSetup(upgrade)
-    };
+        {
+            Organization = organization,
+            SubscriptionSetup = GetSubscriptionSetup(upgrade)
+        };
 
     private static CustomerSetup? GetCustomerSetup(OrganizationSignup signup)
     {
@@ -69,7 +69,9 @@ public class OrganizationSale
 
         return new CustomerSetup
         {
-            TokenizedPaymentSource = tokenizedPaymentSource, TaxInformation = taxInformation, Coupon = coupon
+            TokenizedPaymentSource = tokenizedPaymentSource,
+            TaxInformation = taxInformation,
+            Coupon = coupon
         };
     }
 
@@ -87,7 +89,8 @@ public class OrganizationSale
         var secretsManagerOptions = upgrade.UseSecretsManager
             ? new SubscriptionSetup.SecretsManager
             {
-                Seats = upgrade.AdditionalSmSeats ?? 0, ServiceAccounts = upgrade.AdditionalServiceAccounts
+                Seats = upgrade.AdditionalSmSeats ?? 0,
+                ServiceAccounts = upgrade.AdditionalServiceAccounts
             }
             : null;
 
