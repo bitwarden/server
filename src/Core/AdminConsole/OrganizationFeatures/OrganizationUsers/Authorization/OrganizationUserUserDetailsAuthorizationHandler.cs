@@ -1,10 +1,9 @@
 ﻿#nullable enable
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 
 public class OrganizationUserUserDetailsAuthorizationHandler : AuthorizationHandler<OrganizationUserUserDetailsOperationRequirement, OrganizationIdResource>
 {

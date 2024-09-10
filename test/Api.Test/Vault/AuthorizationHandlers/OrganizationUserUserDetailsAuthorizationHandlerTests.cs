@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;

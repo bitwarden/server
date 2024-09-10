@@ -143,6 +143,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
 
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserMiniDetailsAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
         services.AddScoped<IOrganizationUserUserMiniDetailsQuery, OrganizationUserUserMiniDetailsQuery>();
     }
 

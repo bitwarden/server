@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 
-namespace Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 
 public class OrganizationUserUserDetailsOperationRequirement : OperationAuthorizationRequirement;
 
