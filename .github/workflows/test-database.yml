@@ -117,15 +117,15 @@ jobs:
       
       - name: Print MySQL Logs
         if: failure()
-        run: 'docker logs $(docker ps -aqf "name=mysql")'
+        run: 'docker logs $(docker ps --quiet --filter "name=mysql")'
 
       - name: Print Postgres Logs
         if: failure()
-        run: 'docker logs $(docker ps -aqf "name=postgres")'
+        run: 'docker logs $(docker ps --quiet --filter "name=postgres")'
 
       - name: Print MSSQL Logs
         if: failure()
-        run: 'docker logs $(docker ps -aqf "name=mssql")'
+        run: 'docker logs $(docker ps --quiet --filter "name=mssql")'
 
       - name: Report test results
         uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
