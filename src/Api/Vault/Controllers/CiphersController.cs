@@ -37,11 +37,9 @@ public class CiphersController : Controller
     private readonly ICipherService _cipherService;
     private readonly IUserService _userService;
     private readonly IAttachmentStorageService _attachmentStorageService;
-    private readonly IProviderService _providerService;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
@@ -52,11 +50,9 @@ public class CiphersController : Controller
         ICipherService cipherService,
         IUserService userService,
         IAttachmentStorageService attachmentStorageService,
-        IProviderService providerService,
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
-        IFeatureService featureService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository)
@@ -66,11 +62,9 @@ public class CiphersController : Controller
         _cipherService = cipherService;
         _userService = userService;
         _attachmentStorageService = attachmentStorageService;
-        _providerService = providerService;
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
-        _featureService = featureService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _applicationCacheService = applicationCacheService;
         _collectionRepository = collectionRepository;
@@ -282,8 +276,7 @@ public class CiphersController : Controller
 
     /// <summary>
     /// Permission helper to determine if the current user can use the "/admin" variants of the cipher endpoints.
-    /// Allowed for custom users with EditAnyCollection, providers, unrestricted owners and admins (allowAdminAccess setting is ON).
-    /// Falls back to original EditAnyCollection permission check for when V1 flag is disabled.
+    /// Allowed for custom users with EditAnyCollection, unrestricted owners and admins (allowAdminAccess setting is ON).
     /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
     /// </summary>
     private async Task<bool> CanEditCipherAsAdminAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
@@ -293,23 +286,7 @@ public class CiphersController : Controller
         // If we're not an "admin", we don't need to check the ciphers
         if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
         {
-            // Are we a provider user? If so, we need to be sure we're not restricted
-            // Once the feature flag is removed, this check can be combined with the above
-            if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-            {
-                // Provider is restricted from editing ciphers, so we're not an "admin"
-                if (_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess))
-                {
-                    return false;
-                }
-
-                // Provider is unrestricted, so we're an "admin", don't return early
-            }
-            else
-            {
-                // Not a provider or admin
-                return false;
-            }
+            return false;
         }
 
         // We know we're an "admin", now check the ciphers explicitly (in case admins are restricted)
@@ -366,12 +343,6 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can edit all ciphers if RestrictProviderAccess is disabled
-        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-        {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
-        }
-
         return false;
     }
 
@@ -389,12 +360,6 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can only access organization ciphers if RestrictProviderAccess is disabled
-        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-        {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
-        }
-
         return false;
     }
 
@@ -410,12 +375,6 @@ public class CiphersController : Controller
         { Permissions.EditAnyCollection: true })
         {
             return true;
-        }
-
-        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
-        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-        {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
