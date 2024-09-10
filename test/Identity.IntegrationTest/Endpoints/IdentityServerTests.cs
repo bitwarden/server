@@ -145,7 +145,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersTrue_Success(OrganizationUserType organizationUserType, Guid organizationId, string deviceId, int generatedUsername)
     {
@@ -173,7 +172,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersFalse_Success(OrganizationUserType organizationUserType, Guid organizationId, string deviceId, int generatedUsername)
     {
@@ -201,7 +199,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersTrue_Throw(OrganizationUserType organizationUserType, Guid organizationId, string deviceId, int generatedUsername)
     {
@@ -253,7 +250,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
     [Theory]
     [BitAutoData(OrganizationUserType.User)]
-    [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task TokenEndpoint_GrantTypePassword_WithNonOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Throws(OrganizationUserType organizationUserType, Guid organizationId, string deviceId, int generatedUsername)
     {
@@ -607,7 +603,16 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var organizationUserRepository = _factory.Services.GetService<IOrganizationUserRepository>();
         var policyRepository = _factory.Services.GetService<IPolicyRepository>();
 
-        var organization = new Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled, UsePolicies = true };
+        var organization = new Organization
+        {
+            Id = organizationId,
+            Name = $"Org Name | {organizationId}",
+            Enabled = true,
+            UseSso = ssoPolicyEnabled,
+            Plan = "Enterprise",
+            UsePolicies = true,
+            BillingEmail = $"billing-email+{organizationId}@example.com",
+        };
         await organizationRepository.CreateAsync(organization);
 
         var user = await userRepository.GetByEmailAsync(username);

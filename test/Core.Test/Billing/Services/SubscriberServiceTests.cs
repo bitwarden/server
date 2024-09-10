@@ -5,7 +5,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
-using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
@@ -29,8 +28,9 @@ namespace Bit.Core.Test.Billing.Services;
 public class SubscriberServiceTests
 {
     #region CancelSubscription
+
     [Theory, BitAutoData]
-    public async Task CancelSubscription_SubscriptionInactive_ContactSupport(
+    public async Task CancelSubscription_SubscriptionInactive_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -45,7 +45,7 @@ public class SubscriberServiceTests
             .SubscriptionGetAsync(organization.GatewaySubscriptionId)
             .Returns(subscription);
 
-        await ThrowsContactSupportAsync(() =>
+        await ThrowsBillingExceptionAsync(() =>
             sutProvider.Sut.CancelSubscription(organization, new OffboardingSurveyResponse(), false));
 
         await stripeAdapter
@@ -192,9 +192,11 @@ public class SubscriberServiceTests
             .DidNotReceiveWithAnyArgs()
             .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>()); ;
     }
+
     #endregion
 
     #region GetCustomer
+
     [Theory, BitAutoData]
     public async Task GetCustomer_NullSubscriber_ThrowsArgumentNullException(
         SutProvider<SubscriberService> sutProvider)
@@ -256,9 +258,11 @@ public class SubscriberServiceTests
 
         Assert.Equivalent(customer, gotCustomer);
     }
+
     #endregion
 
     #region GetCustomerOrThrow
+
     [Theory, BitAutoData]
     public async Task GetCustomerOrThrow_NullSubscriber_ThrowsArgumentNullException(
         SutProvider<SubscriberService> sutProvider)
@@ -266,17 +270,17 @@ public class SubscriberServiceTests
             async () => await sutProvider.Sut.GetCustomerOrThrow(null));
 
     [Theory, BitAutoData]
-    public async Task GetCustomerOrThrow_NoGatewayCustomerId_ContactSupport(
+    public async Task GetCustomerOrThrow_NoGatewayCustomerId_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
         organization.GatewayCustomerId = null;
 
-        await ThrowsContactSupportAsync(async () => await sutProvider.Sut.GetCustomerOrThrow(organization));
+        await ThrowsBillingExceptionAsync(async () => await sutProvider.Sut.GetCustomerOrThrow(organization));
     }
 
     [Theory, BitAutoData]
-    public async Task GetCustomerOrThrow_NoCustomer_ContactSupport(
+    public async Task GetCustomerOrThrow_NoCustomer_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -284,11 +288,11 @@ public class SubscriberServiceTests
             .CustomerGetAsync(organization.GatewayCustomerId)
             .ReturnsNull();
 
-        await ThrowsContactSupportAsync(async () => await sutProvider.Sut.GetCustomerOrThrow(organization));
+        await ThrowsBillingExceptionAsync(async () => await sutProvider.Sut.GetCustomerOrThrow(organization));
     }
 
     [Theory, BitAutoData]
-    public async Task GetCustomerOrThrow_StripeException_ContactSupport(
+    public async Task GetCustomerOrThrow_StripeException_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -298,10 +302,10 @@ public class SubscriberServiceTests
             .CustomerGetAsync(organization.GatewayCustomerId)
             .ThrowsAsync(stripeException);
 
-        await ThrowsContactSupportAsync(
+        await ThrowsBillingExceptionAsync(
             async () => await sutProvider.Sut.GetCustomerOrThrow(organization),
-            "An error occurred while trying to retrieve a Stripe Customer",
-            stripeException);
+            message: "An error occurred while trying to retrieve a Stripe customer",
+            innerException: stripeException);
     }
 
     [Theory, BitAutoData]
@@ -319,108 +323,6 @@ public class SubscriberServiceTests
 
         Assert.Equivalent(customer, gotCustomer);
     }
-    #endregion
-
-    #region GetInvoices
-
-    [Theory, BitAutoData]
-    public async Task GetInvoices_NullSubscriber_ThrowsArgumentNullException(
-        SutProvider<SubscriberService> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await sutProvider.Sut.GetInvoices(null));
-
-    [Theory, BitAutoData]
-    public async Task GetCustomer_NoGatewayCustomerId_ReturnsEmptyList(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        organization.GatewayCustomerId = null;
-
-        var invoices = await sutProvider.Sut.GetInvoices(organization);
-
-        Assert.Empty(invoices);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetInvoices_StripeException_ReturnsEmptyList(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceListAsync(Arg.Any<StripeInvoiceListOptions>())
-            .ThrowsAsync<StripeException>();
-
-        var invoices = await sutProvider.Sut.GetInvoices(organization);
-
-        Assert.Empty(invoices);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetInvoices_NullOptions_Succeeds(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var invoices = new List<Invoice>
-        {
-            new ()
-            {
-                Created = new DateTime(2024, 6, 1),
-                Number = "2",
-                Status = "open",
-                Total = 100000,
-                HostedInvoiceUrl = "https://example.com/invoice/2",
-                InvoicePdf = "https://example.com/invoice/2/pdf"
-            },
-            new ()
-            {
-                Created = new DateTime(2024, 5, 1),
-                Number = "1",
-                Status = "paid",
-                Total = 100000,
-                HostedInvoiceUrl = "https://example.com/invoice/1",
-                InvoicePdf = "https://example.com/invoice/1/pdf"
-            }
-        };
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceListAsync(Arg.Is<StripeInvoiceListOptions>(options => options.Customer == organization.GatewayCustomerId))
-            .Returns(invoices);
-
-        var gotInvoices = await sutProvider.Sut.GetInvoices(organization);
-
-        Assert.Equivalent(invoices, gotInvoices);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetInvoices_ProvidedOptions_Succeeds(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var invoices = new List<Invoice>
-        {
-            new ()
-            {
-                Created = new DateTime(2024, 5, 1),
-                Number = "1",
-                Status = "paid",
-                Total = 100000,
-            }
-        };
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceListAsync(Arg.Is<StripeInvoiceListOptions>(
-                options =>
-                    options.Customer == organization.GatewayCustomerId &&
-                    options.Status == "paid"))
-            .Returns(invoices);
-
-        var gotInvoices = await sutProvider.Sut.GetInvoices(organization, new StripeInvoiceListOptions
-        {
-            Status = "paid"
-        });
-
-        Assert.Equivalent(invoices, gotInvoices);
-    }
 
     #endregion
 
@@ -428,7 +330,7 @@ public class SubscriberServiceTests
     [Theory, BitAutoData]
     public async Task GetPaymentMethod_NullSubscriber_ThrowsArgumentNullException(
         SutProvider<SubscriberService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GetPaymentMethod(null));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GetPaymentSource(null));
 
     [Theory, BitAutoData]
     public async Task GetPaymentMethod_Braintree_NoDefaultPaymentMethod_ReturnsNull(
@@ -462,7 +364,7 @@ public class SubscriberServiceTests
 
         customerGateway.FindAsync(braintreeCustomerId).Returns(braintreeCustomer);
 
-        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+        var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
         Assert.Null(paymentMethod);
     }
@@ -505,7 +407,7 @@ public class SubscriberServiceTests
 
         customerGateway.FindAsync(braintreeCustomerId).Returns(braintreeCustomer);
 
-        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+        var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
         Assert.Equal(PaymentMethodType.PayPal, paymentMethod.Type);
         Assert.Equal("a@example.com", paymentMethod.Description);
@@ -543,7 +445,7 @@ public class SubscriberServiceTests
                                options.Expand.Contains("invoice_settings.default_payment_method")))
             .Returns(customer);
 
-        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+        var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
         Assert.Equal(PaymentMethodType.BankAccount, paymentMethod.Type);
         Assert.Equal("Chase, *9999", paymentMethod.Description);
@@ -579,7 +481,7 @@ public class SubscriberServiceTests
                                options.Expand.Contains("invoice_settings.default_payment_method")))
             .Returns(customer);
 
-        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+        var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
         Assert.Equal(PaymentMethodType.Card, paymentMethod.Type);
         Assert.Equal("VISA, *9999, 09/2028", paymentMethod.Description);
@@ -625,7 +527,7 @@ public class SubscriberServiceTests
         sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntent.Id, Arg.Is<SetupIntentGetOptions>(
             options => options.Expand.Contains("payment_method"))).Returns(setupIntent);
 
-        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+        var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
         Assert.Equal(PaymentMethodType.BankAccount, paymentMethod.Type);
         Assert.Equal("Chase, *9999", paymentMethod.Description);
@@ -653,7 +555,7 @@ public class SubscriberServiceTests
                                options.Expand.Contains("invoice_settings.default_payment_method")))
             .Returns(customer);
 
-        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+        var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
         Assert.Equal(PaymentMethodType.BankAccount, paymentMethod.Type);
         Assert.Equal("Chase, *9999 - Verified", paymentMethod.Description);
@@ -682,7 +584,7 @@ public class SubscriberServiceTests
                                options.Expand.Contains("invoice_settings.default_payment_method")))
             .Returns(customer);
 
-        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+        var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
         Assert.Equal(PaymentMethodType.Card, paymentMethod.Type);
         Assert.Equal("VISA, *9999, 09/2028", paymentMethod.Description);
@@ -714,7 +616,7 @@ public class SubscriberServiceTests
                                options.Expand.Contains("invoice_settings.default_payment_method")))
             .Returns(customer);
 
-        var paymentMethod = await sutProvider.Sut.GetPaymentMethod(provider);
+        var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
         Assert.Equal(PaymentMethodType.Card, paymentMethod.Type);
         Assert.Equal("VISA, *9999, 09/2028", paymentMethod.Description);
@@ -795,17 +697,17 @@ public class SubscriberServiceTests
             async () => await sutProvider.Sut.GetSubscriptionOrThrow(null));
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_NoGatewaySubscriptionId_ContactSupport(
+    public async Task GetSubscriptionOrThrow_NoGatewaySubscriptionId_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
         organization.GatewaySubscriptionId = null;
 
-        await ThrowsContactSupportAsync(async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization));
+        await ThrowsBillingExceptionAsync(async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization));
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_NoSubscription_ContactSupport(
+    public async Task GetSubscriptionOrThrow_NoSubscription_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -813,11 +715,11 @@ public class SubscriberServiceTests
             .SubscriptionGetAsync(organization.GatewaySubscriptionId)
             .ReturnsNull();
 
-        await ThrowsContactSupportAsync(async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization));
+        await ThrowsBillingExceptionAsync(async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization));
     }
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionOrThrow_StripeException_ContactSupport(
+    public async Task GetSubscriptionOrThrow_StripeException_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -827,10 +729,10 @@ public class SubscriberServiceTests
             .SubscriptionGetAsync(organization.GatewaySubscriptionId)
             .ThrowsAsync(stripeException);
 
-        await ThrowsContactSupportAsync(
+        await ThrowsBillingExceptionAsync(
             async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization),
-            "An error occurred while trying to retrieve a Stripe Subscription",
-            stripeException);
+            message: "An error occurred while trying to retrieve a Stripe subscription",
+            innerException: stripeException);
     }
 
     [Theory, BitAutoData]
@@ -911,12 +813,12 @@ public class SubscriberServiceTests
 
     #region RemovePaymentMethod
     [Theory, BitAutoData]
-    public async Task RemovePaymentMethod_NullSubscriber_ArgumentNullException(
+    public async Task RemovePaymentMethod_NullSubscriber_ThrowsArgumentNullException(
         SutProvider<SubscriberService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.RemovePaymentMethod(null));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.RemovePaymentSource(null));
 
     [Theory, BitAutoData]
-    public async Task RemovePaymentMethod_Braintree_NoCustomer_ContactSupport(
+    public async Task RemovePaymentMethod_Braintree_NoCustomer_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -940,7 +842,7 @@ public class SubscriberServiceTests
 
         braintreeGateway.Customer.Returns(customerGateway);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.RemovePaymentMethod(organization));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.RemovePaymentSource(organization));
 
         await customerGateway.Received(1).FindAsync(braintreeCustomerId);
 
@@ -977,7 +879,7 @@ public class SubscriberServiceTests
 
         customerGateway.FindAsync(braintreeCustomerId).Returns(braintreeCustomer);
 
-        await sutProvider.Sut.RemovePaymentMethod(organization);
+        await sutProvider.Sut.RemovePaymentSource(organization);
 
         await customerGateway.Received(1).FindAsync(braintreeCustomerId);
 
@@ -987,7 +889,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemovePaymentMethod_Braintree_CustomerUpdateFails_ContactSupport(
+    public async Task RemovePaymentMethod_Braintree_CustomerUpdateFails_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -1028,7 +930,7 @@ public class SubscriberServiceTests
                 Arg.Is<CustomerRequest>(request => request.DefaultPaymentMethodToken == null))
             .Returns(updateBraintreeCustomerResult);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.RemovePaymentMethod(organization));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.RemovePaymentSource(organization));
 
         await customerGateway.Received(1).FindAsync(braintreeCustomerId);
 
@@ -1042,7 +944,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemovePaymentMethod_Braintree_PaymentMethodDeleteFails_RollBack_ContactSupport(
+    public async Task RemovePaymentMethod_Braintree_PaymentMethodDeleteFails_RollBack_ThrowsBillingException(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -1086,7 +988,7 @@ public class SubscriberServiceTests
 
         paymentMethodGateway.DeleteAsync(paymentMethod.Token).Returns(deleteBraintreePaymentMethodResult);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.RemovePaymentMethod(organization));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.RemovePaymentSource(organization));
 
         await customerGateway.Received(1).FindAsync(braintreeCustomerId);
 
@@ -1124,7 +1026,7 @@ public class SubscriberServiceTests
             .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
             .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>()));
 
-        await sutProvider.Sut.RemovePaymentMethod(organization);
+        await sutProvider.Sut.RemovePaymentSource(organization);
 
         await stripeAdapter.Received(1).BankAccountDeleteAsync(stripeCustomer.Id, bankAccountId);
 
@@ -1166,7 +1068,7 @@ public class SubscriberServiceTests
                 }
             }));
 
-        await sutProvider.Sut.RemovePaymentMethod(organization);
+        await sutProvider.Sut.RemovePaymentSource(organization);
 
         await stripeAdapter.DidNotReceiveWithAnyArgs().BankAccountDeleteAsync(Arg.Any<string>(), Arg.Any<string>());
 
@@ -1206,42 +1108,42 @@ public class SubscriberServiceTests
     #region UpdatePaymentMethod
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_NullSubscriber_ArgumentNullException(
+    public async Task UpdatePaymentMethod_NullSubscriber_ThrowsArgumentNullException(
         SutProvider<SubscriberService> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdatePaymentMethod(null, null));
+        => await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdatePaymentSource(null, null));
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_NullTokenizedPaymentMethod_ArgumentNullException(
+    public async Task UpdatePaymentMethod_NullTokenizedPaymentMethod_ThrowsArgumentNullException(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdatePaymentMethod(provider, null));
+        => await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdatePaymentSource(provider, null));
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_NoToken_ContactSupport(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer());
-
-        await ThrowsContactSupportAsync(() =>
-            sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.Card, null)));
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_UnsupportedPaymentMethod_ContactSupport(
+    public async Task UpdatePaymentMethod_NoToken_ThrowsBillingException(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
         sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
             .Returns(new Customer());
 
-        await ThrowsContactSupportAsync(() =>
-            sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.BitPay, "TOKEN")));
+        await ThrowsBillingExceptionAsync(() =>
+            sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.Card, null)));
     }
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_BankAccount_IncorrectNumberOfSetupIntentsForToken_ContactSupport(
+    public async Task UpdatePaymentMethod_UnsupportedPaymentMethod_ThrowsBillingException(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+            .Returns(new Customer());
+
+        await ThrowsBillingExceptionAsync(() =>
+            sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.BitPay, "TOKEN")));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdatePaymentMethod_BankAccount_IncorrectNumberOfSetupIntentsForToken_ThrowsBillingException(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -1253,8 +1155,8 @@ public class SubscriberServiceTests
         stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.PaymentMethod == "TOKEN"))
             .Returns([new SetupIntent(), new SetupIntent()]);
 
-        await ThrowsContactSupportAsync(() =>
-            sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.BankAccount, "TOKEN")));
+        await ThrowsBillingExceptionAsync(() =>
+            sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.BankAccount, "TOKEN")));
     }
 
     [Theory, BitAutoData]
@@ -1289,8 +1191,8 @@ public class SubscriberServiceTests
             new PaymentMethod { Id = "payment_method_1" }
         ]);
 
-        await sutProvider.Sut.UpdatePaymentMethod(provider,
-            new TokenizedPaymentMethodDTO(PaymentMethodType.BankAccount, "TOKEN"));
+        await sutProvider.Sut.UpdatePaymentSource(provider,
+            new TokenizedPaymentSource(PaymentMethodType.BankAccount, "TOKEN"));
 
         await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Set(provider.Id, "setup_intent_1");
 
@@ -1330,8 +1232,8 @@ public class SubscriberServiceTests
             new PaymentMethod { Id = "payment_method_1" }
         ]);
 
-        await sutProvider.Sut.UpdatePaymentMethod(provider,
-            new TokenizedPaymentMethodDTO(PaymentMethodType.Card, "TOKEN"));
+        await sutProvider.Sut.UpdatePaymentSource(provider,
+            new TokenizedPaymentSource(PaymentMethodType.Card, "TOKEN"));
 
         await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_2",
             Arg.Is<SetupIntentCancelOptions>(options => options.CancellationReason == "abandoned"));
@@ -1348,7 +1250,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_NullCustomer_ContactSupport(
+    public async Task UpdatePaymentMethod_Braintree_NullCustomer_ThrowsBillingException(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -1368,13 +1270,13 @@ public class SubscriberServiceTests
 
         customerGateway.FindAsync(braintreeCustomerId).ReturnsNull();
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN")));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN")));
 
         await paymentMethodGateway.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<PaymentMethodRequest>());
     }
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_CreatePaymentMethodFails_ContactSupport(
+    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_CreatePaymentMethodFails_ThrowsBillingException(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -1406,13 +1308,13 @@ public class SubscriberServiceTests
                 options => options.CustomerId == braintreeCustomerId && options.PaymentMethodNonce == "TOKEN"))
             .Returns(createPaymentMethodResult);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN")));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN")));
 
         await customerGateway.DidNotReceiveWithAnyArgs().UpdateAsync(Arg.Any<string>(), Arg.Any<CustomerRequest>());
     }
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_UpdateCustomerFails_DeletePaymentMethod_ContactSupport(
+    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_UpdateCustomerFails_DeletePaymentMethod_ThrowsBillingException(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -1458,7 +1360,7 @@ public class SubscriberServiceTests
                 options.DefaultPaymentMethodToken == createPaymentMethodResult.Target.Token))
             .Returns(updateCustomerResult);
 
-        await ThrowsContactSupportAsync(() => sutProvider.Sut.UpdatePaymentMethod(provider, new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN")));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN")));
 
         await paymentMethodGateway.Received(1).DeleteAsync(createPaymentMethodResult.Target.Token);
     }
@@ -1524,14 +1426,14 @@ public class SubscriberServiceTests
 
         paymentMethodGateway.DeleteAsync(existingPaymentMethod.Token).Returns(deletePaymentMethodResult);
 
-        await sutProvider.Sut.UpdatePaymentMethod(provider,
-            new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN"));
+        await sutProvider.Sut.UpdatePaymentSource(provider,
+            new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN"));
 
         await paymentMethodGateway.Received(1).DeleteAsync(existingPaymentMethod.Token);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_CreateCustomer_CustomerUpdateFails_ContactSupport(
+    public async Task UpdatePaymentMethod_Braintree_CreateCustomer_CustomerUpdateFails_ThrowsBillingException(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -1564,9 +1466,9 @@ public class SubscriberServiceTests
                     options.PaymentMethodNonce == "TOKEN"))
             .Returns(createCustomerResult);
 
-        await ThrowsContactSupportAsync(() =>
-            sutProvider.Sut.UpdatePaymentMethod(provider,
-                new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN")));
+        await ThrowsBillingExceptionAsync(() =>
+            sutProvider.Sut.UpdatePaymentSource(provider,
+                new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN")));
 
         await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
             .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
@@ -1611,8 +1513,8 @@ public class SubscriberServiceTests
                     options.PaymentMethodNonce == "TOKEN"))
             .Returns(createCustomerResult);
 
-        await sutProvider.Sut.UpdatePaymentMethod(provider,
-            new TokenizedPaymentMethodDTO(PaymentMethodType.PayPal, "TOKEN"));
+        await sutProvider.Sut.UpdatePaymentSource(provider,
+            new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN"));
 
         await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(provider.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(
@@ -1648,7 +1550,7 @@ public class SubscriberServiceTests
         stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId, Arg.Is<CustomerGetOptions>(
             options => options.Expand.Contains("tax_ids"))).Returns(customer);
 
-        var taxInformation = new TaxInformationDTO(
+        var taxInformation = new TaxInformation(
             "US",
             "12345",
             "123456789",
@@ -1685,9 +1587,9 @@ public class SubscriberServiceTests
         () => sutProvider.Sut.VerifyBankAccount(null, (0, 0)));
 
     [Theory, BitAutoData]
-    public async Task VerifyBankAccount_NoSetupIntentId_ContactSupport(
+    public async Task VerifyBankAccount_NoSetupIntentId_ThrowsBillingException(
         Provider provider,
-        SutProvider<SubscriberService> sutProvider) => await ThrowsContactSupportAsync(() => sutProvider.Sut.VerifyBankAccount(provider, (1, 1)));
+        SutProvider<SubscriberService> sutProvider) => await ThrowsBillingExceptionAsync(() => sutProvider.Sut.VerifyBankAccount(provider, (1, 1)));
 
     [Theory, BitAutoData]
     public async Task VerifyBankAccount_MakesCorrectInvocations(

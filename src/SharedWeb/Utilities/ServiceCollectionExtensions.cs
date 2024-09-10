@@ -16,6 +16,9 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Implementations;
+using Bit.Core.Billing.TrialInitiation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -70,41 +73,7 @@ public static class ServiceCollectionExtensions
 {
     public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        var selectedDatabaseProvider = globalSettings.DatabaseProvider;
-        var provider = SupportedDatabaseProviders.SqlServer;
-        var connectionString = string.Empty;
-
-        if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
-        {
-            switch (selectedDatabaseProvider.ToLowerInvariant())
-            {
-                case "postgres":
-                case "postgresql":
-                    provider = SupportedDatabaseProviders.Postgres;
-                    connectionString = globalSettings.PostgreSql.ConnectionString;
-                    break;
-                case "mysql":
-                case "mariadb":
-                    provider = SupportedDatabaseProviders.MySql;
-                    connectionString = globalSettings.MySql.ConnectionString;
-                    break;
-                case "sqlite":
-                    provider = SupportedDatabaseProviders.Sqlite;
-                    connectionString = globalSettings.Sqlite.ConnectionString;
-                    break;
-                case "sqlserver":
-                    connectionString = globalSettings.SqlServer.ConnectionString;
-                    break;
-                default:
-                    break;
-            }
-        }
-        else
-        {
-            // Default to attempting to use SqlServer connection string if globalSettings.DatabaseProvider has no value.
-            connectionString = globalSettings.SqlServer.ConnectionString;
-        }
-
+        var (provider, connectionString) = GetDatabaseProvider(globalSettings);
         services.SetupEntityFramework(connectionString, provider);
 
         if (provider != SupportedDatabaseProviders.SqlServer)
@@ -134,6 +103,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICipherService, CipherService>();
         services.AddUserServices(globalSettings);
+        services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();
@@ -220,14 +190,18 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<ProviderDeleteTokenable>>>())
         );
-
         services.AddSingleton<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>(
             serviceProvider => new DataProtectorTokenFactory<RegistrationEmailVerificationTokenable>(
                 RegistrationEmailVerificationTokenable.ClearTextPrefix,
                 RegistrationEmailVerificationTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>>()));
-
+        services.AddSingleton<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>(
+                TwoFactorAuthenticatorUserVerificationTokenable.ClearTextPrefix,
+                TwoFactorAuthenticatorUserVerificationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -250,6 +224,7 @@ public static class ServiceCollectionExtensions
             };
         });
         services.AddScoped<IPaymentService, StripePaymentService>();
+        services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
@@ -449,7 +424,7 @@ public static class ServiceCollectionExtensions
             .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
             .AddTokenProvider<AuthenticatorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator))
-            .AddTokenProvider<EmailTokenProvider>(
+            .AddTokenProvider<EmailTwoFactorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
@@ -457,7 +432,7 @@ public static class ServiceCollectionExtensions
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Duo))
             .AddTokenProvider<TwoFactorRememberTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))
-            .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider)
+            .AddTokenProvider<EmailTokenProvider>(TokenOptions.DefaultEmailProvider)
             .AddTokenProvider<WebAuthnTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.WebAuthn));
 
@@ -745,7 +720,20 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddDistributedMemoryCache();
+            var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
+            if (databaseProvider == SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddDistributedSqlServerCache(o =>
+                {
+                    o.ConnectionString = databaseConnectionString;
+                    o.SchemaName = "dbo";
+                    o.TableName = "Cache";
+                });
+            }
+            else
+            {
+                services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+            }
         }
 
         if (!string.IsNullOrEmpty(globalSettings.DistributedCache?.Cosmos?.ConnectionString))
@@ -761,7 +749,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddKeyedSingleton<IDistributedCache, MemoryDistributedCache>("persistent");
+            services.AddKeyedSingleton("persistent", (s, _) => s.GetRequiredService<IDistributedCache>());
         }
     }
 
@@ -776,5 +764,46 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
 
         return services;
+    }
+
+    private static (SupportedDatabaseProviders provider, string connectionString)
+        GetDatabaseProvider(GlobalSettings globalSettings)
+    {
+        var selectedDatabaseProvider = globalSettings.DatabaseProvider;
+        var provider = SupportedDatabaseProviders.SqlServer;
+        var connectionString = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
+        {
+            switch (selectedDatabaseProvider.ToLowerInvariant())
+            {
+                case "postgres":
+                case "postgresql":
+                    provider = SupportedDatabaseProviders.Postgres;
+                    connectionString = globalSettings.PostgreSql.ConnectionString;
+                    break;
+                case "mysql":
+                case "mariadb":
+                    provider = SupportedDatabaseProviders.MySql;
+                    connectionString = globalSettings.MySql.ConnectionString;
+                    break;
+                case "sqlite":
+                    provider = SupportedDatabaseProviders.Sqlite;
+                    connectionString = globalSettings.Sqlite.ConnectionString;
+                    break;
+                case "sqlserver":
+                    connectionString = globalSettings.SqlServer.ConnectionString;
+                    break;
+                default:
+                    break;
+            }
+        }
+        else
+        {
+            // Default to attempting to use SqlServer connection string if globalSettings.DatabaseProvider has no value.
+            connectionString = globalSettings.SqlServer.ConnectionString;
+        }
+
+        return (provider, connectionString);
     }
 }

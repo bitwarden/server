@@ -20,7 +20,6 @@ public class ScimUserRequestModel : BaseScimUserModel
 
             // Permissions cannot be set via SCIM so we use default values
             Type = OrganizationUserType.User,
-            AccessAll = false,
             Collections = new List<CollectionAccessSelection>(),
             Groups = new List<Guid>()
         };

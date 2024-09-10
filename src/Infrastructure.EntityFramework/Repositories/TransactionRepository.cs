@@ -6,6 +6,8 @@ using LinqToDB;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class TransactionRepository : Repository<Core.Entities.Transaction, Transaction, Guid>, ITransactionRepository
@@ -14,7 +16,7 @@ public class TransactionRepository : Repository<Core.Entities.Transaction, Trans
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Transactions)
     { }
 
-    public async Task<Core.Entities.Transaction> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
+    public async Task<Core.Entities.Transaction?> GetByGatewayIdAsync(GatewayType gatewayType, string gatewayId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -22,7 +24,10 @@ public class TransactionRepository : Repository<Core.Entities.Transaction, Trans
         return Mapper.Map<Core.Entities.Transaction>(results);
     }
 
-    public async Task<ICollection<Core.Entities.Transaction>> GetManyByOrganizationIdAsync(Guid organizationId, int? limit = null)
+    public async Task<ICollection<Core.Entities.Transaction>> GetManyByOrganizationIdAsync(
+        Guid organizationId,
+        int? limit = null,
+        DateTime? startAfter = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();
 
@@ -30,6 +35,11 @@ public class TransactionRepository : Repository<Core.Entities.Transaction, Trans
         var query = dbContext.Transactions
             .Where(t => t.OrganizationId == organizationId && !t.UserId.HasValue);
 
+        if (startAfter.HasValue)
+        {
+            query = query.Where(t => t.CreationDate < startAfter.Value);
+        }
+
         if (limit.HasValue)
         {
             query = query.OrderByDescending(o => o.CreationDate).Take(limit.Value);
@@ -39,7 +49,10 @@ public class TransactionRepository : Repository<Core.Entities.Transaction, Trans
         return Mapper.Map<List<Core.Entities.Transaction>>(results);
     }
 
-    public async Task<ICollection<Core.Entities.Transaction>> GetManyByUserIdAsync(Guid userId, int? limit = null)
+    public async Task<ICollection<Core.Entities.Transaction>> GetManyByUserIdAsync(
+        Guid userId,
+        int? limit = null,
+        DateTime? startAfter = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();
 
@@ -47,6 +60,11 @@ public class TransactionRepository : Repository<Core.Entities.Transaction, Trans
         var query = dbContext.Transactions
             .Where(t => t.UserId == userId);
 
+        if (startAfter.HasValue)
+        {
+            query = query.Where(t => t.CreationDate < startAfter.Value);
+        }
+
         if (limit.HasValue)
         {
             query = query.OrderByDescending(o => o.CreationDate).Take(limit.Value);
@@ -57,12 +75,20 @@ public class TransactionRepository : Repository<Core.Entities.Transaction, Trans
         return Mapper.Map<List<Core.Entities.Transaction>>(results);
     }
 
-    public async Task<ICollection<Core.Entities.Transaction>> GetManyByProviderIdAsync(Guid providerId, int? limit = null)
+    public async Task<ICollection<Core.Entities.Transaction>> GetManyByProviderIdAsync(
+        Guid providerId,
+        int? limit = null,
+        DateTime? startAfter = null)
     {
         using var serviceScope = ServiceScopeFactory.CreateScope();
         var databaseContext = GetDatabaseContext(serviceScope);
         var query = databaseContext.Transactions
             .Where(transaction => transaction.ProviderId == providerId);
+
+        if (startAfter.HasValue)
+        {
+            query = query.Where(transaction => transaction.CreationDate < startAfter.Value);
+        }
 
         if (limit.HasValue)
         {

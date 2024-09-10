@@ -13,6 +13,7 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -40,6 +41,7 @@ public class ProvidersController : Controller
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
+    private readonly IProviderBillingService _providerBillingService;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
@@ -57,6 +59,7 @@ public class ProvidersController : Controller
         ICreateProviderCommand createProviderCommand,
         IFeatureService featureService,
         IProviderPlanRepository providerPlanRepository,
+        IProviderBillingService providerBillingService,
         IWebHostEnvironment webHostEnvironment)
     {
         _organizationRepository = organizationRepository;
@@ -71,6 +74,7 @@ public class ProvidersController : Controller
         _createProviderCommand = createProviderCommand;
         _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
+        _providerBillingService = providerBillingService;
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -158,27 +162,13 @@ public class ProvidersController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await GetEditModel(id);
         if (provider == null)
         {
             return RedirectToAction("Index");
         }
 
-        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
-        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
-        {
-            return View(new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>()));
-        }
-
-        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-
-        return View(new ProviderEditModel(
-            provider, users, providerOrganizations,
-            providerPlans.ToList(), GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider)));
+        return View(provider);
     }
 
     [HttpPost]
@@ -192,6 +182,20 @@ public class ProvidersController : Controller
         if (provider == null)
         {
             return RedirectToAction("Index");
+        }
+
+        if (provider.Type != model.Type)
+        {
+            var oldModel = await GetEditModel(id);
+            ModelState.AddModelError(nameof(model.Type), "Provider type cannot be changed.");
+            return View(oldModel);
+        }
+
+        if (!ModelState.IsValid)
+        {
+            var oldModel = await GetEditModel(id);
+            ModelState[nameof(ProviderEditModel.BillingEmail)]!.RawValue = oldModel.BillingEmail;
+            return View(oldModel);
         }
 
         model.ToProvider(provider);
@@ -223,22 +227,39 @@ public class ProvidersController : Controller
         }
         else
         {
-            foreach (var providerPlan in providerPlans)
-            {
-                if (providerPlan.PlanType == PlanType.EnterpriseMonthly)
-                {
-                    providerPlan.SeatMinimum = model.EnterpriseMonthlySeatMinimum;
-                }
-                else if (providerPlan.PlanType == PlanType.TeamsMonthly)
-                {
-                    providerPlan.SeatMinimum = model.TeamsMonthlySeatMinimum;
-                }
-
-                await _providerPlanRepository.ReplaceAsync(providerPlan);
-            }
+            await _providerBillingService.UpdateSeatMinimums(
+                provider,
+                model.EnterpriseMonthlySeatMinimum,
+                model.TeamsMonthlySeatMinimum);
         }
 
         return RedirectToAction("Edit", new { id });
+    }
+
+    private async Task<ProviderEditModel> GetEditModel(Guid id)
+    {
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider == null)
+        {
+            return null;
+        }
+
+        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+
+        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        {
+            return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>());
+        }
+
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+
+        return new ProviderEditModel(
+            provider, users, providerOrganizations,
+            providerPlans.ToList(), GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
     }
 
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
@@ -315,8 +336,7 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        var flexibleCollectionsV1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-        var organization = model.CreateOrganization(provider, flexibleCollectionsV1Enabled);
+        var organization = model.CreateOrganization(provider);
         await _organizationService.CreatePendingOrganization(organization, model.Owners, User, _userService, model.SalesAssistedTrialStarted);
         await _providerService.AddOrganization(providerId, organization.Id, null);
 

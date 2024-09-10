@@ -18,7 +18,14 @@ public static class StripeConstants
 
     public static class CouponIDs
     {
+        public const string MSPDiscount35 = "msp-discount-35";
         public const string SecretsManagerStandalone = "sm-standalone";
+    }
+
+    public static class ErrorCodes
+    {
+        public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";
+        public const string TaxIdInvalid = "tax_id_invalid";
     }
 
     public static class PaymentMethodTypes
@@ -44,5 +51,11 @@ public static class StripeConstants
         public const string Canceled = "canceled";
         public const string Unpaid = "unpaid";
         public const string Paused = "paused";
+    }
+
+    public static class ValidateTaxLocationTiming
+    {
+        public const string Deferred = "deferred";
+        public const string Immediately = "immediately";
     }
 }
