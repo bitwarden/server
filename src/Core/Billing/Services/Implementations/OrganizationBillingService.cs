@@ -79,6 +79,31 @@ public class OrganizationBillingService(
         await organizationRepository.ReplaceAsync(organization);
     }
 
+    public async Task UpdatePaymentMethod(
+        Organization organization,
+        TokenizedPaymentSource tokenizedPaymentSource,
+        TaxInformation taxInformation)
+    {
+        if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+        {
+            var customer = await CreateCustomerAsync(organization,
+                new CustomerSetup
+                {
+                    TokenizedPaymentSource = tokenizedPaymentSource, TaxInformation = taxInformation,
+                });
+
+            organization.Gateway = GatewayType.Stripe;
+            organization.GatewayCustomerId = customer.Id;
+
+            await organizationRepository.ReplaceAsync(organization);
+        }
+        else
+        {
+            await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
+            await subscriberService.UpdateTaxInformation(organization, taxInformation);
+        }
+    }
+
     #region Utilities
 
     private async Task<Customer> CreateCustomerAsync(
