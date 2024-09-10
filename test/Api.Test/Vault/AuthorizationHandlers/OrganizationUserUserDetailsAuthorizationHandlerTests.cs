@@ -12,7 +12,7 @@ using Xunit;
 namespace Bit.Api.Test.Vault.AuthorizationHandlers;
 
 [SutProviderCustomize]
-public class OrganizationUserAuthorizationHandlerTests
+public class OrganizationUserUserDetailsAuthorizationHandlerTests
 {
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
@@ -21,14 +21,14 @@ public class OrganizationUserAuthorizationHandlerTests
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task CanReadAllAsync_WhenMemberOfOrg_Success(
         OrganizationUserType userType,
-        Guid userId, SutProvider<OrganizationUserAuthorizationHandler> sutProvider,
+        Guid userId, SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserOperations.ReadAll(organization.Id) },
+            new[] { OrganizationUserUserDetailsOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
             null);
 
@@ -43,13 +43,13 @@ public class OrganizationUserAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task CanReadAllAsync_WithProviderUser_Success(
         Guid userId,
-        SutProvider<OrganizationUserAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
+        SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserOperations.ReadAll(organization.Id) },
+            new[] { OrganizationUserUserDetailsOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
             null);
 
@@ -69,10 +69,10 @@ public class OrganizationUserAuthorizationHandlerTests
     public async Task HandleRequirementAsync_WhenMissingOrgAccess_NoSuccess(
         Guid userId,
         CurrentContextOrganization organization,
-        SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
+        SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserOperations.ReadAll(organization.Id) },
+            new[] { OrganizationUserUserDetailsOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
             null
         );
@@ -88,10 +88,10 @@ public class OrganizationUserAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task HandleRequirementAsync_MissingUserId_Failure(
         Guid organizationId,
-        SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
+        SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserOperations.ReadAll(organizationId) },
+            new[] { OrganizationUserUserDetailsOperations.ReadAll(organizationId) },
             new ClaimsPrincipal(),
             null
         );
@@ -105,10 +105,10 @@ public class OrganizationUserAuthorizationHandlerTests
 
     [Theory, BitAutoData]
     public async Task HandleRequirementAsync_NoSpecifiedOrgId_Failure(
-        SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
+        SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserOperations.ReadAll(default) },
+            new[] { OrganizationUserUserDetailsOperations.ReadAll(default) },
             new ClaimsPrincipal(),
             null
         );

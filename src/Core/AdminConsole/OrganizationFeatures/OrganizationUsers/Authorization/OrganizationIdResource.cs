@@ -8,9 +8,13 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authoriza
 /// Organization object from the database each time when it's usually not needed.
 /// It implicitly converts to a regular Guid.
 /// </summary>
-public readonly struct OrganizationIdResource(Guid id)
+public class OrganizationIdResource
 {
-    private Guid Id { get; } = id;
+    public OrganizationIdResource(Guid id)
+    {
+        Id = id;
+    }
+    private Guid Id { get; }
     public static implicit operator Guid(OrganizationIdResource organizationIdResource) =>
         organizationIdResource.Id;
     public override string ToString() => Id.ToString();

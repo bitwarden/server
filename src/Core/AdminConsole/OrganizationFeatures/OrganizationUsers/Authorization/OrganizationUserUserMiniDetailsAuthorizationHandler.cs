@@ -60,7 +60,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
             return true;
         }
 
-        // Needed for creating and managing collections, if this is not limited then any org member can
+        // Needed for creating and managing collections - this may allow all members to access this
         if (organization != null)
         {
             var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
@@ -70,11 +70,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
             }
         }
 
-        if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-        {
-            return true;
-        }
-
-        return false;
+        // Providers for the org
+        return await _currentContext.ProviderUserForOrgAsync(organizationId);
     }
 }
