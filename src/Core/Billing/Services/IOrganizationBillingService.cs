@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Sales;
 
 namespace Bit.Core.Billing.Services;
 
@@ -13,11 +14,20 @@ public interface IOrganizationBillingService
     Task<OrganizationMetadata> GetMetadata(Guid organizationId);
 
     /// <summary>
-    /// Purchase a subscription for the provided <paramref name="organization"/> using the provided <paramref name="organizationSubscriptionPurchase"/>.
-    /// If successful, a Stripe <see cref="Stripe.Customer"/> and <see cref="Stripe.Subscription"/> will be created for the organization and the
-    /// organization will be enabled.
+    /// <para>Establishes the billing configuration for a Bitwarden <see cref="Organization"/> using the provided <paramref name="sale"/>.</para>
+    /// <para>
+    /// The method first checks to see if the
+    /// provided <see cref="OrganizationSale.Organization"/> already has a Stripe <see cref="Stripe.Customer"/> using the <see cref="Organization.GatewayCustomerId"/>.
+    /// If it doesn't, the method creates one using the <paramref name="sale"/>'s <see cref="OrganizationSale.CustomerSetup"/>. The method then creates a Stripe <see cref="Stripe.Subscription"/>
+    /// for the created or existing customer using the provided <see cref="OrganizationSale.SubscriptionSetup"/>.
+    /// </para>
     /// </summary>
-    /// <param name="organization">The organization to purchase a subscription for.</param>
-    /// <param name="organizationSubscriptionPurchase">The purchase information for the organization's subscription.</param>
-    Task PurchaseSubscription(Organization organization, OrganizationSubscriptionPurchase organizationSubscriptionPurchase);
+    /// <param name="sale">The purchase details necessary to establish the Stripe entities responsible for billing the organization.</param>
+    /// <example>
+    /// <code>
+    /// var sale = OrganizationSale.From(organization, organizationSignup);
+    /// await organizationBillingService.Finalize(sale);
+    /// </code>
+    /// </example>
+    Task Finalize(OrganizationSale sale);
 }

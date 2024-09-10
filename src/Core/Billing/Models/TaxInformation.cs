@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Billing.Models;
+﻿using Stripe;
+
+namespace Bit.Core.Billing.Models;
 
 public record TaxInformation(
     string Country,
@@ -9,6 +11,25 @@ public record TaxInformation(
     string City,
     string State)
 {
+    public (AddressOptions, List<CustomerTaxIdDataOptions>) GetStripeOptions()
+    {
+        var address = new AddressOptions
+        {
+            Country = Country,
+            PostalCode = PostalCode,
+            Line1 = Line1,
+            Line2 = Line2,
+            City = City,
+            State = State
+        };
+
+        var customerTaxIdDataOptionsList = !string.IsNullOrEmpty(TaxId)
+            ? new List<CustomerTaxIdDataOptions> { new() { Type = GetTaxIdType(), Value = TaxId } }
+            : null;
+
+        return (address, customerTaxIdDataOptionsList);
+    }
+
     public string GetTaxIdType()
     {
         if (string.IsNullOrEmpty(Country) || string.IsNullOrEmpty(TaxId))

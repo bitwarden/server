@@ -15,6 +15,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -584,9 +585,8 @@ public class OrganizationService : IOrganizationService
 
             if (deprecateStripeSourcesAPI)
             {
-                var subscriptionPurchase = signup.ToSubscriptionPurchase();
-
-                await _organizationBillingService.PurchaseSubscription(organization, subscriptionPurchase);
+                var sale = OrganizationSale.From(organization, signup);
+                await _organizationBillingService.Finalize(sale);
             }
             else
             {
