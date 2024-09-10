@@ -13,7 +13,6 @@ public class OrganizationUserRepositoryTests
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
     {
-        throw new Exception("Test Failure");
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
