@@ -28,7 +28,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
         switch (requirement)
         {
             case not null when requirement.Name == nameof(OrganizationUserUserMiniDetailsOperations.ReadAll):
-                authorized = await CanReadAllForOrganization(organizationId);
+                authorized = await CanReadAllAsync(organizationId);
                 break;
         }
 
@@ -38,7 +38,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
         }
     }
 
-    private async Task<bool> CanReadAllForOrganization(Guid organizationId)
+    private async Task<bool> CanReadAllAsync(Guid organizationId)
     {
         var organization = _currentContext.GetOrganization(organizationId);
 
