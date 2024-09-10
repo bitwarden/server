@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -585,7 +586,7 @@ public class SubscriberService(
 
         var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
         {
-            Expand = ["tax_ids"]
+            Expand = ["subscriptions", "tax", "tax_ids"]
         });
 
         await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
@@ -622,6 +623,23 @@ public class SubscriberService(
                 });
             }
         }
+
+        if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+        {
+            await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                new SubscriptionUpdateOptions
+                {
+                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
+                    DefaultTaxRates = []
+                });
+        }
+
+        return;
+
+        bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
+            => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
+               (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
+               localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
     }
 
     public async Task VerifyBankAccount(

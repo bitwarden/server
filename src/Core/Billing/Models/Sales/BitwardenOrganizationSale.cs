@@ -33,6 +33,14 @@ public class BitwardenOrganizationSale
         SubscriptionSetup = GetSubscriptionSetup(signup)
     };
 
+    public static BitwardenOrganizationSale From(
+        Organization organization,
+        OrganizationUpgrade upgrade) => new()
+    {
+        Organization = organization,
+        SubscriptionSetup = GetSubscriptionSetup(upgrade)
+    };
+
     private static CustomerSetup? GetCustomerSetup(OrganizationSignup signup)
     {
         if (!signup.PaymentMethodType.HasValue)
@@ -65,21 +73,21 @@ public class BitwardenOrganizationSale
         };
     }
 
-    private static SubscriptionSetup GetSubscriptionSetup(OrganizationSignup signup)
+    private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
     {
-        var plan = Core.Utilities.StaticStore.GetPlan(signup.Plan);
+        var plan = Core.Utilities.StaticStore.GetPlan(upgrade.Plan);
 
         var passwordManagerOptions = new SubscriptionSetup.PasswordManager
         {
-            Seats = signup.AdditionalSeats,
-            Storage = signup.AdditionalStorageGb,
-            PremiumAccess = signup.PremiumAccessAddon
+            Seats = upgrade.AdditionalSeats,
+            Storage = upgrade.AdditionalStorageGb,
+            PremiumAccess = upgrade.PremiumAccessAddon
         };
 
-        var secretsManagerOptions = signup.UseSecretsManager
+        var secretsManagerOptions = upgrade.UseSecretsManager
             ? new SubscriptionSetup.SecretsManager
             {
-                Seats = signup.AdditionalSmSeats ?? 0, ServiceAccounts = signup.AdditionalServiceAccounts
+                Seats = upgrade.AdditionalSmSeats ?? 0, ServiceAccounts = upgrade.AdditionalServiceAccounts
             }
             : null;
 

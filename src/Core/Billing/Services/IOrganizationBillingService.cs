@@ -30,4 +30,17 @@ public interface IOrganizationBillingService
     /// <param name="organizationId">The ID of the organization to retrieve metadata for.</param>
     /// <returns>An <see cref="OrganizationMetadata"/> record.</returns>
     Task<OrganizationMetadata> GetMetadata(Guid organizationId);
+
+    /// <summary>
+    /// Updates the provided <paramref name="organization"/>'s payment source and tax information.
+    /// If the <paramref name="organization"/> does not have a Stripe <see cref="Stripe.Customer"/>, this method will create one using the provided
+    /// <paramref name="tokenizedPaymentSource"/> and <paramref name="taxInformation"/>.
+    /// </summary>
+    /// <param name="organization">The <paramref name="organization"/> to update the payment source and tax information for.</param>
+    /// <param name="tokenizedPaymentSource">The tokenized payment source (ex. Credit Card) to attach to the <paramref name="organization"/>.</param>
+    /// <param name="taxInformation">The <paramref name="organization"/>'s updated tax information.</param>
+    Task UpdatePaymentMethod(
+        Organization organization,
+        TokenizedPaymentSource tokenizedPaymentSource,
+        TaxInformation taxInformation);
 }

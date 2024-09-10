@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Enums;
@@ -33,13 +32,15 @@ public class OrganizationBillingService(
     {
         var (organization, customerSetup, subscriptionSetup) = sale;
 
+        List<string> expand = ["tax"];
+
         var customer = customerSetup != null
-            ? await CreateCustomerAsync(organization, customerSetup)
-            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax"] });
+            ? await CreateCustomerAsync(organization, customerSetup, expand)
+            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = expand });
 
         var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
 
-        if (subscription.Status == StripeConstants.SubscriptionStatus.Trialing)
+        if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
         {
             organization.Enabled = true;
             organization.ExpirationDate = subscription.CurrentPeriodEnd;
@@ -78,11 +79,37 @@ public class OrganizationBillingService(
         return new OrganizationMetadata(isOnSecretsManagerStandalone);
     }
 
+    public async Task UpdatePaymentMethod(
+        Organization organization,
+        TokenizedPaymentSource tokenizedPaymentSource,
+        TaxInformation taxInformation)
+    {
+        if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+        {
+            var customer = await CreateCustomerAsync(organization,
+                new CustomerSetup
+                {
+                    TokenizedPaymentSource = tokenizedPaymentSource, TaxInformation = taxInformation,
+                });
+
+            organization.Gateway = GatewayType.Stripe;
+            organization.GatewayCustomerId = customer.Id;
+
+            await organizationRepository.ReplaceAsync(organization);
+        }
+        else
+        {
+            await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
+            await subscriberService.UpdateTaxInformation(organization, taxInformation);
+        }
+    }
+
     #region Utilities
 
     private async Task<Customer> CreateCustomerAsync(
         Organization organization,
-        CustomerSetup customerSetup)
+        CustomerSetup customerSetup,
+        List<string> expand = null)
     {
         if (customerSetup.TokenizedPaymentSource is not
             {
@@ -116,7 +143,7 @@ public class OrganizationBillingService(
             Coupon = customerSetup.Coupon,
             Description = organization.DisplayBusinessName(),
             Email = organization.BillingEmail,
-            Expand = ["tax"],
+            Expand = expand,
             InvoiceSettings = new CustomerInvoiceSettingsOptions
             {
                 CustomFields = [
@@ -241,11 +268,17 @@ public class OrganizationBillingService(
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
-            new ()
-            {
-                Price = plan.PasswordManager.StripeSeatPlanId,
-                Quantity = passwordManagerOptions.Seats
-            }
+            plan.HasNonSeatBasedPasswordManagerPlan()
+                ? new SubscriptionItemOptions
+                {
+                    Price = plan.PasswordManager.StripePlanId,
+                    Quantity = 1
+                }
+                : new SubscriptionItemOptions
+                {
+                    Price = plan.PasswordManager.StripeSeatPlanId,
+                    Quantity = passwordManagerOptions.Seats
+                }
         };
 
         if (passwordManagerOptions.PremiumAccess is true)
