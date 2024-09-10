@@ -1,9 +1,7 @@
-﻿using System.Collections;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;

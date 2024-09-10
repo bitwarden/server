@@ -37,9 +37,9 @@ public class OrganizationUserUserDetailsAuthorizationHandler : AuthorizationHand
         // Admins can access this for general user management
         var organization = _currentContext.GetOrganization(organizationId);
         if (organization is
-            { Type: OrganizationUserType.Owner} or
-            { Type: OrganizationUserType.Admin} or
-            { Permissions.ManageUsers: true})
+        { Type: OrganizationUserType.Owner } or
+        { Type: OrganizationUserType.Admin } or
+        { Permissions.ManageUsers: true })
         {
             return true;
         }
