@@ -123,32 +123,49 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var transaction = await dbContext.Database.BeginTransactionAsync();
+        // Fetch all related entities
+        var collectionUsers = await dbContext.CollectionUsers
+            .Where(cu => targetOrganizationUserIds.Contains(cu.OrganizationUserId))
+            .ToListAsync();
+        var groupUsers = await dbContext.GroupUsers
+            .Where(gu => targetOrganizationUserIds.Contains(gu.OrganizationUserId))
+            .ToListAsync();
+        var userProjectAccessPolicies = await dbContext.UserProjectAccessPolicy
+            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ToListAsync();
+        var userServiceAccountAccessPolicies = await dbContext.UserServiceAccountAccessPolicy
+            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ToListAsync();
+        var userSecretAccessPolicies = await dbContext.UserSecretAccessPolicy
+            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ToListAsync();
+        var organizationUsers = await dbContext.OrganizationUsers
+            .Where(ou => targetOrganizationUserIds.Contains(ou.Id))
+            .ToListAsync();
+
+        // Bump account revision dates for all users
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(targetOrganizationUserIds);
 
-        await dbContext.CollectionUsers
-            .Where(cu => targetOrganizationUserIds.Contains(cu.OrganizationUserId))
-            .ExecuteDeleteAsync();
+        // Mark all entities for deletion
+        dbContext.CollectionUsers.RemoveRange(collectionUsers);
+        dbContext.GroupUsers.RemoveRange(groupUsers);
+        dbContext.UserProjectAccessPolicy.RemoveRange(userProjectAccessPolicies);
+        dbContext.UserServiceAccountAccessPolicy.RemoveRange(userServiceAccountAccessPolicies);
+        dbContext.UserSecretAccessPolicy.RemoveRange(userSecretAccessPolicies);
+        dbContext.OrganizationUsers.RemoveRange(organizationUsers);
 
-        await dbContext.GroupUsers
-            .Where(gu => targetOrganizationUserIds.Contains(gu.OrganizationUserId))
-            .ExecuteDeleteAsync();
-
-        await dbContext.UserProjectAccessPolicy
-            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
-            .ExecuteDeleteAsync();
-        await dbContext.UserServiceAccountAccessPolicy
-            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
-            .ExecuteDeleteAsync();
-        await dbContext.UserSecretAccessPolicy
-            .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
-            .ExecuteDeleteAsync();
-
-        await dbContext.OrganizationUsers
-            .Where(ou => targetOrganizationUserIds.Contains(ou.Id)).ExecuteDeleteAsync();
-
-        await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
+        // Begin transaction and save changes
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
