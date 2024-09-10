@@ -28,6 +28,31 @@ public class OrganizationBillingService(
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IOrganizationBillingService
 {
+    public async Task Finalize(OrganizationSale sale)
+    {
+        var (organization, customerSetup, subscriptionSetup) = sale;
+
+        List<string> expand = ["tax"];
+
+        var customer = customerSetup != null
+            ? await CreateCustomerAsync(organization, customerSetup, expand)
+            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = expand });
+
+        var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
+
+        if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
+        {
+            organization.Enabled = true;
+            organization.ExpirationDate = subscription.CurrentPeriodEnd;
+        }
+
+        organization.Gateway = GatewayType.Stripe;
+        organization.GatewayCustomerId = customer.Id;
+        organization.GatewaySubscriptionId = subscription.Id;
+
+        await organizationRepository.ReplaceAsync(organization);
+    }
+
     public async Task<OrganizationMetadata> GetMetadata(Guid organizationId)
     {
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -52,31 +77,6 @@ public class OrganizationBillingService(
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
 
         return new OrganizationMetadata(isOnSecretsManagerStandalone);
-    }
-
-    public async Task Finalize(OrganizationSale sale)
-    {
-        var (organization, customerSetup, subscriptionSetup) = sale;
-
-        List<string> expand = ["tax"];
-
-        var customer = customerSetup != null
-            ? await CreateCustomerAsync(organization, customerSetup, expand)
-            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = expand });
-
-        var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
-
-        if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
-        {
-            organization.Enabled = true;
-            organization.ExpirationDate = subscription.CurrentPeriodEnd;
-        }
-
-        organization.Gateway = GatewayType.Stripe;
-        organization.GatewayCustomerId = customer.Id;
-        organization.GatewaySubscriptionId = subscription.Id;
-
-        await organizationRepository.ReplaceAsync(organization);
     }
 
     public async Task UpdatePaymentMethod(
