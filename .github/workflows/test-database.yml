@@ -114,10 +114,6 @@ jobs:
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
         shell: pwsh
-
-      - name: Print Running Container (Diagnostic)
-        if: failure()
-        run: 'docker ps'
       
       - name: Print MySQL Logs
         if: failure()
