@@ -72,50 +72,51 @@ public class MemberAccessReportResponseModel
                 (key, g) => new { CollectionId = key, Ciphers = g });
         var collectionItemCounts = collectionItems.ToDictionary(x => x.CollectionId, x => x.Ciphers.Count());
 
-        // Take the collections/groups and create the access details items
-        var groupAccessDetails = new List<MemberAccessReportAccessDetails>();
-        var userCollectionAccessDetails = new List<MemberAccessReportAccessDetails>();
-        foreach (var tCollect in orgCollectionsWithAccess)
-        {
-            var itemCounts = collectionItemCounts.TryGetValue(tCollect.Item1.Id, out var itemCount) ? itemCount : 0;
-            if (tCollect.Item2.Groups.Count() > 0)
-            {
-                var groupDetails = tCollect.Item2.Groups.Select(x =>
-                    new MemberAccessReportAccessDetails
-                    {
-                        CollectionId = tCollect.Item1.Id,
-                        CollectionName = tCollect.Item1.Name,
-                        GroupId = x.Id,
-                        GroupName = groupNameDictionary[x.Id],
-                        ReadOnly = x.ReadOnly,
-                        HidePasswords = x.HidePasswords,
-                        Manage = x.Manage,
-                        ItemCount = itemCounts,
-                    });
-                groupAccessDetails.AddRange(groupDetails);
-            }
-
-            // All collections assigned to users and their permissions
-            if (tCollect.Item2.Users.Count() > 0)
-            {
-                var userCollectionDetails = tCollect.Item2.Users.Select(x =>
-                    new MemberAccessReportAccessDetails
-                    {
-                        CollectionId = tCollect.Item1.Id,
-                        CollectionName = tCollect.Item1.Name,
-                        ReadOnly = x.ReadOnly,
-                        HidePasswords = x.HidePasswords,
-                        Manage = x.Manage,
-                        ItemCount = itemCounts,
-                    });
-                userCollectionAccessDetails.AddRange(userCollectionDetails);
-            }
-        }
 
         // Loop through the org users and populate report and access data
         var memberAccessReport = new List<MemberAccessReportResponseModel>();
         foreach (var user in orgUsers)
         {
+            // Take the collections/groups and create the access details items
+            var groupAccessDetails = new List<MemberAccessReportAccessDetails>();
+            var userCollectionAccessDetails = new List<MemberAccessReportAccessDetails>();
+            foreach (var tCollect in orgCollectionsWithAccess)
+            {
+                var itemCounts = collectionItemCounts.TryGetValue(tCollect.Item1.Id, out var itemCount) ? itemCount : 0;
+                if (tCollect.Item2.Groups.Count() > 0)
+                {
+                    var groupDetails = tCollect.Item2.Groups.Where((tCollectGroups) => user.Groups.Contains(tCollectGroups.Id)).Select(x =>
+                        new MemberAccessReportAccessDetails
+                        {
+                            CollectionId = tCollect.Item1.Id,
+                            CollectionName = tCollect.Item1.Name,
+                            GroupId = x.Id,
+                            GroupName = groupNameDictionary[x.Id],
+                            ReadOnly = x.ReadOnly,
+                            HidePasswords = x.HidePasswords,
+                            Manage = x.Manage,
+                            ItemCount = itemCounts,
+                        });
+                    groupAccessDetails.AddRange(groupDetails);
+                }
+
+                // All collections assigned to users and their permissions
+                if (tCollect.Item2.Users.Count() > 0)
+                {
+                    var userCollectionDetails = tCollect.Item2.Users.Where((tCollectUser) => tCollectUser.Id == user.Id).Select(x =>
+                        new MemberAccessReportAccessDetails
+                        {
+                            CollectionId = tCollect.Item1.Id,
+                            CollectionName = tCollect.Item1.Name,
+                            ReadOnly = x.ReadOnly,
+                            HidePasswords = x.HidePasswords,
+                            Manage = x.Manage,
+                            ItemCount = itemCounts,
+                        });
+                    userCollectionAccessDetails.AddRange(userCollectionDetails);
+                }
+            }
+
             var report = new MemberAccessReportResponseModel
             {
                 UserName = user.Name,
