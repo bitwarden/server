@@ -15,15 +15,17 @@ public class OrganizationSignup : OrganizationUpgrade
     public string PaymentToken { get; set; }
     public int? MaxAutoscaleSeats { get; set; } = null;
     public string InitiationPath { get; set; }
+    public bool IsFromSecretsManagerTrial { get; set; }
+    public bool IsFromProvider { get; set; }
 
-    public OrganizationSubscriptionPurchase ToSubscriptionPurchase(bool fromProvider = false)
+    public OrganizationSubscriptionPurchase ToSubscriptionPurchase()
     {
         if (!PaymentMethodType.HasValue)
         {
             return null;
         }
 
-        var metadata = new OrganizationSubscriptionPurchaseMetadata(fromProvider, IsFromSecretsManagerTrial);
+        var metadata = new OrganizationSubscriptionPurchaseMetadata(IsFromProvider, IsFromSecretsManagerTrial);
 
         var passwordManager = new OrganizationPasswordManagerSubscriptionPurchase(
             AdditionalStorageGb,
