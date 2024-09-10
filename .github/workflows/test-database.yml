@@ -115,6 +115,22 @@ jobs:
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
         shell: pwsh
 
+      - name: Print Running Container (Diagnostic)
+        if: failure()
+        run: 'docker ps'
+      
+      - name: Print MySQL Logs
+        if: failure()
+        run: 'docker logs $(docker ps -aqf "name=mysql")'
+
+      - name: Print Postgres Logs
+        if: failure()
+        run: 'docker logs $(docker ps -aqf "name=postgres")'
+
+      - name: Print MSSQL Logs
+        if: failure()
+        run: 'docker logs $(docker ps -aqf "name=mssql")'
+
       - name: Report test results
         uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
         if: always()
