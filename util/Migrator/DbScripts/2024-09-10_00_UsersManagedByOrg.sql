@@ -3,8 +3,7 @@ FROM sys.indexes
 WHERE name = 'IX_OrganizationDomain_OrganizationIdVerifiedDate')
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_OrganizationIdVerifiedDate]
-        ON [dbo].[OrganizationDomain] ([OrganizationId],[VerifiedDate])
-        WITH (ONLINE = ON);
+        ON [dbo].[OrganizationDomain] ([OrganizationId],[VerifiedDate]);
 END
 GO
 
@@ -14,8 +13,7 @@ WHERE name = 'IX_OrganizationDomain_VerifiedDate')
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_VerifiedDate]
         ON [dbo].[OrganizationDomain] ([VerifiedDate])
-        INCLUDE ([OrganizationId],[DomainName])
-        WITH (ONLINE = ON);
+        INCLUDE ([OrganizationId],[DomainName]);
 END
 GO
 
