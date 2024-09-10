@@ -63,6 +63,16 @@ public class LaunchDarklyFeatureServiceTests
     }
 
     [Fact(Skip = "For local development")]
+    public void FeatureValue_BooleanWithOverridingOrganization()
+    {
+        var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
+
+        var sutProvider = GetSutProvider(settings);
+
+        Assert.False(sutProvider.Sut.IsEnabled(_fakeFeatureKey, overridingOrganizationId: Guid.NewGuid()));
+    }
+
+    [Fact(Skip = "For local development")]
     public void FeatureValue_Int()
     {
         var settings = new Settings.GlobalSettings { LaunchDarkly = { SdkKey = _fakeSdkKey } };
