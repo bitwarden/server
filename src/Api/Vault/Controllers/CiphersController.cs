@@ -6,7 +6,6 @@ using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
