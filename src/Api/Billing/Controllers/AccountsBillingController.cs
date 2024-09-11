@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Billing.Models.Responses;
+using Bit.Core.Billing.Services;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,8 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class AccountsBillingController(
     IPaymentService paymentService,
-    IUserService userService) : Controller
+    IUserService userService,
+    IPaymentHistoryService paymentHistoryService) : Controller
 {
     [HttpGet("history")]
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -38,5 +40,39 @@ public class AccountsBillingController(
 
         var billingInfo = await paymentService.GetBillingAsync(user);
         return new BillingPaymentResponseModel(billingInfo);
+    }
+
+    [HttpGet("invoices")]
+    public async Task<IResult> GetInvoicesAsync([FromQuery] string startAfter = null)
+    {
+        var user = await userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var invoices = await paymentHistoryService.GetInvoiceHistoryAsync(
+            user,
+            5,
+            startAfter);
+
+        return TypedResults.Ok(invoices);
+    }
+
+    [HttpGet("transactions")]
+    public async Task<IResult> GetTransactionsAsync([FromQuery] DateTime? startAfter = null)
+    {
+        var user = await userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var transactions = await paymentHistoryService.GetTransactionHistoryAsync(
+            user,
+            5,
+            startAfter);
+
+        return TypedResults.Ok(transactions);
     }
 }

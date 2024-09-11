@@ -5,6 +5,7 @@ using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
@@ -71,6 +72,8 @@ public class DatabaseContext : DbContext
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
     public DbSet<ProviderPlan> ProviderPlans { get; set; }
     public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<NotificationStatus> NotificationStatuses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -103,7 +106,6 @@ public class DatabaseContext : DbContext
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
         // Shadow property configurations
-        eGroup.Property<bool>("AccessAll").HasDefaultValue(false);
         builder.Entity<OrganizationUser>()
             .Property<bool>("AccessAll")
             .HasDefaultValue(false);
