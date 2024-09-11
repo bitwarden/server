@@ -16,7 +16,6 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -109,16 +108,6 @@ public class OrganizationUsersController : Controller
         }
 
         var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
-
-        // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-        response.Type = GetFlexibleCollectionsUserType(response.Type, response.Permissions);
-
-        // Set 'Edit/Delete Assigned Collections' custom permissions to false
-        if (response.Permissions is not null)
-        {
-            response.Permissions.EditAssignedCollections = false;
-            response.Permissions.DeleteAssignedCollections = false;
-        }
 
         if (includeGroups)
         {
@@ -646,35 +635,6 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
-    }
-
-    private OrganizationUserType GetFlexibleCollectionsUserType(OrganizationUserType type, Permissions permissions)
-    {
-        // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-        if (type == OrganizationUserType.Custom && permissions is not null)
-        {
-            if ((permissions.EditAssignedCollections || permissions.DeleteAssignedCollections) &&
-                permissions is
-                {
-                    AccessEventLogs: false,
-                    AccessImportExport: false,
-                    AccessReports: false,
-                    CreateNewCollections: false,
-                    EditAnyCollection: false,
-                    DeleteAnyCollection: false,
-                    ManageGroups: false,
-                    ManagePolicies: false,
-                    ManageSso: false,
-                    ManageUsers: false,
-                    ManageResetPassword: false,
-                    ManageScim: false
-                })
-            {
-                return OrganizationUserType.User;
-            }
-        }
-
-        return type;
     }
 
     private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get_vNext(Guid orgId,
