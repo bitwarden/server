@@ -181,7 +181,7 @@ public class LaunchDarklyFeatureService : IFeatureService
                     if (_currentContext.Organizations?.Any() ?? false)
                     {
                         var ldOrgs = _currentContext.Organizations.Select(o => LdValue.Of(o.Id.ToString()));
-                        ldUser.Set(_contextAttributeOrganizations, LaunchDarkly.Sdk.LdValue.ArrayFrom(ldOrgs));
+                        ldUser.Set(_contextAttributeOrganizations, LdValue.ArrayFrom(ldOrgs));
                     }
 
                     builder.Add(ldUser.Build());
@@ -213,15 +213,14 @@ public class LaunchDarklyFeatureService : IFeatureService
 
                         builder.Add(ldServiceAccount.Build());
                     }
-
-                    if (_currentContext.OrganizationId.HasValue)
+                    else if (_currentContext.OrganizationId.HasValue)
                     {
-                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(_currentContext.OrganizationId.Value.ToString());
+                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(_currentContext.OrganizationId.Value.ToString());
 
-                        ldOrg.Kind(_contextKindOrganization);
-                        SetCommonContextAttributes(ldOrg);
+                        ldServiceAccount.Kind(_contextKindServiceAccount);
+                        SetCommonContextAttributes(ldServiceAccount);
 
-                        builder.Add(ldOrg.Build());
+                        builder.Add(ldServiceAccount.Build());
                     }
                 }
                 break;
@@ -235,17 +234,17 @@ public class LaunchDarklyFeatureService : IFeatureService
         var source = TestData.DataSource();
         foreach (var kvp in values)
         {
-            if (bool.TryParse(kvp.Value, out bool boolValue))
+            if (bool.TryParse(kvp.Value, out var boolValue))
             {
-                source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(boolValue)));
+                source.Update(source.Flag(kvp.Key).ValueForAll(LdValue.Of(boolValue)));
             }
-            else if (int.TryParse(kvp.Value, out int intValue))
+            else if (int.TryParse(kvp.Value, out var intValue))
             {
-                source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(intValue)));
+                source.Update(source.Flag(kvp.Key).ValueForAll(LdValue.Of(intValue)));
             }
             else
             {
-                source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(kvp.Value)));
+                source.Update(source.Flag(kvp.Key).ValueForAll(LdValue.Of(kvp.Value)));
             }
         }
 
