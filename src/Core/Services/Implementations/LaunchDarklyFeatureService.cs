@@ -19,9 +19,6 @@ public class LaunchDarklyFeatureService : IFeatureService
     private const string _contextKindServiceAccount = "service-account";
 
     private const string _contextAttributeClientVersion = "client-version";
-    private const string _contextAttributeClientVersionMajor = "client-version-major";
-    private const string _contextAttributeClientVersionMinor = "client-version-minor";
-    private const string _contextAttributeClientVersionBuild = "client-version-build";
     private const string _contextAttributeDeviceType = "device-type";
     private const string _contextAttributeOrganizations = "organizations";
 
@@ -146,9 +143,6 @@ public class LaunchDarklyFeatureService : IFeatureService
             if (_currentContext.ClientVersion != null)
             {
                 builder.Set(_contextAttributeClientVersion, _currentContext.ClientVersion.ToString());
-                builder.Set(_contextAttributeClientVersionMajor, _currentContext.ClientVersion.Major);
-                builder.Set(_contextAttributeClientVersionMinor, _currentContext.ClientVersion.Minor);
-                builder.Set(_contextAttributeClientVersionBuild, _currentContext.ClientVersion.Build);
             }
 
             if (_currentContext.DeviceType.HasValue)
