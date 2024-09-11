@@ -6,5 +6,5 @@ public record PaymentMethod(
     string SubscriptionStatus,
     TaxInformation TaxInformation)
 {
-    public static PaymentMethod Empty => new (0, null, null, null);
+    public static PaymentMethod Empty => new(0, null, null, null);
 }
