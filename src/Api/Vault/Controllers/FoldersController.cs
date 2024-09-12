@@ -96,7 +96,7 @@ public class FoldersController : Controller
 
         foreach (var folder in allFolders)
         {
-            _cipherService.DeleteFolderAsync(folder);
+            await _cipherService.DeleteFolderAsync(folder);
         }
     }
 }
