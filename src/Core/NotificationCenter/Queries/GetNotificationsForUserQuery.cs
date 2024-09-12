@@ -2,47 +2,39 @@
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.NotificationCenter.Queries;
 
 public class GetNotificationsForUserQuery : IGetNotificationsForUserQuery
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IAuthorizationService _authorizationService;
     private readonly INotificationRepository _notificationRepository;
 
     public GetNotificationsForUserQuery(ICurrentContext currentContext,
-        IAuthorizationService authorizationService,
         INotificationRepository notificationRepository)
     {
         _currentContext = currentContext;
-        _authorizationService = authorizationService;
         _notificationRepository = notificationRepository;
     }
 
-    public async Task<IEnumerable<Notification>> GetByUserIdStatusFilterAsync(Guid userId,
-        NotificationStatusFilter statusFilter)
+    public async Task<IEnumerable<Notification>> GetByUserIdStatusFilterAsync(NotificationStatusFilter statusFilter)
     {
-        var clientType = DeviceTypeToClientType(_currentContext.DeviceType);
-
-        var notifications = await _notificationRepository.GetByUserIdAndStatusAsync(userId, clientType, statusFilter);
-
-        var authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
-            notifications, NotificationOperations.Read);
-        if (!authorizationResult.Succeeded)
+        if (!_currentContext.UserId.HasValue)
         {
             throw new NotFoundException();
         }
 
-        return notifications;
+        var clientType = DeviceTypeToClientType(_currentContext.DeviceType);
+
+        // Note: only returns the user's notifications - no authorization check needed
+        return await _notificationRepository.GetByUserIdAndStatusAsync(_currentContext.UserId.Value, clientType,
+            statusFilter);
     }
 
     private static ClientType DeviceTypeToClientType(DeviceType? deviceType)

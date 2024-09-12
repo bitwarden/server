@@ -2,20 +2,20 @@
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.NotificationCenter.Authorization;
-using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Queries.Interfaces;
 using Bit.Core.NotificationCenter.Repositories;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Core.NotificationCenter.Commands;
+namespace Bit.Core.NotificationCenter.Queries;
 
-public class CreateNotificationCommand : ICreateNotificationCommand
+public class GetNotificationByIdQuery : IGetNotificationByIdQuery
 {
     private readonly ICurrentContext _currentContext;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotificationRepository _notificationRepository;
 
-    public CreateNotificationCommand(ICurrentContext currentContext,
+    public GetNotificationByIdQuery(ICurrentContext currentContext,
         IAuthorizationService authorizationService,
         INotificationRepository notificationRepository)
     {
@@ -24,18 +24,21 @@ public class CreateNotificationCommand : ICreateNotificationCommand
         _notificationRepository = notificationRepository;
     }
 
-    public async Task<Notification> CreateAsync(Notification notification)
+    public async Task<Notification> GetByIdAsync(Guid notificationId)
     {
-        notification.SetNewId();
-        notification.CreationDate = notification.RevisionDate = DateTime.UtcNow;
+        var notification = await _notificationRepository.GetByIdAsync(notificationId);
+        if (notification == null)
+        {
+            throw new NotFoundException();
+        }
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
-            notification, NotificationOperations.Create);
+            notification, NotificationOperations.Read);
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        return await _notificationRepository.CreateAsync(notification);
+        return notification;
     }
 }

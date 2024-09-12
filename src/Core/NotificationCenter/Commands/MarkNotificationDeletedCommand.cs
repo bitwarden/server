@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.NotificationCenter.Commands;
 
-public class MarkNotificationReadCommand : IMarkNotificationReadCommand
+public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
 {
     private readonly ICurrentContext _currentContext;
     private readonly IAuthorizationService _authorizationService;
@@ -18,7 +18,7 @@ public class MarkNotificationReadCommand : IMarkNotificationReadCommand
     private readonly INotificationRepository _notificationRepository;
     private readonly INotificationStatusRepository _notificationStatusRepository;
 
-    public MarkNotificationReadCommand(ICurrentContext currentContext,
+    public MarkNotificationDeletedCommand(ICurrentContext currentContext,
         IAuthorizationService authorizationService,
         INotificationRepository notificationRepository,
         INotificationStatusRepository notificationStatusRepository,
@@ -33,7 +33,7 @@ public class MarkNotificationReadCommand : IMarkNotificationReadCommand
         _updateNotificationStatusCommand = updateNotificationStatusCommand;
     }
 
-    public async Task MarkReadAsync(Guid notificationId)
+    public async Task MarkDeletedAsync(Guid notificationId)
     {
         if (!_currentContext.UserId.HasValue)
         {
@@ -62,7 +62,7 @@ public class MarkNotificationReadCommand : IMarkNotificationReadCommand
             {
                 NotificationId = notificationId,
                 UserId = _currentContext.UserId.Value,
-                ReadDate = DateTime.Now
+                DeletedDate = DateTime.Now
             };
 
             authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
@@ -83,7 +83,7 @@ public class MarkNotificationReadCommand : IMarkNotificationReadCommand
                 throw new NotFoundException();
             }
 
-            notificationStatus.ReadDate = DateTime.UtcNow;
+            notificationStatus.DeletedDate = DateTime.UtcNow;
 
             await _updateNotificationStatusCommand.UpdateAsync(notificationStatus);
         }

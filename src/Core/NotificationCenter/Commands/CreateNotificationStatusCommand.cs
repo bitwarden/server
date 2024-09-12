@@ -9,42 +9,46 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.NotificationCenter.Commands;
 
-public class UpdateNotificationCommand : IUpdateNotificationCommand
+public class CreateNotificationStatusCommand : ICreateNotificationStatusCommand
 {
     private readonly ICurrentContext _currentContext;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationStatusRepository _notificationStatusRepository;
 
-    public UpdateNotificationCommand(ICurrentContext currentContext,
+    public CreateNotificationStatusCommand(ICurrentContext currentContext,
         IAuthorizationService authorizationService,
-        INotificationRepository notificationRepository)
+        INotificationRepository notificationRepository,
+        INotificationStatusRepository notificationStatusRepository)
     {
         _currentContext = currentContext;
         _authorizationService = authorizationService;
         _notificationRepository = notificationRepository;
+        _notificationStatusRepository = notificationStatusRepository;
     }
 
-    public async Task UpdateAsync(Notification notificationToUpdate)
+    public async Task<NotificationStatus> CreateAsync(NotificationStatus notificationStatus)
     {
-        var notification = await _notificationRepository.GetByIdAsync(notificationToUpdate.Id);
+        var notification = _notificationRepository.GetByIdAsync(notificationStatus.NotificationId);
         if (notification == null)
         {
             throw new NotFoundException();
         }
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
-            notification, NotificationOperations.Update);
+            notification, NotificationOperations.Read);
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        notification.Priority = notificationToUpdate.Priority;
-        notification.ClientType = notificationToUpdate.ClientType;
-        notification.Title = notificationToUpdate.Title;
-        notification.Body = notificationToUpdate.Body;
-        notification.RevisionDate = DateTime.UtcNow;
+        authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
+            notificationStatus, NotificationStatusOperations.Create);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
 
-        await _notificationRepository.ReplaceAsync(notification);
+        return await _notificationStatusRepository.CreateAsync(notificationStatus);
     }
 }

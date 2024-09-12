@@ -5,5 +5,5 @@ namespace Bit.Core.NotificationCenter.Queries.Interfaces;
 
 public interface IGetNotificationStatusForUserQuery
 {
-    Task<NotificationStatus?> GetByNotificationIdAndUserIdAsync(Guid notificationId, Guid userId);
+    Task<NotificationStatus> GetByNotificationIdAndUserIdAsync(Guid notificationId);
 }
