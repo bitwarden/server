@@ -67,8 +67,8 @@ public class UsersController : Controller
         if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
         {
             var user2Fa = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
-            // TempDataSerializer is having an issue serializing an empty IEnumerable<Tuple<T1,T2>> so sending null if empty
-            TempData["UsersTwoFactorIsEnabled"] = user2Fa.Count != 0 ? user2Fa : null;
+            // TempDataSerializer is having an issue serializing an empty IEnumerable<Tuple<T1,T2>> so not setting the header if empty
+            if (user2Fa.Count != 0) TempData["UsersTwoFactorIsEnabled"] = user2Fa;
         }
 
         return View(new UsersModel
