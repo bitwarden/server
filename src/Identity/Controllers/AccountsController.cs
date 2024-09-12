@@ -75,7 +75,7 @@ public class AccountsController : Controller
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
         var user = model.ToUser();
-        var identityResult = await _registerUserCommand.RegisterUserViaOrgInvite(user, model.MasterPasswordHash,
+        var identityResult = await _registerUserCommand.RegisterUserViaOrgInviteToken(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         // delaysEnabled false is only for the new registration with email verification process
         return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
@@ -151,7 +151,7 @@ public class AccountsController : Controller
 
         if (!string.IsNullOrEmpty(model.OrgInviteToken) && model.OrganizationUserId.HasValue)
         {
-            identityResult = await _registerUserCommand.RegisterUserViaOrgInvite(user, model.MasterPasswordHash,
+            identityResult = await _registerUserCommand.RegisterUserViaOrgInviteToken(user, model.MasterPasswordHash,
                 model.OrgInviteToken, model.OrganizationUserId);
 
             return await ProcessRegistrationResult(identityResult, user, delaysEnabled);

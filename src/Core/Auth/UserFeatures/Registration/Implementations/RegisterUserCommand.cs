@@ -81,7 +81,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
-    public async Task<IdentityResult> RegisterUserViaOrgInvite(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaOrgInviteToken(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
         ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
