@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -449,7 +450,90 @@ public class RegisterUserCommandTests
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+    }
 
+    // RegisterUserViaAcceptEmergencyAccessInviteToken
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    {
+        // Arrange
+        emergencyAccess.Email = user.Email;
+        emergencyAccess.Id = acceptEmergencyAccessId;
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(acceptEmergencyAccessInviteToken, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 10);
+                return true;
+            });
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendWelcomeEmailAsync(user);
+
+        await sutProvider.GetDependency<IReferenceEventService>()
+            .Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+    }
+
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+        string masterPasswordHash, EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    {
+        // Arrange
+        emergencyAccess.Email = "wrong@email.com";
+        emergencyAccess.Id = acceptEmergencyAccessId;
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(acceptEmergencyAccessInviteToken, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 10);
+                return true;
+            });
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
+        Assert.Equal("Invalid accept emergency access invite token.", result.Message);
+
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+        string masterPasswordHash, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration = true;
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
+        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
     }
 
 

@@ -33,6 +33,9 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public string? OrgSponsoredFreeFamilyPlanToken { get; set; }
 
+    public string? AcceptEmergencyAccessInviteToken { get; set; }
+    public Guid? AcceptEmergencyAccessId { get; set; }
+
     public User ToUser()
     {
         var user = new User
