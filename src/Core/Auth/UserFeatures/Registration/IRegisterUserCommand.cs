@@ -37,6 +37,6 @@ public interface IRegisterUserCommand
     /// <returns></returns>
     public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash, string emailVerificationToken);
 
-    // public Task<IdentityResult> RegisterUserViaOrgSponsoredFamilyPlanInviteToken(User user, string masterPasswordHash, string orgSponsoredFamilyPlanInviteToken);
+    public Task<IdentityResult> RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken(User user, string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken);
 
 }

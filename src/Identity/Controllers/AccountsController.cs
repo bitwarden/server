@@ -157,6 +157,13 @@ public class AccountsController : Controller
             return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
         }
 
+        if (!string.IsNullOrEmpty(model.OrgSponsoredFreeFamilyPlanToken))
+        {
+            identityResult = await _registerUserCommand.RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
+
+            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+        }
+
         identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
 
         return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
