@@ -40,6 +40,8 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
 
+    private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _emergencyAccessInviteTokenDataFactory;
+
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
     public RegisterUserCommand(
@@ -53,7 +55,8 @@ public class RegisterUserCommand : IRegisterUserCommand
         ICurrentContext currentContext,
         IUserService userService,
         IMailService mailService,
-        IValidateRedemptionTokenCommand validateRedemptionTokenCommand
+        IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
+        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory
         )
     {
         _globalSettings = globalSettings;
@@ -71,6 +74,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         _mailService = mailService;
 
         _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
+        _emergencyAccessInviteTokenDataFactory = emergencyAccessInviteTokenDataFactory;
     }
 
 
@@ -278,6 +282,27 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
+
+    // TODO: in future, consider how we can consolidate base registration logic to reduce code duplication
+    public async Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, string masterPasswordHash,
+        string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    {
+        ValidateOpenRegistrationAllowed();
+        ValidateAcceptEmergencyAccessInviteToken(acceptEmergencyAccessInviteToken, acceptEmergencyAccessId, user.Email);
+
+        user.EmailVerified = true;
+        user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
+
+        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        if (result == IdentityResult.Success)
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
+        }
+
+        return result;
+    }
+
     private void ValidateOpenRegistrationAllowed()
     {
         // We validate open registration on send of initial email and here b/c a user could technically start the
@@ -297,7 +322,15 @@ public class RegisterUserCommand : IRegisterUserCommand
         {
             throw new BadRequestException("Invalid org sponsored free family plan token.");
         }
+    }
 
+    private void ValidateAcceptEmergencyAccessInviteToken(string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId, string userEmail)
+    {
+        _emergencyAccessInviteTokenDataFactory.TryUnprotect(acceptEmergencyAccessInviteToken, out var tokenable);
+        if (tokenable == null || !tokenable.Valid || !tokenable.IsValid(acceptEmergencyAccessId, userEmail))
+        {
+            throw new BadRequestException("Invalid accept emergency access invite token.");
+        }
     }
 
 

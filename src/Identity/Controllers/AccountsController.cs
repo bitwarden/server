@@ -144,7 +144,7 @@ public class AccountsController : Controller
     {
         var user = model.ToUser();
 
-        // Users will either have an org invite token or an email verification token - not both.
+        // Users will either have an emailed token or an email verification token - not both.
 
         IdentityResult identityResult = null;
         var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
@@ -164,9 +164,25 @@ public class AccountsController : Controller
             return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
         }
 
-        identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
+        if (!string.IsNullOrEmpty(model.AcceptEmergencyAccessInviteToken) && model.AcceptEmergencyAccessId.HasValue)
+        {
+            identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
+                model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
+
+            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+        }
+
+        if (string.IsNullOrEmpty(model.EmailVerificationToken))
+        {
+            throw new BadRequestException("Invalid registration finish request");
+        }
+
+        identityResult =
+            await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
+                model.EmailVerificationToken);
 
         return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+
     }
 
     private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)
