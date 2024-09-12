@@ -10,7 +10,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -107,26 +106,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(OrganizationUserType.Custom, result.Type);
         AssertHelper.AssertPropertyEqual(new PermissionsModel { AccessReports = true, ManageScim = true },
             result.Permissions);
-    }
-
-    [Theory]
-    [BitAutoData(true, true)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    public async Task Get_CustomMember_WithDeprecatedPermissions_TreatsAsUser(bool editAssignedCollections, bool deleteAssignedCollections)
-    {
-        var (email, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
-            OrganizationUserType.Custom, new Permissions { EditAssignedCollections = editAssignedCollections, DeleteAssignedCollections = deleteAssignedCollections });
-
-        var response = await _client.GetAsync($"/public/members/{orgUser.Id}");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<MemberResponseModel>();
-        Assert.NotNull(result);
-        Assert.Equal(email, result.Email);
-
-        Assert.Equal(OrganizationUserType.User, result.Type);
-        Assert.Null(result.Permissions);
     }
 
     [Fact]

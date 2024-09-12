@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.Services.Implementations;
 
 public class OrganizationDomainService : IOrganizationDomainService
 {
@@ -53,7 +54,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 {
                     _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
 
-                    //update entry on OrganizationDomain table 
+                    // Update entry on OrganizationDomain table
                     domain.SetLastCheckedDate();
                     domain.SetVerifiedDate();
                     domain.SetJobRunCount();
@@ -64,7 +65,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 }
                 else
                 {
-                    //update entry on OrganizationDomain table 
+                    // Update entry on OrganizationDomain table
                     domain.SetLastCheckedDate();
                     domain.SetJobRunCount();
                     domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
@@ -78,7 +79,7 @@ public class OrganizationDomainService : IOrganizationDomainService
             }
             catch (Exception ex)
             {
-                //update entry on OrganizationDomain table 
+                // Update entry on OrganizationDomain table
                 domain.SetLastCheckedDate();
                 domain.SetJobRunCount();
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
@@ -117,7 +118,7 @@ public class OrganizationDomainService : IOrganizationDomainService
 
                 _logger.LogInformation(Constants.BypassFiltersEventId, "Expired domain: {domainName}", domain.DomainName);
             }
-            //delete domains that have not been verified within 7 days 
+            // Delete domains that have not been verified within 7 days
             var status = await _domainRepository.DeleteExpiredAsync(_globalSettings.DomainVerification.ExpirationPeriod);
             _logger.LogInformation(Constants.BypassFiltersEventId, "Delete status {status}", status);
         }
@@ -125,6 +126,12 @@ public class OrganizationDomainService : IOrganizationDomainService
         {
             _logger.LogError(ex, "Organization domain maintenance failed");
         }
+    }
+
+    public async Task<bool> HasVerifiedDomainsAsync(Guid orgId)
+    {
+        var orgDomains = await _domainRepository.GetDomainsByOrganizationIdAsync(orgId);
+        return orgDomains.Any(od => od.VerifiedDate != null);
     }
 
     private async Task<List<string>> GetAdminEmailsAsync(Guid organizationId)

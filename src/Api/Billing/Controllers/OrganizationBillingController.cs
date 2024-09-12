@@ -182,11 +182,9 @@ public class OrganizationBillingController(
 
         var tokenizedPaymentSource = requestBody.PaymentSource.ToDomain();
 
-        await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
-
         var taxInformation = requestBody.TaxInformation.ToDomain();
 
-        await subscriberService.UpdateTaxInformation(organization, taxInformation);
+        await organizationBillingService.UpdatePaymentMethod(organization, tokenizedPaymentSource, taxInformation);
 
         return TypedResults.Ok();
     }
