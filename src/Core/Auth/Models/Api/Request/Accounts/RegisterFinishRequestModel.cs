@@ -31,6 +31,7 @@ public class RegisterFinishRequestModel : IValidatableObject
     public Guid? OrganizationUserId { get; set; }
     public string? OrgInviteToken { get; set; }
 
+    public string? OrgSponsoredFreeFamilyPlanToken { get; set; }
 
     public User ToUser()
     {
