@@ -1,0 +1,116 @@
+-- batch user processing
+do $$
+declare
+    UserBatchSize INTEGER := 1000;
+	TotalUserRows INTEGER;
+	UserBatchNum INTEGER := 0;
+begin
+    IF EXISTS (
+    SELECT
+    FROM 
+    	"User" 
+    where 
+        "TwoFactorProviders" like '%"2":%'
+	    and jsonb_typeof("TwoFactorProviders"::jsonb) = 'object') 
+    then
+        -- Create temporary table to store User IDs
+        create temporary table "TempUserIDs"
+        (
+            RowNum SERIAL primary key,
+            ID UUID
+        );
+
+        -- Populate temporary table with User IDs
+        insert into "TempUserIDs" (ID)
+        select "Id"
+        from "User"
+        where
+            "TwoFactorProviders" like '%"2":%'
+            and jsonb_typeof("TwoFactorProviders"::jsonb) = 'object';
+
+
+        select COUNT(*)
+        into TotalUserRows
+        from "TempUserIDs";
+
+        while UserBatchNum * UserBatchSize < TotalUserRows loop
+        -- Update Users
+        update "User"
+        set "TwoFactorProviders" = jsonb_set(
+                jsonb_set("TwoFactorProviders"::jsonb,
+                    '{2,MetaData,ClientSecret}',
+                    ("TwoFactorProviders"::jsonb -> '2' -> 'MetaData' -> 'SKey')),
+                    '{2,MetaData,ClientId}',
+                    ("TwoFactorProviders"::jsonb -> '2' -> 'MetaData' -> 'IKey'))
+        from "TempUserIDs"
+        where
+        "User"."Id" = "TempUserIDs".ID
+            and "TempUserIDs".RowNum > UserBatchNum * UserBatchSize
+            and "TempUserIDs".RowNum <= (UserBatchNum + 1) * UserBatchSize;
+
+        UserBatchNum := UserBatchNum + 1;
+        end loop;
+        -- Clean up
+        drop table "TempUserIDs";
+	else
+	    RAISE NOTICE 'No Users to update';
+	end if;
+end $$;
+
+-- batch organization processing
+do $$
+declare
+    OrganizationBatchSize INTEGER := 1000;
+    TotalOrganizationRows INTEGER;
+    OrganizationBatchNum INTEGER := 0;
+begin
+    IF EXISTS (
+    SELECT
+    FROM 
+    	"Organization" 
+    where 
+        "TwoFactorProviders" like '%"6":%'
+	    and jsonb_typeof("TwoFactorProviders"::jsonb) = 'object') 
+    then	
+	    -- Make the temp table
+	    create temporary table "TempOrganizationIDs"
+	    (
+	        RowNum SERIAL primary key,
+	        ID UUID
+	    );
+	
+	    -- Populate temporary table with Organization IDs
+	    insert into "TempOrganizationIDs" (ID)
+	    select "Id"
+	    from "Organization"
+	    where 
+	        "TwoFactorProviders" like '%"6":%'
+	        and jsonb_typeof("TwoFactorProviders"::jsonb) = 'object';
+	    
+        select COUNT(*)
+        into TotalOrganizationRows
+        from "TempOrganizationIDs";
+
+        while OrganizationBatchNum * OrganizationBatchSize < TotalOrganizationRows loop
+        -- Update Organizations
+        update "Organization"
+        set "TwoFactorProviders" = jsonb_set(
+                jsonb_set("TwoFactorProviders"::jsonb,
+                    '{6,MetaData,ClientSecret}',
+                    ("TwoFactorProviders"::jsonb -> '6' -> 'MetaData' -> 'SKey')),
+                    '{6,MetaData,ClientId}',
+                    ("TwoFactorProviders"::jsonb -> '6' -> 'MetaData' -> 'IKey'))
+        from "TempOrganizationIDs"
+        where
+        "Organization"."Id" = "TempOrganizationIDs".ID
+            and "TempOrganizationIDs".RowNum > OrganizationBatchNum * OrganizationBatchSize
+            and "TempOrganizationIDs".RowNum <= (OrganizationBatchNum + 1) * OrganizationBatchSize;
+
+        OrganizationBatchNum := OrganizationBatchNum + 1;
+        end loop;
+        -- Clean up
+	    DROP TABLE "TempOrganizationIDs";
+	ELSE
+	    RAISE NOTICE 'No Organizations to update';
+	END IF;
+end $$;
