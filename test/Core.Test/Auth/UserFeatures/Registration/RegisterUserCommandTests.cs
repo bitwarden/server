@@ -86,11 +86,10 @@ public class RegisterUserCommandTests
     }
 
     // RegisterUserWithOptionalOrgInvite tests
-
     // Simple happy path test
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserWithOptionalOrgInvite_NoOrgInviteOrOrgUserIdOrReferenceData_Succeeds(
+    public async Task RegisterUserWithOrgInviteToken_NoOrgInviteOrOrgUserIdOrReferenceData_Succeeds(
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash)
     {
         // Arrange
@@ -120,7 +119,7 @@ public class RegisterUserCommandTests
     [BitAutoData(false, null)]
     [BitAutoData(true, "sampleInitiationPath")]
     [BitAutoData(true, "Secrets Manager trial")]
-    public async Task RegisterUserWithOptionalOrgInvite_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
+    public async Task RegisterUserWithOrgInviteToken_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
     {
         // Arrange
@@ -228,7 +227,7 @@ public class RegisterUserCommandTests
     [BitAutoData("invalidOrgInviteToken")]
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
-    public async Task RegisterUserWithOptionalOrgInvite_MissingOrInvalidOrgInviteDataWithDisabledOpenRegistration_ThrowsBadRequestException(string scenario,
+    public async Task RegisterUserWithOrgInviteToken_MissingOrInvalidOrgInviteDataWithDisabledOpenRegistration_ThrowsBadRequestException(string scenario,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
@@ -266,7 +265,7 @@ public class RegisterUserCommandTests
     [BitAutoData("invalidOrgInviteToken")]
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
-    public async Task RegisterUserWithOptionalOrgInvite_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_ThrowsBadRequestException(string scenario,
+    public async Task RegisterUserWithOrgInviteToken_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_ThrowsBadRequestException(string scenario,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
