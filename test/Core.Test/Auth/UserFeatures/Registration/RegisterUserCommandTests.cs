@@ -7,6 +7,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -380,5 +381,77 @@ public class RegisterUserCommandTests
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
 
     }
+
+
+
+    // RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        string orgSponsoredFreeFamilyPlanInviteToken)
+    {
+        // Arrange
+        sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
+            .ValidateRedemptionTokenAsync(orgSponsoredFreeFamilyPlanInviteToken, user.Email)
+            .Returns((true, new OrganizationSponsorship()));
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendWelcomeEmailAsync(user);
+
+        await sutProvider.GetDependency<IReferenceEventService>()
+            .Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+        string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
+    {
+        // Arrange
+        sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
+            .ValidateRedemptionTokenAsync(orgSponsoredFreeFamilyPlanInviteToken, user.Email)
+            .Returns((false, new OrganizationSponsorship()));
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
+        Assert.Equal("Invalid org sponsored free family plan token.", result.Message);
+
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+        string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
+    {
+        // Arrange
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration = true;
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
+        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+
+    }
+
 
 }
