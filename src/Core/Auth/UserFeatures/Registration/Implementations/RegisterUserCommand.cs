@@ -81,8 +81,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
-
-    public async Task<IdentityResult> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaOrgInvite(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
         ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
@@ -233,13 +232,8 @@ public class RegisterUserCommand : IRegisterUserCommand
     public async Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash,
         string emailVerificationToken)
     {
-        // We validate open registration on send of initial email and here b/c a user could technically start the
-        // account creation process while open registration is enabled and then finish it after it has been
-        // disabled by the self hosted admin.
-        if (_globalSettings.DisableUserRegistration)
-        {
-            throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
-        }
+
+        ValidateOpenRegistrationAllowed();
 
         var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
 
@@ -259,6 +253,46 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         return result;
     }
+
+    // create RegisterUserViaOrgSponsoredFamilyPlanInviteToken
+    // public async Task<IdentityResult> RegisterUserViaOrgSponsoredFamilyPlanInviteToken(User user, string masterPasswordHash,
+    //     string orgSponsoredFamilyPlanInviteToken)
+    // {
+    //     ValidateOpenRegistrationAllowed();
+    //
+    //
+    //     // TODO: Validate tokenable using IValidateRedemptionTokenCommand
+    //
+    //     // var tokenable = ValidateOrgSponsoredFamilyPlanInviteToken(orgSponsoredFamilyPlanInviteToken, user.Email);
+    //
+    //     user.EmailVerified = true;
+    //     user.Name = tokenable.Name;  // how to get user's name? Redesign UI or put in all tokenables or
+    //     user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
+    //
+    //     var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+    //     if (result == IdentityResult.Success)
+    //     {
+    //         await _mailService.SendWelcomeEmailAsync(user);
+    //         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
+    //         {
+    //             ReceiveMarketingEmails = tokenable.ReceiveMarketingEmails
+    //         });
+    //     }
+    //
+    //     return result;
+    // }
+
+    private void ValidateOpenRegistrationAllowed()
+    {
+        // We validate open registration on send of initial email and here b/c a user could technically start the
+        // account creation process while open registration is enabled and then finish it after it has been
+        // disabled by the self hosted admin.Ï
+        if (_globalSettings.DisableUserRegistration)
+        {
+            throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
+        }
+    }
+
 
     private RegistrationEmailVerificationTokenable ValidateRegistrationEmailVerificationTokenable(string emailVerificationToken, string userEmail)
     {

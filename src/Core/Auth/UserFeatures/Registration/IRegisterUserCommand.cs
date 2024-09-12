@@ -24,7 +24,7 @@ public interface IRegisterUserCommand
     /// <param name="orgInviteToken">The org invite token sent to the user via email</param>
     /// <param name="orgUserId">The associated org user guid that was created at the time of invite</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
+    public Task<IdentityResult> RegisterUserViaOrgInvite(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -36,5 +36,7 @@ public interface IRegisterUserCommand
     /// <param name="emailVerificationToken">The email verification token sent to the user via email</param>
     /// <returns></returns>
     public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash, string emailVerificationToken);
+
+    // public Task<IdentityResult> RegisterUserViaOrgSponsoredFamilyPlanInviteToken(User user, string masterPasswordHash, string orgSponsoredFamilyPlanInviteToken);
 
 }

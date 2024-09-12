@@ -100,7 +100,7 @@ public class RegisterUserCommandTests
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, null, null);
+        var result = await sutProvider.Sut.RegisterUserViaOrgInvite(user, masterPasswordHash, null, null);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -158,7 +158,7 @@ public class RegisterUserCommandTests
         user.ReferenceData = addUserReferenceData ? $"{{\"initiationPath\":\"{initiationPath}\"}}" : null;
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId);
+        var result = await sutProvider.Sut.RegisterUserViaOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId);
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -257,7 +257,7 @@ public class RegisterUserCommandTests
         }
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId));
         Assert.Equal("Open registration has been disabled by the system administrator.", exception.Message);
     }
 
@@ -307,7 +307,7 @@ public class RegisterUserCommandTests
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId));
+            sutProvider.Sut.RegisterUserViaOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId));
         Assert.Equal(expectedErrorMessage, exception.Message);
     }
 
