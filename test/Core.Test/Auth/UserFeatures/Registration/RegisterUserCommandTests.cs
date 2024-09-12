@@ -383,12 +383,12 @@ public class RegisterUserCommandTests
 
 
 
-    // RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken
+    // RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken
 
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
         string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
@@ -421,7 +421,7 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
         string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
@@ -438,7 +438,7 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaOrgSponsoredFreeFamilyPlanInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
         string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
