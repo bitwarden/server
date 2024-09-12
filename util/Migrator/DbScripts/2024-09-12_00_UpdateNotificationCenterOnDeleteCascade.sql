@@ -23,5 +23,9 @@ ALTER TABLE [dbo].[NotificationStatus]
 GO
 
 ALTER TABLE [dbo].[NotificationStatus]
-    ADD CONSTRAINT [FK_NotificationStatus_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE
+    ADD CONSTRAINT [FK_NotificationStatus_Notification] FOREIGN KEY ([NotificationId]) REFERENCES [dbo].[Notification] ([Id]) ON DELETE CASCADE
+GO
+
+ALTER TABLE [dbo].[NotificationStatus]
+    ADD CONSTRAINT [FK_NotificationStatus_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE NO ACTION
 GO
