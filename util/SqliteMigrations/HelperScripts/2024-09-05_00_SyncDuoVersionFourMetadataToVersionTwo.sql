@@ -4,8 +4,9 @@ a good interface for batch processing. So to improve readability and maintain ve
 for a single update query for each table: "User" and "Organization".
 
 Part of the Reasoning is that SQLite, while not a "toy database", is not usually used in larger
-deployments. Scaleablity is difficult for SQLite so not running these in a batch should not
-impact on users that do use SQLite.
+deployments. Scalability is difficult in SQLite, so the assumption is the database is small for 
+installations using SQLite. So not running these in a batch should not impact on users who do 
+use SQLite.
 */
 
 -- Update User accounts
