@@ -25,3 +25,4 @@ set
 where
 	"TwoFactorProviders" like '%"6":%'
 	and jsonb_typeof("TwoFactorProviders"::jsonb) = 'object';
+	

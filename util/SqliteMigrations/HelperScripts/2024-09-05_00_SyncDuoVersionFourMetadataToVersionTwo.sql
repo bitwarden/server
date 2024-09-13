@@ -19,7 +19,7 @@ SET TwoFactorProviders = json_set(
         json_extract("User".TwoFactorProviders, '$."2".MetaData.IKey')
 )
 WHERE TwoFactorProviders LIKE '%"2":%'
-	AND JSON_VALID(TwoFactorProviders) = 1;
+    AND JSON_VALID(TwoFactorProviders) = 1;
 
 -- Update Organizations
 UPDATE "Organization"
@@ -31,4 +31,5 @@ SET TwoFactorProviders = json_set(
         json_extract("Organization".TwoFactorProviders, '$."6".MetaData.IKey')
 )
 WHERE TwoFactorProviders LIKE '%"6":%'
-	AND JSON_VALID(TwoFactorProviders) = 1;
+    AND JSON_VALID(TwoFactorProviders) = 1;
+    

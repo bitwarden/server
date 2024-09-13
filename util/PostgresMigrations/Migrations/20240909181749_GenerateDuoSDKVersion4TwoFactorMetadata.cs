@@ -7,7 +7,7 @@ namespace Bit.PostgresMigrations.Migrations;
 
 public partial class GenerateDuoSDKVersion4TwoFactorMetadata : Migration
 {
-    private const string _scriptLocation = 
+    private const string _scriptLocation =
     "PostgresMigrations.HelperScripts.2024-09-05_00_SyncDuoVersionFourMetadataToVersionTwo.psql";
 
     protected override void Up(MigrationBuilder migrationBuilder)

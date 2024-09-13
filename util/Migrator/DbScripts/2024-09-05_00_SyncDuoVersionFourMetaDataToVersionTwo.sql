@@ -34,9 +34,6 @@ BEGIN
       AND T.RowNum <= (@UserBatchNum + 1) * @UserBatchSize;
 
     SET @UserBatchNum = @UserBatchNum + 1;
-    
-    -- Optional: Print progress
-    -- PRINT 'Processed User batch ' + CAST(@BatchNum AS VARCHAR(10)) + ' of ' + CAST((@TotalRows - 1) / @BatchSize + 1 AS VARCHAR(10));
 END
 
 -- Clean up
@@ -78,9 +75,6 @@ BEGIN
       AND T.RowNum <= (@OrganizationBatchNum + 1) * @OrganizationBatchSize;
 
     SET @OrganizationBatchNum = @OrganizationBatchNum + 1;
-    
-    -- Optional: Print progress
-    -- PRINT 'Processed Organization batch ' + CAST(@BatchNum AS VARCHAR(10)) + ' of ' + CAST((@TotalRows - 1) / @BatchSize + 1 AS VARCHAR(10));
 END
 
 -- Clean up

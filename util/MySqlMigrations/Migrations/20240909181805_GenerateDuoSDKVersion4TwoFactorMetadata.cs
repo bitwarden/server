@@ -20,4 +20,3 @@ public partial class GenerateDuoSDKVersion4TwoFactorMetadata : Migration
         throw new Exception("Irreversible migration");
     }
 }
-
