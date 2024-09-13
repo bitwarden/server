@@ -172,8 +172,8 @@ jobs:
         uses: actions/create-github-app-token@3378cda945da322a8db4b193e19d46352ebe2de5 # v1.10.4
         id: app-token
         with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_KEY }}
+          app-id: ${{ secrets.BW_GHAPP_ID }}
+          private-key: ${{ secrets.BW_GHAPP_KEY }}
           owner: ${{ github.repository_owner }}
 
       - name: Create version PR
@@ -208,59 +208,59 @@ jobs:
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr review $PR_NUMBER --approve
 
-      # - name: Merge PR
-      #   if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-      #   env:
-      #     GH_TOKEN: ${{ steps.app-token.outputs.token }}
-      #     PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
-      #   run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
+      - name: Merge PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
 
-      # - name: Report upcoming release version to Slack
-      #   if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' && inputs.enable_slack_notification == true }}
-      #   uses: bitwarden/gh-actions/report-upcoming-release-version@main
-      #   with:
-      #     version: ${{ steps.set-final-version-output.outputs.version }}
-      #     project: ${{ github.repository }}
-      #     AZURE_KV_CI_SERVICE_PRINCIPAL: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+      - name: Report upcoming release version to Slack
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' && inputs.enable_slack_notification == true }}
+        uses: bitwarden/gh-actions/report-upcoming-release-version@main
+        with:
+          version: ${{ steps.set-final-version-output.outputs.version }}
+          project: ${{ github.repository }}
+          AZURE_KV_CI_SERVICE_PRINCIPAL: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-  # cut_rc:
-  #   name: Cut RC branch
-  #   if: ${{ inputs.cut_rc_branch == true }}
-  #   needs: bump_version
-  #   runs-on: ubuntu-22.04
-  #   steps:
-  #     - name: Check out branch
-  #       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-  #       with:
-  #         ref: main
+  cut_rc:
+    name: Cut RC branch
+    if: ${{ inputs.cut_rc_branch == true }}
+    needs: bump_version
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          ref: main
 
-  #     - name: Install xmllint
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -y libxml2-utils
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
 
-  #     - name: Verify version has been updated
-  #       env:
-  #         NEW_VERSION: ${{ needs.bump_version.outputs.version }}
-  #       run: |
-  #         # Wait for version to change.
-  #         while : ; do
-  #           echo "Waiting for version to be updated..."
-  #           git pull --force
-  #           CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+      - name: Verify version has been updated
+        env:
+          NEW_VERSION: ${{ needs.bump_version.outputs.version }}
+        run: |
+          # Wait for version to change.
+          while : ; do
+            echo "Waiting for version to be updated..."
+            git pull --force
+            CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
 
-  #           # If the versions don't match we continue the loop, otherwise we break out of the loop.
-  #           [[ "$NEW_VERSION" != "$CURRENT_VERSION" ]] || break
-  #           sleep 10
-  #         done
+            # If the versions don't match we continue the loop, otherwise we break out of the loop.
+            [[ "$NEW_VERSION" != "$CURRENT_VERSION" ]] || break
+            sleep 10
+          done
 
-  #     - name: Cut RC branch
-  #       run: |
-  #         git switch --quiet --create rc
-  #         git push --quiet --set-upstream origin rc
+      - name: Cut RC branch
+        run: |
+          git switch --quiet --create rc
+          git push --quiet --set-upstream origin rc
 
-  # move-future-db-scripts:
-  #   name: Move finalization database scripts
-  #   needs: cut_rc
-  #   uses: ./.github/workflows/_move_finalization_db_scripts.yml
-  #   secrets: inherit
+  move-future-db-scripts:
+    name: Move finalization database scripts
+    needs: cut_rc
+    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    secrets: inherit
