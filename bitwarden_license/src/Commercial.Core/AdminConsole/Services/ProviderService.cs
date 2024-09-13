@@ -551,7 +551,7 @@ public class ProviderService : IProviderService
 
         var (organization, _, defaultCollection) = consolidatedBillingEnabled
             ? await _organizationService.SignupClientAsync(organizationSignup)
-            : await _organizationService.SignUpAsync(organizationSignup, true);
+            : await _organizationService.SignUpAsync(organizationSignup);
 
         var providerOrganization = new ProviderOrganization
         {

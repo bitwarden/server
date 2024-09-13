@@ -271,6 +271,25 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         return await query.ToListAsync();
     }
 
+    public async Task<Core.AdminConsole.Entities.Organization> GetByClaimedUserDomainAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var query = from u in dbContext.Users
+                        join ou in dbContext.OrganizationUsers on u.Id equals ou.UserId
+                        join o in dbContext.Organizations on ou.OrganizationId equals o.Id
+                        join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+                        where u.Id == userId
+                              && od.VerifiedDate != null
+                              && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
+                        select o;
+
+            return await query.FirstOrDefaultAsync();
+        }
+    }
+
     public Task EnableCollectionEnhancements(Guid organizationId)
     {
         throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");

@@ -73,7 +73,9 @@
                             @if (featureService.IsEnabled(Bit.Core.FeatureFlagKeys.MembersTwoFAQueryOptimization))
                             {
                                 var usersTwoFactorIsEnabled = TempData["UsersTwoFactorIsEnabled"] as IEnumerable<(Guid userId, bool twoFactorIsEnabled)>;
-                                @if(usersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled)
+                                var matchingUser2Fa = usersTwoFactorIsEnabled?.FirstOrDefault(tuple => tuple.userId == user.Id);
+
+                                @if(matchingUser2Fa is { twoFactorIsEnabled: true })
                                 {
                                     <i class="fa fa-lock fa-lg fa-fw" title="2FA Enabled"></i>
                                 }
