@@ -87,4 +87,16 @@ public class FoldersController : Controller
 
         await _cipherService.DeleteFolderAsync(folder);
     }
+
+    [HttpDelete("all")]
+    public async Task DeleteAll()
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var allFolders = await _folderRepository.GetManyByUserIdAsync(userId);
+
+        foreach (var folder in allFolders)
+        {
+            await _cipherService.DeleteFolderAsync(folder);
+        }
+    }
 }
