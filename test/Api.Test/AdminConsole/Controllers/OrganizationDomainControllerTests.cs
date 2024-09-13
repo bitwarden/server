@@ -295,25 +295,25 @@ public class OrganizationDomainControllerTests
 
     [Theory, BitAutoData]
     public async Task GetOrgDomainSsoDetails_ShouldThrowNotFound_WhenEmailHasNotClaimedDomain(
-        OrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
+        VerifiedOrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetOrganizationDomainSsoDetailsAsync(model.Email).ReturnsNull();
+            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.GetOrgDomainSsoDetails(model);
+        var requestAction = async () => await sutProvider.Sut.GetVerifiedOrgDomainSsoDetailsAsync(model);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
 
     [Theory, BitAutoData]
     public async Task GetOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetails_WhenEmailHasClaimedDomain(
-        OrganizationDomainSsoDetailsRequestModel model, OrganizationDomainSsoDetailsData ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
+        VerifiedOrganizationDomainSsoDetailsRequestModel model, OrganizationDomainSsoDetailsData ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
+            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
 
-        var result = await sutProvider.Sut.GetOrgDomainSsoDetails(model);
+        var result = await sutProvider.Sut.GetVerifiedOrgDomainSsoDetailsAsync(model);
 
-        Assert.IsType<OrganizationDomainSsoDetailsResponseModel>(result);
+        Assert.IsType<VerifiedOrganizationDomainSsoDetailsResponseModel>(result);
     }
 }

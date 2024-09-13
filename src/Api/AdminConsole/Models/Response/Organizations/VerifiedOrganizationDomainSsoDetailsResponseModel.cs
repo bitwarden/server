@@ -3,9 +3,9 @@ using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
-public class OrganizationDomainSsoDetailsResponseModel : ResponseModel
+public class VerifiedOrganizationDomainSsoDetailsResponseModel : ResponseModel
 {
-    public OrganizationDomainSsoDetailsResponseModel(OrganizationDomainSsoDetailsData data, string obj = "organizationDomainSsoDetails")
+    public VerifiedOrganizationDomainSsoDetailsResponseModel(OrganizationDomainSsoDetailsData data, string obj = "organizationDomainSsoDetails")
         : base(obj)
     {
         if (data == null)

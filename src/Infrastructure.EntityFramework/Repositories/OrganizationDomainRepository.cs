@@ -69,7 +69,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(results);
     }
 
-    public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
+    public async Task<OrganizationDomainSsoDetailsData?> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
     {
         var domainName = new MailAddress(email).Host;
 
