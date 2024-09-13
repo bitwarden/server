@@ -87,16 +87,10 @@ public class CollectController : Controller
                             continue;
                         }
 
-                        var org = _currentContext.GetOrganization(eventModel.OrganizationId.Value);
-                        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(eventModel.OrganizationId.Value);
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value);
-
                         var cipherBelongsToOrg = cipher.OrganizationId == eventModel.OrganizationId;
-                        var customOrgAllowsAnyCollection = org is { Type: OrganizationUserType.Custom, Permissions.EditAnyCollection: true };
-                        var orgAllowsOwnerAdminAccess = orgAbility is { AllowAdminAccessToAllCollectionItems: true } && org is
-                        { Type: OrganizationUserType.Admin or OrganizationUserType.Owner };
 
-                        if (!cipherBelongsToOrg || !(customOrgAllowsAnyCollection || orgAllowsOwnerAdminAccess))
+                        if (!cipherBelongsToOrg || cipher == null)
                         {
                             continue;
                         }
