@@ -68,7 +68,10 @@ public class UsersController : Controller
         {
             var user2Fa = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
             // TempDataSerializer is having an issue serializing an empty IEnumerable<Tuple<T1,T2>>, do not set if empty.
-            if (user2Fa.Count != 0) TempData["UsersTwoFactorIsEnabled"] = user2Fa;
+            if (user2Fa.Count != 0)
+            {
+                TempData["UsersTwoFactorIsEnabled"] = user2Fa;
+            }
         }
 
         return View(new UsersModel
