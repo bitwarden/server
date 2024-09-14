@@ -161,8 +161,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 from ou in dbContext.OrganizationUsers
                 join cu in dbContext.CollectionUsers
                     on ou.Id equals cu.OrganizationUserId
-                where !ou.AccessAll &&
-                    ou.Id == id
+                where ou.Id == id
                 select cu).ToListAsync();
             var collections = query.Select(cu => new CollectionAccessSelection
             {
@@ -257,7 +256,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var dbContext = GetDatabaseContext(scope);
             var query = from ou in dbContext.OrganizationUsers
                         join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-                        where !ou.AccessAll && ou.Id == id
+                        where ou.Id == id
                         select cu;
             var collections = await query.Select(cu => new CollectionAccessSelection
             {
@@ -712,4 +711,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         };
     }
 
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationUserReadByClaimedOrganizationDomainsQuery(organizationId);
+            var data = await query.Run(dbContext).ToListAsync();
+            return data;
+        }
+    }
 }

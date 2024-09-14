@@ -4,6 +4,9 @@ using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -33,6 +36,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
+    private readonly IFeatureService _featureService;
+    private readonly IOrganizationBillingService _organizationBillingService;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -46,7 +51,9 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         ICurrentContext currentContext,
         IServiceAccountRepository serviceAccountRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService,
+        IFeatureService featureService,
+        IOrganizationBillingService organizationBillingService)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -60,6 +67,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _serviceAccountRepository = serviceAccountRepository;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
+        _featureService = featureService;
+        _organizationBillingService = organizationBillingService;
     }
 
     public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
@@ -215,9 +224,17 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
-                newPlan, upgrade);
-            success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
+            if (_featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
+            {
+                var sale = OrganizationSale.From(organization, upgrade);
+                await _organizationBillingService.Finalize(sale);
+            }
+            else
+            {
+                paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
+                    newPlan, upgrade);
+                success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
+            }
         }
         else
         {
@@ -279,7 +296,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (success)
         {
-            var upgradePath = GetUpgradePath(existingPlan.Product, newPlan.Product);
+            var upgradePath = GetUpgradePath(existingPlan.ProductTier, newPlan.ProductTier);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
                 {
@@ -342,25 +359,25 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static string GetUpgradePath(ProductType oldProductType, ProductType newProductType)
+    private static string GetUpgradePath(ProductTierType oldProductTierType, ProductTierType newProductTierType)
     {
-        var oldDescription = _upgradePath.TryGetValue(oldProductType, out var description)
+        var oldDescription = _upgradePath.TryGetValue(oldProductTierType, out var description)
             ? description
-            : $"{oldProductType:G}";
+            : $"{oldProductTierType:G}";
 
-        var newDescription = _upgradePath.TryGetValue(newProductType, out description)
+        var newDescription = _upgradePath.TryGetValue(newProductTierType, out description)
             ? description
-            : $"{newProductType:G}";
+            : $"{newProductTierType:G}";
 
         return $"{oldDescription} → {newDescription}";
     }
 
-    private static readonly Dictionary<ProductType, string> _upgradePath = new()
+    private static readonly Dictionary<ProductTierType, string> _upgradePath = new()
     {
-        [ProductType.Free] = "2-person org",
-        [ProductType.Families] = "Families",
-        [ProductType.TeamsStarter] = "Teams Starter",
-        [ProductType.Teams] = "Teams",
-        [ProductType.Enterprise] = "Enterprise"
+        [ProductTierType.Free] = "2-person org",
+        [ProductTierType.Families] = "Families",
+        [ProductTierType.TeamsStarter] = "Teams Starter",
+        [ProductTierType.Teams] = "Teams",
+        [ProductTierType.Enterprise] = "Enterprise"
     };
 }

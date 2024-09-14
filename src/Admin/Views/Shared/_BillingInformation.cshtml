@@ -3,10 +3,10 @@
 @model BillingInformationModel
 
 @{
-    var canManageTransactions = Model.Entity == "User" ? AccessControlService.UserHasPermission(Permission.User_BillingInformation_CreateEditTransaction) 
+    var canManageTransactions = Model.Entity == "User" ? AccessControlService.UserHasPermission(Permission.User_BillingInformation_CreateEditTransaction)
                                                        : AccessControlService.UserHasPermission(Permission.Org_BillingInformation_CreateEditTransaction);
 
-    var canDownloadInvoice = Model.Entity == "User" ? AccessControlService.UserHasPermission(Permission.User_BillingInformation_DownloadInvoice) 
+    var canDownloadInvoice = Model.Entity == "User" ? AccessControlService.UserHasPermission(Permission.User_BillingInformation_DownloadInvoice)
                                                        : AccessControlService.UserHasPermission(Permission.Org_BillingInformation_DownloadInvoice);
 }
 
@@ -16,11 +16,11 @@
 
     <dt class="col-sm-4 col-lg-3">Invoices</dt>
     <dd class="col-sm-8 col-lg-9">
-        @if(Model.BillingInfo.Invoices?.Any() ?? false)
+        @if(Model.BillingHistoryInfo.Invoices?.Any() ?? false)
         {
             <table class="table">
                 <tbody>
-                    @foreach(var invoice in Model.BillingInfo.Invoices)
+                    @foreach(var invoice in Model.BillingHistoryInfo.Invoices)
                     {
                         <tr>
                             <td>@invoice.Date</td>
@@ -28,7 +28,7 @@
                             </td>
                             <td>@invoice.Amount.ToString("C")</td>
                             <td>@(invoice.Paid ? "Paid" : "Unpaid")</td>
-                            @if (canDownloadInvoice) 
+                            @if (canDownloadInvoice)
                             {
                                 <td>
                                     <a target="_blank" rel="noreferrer" href="@invoice.PdfUrl" title="Download Invoice">
@@ -49,11 +49,11 @@
 
     <dt class="col-sm-4 col-lg-3">Transactions</dt>
     <dd class="col-sm-8 col-lg-9">
-        @if(Model.BillingInfo.Transactions?.Any() ?? false)
+        @if(Model.BillingHistoryInfo.Transactions?.Any() ?? false)
         {
             <table class="table">
                 <tbody>
-                    @foreach(var transaction in Model.BillingInfo.Transactions)
+                    @foreach(var transaction in Model.BillingHistoryInfo.Transactions)
                     {
                         <tr>
                             <td>@transaction.CreatedDate</td>

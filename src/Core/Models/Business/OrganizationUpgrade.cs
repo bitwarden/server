@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Models.Business;
 
@@ -15,5 +15,4 @@ public class OrganizationUpgrade
     public int? AdditionalSmSeats { get; set; }
     public int? AdditionalServiceAccounts { get; set; }
     public bool UseSecretsManager { get; set; }
-    public bool IsFromSecretsManagerTrial { get; set; }
 }

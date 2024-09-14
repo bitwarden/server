@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -18,6 +17,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -231,7 +231,7 @@ public class OrganizationsController : Controller
         }
 
 
-        await _organizationService.DeleteUserAsync(orgGuidId, user.Id);
+        await _organizationService.RemoveUserAsync(orgGuidId, user.Id);
     }
 
     [HttpDelete("{id}")]
@@ -311,31 +311,6 @@ public class OrganizationsController : Controller
         await _organizationService.DeleteAsync(organization);
     }
 
-    [HttpPost("{id}/import")]
-    public async Task Import(string id, [FromBody] ImportOrganizationUsersRequestModel model)
-    {
-        if (!_globalSettings.SelfHosted && !model.LargeImport &&
-            (model.Groups.Count() > 2000 || model.Users.Count(u => !u.Deleted) > 2000))
-        {
-            throw new BadRequestException("You cannot import this much data at once.");
-        }
-
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.OrganizationAdmin(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User);
-        await _organizationService.ImportAsync(
-            orgIdGuid,
-            userId.Value,
-            model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),
-            model.Users.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-            model.Users.Where(u => u.Deleted).Select(u => u.ExternalId),
-            model.OverwriteExisting);
-    }
-
     [HttpPost("{id}/api-key")]
     public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody] OrganizationApiKeyRequestModel model)
     {
@@ -355,7 +330,7 @@ public class OrganizationsController : Controller
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
             var plan = StaticStore.GetPlan(organization.PlanType);
-            if (plan.Product != ProductType.Enterprise)
+            if (plan.ProductTier != ProductTierType.Enterprise)
             {
                 throw new NotFoundException();
             }
@@ -459,7 +434,7 @@ public class OrganizationsController : Controller
         return new OrganizationPublicKeyResponseModel(org);
     }
 
-    [Obsolete("TDL-136 Renamed to public-key (2023.8), left for backwards compatability with older clients.")]
+    [Obsolete("TDL-136 Renamed to public-key (2023.8), left for backwards compatibility with older clients.")]
     [HttpGet("{id}/keys")]
     public async Task<OrganizationPublicKeyResponseModel> GetKeys(string id)
     {
@@ -536,14 +511,6 @@ public class OrganizationsController : Controller
         if (!await _currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
-        }
-
-        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-
-        if (!v1Enabled)
-        {
-            // V1 is disabled, ensure V1 setting doesn't change
-            model.AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization), eventType: EventType.Organization_CollectionManagement_Updated);

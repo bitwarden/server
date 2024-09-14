@@ -3,6 +3,7 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Context;
@@ -25,19 +26,22 @@ public class DevicesController : Controller
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ILogger<DevicesController> _logger;
 
     public DevicesController(
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
         IUserService userService,
         IUserRepository userRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ILogger<DevicesController> logger)
     {
         _deviceRepository = deviceRepository;
         _deviceService = deviceService;
         _userService = userService;
         _userRepository = userRepository;
         _currentContext = currentContext;
+        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -231,4 +235,31 @@ public class DevicesController : Controller
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, user.Id);
         return device != null;
     }
+
+    [RequireFeature(FeatureFlagKeys.DeviceTrustLogging)]
+    [HttpPost("lost-trust")]
+    public void PostLostTrust()
+    {
+        var userId = _currentContext.UserId.GetValueOrDefault();
+        if (userId == default)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var deviceId = _currentContext.DeviceIdentifier;
+        if (deviceId == null)
+        {
+            throw new BadRequestException("Please provide a device identifier");
+        }
+
+        var deviceType = _currentContext.DeviceType;
+        if (deviceType == null)
+        {
+            throw new BadRequestException("Please provide a device type");
+        }
+
+        _logger.LogError("User {id} has a device key, but didn't receive decryption keys for device {device} of type {deviceType}", userId,
+            deviceId, deviceType);
+    }
+
 }

@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.20">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -30,5 +30,6 @@
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.sql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.sql" />
     <EmbeddedResource Include="HelperScripts\2024-04-25_00_EnableOrgsCollectionEnhancements.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-08-26_00_FinalFlexibleCollectionsDataMigrations.sql" />
   </ItemGroup>
 </Project>

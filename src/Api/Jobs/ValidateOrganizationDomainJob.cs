@@ -1,6 +1,6 @@
 ﻿using Bit.Core;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Jobs;
-using Bit.Core.Services;
 using Quartz;
 
 namespace Bit.Api.Jobs;

@@ -3,28 +3,30 @@
 namespace Bit.Api.Billing.Models.Responses;
 
 public record InvoicesResponse(
-    List<InvoiceDTO> Invoices)
+    List<InvoiceResponse> Invoices)
 {
     public static InvoicesResponse From(IEnumerable<Invoice> invoices) => new(
         invoices
             .Where(i => i.Status is "open" or "paid" or "uncollectible")
             .OrderByDescending(i => i.Created)
-            .Select(InvoiceDTO.From).ToList());
+            .Select(InvoiceResponse.From).ToList());
 }
 
-public record InvoiceDTO(
+public record InvoiceResponse(
+    string Id,
     DateTime Date,
     string Number,
     decimal Total,
     string Status,
-    string Url,
-    string PdfUrl)
+    DateTime? DueDate,
+    string Url)
 {
-    public static InvoiceDTO From(Invoice invoice) => new(
+    public static InvoiceResponse From(Invoice invoice) => new(
+        invoice.Id,
         invoice.Created,
         invoice.Number,
         invoice.Total / 100M,
         invoice.Status,
-        invoice.HostedInvoiceUrl,
-        invoice.InvoicePdf);
+        invoice.DueDate,
+        invoice.HostedInvoiceUrl);
 }

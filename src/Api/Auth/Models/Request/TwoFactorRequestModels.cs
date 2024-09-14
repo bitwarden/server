@@ -17,7 +17,7 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
     [Required]
     [StringLength(50)]
     public string Key { get; set; }
-
+    public string UserVerificationToken { get; set; }
     public User ToUser(User existingUser)
     {
         var providers = existingUser.GetTwoFactorProviders();
@@ -322,4 +322,12 @@ public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
     [Required]
     [StringLength(32)]
     public string RecoveryCode { get; set; }
+}
+
+public class TwoFactorAuthenticatorDisableRequestModel : TwoFactorProviderRequestModel
+{
+    [Required]
+    public string UserVerificationToken { get; set; }
+    [Required]
+    public string Key { get; set; }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -52,6 +53,21 @@ public class Startup
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
 
+        //Handlers
+        services.AddScoped<IStripeEventUtilityService, StripeEventUtilityService>();
+        services.AddScoped<ISubscriptionDeletedHandler, SubscriptionDeletedHandler>();
+        services.AddScoped<ISubscriptionUpdatedHandler, SubscriptionUpdatedHandler>();
+        services.AddScoped<IUpcomingInvoiceHandler, UpcomingInvoiceHandler>();
+        services.AddScoped<IChargeSucceededHandler, ChargeSucceededHandler>();
+        services.AddScoped<IChargeRefundedHandler, ChargeRefundedHandler>();
+        services.AddScoped<ICustomerUpdatedHandler, CustomerUpdatedHandler>();
+        services.AddScoped<IInvoiceCreatedHandler, InvoiceCreatedHandler>();
+        services.AddScoped<IPaymentFailedHandler, PaymentFailedHandler>();
+        services.AddScoped<IPaymentMethodAttachedHandler, PaymentMethodAttachedHandler>();
+        services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
+        services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
+        services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
+
         // Identity
         services.AddCustomIdentityServices(globalSettings);
         //services.AddPasswordlessIdentityServices<ReadOnlyDatabaseIdentityUserStore>(globalSettings);
@@ -59,6 +75,7 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddBillingOperations();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
@@ -81,6 +98,7 @@ public class Startup
 
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
+        services.AddScoped<IProviderEventService, ProviderEventService>();
     }
 
     public void Configure(

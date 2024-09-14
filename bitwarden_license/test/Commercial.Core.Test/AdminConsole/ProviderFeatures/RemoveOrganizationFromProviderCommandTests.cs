@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -172,7 +173,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
                 options.DaysUntilDue == 30));
 
-        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentMethod(organization);
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentSource(organization);
 
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
 

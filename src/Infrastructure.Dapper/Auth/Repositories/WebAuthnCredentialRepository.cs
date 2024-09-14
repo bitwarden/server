@@ -1,10 +1,15 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
+
+#nullable enable
 
 
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
@@ -19,7 +24,7 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<WebAuthnCredential> GetByIdAsync(Guid id, Guid userId)
+    public async Task<WebAuthnCredential?> GetByIdAsync(Guid id, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -55,4 +60,37 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
 
         return affectedRows > 0;
     }
+
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials)
+    {
+        return async (SqlConnection connection, SqlTransaction transaction) =>
+        {
+            const string sql = @"
+                UPDATE WC
+                SET
+                    WC.[EncryptedPublicKey] = UW.[encryptedPublicKey],
+                    WC.[EncryptedUserKey] = UW.[encryptedUserKey]
+                FROM
+                    [dbo].[WebAuthnCredential] WC
+                INNER JOIN
+                    OPENJSON(@JsonCredentials)
+                    WITH (
+                        id UNIQUEIDENTIFIER,
+                        encryptedPublicKey NVARCHAR(MAX),
+                        encryptedUserKey NVARCHAR(MAX)
+                    ) UW
+                    ON UW.id = WC.Id
+                WHERE
+                    WC.[UserId] = @UserId";
+
+            var jsonCredentials = CoreHelpers.ClassToJsonData(credentials);
+
+            await connection.ExecuteAsync(
+                sql,
+                new { UserId = userId, JsonCredentials = jsonCredentials },
+                transaction: transaction,
+                commandType: CommandType.Text);
+        };
+    }
+
 }

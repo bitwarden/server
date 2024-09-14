@@ -101,7 +101,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        var isBot = (validatorContext.CaptchaResponse?.IsBot ?? false);
+        var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
         if (isBot)
         {
             _logger.LogInformation(Constants.BypassFiltersEventId,
@@ -350,9 +350,8 @@ public abstract class BaseRequestValidator<T> where T : class
                                  (await _userManager.GetValidTwoFactorProvidersAsync(user)).Count > 0;
 
         Organization firstEnabledOrg = null;
-        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
-            .ToList();
-        if (orgs.Any())
+        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id)).ToList();
+        if (orgs.Count > 0)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
             var twoFactorOrgs = orgs.Where(o => OrgUsing2fa(orgAbilities, o.Id));
@@ -511,7 +510,9 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else if (type == TwoFactorProviderType.Email)
                 {
-                    return new Dictionary<string, object> { ["Email"] = token };
+                    var twoFactorEmail = (string)provider.MetaData["Email"];
+                    var redactedEmail = CoreHelpers.RedactEmailAddress(twoFactorEmail);
+                    return new Dictionary<string, object> { ["Email"] = redactedEmail };
                 }
                 else if (type == TwoFactorProviderType.YubiKey)
                 {
@@ -619,6 +620,13 @@ public abstract class BaseRequestValidator<T> where T : class
         }
     }
 
+    /// <summary>
+    /// checks to see if a user is trying to log into a new device 
+    /// and has reached the maximum number of failed login attempts.
+    /// </summary>
+    /// <param name="unknownDevice">boolean</param>
+    /// <param name="user">current user</param>
+    /// <returns></returns>
     private bool ValidateFailedAuthEmailConditions(bool unknownDevice, User user)
     {
         var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
