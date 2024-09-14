@@ -6,6 +6,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -37,6 +38,10 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IUserService _userService;
     private readonly IMailService _mailService;
 
+    private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
+
+    private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _emergencyAccessInviteTokenDataFactory;
+
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
     public RegisterUserCommand(
@@ -49,7 +54,9 @@ public class RegisterUserCommand : IRegisterUserCommand
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
         ICurrentContext currentContext,
         IUserService userService,
-        IMailService mailService
+        IMailService mailService,
+        IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
+        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory
         )
     {
         _globalSettings = globalSettings;
@@ -66,6 +73,8 @@ public class RegisterUserCommand : IRegisterUserCommand
         _userService = userService;
         _mailService = mailService;
 
+        _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
+        _emergencyAccessInviteTokenDataFactory = emergencyAccessInviteTokenDataFactory;
     }
 
 
@@ -81,8 +90,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
-
-    public async Task<IdentityResult> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, string masterPasswordHash,
         string orgInviteToken, Guid? orgUserId)
     {
         ValidateOrgInviteToken(orgInviteToken, orgUserId, user);
@@ -233,13 +241,8 @@ public class RegisterUserCommand : IRegisterUserCommand
     public async Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash,
         string emailVerificationToken)
     {
-        // We validate open registration on send of initial email and here b/c a user could technically start the
-        // account creation process while open registration is enabled and then finish it after it has been
-        // disabled by the self hosted admin.
-        if (_globalSettings.DisableUserRegistration)
-        {
-            throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
-        }
+
+        ValidateOpenRegistrationAllowed();
 
         var tokenable = ValidateRegistrationEmailVerificationTokenable(emailVerificationToken, user.Email);
 
@@ -259,6 +262,77 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         return result;
     }
+
+    public async Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, string masterPasswordHash,
+        string orgSponsoredFreeFamilyPlanInviteToken)
+    {
+        ValidateOpenRegistrationAllowed();
+        await ValidateOrgSponsoredFreeFamilyPlanInviteToken(orgSponsoredFreeFamilyPlanInviteToken, user.Email);
+
+        user.EmailVerified = true;
+        user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
+
+        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        if (result == IdentityResult.Success)
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
+        }
+
+        return result;
+    }
+
+
+    // TODO: in future, consider how we can consolidate base registration logic to reduce code duplication
+    public async Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, string masterPasswordHash,
+        string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    {
+        ValidateOpenRegistrationAllowed();
+        ValidateAcceptEmergencyAccessInviteToken(acceptEmergencyAccessInviteToken, acceptEmergencyAccessId, user.Email);
+
+        user.EmailVerified = true;
+        user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
+
+        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        if (result == IdentityResult.Success)
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
+        }
+
+        return result;
+    }
+
+    private void ValidateOpenRegistrationAllowed()
+    {
+        // We validate open registration on send of initial email and here b/c a user could technically start the
+        // account creation process while open registration is enabled and then finish it after it has been
+        // disabled by the self hosted admin.Ï
+        if (_globalSettings.DisableUserRegistration)
+        {
+            throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
+        }
+    }
+
+    private async Task ValidateOrgSponsoredFreeFamilyPlanInviteToken(string orgSponsoredFreeFamilyPlanInviteToken, string userEmail)
+    {
+        var (valid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(orgSponsoredFreeFamilyPlanInviteToken, userEmail);
+
+        if (!valid)
+        {
+            throw new BadRequestException("Invalid org sponsored free family plan token.");
+        }
+    }
+
+    private void ValidateAcceptEmergencyAccessInviteToken(string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId, string userEmail)
+    {
+        _emergencyAccessInviteTokenDataFactory.TryUnprotect(acceptEmergencyAccessInviteToken, out var tokenable);
+        if (tokenable == null || !tokenable.Valid || !tokenable.IsValid(acceptEmergencyAccessId, userEmail))
+        {
+            throw new BadRequestException("Invalid accept emergency access invite token.");
+        }
+    }
+
 
     private RegistrationEmailVerificationTokenable ValidateRegistrationEmailVerificationTokenable(string emailVerificationToken, string userEmail)
     {
