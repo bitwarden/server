@@ -34,9 +34,8 @@
             "stopAll": true
         },
         {
-            "name": "Admin, API, Identity, SSO",
+            "name": "API, Identity, SSO",
             "configurations": [
-                "run-Admin",
                 "run-API",
                 "run-Identity",
                 "run-Sso"
@@ -46,7 +45,7 @@
                 "group": "AA_compounds",
                 "order": 4
             },
-            "preLaunchTask": "buildIdentityApiAdmin",
+            "preLaunchTask": "buildIdentityApiSso",
             "stopAll": true
         },
         {
