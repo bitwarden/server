@@ -104,6 +104,15 @@ public class LaunchDarklyFeatureService : IFeatureService
         return _client.StringVariation(key, BuildContext(), defaultValue);
     }
 
+    public FeatureFlagContext GetFlagContext()
+    {
+        return new FeatureFlagContext()
+        {
+            UserId = _currentContext.UserId,
+            OrganizationIds = _currentContext.Organizations?.Select(o => o.Id).ToArray()
+        };
+    }
+
     public Dictionary<string, object> GetAll()
     {
         var results = new Dictionary<string, object>();

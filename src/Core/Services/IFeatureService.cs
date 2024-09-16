@@ -1,5 +1,11 @@
 ﻿namespace Bit.Core.Services;
 
+public struct FeatureFlagContext
+{
+    public Guid? UserId { get; init; }
+    public Guid[] OrganizationIds { get; init; }
+}
+
 public interface IFeatureService
 {
     /// <summary>
@@ -37,4 +43,5 @@ public interface IFeatureService
     /// </summary>
     /// <returns>A dictionary of feature keys and their values.</returns>
     Dictionary<string, object> GetAll();
+    FeatureFlagContext GetFlagContext();
 }

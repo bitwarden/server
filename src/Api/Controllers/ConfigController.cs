@@ -23,6 +23,6 @@ public class ConfigController : Controller
     [HttpGet("")]
     public ConfigResponseModel GetConfigs()
     {
-        return new ConfigResponseModel(_globalSettings, _featureService.GetAll());
+        return new ConfigResponseModel(_globalSettings, _featureService.GetAll(), _featureService.GetFlagContext());
     }
 }
