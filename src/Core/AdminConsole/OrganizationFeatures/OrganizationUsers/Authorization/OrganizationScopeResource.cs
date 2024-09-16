@@ -10,7 +10,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authoriza
 /// This should not be used for operations on the organization itself.
 /// It implicitly converts to a regular Guid.
 /// </summary>
-public class OrganizationScopeResource
+public record OrganizationScopeResource
 {
     public OrganizationScopeResource(Guid id)
     {
