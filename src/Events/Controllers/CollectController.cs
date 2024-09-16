@@ -89,8 +89,9 @@ public class CollectController : Controller
 
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value);
                         var cipherBelongsToOrg = cipher.OrganizationId == eventModel.OrganizationId;
+                        var org = _currentContext.GetOrganization(eventModel.OrganizationId.Value);
 
-                        if (!cipherBelongsToOrg || cipher == null)
+                        if (!cipherBelongsToOrg || org == null || cipher == null)
                         {
                             continue;
                         }
