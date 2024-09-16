@@ -1639,10 +1639,10 @@ namespace Bit.MySqlMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.NotificationStatus", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("NotificationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("NotificationId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
                     b.Property<DateTime?>("DeletedDate")
@@ -1651,10 +1651,11 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("ReadDate")
                         .HasColumnType("datetime(6)");
 
-                    b.HasKey("UserId", "NotificationId")
+                    b.HasKey("NotificationId", "UserId")
                         .HasAnnotation("SqlServer:Clustered", true);
 
-                    b.HasIndex("NotificationId");
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("NotificationStatus", (string)null);
                 });

@@ -1645,10 +1645,10 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.NotificationStatus", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("NotificationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("NotificationId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DeletedDate")
@@ -1657,10 +1657,11 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("ReadDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("UserId", "NotificationId")
+                    b.HasKey("NotificationId", "UserId")
                         .HasAnnotation("SqlServer:Clustered", true);
 
-                    b.HasIndex("NotificationId");
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("NotificationStatus", (string)null);
                 });
