@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 
-public class OrganizationUserUserDetailsAuthorizationHandler : AuthorizationHandler<OrganizationUserUserDetailsOperationRequirement, OrganizationIdResource>
+public class OrganizationUserUserDetailsAuthorizationHandler
+    : AuthorizationHandler<OrganizationUserUserDetailsOperationRequirement, OrganizationScopeResource>
 {
     private readonly ICurrentContext _currentContext;
 
@@ -15,14 +16,14 @@ public class OrganizationUserUserDetailsAuthorizationHandler : AuthorizationHand
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        OrganizationUserUserDetailsOperationRequirement requirement, OrganizationIdResource organizationId)
+        OrganizationUserUserDetailsOperationRequirement requirement, OrganizationScopeResource organizationScope)
     {
         var authorized = false;
 
         switch (requirement)
         {
             case not null when requirement.Name == nameof(OrganizationUserUserDetailsOperations.ReadAll):
-                authorized = await CanReadAllAsync(organizationId);
+                authorized = await CanReadAllAsync(organizationScope);
                 break;
         }
 
@@ -32,7 +33,7 @@ public class OrganizationUserUserDetailsAuthorizationHandler : AuthorizationHand
         }
     }
 
-    private async Task<bool> CanReadAllAsync(OrganizationIdResource organizationId)
+    private async Task<bool> CanReadAllAsync(Guid organizationId)
     {
         // Admins can access this for general user management
         var organization = _currentContext.GetOrganization(organizationId);

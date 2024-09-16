@@ -30,7 +30,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id));
+            new OrganizationScopeResource(organization.Id));
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -52,7 +52,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id));
+            new OrganizationScopeResource(organization.Id));
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -74,7 +74,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id));
+            new OrganizationScopeResource(organization.Id));
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -94,7 +94,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id));
+            new OrganizationScopeResource(organization.Id));
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -113,7 +113,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id)
+            new OrganizationScopeResource(organization.Id)
         );
 
         await sutProvider.Sut.HandleAsync(context);
@@ -128,7 +128,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id)
+            new OrganizationScopeResource(organization.Id)
         );
 
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);

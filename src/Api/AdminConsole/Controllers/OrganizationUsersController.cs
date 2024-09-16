@@ -129,7 +129,7 @@ public class OrganizationUsersController : Controller
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var authorized = (await _authorizationService.AuthorizeAsync(
-            User, new OrganizationIdResource(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
+            User, new OrganizationScopeResource(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();

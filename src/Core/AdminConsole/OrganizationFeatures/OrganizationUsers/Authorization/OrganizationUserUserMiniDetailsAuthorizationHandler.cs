@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 
 public class OrganizationUserUserMiniDetailsAuthorizationHandler :
-    AuthorizationHandler<OrganizationUserUserMiniDetailsOperationRequirement, OrganizationIdResource>
+    AuthorizationHandler<OrganizationUserUserMiniDetailsOperationRequirement, OrganizationScopeResource>
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICurrentContext _currentContext;
@@ -20,14 +20,14 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        OrganizationUserUserMiniDetailsOperationRequirement requirement, OrganizationIdResource organizationId)
+        OrganizationUserUserMiniDetailsOperationRequirement requirement, OrganizationScopeResource organizationScope)
     {
         var authorized = false;
 
         switch (requirement)
         {
             case not null when requirement.Name == nameof(OrganizationUserUserMiniDetailsOperations.ReadAll):
-                authorized = await CanReadAllAsync(organizationId);
+                authorized = await CanReadAllAsync(organizationScope);
                 break;
         }
 

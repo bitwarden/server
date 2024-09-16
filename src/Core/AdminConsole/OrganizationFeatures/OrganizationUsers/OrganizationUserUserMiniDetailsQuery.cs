@@ -28,7 +28,7 @@ public class OrganizationUserUserMiniDetailsQuery : IOrganizationUserUserMiniDet
     public async Task<IEnumerable<OrganizationUserUserMiniDetails>> Get(Guid orgId)
     {
         var authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
-            new OrganizationIdResource(orgId), OrganizationUserUserMiniDetailsOperations.ReadAll);
+            new OrganizationScopeResource(orgId), OrganizationUserUserMiniDetailsOperations.ReadAll);
 
         if (!authorizationResult.Succeeded)
         {

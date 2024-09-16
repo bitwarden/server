@@ -34,7 +34,7 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id));
+            new OrganizationScopeResource(organization.Id));
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -54,7 +54,7 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id));
+            new OrganizationScopeResource(organization.Id));
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -73,7 +73,7 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id)
+            new OrganizationScopeResource(organization.Id)
         );
 
         await sutProvider.Sut.HandleAsync(context);
@@ -88,7 +88,7 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationIdResource(organization.Id)
+            new OrganizationScopeResource(organization.Id)
         );
 
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
