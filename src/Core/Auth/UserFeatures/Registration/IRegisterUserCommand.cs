@@ -24,7 +24,7 @@ public interface IRegisterUserCommand
     /// <param name="orgInviteToken">The org invite token sent to the user via email</param>
     /// <param name="orgUserId">The associated org user guid that was created at the time of invite</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserWithOptionalOrgInvite(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
+    public Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -34,7 +34,31 @@ public interface IRegisterUserCommand
     /// <param name="user">The <see cref="User"/> to create</param>
     /// <param name="masterPasswordHash">The hashed master password the user entered</param>
     /// <param name="emailVerificationToken">The email verification token sent to the user via email</param>
-    /// <returns></returns>
+    /// <returns><see cref="IdentityResult"/></returns>
     public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash, string emailVerificationToken);
+
+    /// <summary>
+    /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
+    /// If a valid org sponsored free family plan invite token is provided, the user will be created with their email verified.
+    /// If the token is invalid or expired, an error will be thrown.
+    /// </summary>
+    /// <param name="user">The <see cref="User"/> to create</param>
+    /// <param name="masterPasswordHash">The hashed master password the user entered</param>
+    /// <param name="orgSponsoredFreeFamilyPlanInviteToken">The org sponsored free family plan invite token sent to the user via email</param>
+    /// <returns><see cref="IdentityResult"/></returns>
+    public Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken);
+
+    /// <summary>
+    /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
+    /// If a valid token is provided, the user will be created with their email verified.
+    /// If the token is invalid or expired, an error will be thrown.
+    /// </summary>
+    /// <param name="user">The <see cref="User"/> to create</param>
+    /// <param name="masterPasswordHash">The hashed master password the user entered</param>
+    /// <param name="acceptEmergencyAccessInviteToken">The emergency access invite token sent to the user via email</param>
+    /// <param name="acceptEmergencyAccessId">The emergency access id (used to validate the token)</param>
+    /// <returns><see cref="IdentityResult"/></returns>
+    public Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, string masterPasswordHash,
+        string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId);
 
 }

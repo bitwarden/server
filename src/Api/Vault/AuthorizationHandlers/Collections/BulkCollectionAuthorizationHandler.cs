@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.Diagnostics;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -98,6 +99,12 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             case not null when requirement == BulkCollectionOperations.Delete:
                 authorized = await CanDeleteAsync(resources, org);
                 break;
+
+            case null:
+                // requirement isn't actually nullable but since we use the
+                // not null when trick it makes the compiler think that requirement
+                // could actually be nullable.
+                throw new UnreachableException();
         }
 
         if (authorized)

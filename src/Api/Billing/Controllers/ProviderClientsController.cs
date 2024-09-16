@@ -39,7 +39,7 @@ public class ProviderClientsController(
 
         if (user == null)
         {
-            return UnauthorizedResponse();
+            return Error.Unauthorized();
         }
 
         var organizationSignup = new OrganizationSignup
@@ -52,7 +52,8 @@ public class ProviderClientsController(
             OwnerKey = requestBody.Key,
             PublicKey = requestBody.KeyPair.PublicKey,
             PrivateKey = requestBody.KeyPair.EncryptedPrivateKey,
-            CollectionName = requestBody.CollectionName
+            CollectionName = requestBody.CollectionName,
+            IsFromProvider = true
         };
 
         var providerOrganization = await providerService.CreateOrganizationAsync(
@@ -96,7 +97,7 @@ public class ProviderClientsController(
 
         if (providerOrganization == null)
         {
-            return NotFoundResponse();
+            return Error.NotFound();
         }
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);

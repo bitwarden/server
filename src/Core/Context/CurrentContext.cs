@@ -509,8 +509,6 @@ public class CurrentContext : ICurrentContext
             CreateNewCollections = hasClaim("createnewcollections"),
             EditAnyCollection = hasClaim("editanycollection"),
             DeleteAnyCollection = hasClaim("deleteanycollection"),
-            EditAssignedCollections = hasClaim("editassignedcollections"),
-            DeleteAssignedCollections = hasClaim("deleteassignedcollections"),
             ManageGroups = hasClaim("managegroups"),
             ManagePolicies = hasClaim("managepolicies"),
             ManageSso = hasClaim("managesso"),

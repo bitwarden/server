@@ -263,7 +263,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         where ap.GrantedSecret.DeletedDate == null &&
               ap.GrantedSecretId != null
         select new ServiceAccountSecretsAccess(sa,
-            new List<Guid> { ap.GrantedSecretId.Value });
+            new List<Guid> { ap.GrantedSecretId!.Value });
 
     private static List<ServiceAccountSecretsAccess> FilterDirectSecretAccessResults(
         List<ServiceAccountSecretsAccess> projectSecretsAccessResults,

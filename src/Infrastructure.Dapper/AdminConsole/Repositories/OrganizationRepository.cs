@@ -167,4 +167,17 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             new { OrganizationId = organizationId },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<Organization> GetByClaimedUserDomainAsync(Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadByClaimedUserEmailDomain]",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return result.SingleOrDefault();
+        }
+    }
 }
