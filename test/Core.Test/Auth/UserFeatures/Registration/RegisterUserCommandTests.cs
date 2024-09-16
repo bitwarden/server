@@ -1,12 +1,14 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -84,12 +86,11 @@ public class RegisterUserCommandTests
             .RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
 
-    // RegisterUserWithOptionalOrgInvite tests
-
+    // RegisterUserWithOrganizationInviteToken tests
     // Simple happy path test
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserWithOptionalOrgInvite_NoOrgInviteOrOrgUserIdOrReferenceData_Succeeds(
+    public async Task RegisterUserViaOrganizationInviteToken_NoOrgInviteOrOrgUserIdOrReferenceData_Succeeds(
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash)
     {
         // Arrange
@@ -100,7 +101,7 @@ public class RegisterUserCommandTests
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, null, null);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, null, null);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -119,7 +120,7 @@ public class RegisterUserCommandTests
     [BitAutoData(false, null)]
     [BitAutoData(true, "sampleInitiationPath")]
     [BitAutoData(true, "Secrets Manager trial")]
-    public async Task RegisterUserWithOptionalOrgInvite_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
+    public async Task RegisterUserViaOrganizationInviteToken_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
     {
         // Arrange
@@ -158,7 +159,7 @@ public class RegisterUserCommandTests
         user.ReferenceData = addUserReferenceData ? $"{{\"initiationPath\":\"{initiationPath}\"}}" : null;
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -227,7 +228,7 @@ public class RegisterUserCommandTests
     [BitAutoData("invalidOrgInviteToken")]
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
-    public async Task RegisterUserWithOptionalOrgInvite_MissingOrInvalidOrgInviteDataWithDisabledOpenRegistration_ThrowsBadRequestException(string scenario,
+    public async Task RegisterUserViaOrganizationInviteToken_MissingOrInvalidOrgInviteDataWithDisabledOpenRegistration_ThrowsBadRequestException(string scenario,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
@@ -257,7 +258,7 @@ public class RegisterUserCommandTests
         }
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
         Assert.Equal("Open registration has been disabled by the system administrator.", exception.Message);
     }
 
@@ -265,7 +266,7 @@ public class RegisterUserCommandTests
     [BitAutoData("invalidOrgInviteToken")]
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
-    public async Task RegisterUserWithOptionalOrgInvite_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_ThrowsBadRequestException(string scenario,
+    public async Task RegisterUserViaOrganizationInviteToken_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_ThrowsBadRequestException(string scenario,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
@@ -307,7 +308,7 @@ public class RegisterUserCommandTests
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserWithOptionalOrgInvite(user, masterPasswordHash, orgInviteToken, orgUserId));
+            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
         Assert.Equal(expectedErrorMessage, exception.Message);
     }
 
@@ -380,5 +381,160 @@ public class RegisterUserCommandTests
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
 
     }
+
+
+
+    // RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        string orgSponsoredFreeFamilyPlanInviteToken)
+    {
+        // Arrange
+        sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
+            .ValidateRedemptionTokenAsync(orgSponsoredFreeFamilyPlanInviteToken, user.Email)
+            .Returns((true, new OrganizationSponsorship()));
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendWelcomeEmailAsync(user);
+
+        await sutProvider.GetDependency<IReferenceEventService>()
+            .Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+        string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
+    {
+        // Arrange
+        sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
+            .ValidateRedemptionTokenAsync(orgSponsoredFreeFamilyPlanInviteToken, user.Email)
+            .Returns((false, new OrganizationSponsorship()));
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
+        Assert.Equal("Invalid org sponsored free family plan token.", result.Message);
+
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+        string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
+    {
+        // Arrange
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration = true;
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
+        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+    }
+
+    // RegisterUserViaAcceptEmergencyAccessInviteToken
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    {
+        // Arrange
+        emergencyAccess.Email = user.Email;
+        emergencyAccess.Id = acceptEmergencyAccessId;
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(acceptEmergencyAccessInviteToken, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 10);
+                return true;
+            });
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendWelcomeEmailAsync(user);
+
+        await sutProvider.GetDependency<IReferenceEventService>()
+            .Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+    }
+
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+        string masterPasswordHash, EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    {
+        // Arrange
+        emergencyAccess.Email = "wrong@email.com";
+        emergencyAccess.Id = acceptEmergencyAccessId;
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(acceptEmergencyAccessInviteToken, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 10);
+                return true;
+            });
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
+        Assert.Equal("Invalid accept emergency access invite token.", result.Message);
+
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
+        string masterPasswordHash, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration = true;
+
+        // Act & Assert
+        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
+        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+    }
+
 
 }
