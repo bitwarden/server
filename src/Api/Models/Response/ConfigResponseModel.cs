@@ -11,7 +11,7 @@ public class ConfigResponseModel : ResponseModel
     public ServerConfigResponseModel Server { get; set; }
     public EnvironmentConfigResponseModel Environment { get; set; }
     public IDictionary<string, object> FeatureStates { get; set; }
-    public ServerSettingsResponseModel Settings { get; set; } 
+    public ServerSettingsResponseModel Settings { get; set; }
 
     public ConfigResponseModel() : base("config")
     {
