@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -39,43 +40,9 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             throw new NotFoundException("Organization user not found.");
         }
 
-        if (deletingUserId.HasValue && orgUser.UserId.Value == deletingUserId.Value)
-        {
-            throw new BadRequestException("You cannot delete yourself.");
-        }
-
-        if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
-        {
-            throw new BadRequestException("You cannot delete a user with Invited status.");
-        }
-
-        if (orgUser.Type == OrganizationUserType.Owner)
-        {
-            if (deletingUserId.HasValue && !await _currentContext.OrganizationOwner(organizationId))
-            {
-                throw new BadRequestException("Only owners can delete other owners.");
-            }
-
-            if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true))
-            {
-                throw new BadRequestException("Organization must have at least one confirmed owner.");
-            }
-        }
-
         var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { orgUser.Id });
-        if (!managementStatus.TryGetValue(organizationUserId, out var isManaged) || !isManaged)
-        {
-            throw new BadRequestException("User is not managed by the organization.");
-        }
 
-        var userToDelete = await _userService.GetUserByIdAsync(orgUser.UserId.Value);
-        if (userToDelete == null)
-        {
-            throw new NotFoundException("User not found.");
-        }
-
-        await _userService.DeleteAsync(userToDelete);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Deleted);
+        await RepositoryDeleteUserAsync(organizationId, orgUser, deletingUserId, managementStatus);
     }
 
     public async Task<IEnumerable<(Guid, string)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
@@ -94,43 +61,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                     throw new NotFoundException("Organization user not found.");
                 }
 
-                if (deletingUserId.HasValue && orgUser.UserId.Value == deletingUserId.Value)
-                {
-                    throw new BadRequestException("You cannot delete yourself.");
-                }
-
-                if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
-                {
-                    throw new BadRequestException("You cannot delete a user with Invited status.");
-                }
-
-                if (orgUser.Type == OrganizationUserType.Owner)
-                {
-                    if (deletingUserId.HasValue && !await _currentContext.OrganizationOwner(organizationId))
-                    {
-                        throw new BadRequestException("Only owners can delete other owners.");
-                    }
-
-                    if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }, includeProvider: true))
-                    {
-                        throw new BadRequestException("Organization must have at least one confirmed owner.");
-                    }
-                }
-
-                if (!managementStatus.TryGetValue(orgUser.Id, out var isManaged) || !isManaged)
-                {
-                    throw new BadRequestException("User is not managed by the organization.");
-                }
-
-                var userToDelete = await _userService.GetUserByIdAsync(orgUser.UserId.Value);
-                if (userToDelete == null)
-                {
-                    throw new NotFoundException("User not found.");
-                }
-
-                await _userService.DeleteAsync(userToDelete);
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Deleted);
-
+                await RepositoryDeleteUserAsync(organizationId, orgUser, deletingUserId, managementStatus);
                 results.Add((orgUserId, ""));
             }
             catch (Exception e)
@@ -140,5 +71,45 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         }
 
         return results;
+    }
+
+    private async Task RepositoryDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus = null)
+    {
+        if (deletingUserId.HasValue && orgUser.UserId.Value == deletingUserId.Value)
+        {
+            throw new BadRequestException("You cannot delete yourself.");
+        }
+
+        if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
+        {
+            throw new BadRequestException("You cannot delete a user with Invited status.");
+        }
+
+        if (orgUser.Type == OrganizationUserType.Owner)
+        {
+            if (deletingUserId.HasValue && !await _currentContext.OrganizationOwner(organizationId))
+            {
+                throw new BadRequestException("Only owners can delete other owners.");
+            }
+
+            if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }, includeProvider: true))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+        }
+
+        if (!managementStatus.TryGetValue(orgUser.Id, out var isManaged) || !isManaged)
+        {
+            throw new BadRequestException("User is not managed by the organization.");
+        }
+
+        var userToDelete = await _userService.GetUserByIdAsync(orgUser.UserId.Value);
+        if (userToDelete == null)
+        {
+            throw new NotFoundException("User not found.");
+        }
+
+        await _userService.DeleteAsync(userToDelete);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Deleted);
     }
 }
