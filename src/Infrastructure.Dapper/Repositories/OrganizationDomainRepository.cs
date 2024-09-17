@@ -57,18 +57,16 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         return results.ToList();
     }
 
-    public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
+    public async Task<ICollection<OrganizationDomainSsoDetailsData>> GetOrganizationDomainSsoDetailsAsync(string email)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection
-                .QueryAsync<OrganizationDomainSsoDetailsData>(
-                    $"[{Schema}].[OrganizationDomainSsoDetails_ReadByEmail]",
-                    new { Email = email },
-                    commandType: CommandType.StoredProcedure);
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection
+            .QueryAsync<OrganizationDomainSsoDetailsData>(
+                $"[{Schema}].[OrganizationDomainSsoDetails_ReadByEmail]",
+                new { Email = email },
+                commandType: CommandType.StoredProcedure);
 
-            return results.SingleOrDefault();
-        }
+        return results.ToList();
     }
 
     public async Task<OrganizationDomain?> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)

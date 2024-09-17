@@ -121,7 +121,7 @@ public class OrganizationDomainController : Controller
 
     [AllowAnonymous]
     [HttpPost("domain/sso/details")] // must be post to accept email cleanly
-    public async Task<OrganizationDomainSsoDetailsResponseModel> GetOrgDomainSsoDetails(
+    public async Task<OrganizationDomainSsoDetailsResponseModel> GetOrgDomainSsoDetailsOld(
         [FromBody] OrganizationDomainSsoDetailsRequestModel model)
     {
         var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetailsAsync(model.Email);
@@ -130,7 +130,22 @@ public class OrganizationDomainController : Controller
             throw new NotFoundException("Claimed org domain not found");
         }
 
-        return new OrganizationDomainSsoDetailsResponseModel(ssoResult);
+        return new OrganizationDomainSsoDetailsResponseModel(ssoResult.FirstOrDefault());
+    }
+
+    [AllowAnonymous]
+    [HttpPost("domain/sso/many-details")] // must be post to accept email cleanly
+    public async Task<ListResponseModel<OrganizationDomainSsoDetailsResponseModel>> GetOrgDomainSsoDetails(
+        [FromBody] OrganizationDomainSsoDetailsRequestModel model)
+    {
+        var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetailsAsync(model.Email);
+        if (!ssoResult.Any())
+        {
+            throw new NotFoundException("Claimed org domain not found");
+        }
+
+        var response = ssoResult.Select(x => new OrganizationDomainSsoDetailsResponseModel(x)).ToList();
+        return new ListResponseModel<OrganizationDomainSsoDetailsResponseModel>(response);
     }
 
     private async Task ValidateOrganizationAccessAsync(Guid orgIdGuid)

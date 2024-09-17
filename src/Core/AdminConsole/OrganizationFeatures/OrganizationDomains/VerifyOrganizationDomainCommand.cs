@@ -11,17 +11,20 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
 {
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IFeatureService _featureService;
     private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
     private readonly ILogger<VerifyOrganizationDomainCommand> _logger;
 
     public VerifyOrganizationDomainCommand(
         IOrganizationDomainRepository organizationDomainRepository,
+        IFeatureService featureService,
         IDnsResolverService dnsResolverService,
         IEventService eventService,
         ILogger<VerifyOrganizationDomainCommand> logger)
     {
         _organizationDomainRepository = organizationDomainRepository;
+        _featureService = featureService;
         _dnsResolverService = dnsResolverService;
         _eventService = eventService;
         _logger = logger;
@@ -36,13 +39,16 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             throw new ConflictException("Domain has already been verified.");
         }
 
-        var claimedDomain =
-            await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
-        if (claimedDomain.Any())
+        if (!_featureService.IsEnabled(FeatureFlagKeys.ManyOrgDomains))
         {
-            domain.SetLastCheckedDate();
-            await _organizationDomainRepository.ReplaceAsync(domain);
-            throw new ConflictException("The domain is not available to be claimed.");
+            var claimedDomain =
+            await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
+            if (claimedDomain.Any())
+            {
+                domain.SetLastCheckedDate();
+                await _organizationDomainRepository.ReplaceAsync(domain);
+                throw new ConflictException("The domain is not available to be claimed.");
+            }
         }
 
         try

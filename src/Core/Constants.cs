@@ -144,6 +144,7 @@ public static class FeatureFlagKeys
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
+    public const string ManyOrgDomains = "many-org-domains";
 
     public static List<string> GetAllKeys()
     {
@@ -161,6 +162,7 @@ public static class FeatureFlagKeys
             { DuoRedirect, "true" },
             { BulkDeviceApproval, "true" },
             { CipherKeyEncryption, "true" },
+            { ManyOrgDomains, "true" },
         };
     }
 }

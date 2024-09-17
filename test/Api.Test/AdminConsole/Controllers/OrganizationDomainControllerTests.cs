@@ -309,11 +309,24 @@ public class OrganizationDomainControllerTests
     public async Task GetOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetails_WhenEmailHasClaimedDomain(
         OrganizationDomainSsoDetailsRequestModel model, OrganizationDomainSsoDetailsData ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
     {
+        var list = new List<OrganizationDomainSsoDetailsData> { ssoDetailsData };
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetOrganizationDomainSsoDetailsAsync(model.Email).Returns(list);
+
+        var result = await sutProvider.Sut.GetOrgDomainSsoDetailsOld(model);
+
+        Assert.IsType<OrganizationDomainSsoDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetailsList_WhenEmailHasClaimedDomain(
+        OrganizationDomainSsoDetailsRequestModel model, ICollection<OrganizationDomainSsoDetailsData> ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
+    {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
 
         var result = await sutProvider.Sut.GetOrgDomainSsoDetails(model);
 
-        Assert.IsType<OrganizationDomainSsoDetailsResponseModel>(result);
+        Assert.IsType<ListResponseModel<OrganizationDomainSsoDetailsResponseModel>>(result);
     }
 }

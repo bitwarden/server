@@ -14,6 +14,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 {
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IEventService _eventService;
+    private readonly IFeatureService _featureService;
     private readonly IDnsResolverService _dnsResolverService;
     private readonly ILogger<VerifyOrganizationDomainCommand> _logger;
     private readonly IGlobalSettings _globalSettings;
@@ -21,12 +22,14 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
     public CreateOrganizationDomainCommand(
         IOrganizationDomainRepository organizationDomainRepository,
         IEventService eventService,
+        IFeatureService featureService,
         IDnsResolverService dnsResolverService,
         ILogger<VerifyOrganizationDomainCommand> logger,
         IGlobalSettings globalSettings)
     {
         _organizationDomainRepository = organizationDomainRepository;
         _eventService = eventService;
+        _featureService = featureService;
         _dnsResolverService = dnsResolverService;
         _logger = logger;
         _globalSettings = globalSettings;
@@ -34,15 +37,18 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 
     public async Task<OrganizationDomain> CreateAsync(OrganizationDomain organizationDomain)
     {
-        //Domains claimed and verified by an organization cannot be claimed
-        var claimedDomain =
-            await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(organizationDomain.DomainName);
-        if (claimedDomain.Any())
+        if (!_featureService.IsEnabled(FeatureFlagKeys.ManyOrgDomains))
         {
-            throw new ConflictException("The domain is not available to be claimed.");
+            // Domains claimed and verified by an organization cannot be claimed
+            var claimedDomain =
+                await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(organizationDomain.DomainName);
+            if (claimedDomain.Any())
+            {
+                throw new ConflictException("The domain is not available to be claimed.");
+            }
         }
 
-        //check for duplicate domain entry for an organization
+        // check for duplicate domain entry for an organization
         var duplicateOrgDomain =
             await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(organizationDomain.OrganizationId,
                 organizationDomain.DomainName);
