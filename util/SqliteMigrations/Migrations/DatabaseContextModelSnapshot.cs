@@ -843,7 +843,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("CollectionGroups");
+                    b.ToTable("CollectionGroups", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
@@ -867,7 +867,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationUserId");
 
-                    b.ToTable("CollectionUsers");
+                    b.ToTable("CollectionUsers", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
@@ -1628,10 +1628,10 @@ namespace Bit.SqliteMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.NotificationStatus", b =>
                 {
-                    b.Property<Guid>("NotificationId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("NotificationId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletedDate")
@@ -1640,11 +1640,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("ReadDate")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("NotificationId", "UserId")
+                    b.HasKey("UserId", "NotificationId")
                         .HasAnnotation("SqlServer:Clustered", true);
 
-                    b.HasIndex("UserId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                    b.HasIndex("NotificationId");
 
                     b.ToTable("NotificationStatus", (string)null);
                 });
@@ -1912,7 +1911,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("SecretsId");
 
-                    b.ToTable("ProjectSecret");
+                    b.ToTable("ProjectSecret", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupProjectAccessPolicy", b =>

@@ -11,8 +11,8 @@ CREATE TABLE [dbo].[Notification]
     [CreationDate] DATETIME2 (7) NOT NULL,
     [RevisionDate] DATETIME2 (7) NOT NULL,
     CONSTRAINT [PK_Notification] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
+    CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
 );
 
 

@@ -199,11 +199,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.ServiceAccount.Where(sa => sa.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
-            var notificationStatuses = from ns in dbContext.NotificationStatuses
-                                       join n in dbContext.Notifications on ns.NotificationId equals n.Id
-                                       where n.OrganizationId == organization.Id
-                                       select ns;
-            dbContext.NotificationStatuses.RemoveRange(notificationStatuses);
+            await dbContext.NotificationStatuses.Where(ns => ns.Notification.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 

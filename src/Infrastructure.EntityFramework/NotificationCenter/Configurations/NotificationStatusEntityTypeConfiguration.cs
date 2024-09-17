@@ -10,12 +10,8 @@ public class NotificationStatusEntityTypeConfiguration : IEntityTypeConfiguratio
     public void Configure(EntityTypeBuilder<NotificationStatus> builder)
     {
         builder
-            .HasKey(ns => new { ns.NotificationId, ns.UserId })
+            .HasKey(ns => new { ns.UserId, ns.NotificationId })
             .IsClustered();
-
-        builder
-            .HasIndex(ns => ns.UserId)
-            .IsClustered(false);
 
         builder.ToTable(nameof(NotificationStatus));
     }
