@@ -12,3 +12,4 @@ CREATE TABLE [dbo].[NotificationStatus]
 GO
 CREATE NONCLUSTERED INDEX [IX_NotificationStatus_UserId]
     ON [dbo].[NotificationStatus]([UserId] ASC);
+
