@@ -7,3 +7,4 @@ IF NOT EXISTS(SELECT name
             ON [dbo].[NotificationStatus] ([UserId] ASC);
     END
 GO
+
