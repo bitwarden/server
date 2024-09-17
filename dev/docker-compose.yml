@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   mssql:
-    image: mcr.microsoft.com/mssql/server:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
     platform: linux/amd64
     environment:
       ACCEPT_EULA: "Y"
