@@ -79,7 +79,9 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
                                 from od in o.Domains
                                 join s in dbContext.SsoConfigs on o.Id equals s.OrganizationId into sJoin
                                 from s in sJoin.DefaultIfEmpty()
-                                where od.DomainName == domainName && o.Enabled
+                                where od.DomainName == domainName
+                                      && o.Enabled
+                                      && od.VerifiedDate is not null
                                 select new OrganizationDomainSsoDetailsData
                                 {
                                     OrganizationId = o.Id,
