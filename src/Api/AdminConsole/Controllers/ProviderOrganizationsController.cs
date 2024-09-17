@@ -84,6 +84,7 @@ public class ProviderOrganizationsController : Controller
         }
 
         var organizationSignup = model.OrganizationCreateRequest.ToOrganizationSignup(user);
+        organizationSignup.IsFromProvider = true;
         var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, model.ClientOwnerEmail, user);
         return new ProviderOrganizationResponseModel(result);
     }

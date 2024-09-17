@@ -891,9 +891,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 throw new BadRequestException("Invalid license.");
             }
 
-            if (!license.CanUse(user))
+            if (!license.CanUse(user, out var exceptionMessage))
             {
-                throw new BadRequestException("This license is not valid for this user.");
+                throw new BadRequestException(exceptionMessage);
             }
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -960,9 +960,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        if (!license.CanUse(user))
+        if (!license.CanUse(user, out var exceptionMessage))
         {
-            throw new BadRequestException("This license is not valid for this user.");
+            throw new BadRequestException(exceptionMessage);
         }
 
         var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -1244,6 +1244,16 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IsLegacyUser(user);
     }
 
+    public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
+    {
+        // Users can only be managed by an Organization that is enabled and can have organization domains
+        var organization = await _organizationRepository.GetByClaimedUserDomainAsync(userId);
+
+        // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
+        // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
+        return organization is { Enabled: true, UseSso: true };
+    }
+
     /// <inheritdoc cref="IsLegacyUser(string)"/>
     public static bool IsLegacyUser(User user)
     {
@@ -1298,7 +1308,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
-            await organizationService.DeleteUserAsync(p.OrganizationId, user.Id);
+            await organizationService.RemoveUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                 organization.DisplayName(), user.Email);
