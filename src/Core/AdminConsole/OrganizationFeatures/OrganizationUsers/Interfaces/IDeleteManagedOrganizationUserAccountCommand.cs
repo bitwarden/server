@@ -1,9 +1,7 @@
-﻿using Bit.Core.Entities;
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IDeleteManagedOrganizationUserAccountCommand
 {
-    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId);
-    Task<IEnumerable<(OrganizationUser, string)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds);
+    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
+    Task<IEnumerable<(Guid, string)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId);
 }

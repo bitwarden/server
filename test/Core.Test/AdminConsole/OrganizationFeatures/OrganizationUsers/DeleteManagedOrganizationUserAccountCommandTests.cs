@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -18,11 +19,12 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WithValidUser_DeletesUserAndLogsEvent(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
-        User user, OrganizationUser organizationUser)
+        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user, Guid deletingUserId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
     {
         // Arrange
         organizationUser.UserId = user.Id;
+        organizationUser.Type = OrganizationUserType.User;
 
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(user.Id)
@@ -36,8 +38,12 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetUsersOrganizationManagementStatusAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
 
+        sutProvider.GetDependency<IOrganizationService>()
+            .HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>(), includeProvider: true)
+            .Returns(true);
+
         // Act
-        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id);
+        await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId);
 
         // Assert
         await sutProvider.GetDependency<IUserService>().Received(1).DeleteAsync(user);
@@ -58,7 +64,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId));
+            sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, null));
     }
 
     [Theory]
@@ -78,14 +84,15 @@ public class DeleteManagedOrganizationUserAccountCommandTests
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id));
+            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, null));
     }
 
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WithValidUsers_DeletesUsersAndLogsEvents(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user2,
-        Guid organizationId, OrganizationUser orgUser1, OrganizationUser orgUser2)
+        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user2, Guid organizationId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
     {
         // Arrange
         orgUser1.OrganizationId = orgUser2.OrganizationId = organizationId;
@@ -104,7 +111,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user2.Id).Returns(user2);
 
         // Act
-        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUser1.Id, orgUser2.Id });
+        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUser1.Id, orgUser2.Id }, null);
 
         // Assert
         Assert.Equal(2, results.Count());
@@ -119,12 +126,16 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_MixedValidAndInvalidUsers_ReturnsAppropriateResults(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1,
-        Guid organizationId, OrganizationUser orgUser1, OrganizationUser orgUser2, OrganizationUser orgUser3)
+        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user3,
+        Guid organizationId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.User)] OrganizationUser orgUser2,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser3)
     {
         // Arrange
         orgUser1.UserId = user1.Id;
         orgUser2.UserId = null;
+        orgUser3.UserId = user3.Id;
         orgUser1.OrganizationId = orgUser2.OrganizationId = orgUser3.OrganizationId = organizationId;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -136,15 +147,16 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser3.Id, false } });
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user1.Id).Returns(user1);
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user3.Id).Returns(user3);
 
         // Act
-        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUser1.Id, orgUser2.Id, orgUser3.Id });
+        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUser1.Id, orgUser2.Id, orgUser3.Id }, null);
 
         // Assert
         Assert.Equal(3, results.Count());
-        Assert.Empty(results.First(r => r.Item1.Id == orgUser1.Id).Item2);
-        Assert.Equal("Invalid organization user.", results.First(r => r.Item1.Id == orgUser2.Id).Item2);
-        Assert.Equal("User is not managed by the organization.", results.First(r => r.Item1.Id == orgUser3.Id).Item2);
+        Assert.Empty(results.First(r => r.Item1 == orgUser1.Id).Item2);
+        Assert.Equal("You cannot delete a user with Invited status.", results.First(r => r.Item1 == orgUser2.Id).Item2);
+        Assert.Equal("User is not managed by the organization.", results.First(r => r.Item1 == orgUser3.Id).Item2);
 
         await sutProvider.GetDependency<IUserService>().Received(1).DeleteAsync(user1);
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser1, EventType.OrganizationUser_Deleted);
