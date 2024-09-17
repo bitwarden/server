@@ -81,7 +81,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
                                 from s in sJoin.DefaultIfEmpty()
                                 where od.DomainName == domainName
                                       && o.Enabled
-                                      && od.VerifiedDate is not null
+                                      && od.VerifiedDate != null
                                 select new OrganizationDomainSsoDetailsData
                                 {
                                     OrganizationId = o.Id,
