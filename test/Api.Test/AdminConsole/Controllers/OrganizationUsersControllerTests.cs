@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -14,7 +13,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -23,6 +21,8 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
@@ -170,7 +170,6 @@ public class OrganizationUsersControllerTests
     public async Task Invite_NotAuthorizedToGiveAccessToCollections_Throws(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
             .Returns(organizationAbility);
@@ -194,71 +193,6 @@ public class OrganizationUsersControllerTests
         var response = await sutProvider.Sut.Get(organizationAbility.Id);
 
         Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_HandlesNullPermissionsObject(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-        organizationUsers.First().Permissions = "null";
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_SetsDeprecatedCustomPermissionstoFalse(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-
-        var customUser = organizationUsers.First();
-        customUser.Type = OrganizationUserType.Custom;
-        customUser.Permissions = CoreHelpers.ClassToJsonData(new Permissions
-        {
-            AccessReports = true,
-            EditAssignedCollections = true,
-            DeleteAssignedCollections = true,
-            AccessEventLogs = true
-        });
-
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        var customUserResponse = response.Data.First(r => r.Id == organizationUsers.First().Id);
-        Assert.Equal(OrganizationUserType.Custom, customUserResponse.Type);
-        Assert.True(customUserResponse.Permissions.AccessReports);
-        Assert.True(customUserResponse.Permissions.AccessEventLogs);
-        Assert.False(customUserResponse.Permissions.EditAssignedCollections);
-        Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_DowngradesCustomUsersWithDeprecatedPermissions(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-
-        var customUser = organizationUsers.First();
-        customUser.Type = OrganizationUserType.Custom;
-        customUser.Permissions = CoreHelpers.ClassToJsonData(new Permissions
-        {
-            EditAssignedCollections = true,
-            DeleteAssignedCollections = true,
-        });
-
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        var customUserResponse = response.Data.First(r => r.Id == organizationUsers.First().Id);
-        Assert.Equal(OrganizationUserType.User, customUserResponse.Type);
-        Assert.False(customUserResponse.Permissions.EditAssignedCollections);
-        Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
     }
 
     [Theory]
@@ -310,6 +244,8 @@ public class OrganizationUsersControllerTests
         }
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
             .Returns(organizationAbility);
+
+        sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>().GetOrganizationUserUserDetails(Arg.Any<OrganizationUserUserDetailsQueryRequest>()).Returns(organizationUsers);
 
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
             user: Arg.Any<ClaimsPrincipal>(),

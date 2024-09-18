@@ -351,7 +351,14 @@ public class ProviderBillingService(
                 : null
         };
 
-        return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        try
+        {
+            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
+        {
+            throw new BadRequestException("Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
+        }
     }
 
     public async Task<Subscription> SetupSubscription(
@@ -479,12 +486,27 @@ public class ProviderBillingService(
 
             if (enterpriseProviderPlan.PurchasedSeats == 0)
             {
-                subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                if (enterpriseProviderPlan.AllocatedSeats > enterpriseSeatMinimum)
                 {
-                    Id = enterpriseSubscriptionItem.Id,
-                    Price = enterprisePriceId,
-                    Quantity = enterpriseSeatMinimum
-                });
+                    enterpriseProviderPlan.PurchasedSeats =
+                        enterpriseProviderPlan.AllocatedSeats - enterpriseSeatMinimum;
+
+                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                    {
+                        Id = enterpriseSubscriptionItem.Id,
+                        Price = enterprisePriceId,
+                        Quantity = enterpriseProviderPlan.AllocatedSeats
+                    });
+                }
+                else
+                {
+                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                    {
+                        Id = enterpriseSubscriptionItem.Id,
+                        Price = enterprisePriceId,
+                        Quantity = enterpriseSeatMinimum
+                    });
+                }
             }
             else
             {
@@ -523,12 +545,26 @@ public class ProviderBillingService(
 
             if (teamsProviderPlan.PurchasedSeats == 0)
             {
-                subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                if (teamsProviderPlan.AllocatedSeats > teamsSeatMinimum)
                 {
-                    Id = teamsSubscriptionItem.Id,
-                    Price = teamsPriceId,
-                    Quantity = teamsSeatMinimum
-                });
+                    teamsProviderPlan.PurchasedSeats = teamsProviderPlan.AllocatedSeats - teamsSeatMinimum;
+
+                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                    {
+                        Id = teamsSubscriptionItem.Id,
+                        Price = teamsPriceId,
+                        Quantity = teamsProviderPlan.AllocatedSeats
+                    });
+                }
+                else
+                {
+                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                    {
+                        Id = teamsSubscriptionItem.Id,
+                        Price = teamsPriceId,
+                        Quantity = teamsSeatMinimum
+                    });
+                }
             }
             else
             {

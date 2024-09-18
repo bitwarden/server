@@ -421,6 +421,8 @@ public static class CoreHelpers
     /// <returns>Base64 standard formatted string</returns>
     public static string TransformFromBase64Url(string input)
     {
+        // TODO: .NET 9 Ships Base64Url in box, investigate replacing this usage with that
+        // Ref: https://github.com/dotnet/runtime/pull/102364
         var output = input;
         // 62nd char of encoding
         output = output.Replace('-', '+');

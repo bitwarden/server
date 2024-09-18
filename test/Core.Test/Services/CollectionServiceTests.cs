@@ -174,7 +174,7 @@ public class CollectionServiceTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteUserAsync(collection, Guid.NewGuid()));
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
-            .LogOrganizationUserEventAsync(default, default);
+            .LogOrganizationUserEventAsync<OrganizationUser>(default, default);
     }
 
     [Theory, BitAutoData]
