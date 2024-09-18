@@ -20,7 +20,7 @@
         {
             <table class="table">
                 <tbody>
-                @{ int invoiceIndex = 0; }
+                @{ var invoiceIndex = 0; }
                 @foreach (var invoice in Model.BillingHistoryInfo.Invoices)
                 {
                     <tr>
@@ -55,7 +55,7 @@
         {
             <table class="table">
                 <tbody>
-                @{ int transactionIndex = 0; }
+                @{ var transactionIndex = 0; }
                 @foreach (var transaction in Model.BillingHistoryInfo.Transactions)
                 {
                     <tr>
@@ -72,6 +72,7 @@
                             </td>
                         }
                     </tr>
+                    transactionIndex++;
                 }
                 </tbody>
             </table>
