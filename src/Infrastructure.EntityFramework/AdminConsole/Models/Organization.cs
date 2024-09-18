@@ -9,6 +9,10 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 public class Organization : Core.AdminConsole.Entities.Organization
 {
+    // Shadow properties - to be introduced by https://bitwarden.atlassian.net/browse/PM-10863
+    public bool LimitCollectionCreation { get => LimitCollectionCreationDeletion; set => LimitCollectionCreationDeletion = value; }
+    public bool LimitCollectionDeletion { get => LimitCollectionCreationDeletion; set => LimitCollectionCreationDeletion = value; }
+
     public virtual ICollection<Cipher> Ciphers { get; set; }
     public virtual ICollection<OrganizationUser> OrganizationUsers { get; set; }
     public virtual ICollection<Group> Groups { get; set; }
@@ -38,6 +42,9 @@ public class OrganizationMapperProfile : Profile
             .ForMember(org => org.ApiKeys, opt => opt.Ignore())
             .ForMember(org => org.Connections, opt => opt.Ignore())
             .ForMember(org => org.Domains, opt => opt.Ignore())
+            // Shadow properties - to be introduced by https://bitwarden.atlassian.net/browse/PM-10863
+            .ForMember(org => org.LimitCollectionCreation, opt => opt.Ignore())
+            .ForMember(org => org.LimitCollectionDeletion, opt => opt.Ignore())
             .ReverseMap();
 
         CreateProjection<Organization, SelfHostedOrganizationDetails>()
