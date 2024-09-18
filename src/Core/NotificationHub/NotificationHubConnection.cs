@@ -60,6 +60,14 @@ class NotificationHubConnection
         }
     }
 
+    public string LogString
+    {
+        get
+        {
+            return $"HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}";
+        }
+    }
+
     /// <summary>
     /// Gets whether registration is enabled for the given comb ID.
     /// This is based off of the generation time encoded in the comb ID.

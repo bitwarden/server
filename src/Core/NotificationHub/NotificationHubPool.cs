@@ -28,6 +28,7 @@ public class NotificationHubPool : INotificationHubPool
                 _logger.LogWarning("Invalid notification hub settings: {HubName}", hub.HubName ?? "hub name missing");
                 continue;
             }
+            _logger.LogDebug("Adding notification hub: {ConnectionLogString}", connection.LogString);
             result.Add(connection);
         }
 
