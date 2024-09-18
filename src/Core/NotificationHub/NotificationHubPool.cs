@@ -20,6 +20,7 @@ public class NotificationHubPool : INotificationHubPool
     private List<NotificationHubConnection> FilterInvalidHubs(IEnumerable<GlobalSettings.NotificationHubSettings> hubs)
     {
         List<NotificationHubConnection> result = new();
+        _logger.LogDebug("Filtering {HubCount} notification hubs", hubs.Count());
         foreach (var hub in hubs)
         {
             var connection = NotificationHubConnection.From(hub);
