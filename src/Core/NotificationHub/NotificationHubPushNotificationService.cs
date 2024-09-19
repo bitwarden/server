@@ -21,6 +21,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     private readonly bool _enableTracing = false;
     private readonly INotificationHubPool _notificationHubPool;
     private readonly ILogger _logger;
+    public string PushServiceType => "NotificationHub";
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,

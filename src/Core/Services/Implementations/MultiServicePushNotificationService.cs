@@ -12,6 +12,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
 {
     private readonly IEnumerable<IPushNotificationService> _services;
     private readonly ILogger<MultiServicePushNotificationService> _logger;
+    public string PushServiceType => "MultiService";
 
     public MultiServicePushNotificationService(
         [FromKeyedServices("implementation")] IEnumerable<IPushNotificationService> services,
@@ -150,6 +151,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
         {
             foreach (var service in _services)
             {
+                _logger.LogError("Relaying push to service: {ServiceType}", service.PushServiceType);
                 pushFunc(service);
             }
         }

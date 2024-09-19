@@ -17,6 +17,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
     private readonly QueueClient _queueClient;
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    public string PushServiceType => "AzureQueue";
 
     public AzureQueuePushNotificationService(
         GlobalSettings globalSettings,
