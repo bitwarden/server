@@ -256,7 +256,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 { "type",  ((byte)type).ToString() },
                 { "payload", JsonSerializer.Serialize(payload) }
             }, tag);
-        _logger.LogDebug("Pushed notifications to {Tag} to all hubs", tag);
+        _logger.LogError("Pushed notifications to {Tag} to all hubs", tag);
 
         if (_enableTracing)
         {

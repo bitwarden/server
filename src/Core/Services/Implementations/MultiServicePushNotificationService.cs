@@ -21,10 +21,10 @@ public class MultiServicePushNotificationService : IPushNotificationService
         _services = services;
 
         _logger = logger;
-        _logger.LogInformation("Hub services: {Services}", _services.Count());
+        _logger.LogError("Hub services: {Services}", _services.Count());
         globalSettings?.NotificationHubPool?.NotificationHubs?.ForEach(hub =>
         {
-            _logger.LogInformation("HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}", hub.HubName, hub.EnableSendTracing, hub.RegistrationStartDate, hub.RegistrationEndDate);
+            _logger.LogError("HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}", hub.HubName, hub.EnableSendTracing, hub.RegistrationStartDate, hub.RegistrationEndDate);
         });
     }
 
