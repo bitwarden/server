@@ -54,7 +54,7 @@ public class NotificationHubPool : INotificationHubPool
                 string.Join("\n", _connections.Select(c => $"Hub {c.HubName} - Start: {c.RegistrationStartDate}, End: {c.RegistrationEndDate}")));
         }
         var resolvedConnection = possibleConnections[CoreHelpers.BinForComb(comb, possibleConnections.Length)];
-        _logger.LogDebug("Resolved notification hub for comb {Comb}\n{ConnectionInfo}", comb, resolvedConnection.LogString);
+        _logger.LogDebug("Resolved notification hub for comb {Comb} out of {HubCount} hubs.\n{ConnectionInfo}", comb, possibleConnections.Length, resolvedConnection.LogString);
         return resolvedConnection.HubClient;
     }
 
