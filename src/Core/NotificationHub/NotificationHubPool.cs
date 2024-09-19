@@ -53,7 +53,9 @@ public class NotificationHubPool : INotificationHubPool
                 $"Hub start and end times are configured as follows:\n" +
                 string.Join("\n", _connections.Select(c => $"Hub {c.HubName} - Start: {c.RegistrationStartDate}, End: {c.RegistrationEndDate}")));
         }
-        return possibleConnections[CoreHelpers.BinForComb(comb, possibleConnections.Length)].HubClient;
+        var resolvedConnection = possibleConnections[CoreHelpers.BinForComb(comb, possibleConnections.Length)];
+        _logger.LogDebug("Resolved notification hub for comb {Comb}\n{ConnectionInfo}", comb, resolvedConnection.LogString);
+        return resolvedConnection.HubClient;
     }
 
     public INotificationHubProxy AllClients { get { return new NotificationHubClientProxy(_clients); } }
