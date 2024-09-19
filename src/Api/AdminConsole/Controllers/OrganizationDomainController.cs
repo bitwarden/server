@@ -130,7 +130,7 @@ public class OrganizationDomainController : Controller
             throw new NotFoundException("Claimed org domain not found");
         }
 
-        return new OrganizationDomainSsoDetailsResponseModel(ssoResult.FirstOrDefault());
+        return new OrganizationDomainSsoDetailsResponseModel(ssoResult.OrderBy(r => r.VerifiedDate).FirstOrDefault());
     }
 
     [AllowAnonymous]
