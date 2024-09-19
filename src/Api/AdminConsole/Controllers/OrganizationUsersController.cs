@@ -43,7 +43,6 @@ public class OrganizationUsersController : Controller
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
-    private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -51,7 +50,6 @@ public class OrganizationUsersController : Controller
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IOrganizationUserUserMiniDetailsQuery _organizationUserUserMiniDetailsQuery;
 
 
     public OrganizationUsersController(
@@ -66,15 +64,13 @@ public class OrganizationUsersController : Controller
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationUserUserMiniDetailsQuery organizationUserUserMiniDetailsQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -87,7 +83,6 @@ public class OrganizationUsersController : Controller
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
-        _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
@@ -95,7 +90,6 @@ public class OrganizationUsersController : Controller
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _organizationUserUserMiniDetailsQuery = organizationUserUserMiniDetailsQuery;
     }
 
     [HttpGet("{id}")]
@@ -120,9 +114,16 @@ public class OrganizationUsersController : Controller
     [HttpGet("mini-details")]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
-        var organizationUsers = await _organizationUserUserMiniDetailsQuery.Get(orgId);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScopeResource(orgId),
+            OrganizationUserUserMiniDetailsOperations.ReadAll);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId);
         return new ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>(
-            organizationUsers.Select(ou => new OrganizationUserUserMiniDetailsResponseModel(ou)));
+            organizationUserUserDetails.Select(ou => new OrganizationUserUserMiniDetailsResponseModel(ou)));
     }
 
     [HttpGet("")]

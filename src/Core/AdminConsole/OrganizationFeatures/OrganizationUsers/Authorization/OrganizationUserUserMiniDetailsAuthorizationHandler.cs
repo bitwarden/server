@@ -52,7 +52,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
             return true;
         }
 
-        // Needed for creating and managing collections - this may allow all members to access this
+        // Needed for creating and managing collections - if this is not limited then most members can access this data
         if (organization != null)
         {
             var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);

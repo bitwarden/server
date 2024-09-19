@@ -87,7 +87,7 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 #nullable enable
 public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
 {
-    public OrganizationUserUserMiniDetailsResponseModel(OrganizationUserUserMiniDetails organizationUser)
+    public OrganizationUserUserMiniDetailsResponseModel(OrganizationUserUserDetails organizationUser)
         : base("organizationUserUserMiniDetails")
     {
         Id = organizationUser.Id;
