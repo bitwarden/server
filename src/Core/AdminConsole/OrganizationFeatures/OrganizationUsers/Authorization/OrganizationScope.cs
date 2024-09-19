@@ -10,14 +10,14 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authoriza
 /// This should not be used for operations on the organization itself.
 /// It implicitly converts to a regular Guid.
 /// </summary>
-public record OrganizationScopeResource
+public record OrganizationScope
 {
-    public OrganizationScopeResource(Guid id)
+    public OrganizationScope(Guid id)
     {
         Id = id;
     }
     private Guid Id { get; }
-    public static implicit operator Guid(OrganizationScopeResource organizationScopeResource) =>
-        organizationScopeResource.Id;
+    public static implicit operator Guid(OrganizationScope organizationScope) =>
+        organizationScope.Id;
     public override string ToString() => Id.ToString();
 }

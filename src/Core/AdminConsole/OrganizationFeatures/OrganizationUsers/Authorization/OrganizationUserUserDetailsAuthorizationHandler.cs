@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 
 public class OrganizationUserUserDetailsAuthorizationHandler
-    : AuthorizationHandler<OrganizationUserUserDetailsOperationRequirement, OrganizationScopeResource>
+    : AuthorizationHandler<OrganizationUserUserDetailsOperationRequirement, OrganizationScope>
 {
     private readonly ICurrentContext _currentContext;
 
@@ -16,7 +16,7 @@ public class OrganizationUserUserDetailsAuthorizationHandler
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        OrganizationUserUserDetailsOperationRequirement requirement, OrganizationScopeResource organizationScope)
+        OrganizationUserUserDetailsOperationRequirement requirement, OrganizationScope organizationScope)
     {
         var authorized = false;
 

@@ -114,7 +114,7 @@ public class OrganizationUsersController : Controller
     [HttpGet("mini-details")]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScopeResource(orgId),
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
             OrganizationUserUserMiniDetailsOperations.ReadAll);
         if (!authorizationResult.Succeeded)
         {
@@ -130,7 +130,7 @@ public class OrganizationUsersController : Controller
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var authorized = (await _authorizationService.AuthorizeAsync(
-            User, new OrganizationScopeResource(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
+            User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
