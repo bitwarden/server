@@ -24,7 +24,7 @@
                 @foreach (var invoice in Model.BillingHistoryInfo.Invoices)
                 {
                     <tr>
-                        <td id="invoice-@(invoiceIndex)-date" >@invoice.Date</td>
+                        <td id="invoice-@(invoiceIndex)-date">@invoice.Date</td>
                         <td><a id="invoice-@(invoiceIndex)-url" target="_blank" rel="noreferrer" href="@invoice.Url" title="View Invoice">@invoice.Number</a>
                         </td>
                         <td id="invoice-@(invoiceIndex)-amount">@invoice.Amount.ToString("C")</td>
