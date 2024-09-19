@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,11 +15,17 @@ public class MultiServicePushNotificationService : IPushNotificationService
 
     public MultiServicePushNotificationService(
         [FromKeyedServices("implementation")] IEnumerable<IPushNotificationService> services,
-        ILogger<MultiServicePushNotificationService> logger)
+        ILogger<MultiServicePushNotificationService> logger,
+        GlobalSettings globalSettings)
     {
         _services = services;
 
         _logger = logger;
+        _logger.LogInformation("Hub services: {Services}", _services.Count());
+        globalSettings?.NotificationHubPool?.NotificationHubs?.ForEach(hub =>
+        {
+            _logger.LogInformation("HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}", hub.HubName, hub.EnableSendTracing, hub.RegistrationStartDate, hub.RegistrationEndDate);
+        });
     }
 
     public Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
