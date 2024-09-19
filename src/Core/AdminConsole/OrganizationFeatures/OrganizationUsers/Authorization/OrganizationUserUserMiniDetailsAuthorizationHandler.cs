@@ -53,6 +53,7 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
         }
 
         // Needed for creating and managing collections - if this is not limited then most members can access this data
+        // Note: if CurrentContextOrganization is null, the user is not a member of the org and this doesn't apply
         if (organization != null)
         {
             var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
