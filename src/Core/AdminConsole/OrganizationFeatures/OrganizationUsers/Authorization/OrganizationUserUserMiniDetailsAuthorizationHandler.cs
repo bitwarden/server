@@ -39,31 +39,14 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandler :
 
     private async Task<bool> CanReadAllAsync(Guid organizationId)
     {
+        // All organization users can access this data to manage collection access
         var organization = _currentContext.GetOrganization(organizationId);
-
-        // Most admin types need this for administrative functionality
-        if (organization is { Type: OrganizationUserType.Owner } or
-            { Type: OrganizationUserType.Admin } or
-            { Permissions.AccessEventLogs: true } or
-            { Permissions.ManageGroups: true } or
-            { Permissions.ManageUsers: true } or
-            { Permissions.CreateNewCollections: true })
+        if (organization != null)
         {
             return true;
         }
 
-        // Needed for creating and managing collections - if this is not limited then most members can access this data
-        // Note: if CurrentContextOrganization is null, the user is not a member of the org and this doesn't apply
-        if (organization != null)
-        {
-            var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
-            if (orgAbility is { LimitCollectionCreationDeletion: false })
-            {
-                return true;
-            }
-        }
-
-        // Providers for the org
+        // Providers can also access this to manage the organization generally
         return await _currentContext.ProviderUserForOrgAsync(organizationId);
     }
 }

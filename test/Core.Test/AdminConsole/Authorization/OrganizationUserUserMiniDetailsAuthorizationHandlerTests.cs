@@ -19,7 +19,9 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
     [Theory, CurrentContextOrganizationCustomize]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task ReadAll_Admins_Success(
+    [BitAutoData(OrganizationUserType.Custom)]
+    [BitAutoData(OrganizationUserType.User)]
+    public async Task ReadAll_AnyOrganizationMember_Success(
         OrganizationUserType userType,
         CurrentContextOrganization organization,
         SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider)
@@ -35,50 +37,6 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.True(context.HasSucceeded);
-    }
-
-    [Theory, CurrentContextOrganizationCustomize]
-    [BitAutoData(OrganizationUserType.User)]
-    public async Task ReadAll_Member_CanCreateCollections_Success(
-        OrganizationUserType userType,
-        CurrentContextOrganization organization,
-        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider)
-    {
-        organization.Type = userType;
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
-            .Returns(new OrganizationAbility { LimitCollectionCreationDeletion = false });
-
-        var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
-            new ClaimsPrincipal(),
-            new OrganizationScope(organization.Id));
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
-    }
-
-    [Theory, CurrentContextOrganizationCustomize]
-    [BitAutoData(OrganizationUserType.User)]
-    public async Task ReadAll_Member_CannotCreateCollections_NoSuccess(
-        OrganizationUserType userType,
-        CurrentContextOrganization organization,
-        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider)
-    {
-        organization.Type = userType;
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
-            .Returns(new OrganizationAbility { LimitCollectionCreationDeletion = true });
-
-        var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
-            new ClaimsPrincipal(),
-            new OrganizationScope(organization.Id));
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CurrentContextOrganizationCustomize]
@@ -87,6 +45,9 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider)
     {
         organization.Type = OrganizationUserType.User;
+        sutProvider.GetDependency<ICurrentContext>()
+            .GetOrganization(organization.Id)
+            .Returns((CurrentContextOrganization)null);
         sutProvider.GetDependency<ICurrentContext>()
             .ProviderUserForOrgAsync(organization.Id)
             .Returns(true);
@@ -99,25 +60,6 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.True(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData, CurrentContextOrganizationCustomize]
-    public async Task ReadAll_User_NoSuccess(
-        CurrentContextOrganization organization,
-        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider)
-    {
-        organization.Type = OrganizationUserType.User;
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
-            new ClaimsPrincipal(),
-            new OrganizationScope(organization.Id)
-        );
-
-        await sutProvider.Sut.HandleAsync(context);
-        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CurrentContextOrganizationCustomize]
