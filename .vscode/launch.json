@@ -34,6 +34,21 @@
             "stopAll": true
         },
         {
+            "name": "API, Identity, SSO",
+            "configurations": [
+                "run-API",
+                "run-Identity",
+                "run-Sso"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 4
+            },
+            "preLaunchTask": "buildIdentityApiSso",
+            "stopAll": true
+        },
+        {
             "name": "Full Server",
             "configurations": [
                 "run-Admin",
@@ -49,7 +64,7 @@
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
-                "order": 4
+                "order": 5
             },
             "preLaunchTask": "buildFullServer",
             "stopAll": true
