@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
