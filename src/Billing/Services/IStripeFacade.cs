@@ -16,6 +16,11 @@ public interface IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
+    public IAsyncEnumerable<Event> ListEvents(
+        EventListOptions eventListOptions,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
     Task<Invoice> GetInvoice(
         string invoiceId,
         InvoiceGetOptions invoiceGetOptions = null,
