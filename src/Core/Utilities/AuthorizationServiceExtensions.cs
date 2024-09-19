@@ -1,7 +1,8 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.Utilities;
+namespace Bit.Core.Utilities;
 
 public static class AuthorizationServiceExtensions
 {
@@ -28,5 +29,27 @@ public static class AuthorizationServiceExtensions
         }
 
         return service.AuthorizeAsync(user, resource: null, new[] { requirement });
+    }
+
+    /// <summary>
+    /// Performs an authorization check and throws a <see cref="Bit.Core.Exceptions.NotFoundException"/> if the
+    /// check fails or the resource is null.
+    /// </summary>
+    public static async Task AuthorizeOrThrowAsync(this IAuthorizationService service,
+        ClaimsPrincipal user, object resource, IAuthorizationRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(requirement);
+
+        if (resource == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var authorizationResult = await service.AuthorizeAsync(user, resource, requirement);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
     }
 }
