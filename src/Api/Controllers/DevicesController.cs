@@ -236,7 +236,6 @@ public class DevicesController : Controller
         return device != null;
     }
 
-    [RequireFeature(FeatureFlagKeys.DeviceTrustLogging)]
     [HttpPost("lost-trust")]
     public void PostLostTrust()
     {
