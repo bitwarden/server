@@ -89,6 +89,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddBillingOperations();
+        services.AddHttpClient();
 
 #if OSS
         services.AddOosServices();
