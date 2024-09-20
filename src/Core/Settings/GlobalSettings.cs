@@ -136,6 +136,7 @@ public class GlobalSettings : IGlobalSettings
         private string _internalApi;
         private string _internalIdentity;
         private string _internalAdmin;
+        private string _internalBilling;
         private string _internalNotifications;
         private string _internalSso;
         private string _internalVault;
@@ -192,6 +193,11 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _globalSettings.BuildInternalUri(_internalAdmin, "admin");
             set => _internalAdmin = value;
+        }
+        public string InternalBilling
+        {
+            get => _globalSettings.BuildInternalUri(_internalBilling, "billing");
+            set => _internalBilling = value;
         }
         public string InternalIdentity
         {

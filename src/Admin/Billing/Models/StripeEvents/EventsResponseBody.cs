@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Bit.Admin.Billing.Models.ProcessStripeEvents;
+namespace Bit.Admin.Billing.Models.StripeEvents;
 
 public class EventsResponseBody
 {

@@ -15,6 +15,7 @@ public interface IBaseServiceUriSettings
     public string Scim { get; set; }
     public string InternalNotifications { get; set; }
     public string InternalAdmin { get; set; }
+    public string InternalBilling { get; set; }
     public string InternalIdentity { get; set; }
     public string InternalApi { get; set; }
     public string InternalVault { get; set; }

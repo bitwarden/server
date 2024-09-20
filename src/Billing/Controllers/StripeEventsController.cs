@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using Bit.Billing.Models;
-using Bit.Billing.Models.Events;
+﻿using Bit.Billing.Models.Events;
 using Bit.Billing.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -23,42 +21,38 @@ public class StripeEventsController(
     [HttpPost("inspect")]
     public async Task<Ok<EventsResponseBody>> InspectEventsAsync([FromBody] EventIDsRequestBody requestBody)
     {
-        var inspected = new ConcurrentBag<EventResponseBody>();
-
-        await Parallel.ForEachAsync(requestBody.EventIDs, async (eventId, cancellationToken) =>
+        var inspected = await Task.WhenAll(requestBody.EventIDs.Select(async eventId =>
         {
-            var @event = await stripeFacade.GetEvent(eventId, cancellationToken: cancellationToken);
+            var @event = await stripeFacade.GetEvent(eventId);
 
-            inspected.Add(Map(@event));
-        });
+            return Map(@event);
+        }));
 
-        var response = new EventsResponseBody { Events = inspected.ToList() };
+        var response = new EventsResponseBody { Events = inspected };
 
         return TypedResults.Ok(response);
     }
 
-    [HttpPost]
+    [HttpPost("process")]
     public async Task<Ok<EventsResponseBody>> ProcessEventsAsync([FromBody] EventIDsRequestBody requestBody)
     {
-        var events = new ConcurrentBag<EventResponseBody>();
-
-        await Parallel.ForEachAsync(requestBody.EventIDs, async (eventId, cancellationToken) =>
+        var processed = await Task.WhenAll(requestBody.EventIDs.Select(async eventId =>
         {
-            var @event = await stripeFacade.GetEvent(eventId, cancellationToken: cancellationToken);
+            var @event = await stripeFacade.GetEvent(eventId);
 
             try
             {
                 await stripeEventProcessor.ProcessEventAsync(@event);
 
-                events.Add(Map(@event));
+                return Map(@event);
             }
             catch (Exception exception)
             {
-                events.Add(Map(@event, exception.Message));
+                return Map(@event, exception.Message);
             }
-        });
+        }));
 
-        var response = new EventsResponseBody { Events = events };
+        var response = new EventsResponseBody { Events = processed };
 
         return TypedResults.Ok(response);
     }
@@ -67,6 +61,7 @@ public class StripeEventsController(
     {
         Id = @event.Id,
         URL = $"{_stripeURL}/workbench/events/{@event.Id}",
+        APIVersion = @event.ApiVersion,
         Type = @event.Type,
         CreatedUTC = @event.Created,
         ProcessingError = processingError
