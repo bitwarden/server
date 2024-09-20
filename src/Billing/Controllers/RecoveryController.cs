@@ -56,7 +56,7 @@ public class RecoveryController(
         return TypedResults.Ok(response);
     }
 
-    private EventResponseBody Map(Event @event, string processingError = null) => new ()
+    private EventResponseBody Map(Event @event, string processingError = null) => new()
     {
         Id = @event.Id,
         URL = $"{_stripeURL}/workbench/events/{@event.Id}",
