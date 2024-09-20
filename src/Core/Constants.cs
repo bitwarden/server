@@ -141,6 +141,9 @@ public static class FeatureFlagKeys
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
     public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
     public const string PersistPopupView = "persist-popup-view";
+    public const string CipherKeyEncryption = "cipher-key-encryption";
+    public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
+    public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string TrialPayment = "PM-8163-trial-payment";
 
     public static List<string> GetAllKeys()
@@ -157,7 +160,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { BulkDeviceApproval, "true" }
+            { BulkDeviceApproval, "true" },
+            { CipherKeyEncryption, "true" },
         };
     }
 }

@@ -223,6 +223,7 @@ public static class ServiceCollectionExtensions
             };
         });
         services.AddScoped<IPaymentService, StripePaymentService>();
+        services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IOrganizationSubscriptionService, OrganizationSubscriptionService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();

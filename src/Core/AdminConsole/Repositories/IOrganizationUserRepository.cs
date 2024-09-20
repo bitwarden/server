@@ -55,4 +55,8 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
         IEnumerable<OrganizationUser> resetPasswordKeys);
 
+    /// <summary>
+    /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
+    /// </summary>
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
 }

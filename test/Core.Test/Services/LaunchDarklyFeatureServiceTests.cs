@@ -2,6 +2,7 @@
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using LaunchDarkly.Sdk.Server.Interfaces;
@@ -22,6 +23,8 @@ public class LaunchDarklyFeatureServiceTests
 
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.UserId.Returns(Guid.NewGuid());
+        currentContext.ClientVersion.Returns(new Version(AssemblyHelpers.GetVersion()));
+        currentContext.DeviceType.Returns(Enums.DeviceType.ChromeBrowser);
 
         var client = Substitute.For<ILdClient>();
 

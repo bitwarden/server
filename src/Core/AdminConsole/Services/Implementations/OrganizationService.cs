@@ -15,6 +15,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -71,6 +72,7 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
 
     public OrganizationService(
@@ -106,6 +108,7 @@ public class OrganizationService : IOrganizationService
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IOrganizationBillingService organizationBillingService,
         IOrganizationSubscriptionService organizationSubscriptionService)
     {
         _organizationRepository = organizationRepository;
@@ -140,6 +143,7 @@ public class OrganizationService : IOrganizationService
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _organizationBillingService = organizationBillingService;
         _organizationSubscriptionService = organizationSubscriptionService;
     }
 
@@ -502,8 +506,7 @@ public class OrganizationService : IOrganizationService
     /// <summary>
     /// Create a new organization in a cloud environment
     /// </summary>
-    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(OrganizationSignup signup,
-        bool provider = false)
+    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(OrganizationSignup signup)
     {
         var plan = StaticStore.GetPlan(signup.Plan);
 
@@ -511,7 +514,7 @@ public class OrganizationService : IOrganizationService
 
         if (signup.UseSecretsManager)
         {
-            if (provider)
+            if (signup.IsFromProvider)
             {
                 throw new BadRequestException(
                     "Organizations with a Managed Service Provider do not support Secrets Manager.");
@@ -519,7 +522,7 @@ public class OrganizationService : IOrganizationService
             ValidateSecretsManagerPlan(plan, signup);
         }
 
-        if (!provider)
+        if (!signup.IsFromProvider)
         {
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
@@ -570,7 +573,7 @@ public class OrganizationService : IOrganizationService
                                              signup.AdditionalServiceAccounts.GetValueOrDefault();
         }
 
-        if (plan.Type == PlanType.Free && !provider)
+        if (plan.Type == PlanType.Free && !signup.IsFromProvider)
         {
             var adminCount =
                 await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
@@ -581,22 +584,32 @@ public class OrganizationService : IOrganizationService
         }
         else if (plan.Type != PlanType.Free)
         {
-            if (signup.PaymentMethodType != null)
+            var deprecateStripeSourcesAPI = _featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI);
+
+            if (deprecateStripeSourcesAPI)
             {
-                await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                    signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                    signup.PremiumAccessAddon, signup.TaxInfo, provider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                    signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                var sale = OrganizationSale.From(organization, signup);
+                await _organizationBillingService.Finalize(sale);
             }
             else
             {
-                await _organizationSubscriptionService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
-                    signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
-                    signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                if (signup.PaymentMethodType != null)
+                {
+                    await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
+                        signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                }
+                else
+                {
+                    await _organizationSubscriptionService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
+                        signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                }
             }
         }
 
-        var ownerId = provider ? default : signup.Owner.Id;
+        var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;
         var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)

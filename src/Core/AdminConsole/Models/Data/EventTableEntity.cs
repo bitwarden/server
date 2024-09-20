@@ -211,7 +211,7 @@ public class EventTableEntity : IEvent
             entities.Add(new EventTableEntity(e)
             {
                 PartitionKey = pKey,
-                RowKey = $"SecretId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}"
+                RowKey = $"SecretId={e.SecretId}__Date={dateKey}__Uniquifier={uniquifier}"
             });
         }
 
