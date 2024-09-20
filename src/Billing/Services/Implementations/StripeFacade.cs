@@ -27,6 +27,13 @@ public class StripeFacade : IStripeFacade
         CancellationToken cancellationToken = default) =>
         await _customerService.GetAsync(customerId, customerGetOptions, requestOptions, cancellationToken);
 
+    public async Task<Event> GetEvent(
+        string eventId,
+        EventGetOptions eventGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _eventService.GetAsync(eventId, eventGetOptions, requestOptions, cancellationToken);
+
     public IAsyncEnumerable<Event> ListEvents(
         EventListOptions eventListOptions,
         RequestOptions requestOptions = null,
