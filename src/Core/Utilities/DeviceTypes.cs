@@ -44,4 +44,16 @@ public static class DeviceTypes
         DeviceType.VivaldiBrowser,
         DeviceType.UnknownBrowser
     ];
+
+    private static ClientType ToClientType(DeviceType? deviceType)
+    {
+        return deviceType switch
+        {
+            not null when MobileTypes.Contains(deviceType.Value) => ClientType.Mobile,
+            not null when DesktopTypes.Contains(deviceType.Value) => ClientType.Desktop,
+            not null when BrowserExtensionTypes.Contains(deviceType.Value) => ClientType.Browser,
+            not null when BrowserTypes.Contains(deviceType.Value) => ClientType.Web,
+            _ => ClientType.All
+        };
+    }
 }

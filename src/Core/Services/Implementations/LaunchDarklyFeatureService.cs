@@ -155,7 +155,7 @@ public class LaunchDarklyFeatureService : IFeatureService
 
         switch (_currentContext.ClientType)
         {
-            case Identity.ClientType.User:
+            case Identity.IdentityClientType.User:
                 {
                     ContextBuilder ldUser;
                     if (_currentContext.UserId.HasValue)
@@ -182,7 +182,7 @@ public class LaunchDarklyFeatureService : IFeatureService
                 }
                 break;
 
-            case Identity.ClientType.Organization:
+            case Identity.IdentityClientType.Organization:
                 {
                     if (_currentContext.OrganizationId.HasValue)
                     {
@@ -196,7 +196,7 @@ public class LaunchDarklyFeatureService : IFeatureService
                 }
                 break;
 
-            case Identity.ClientType.ServiceAccount:
+            case Identity.IdentityClientType.ServiceAccount:
                 {
                     if (_currentContext.UserId.HasValue)
                     {

@@ -145,7 +145,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        if (_currentContext.ClientType == ClientType.ServiceAccount)
+        if (_currentContext.ClientType == IdentityClientType.ServiceAccount)
         {
             await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
 
@@ -311,7 +311,7 @@ public class SecretsController : Controller
 
     private async Task LogSecretsRetrievalAsync(Guid organizationId, IEnumerable<Secret> secrets)
     {
-        if (_currentContext.ClientType == ClientType.ServiceAccount)
+        if (_currentContext.ClientType == IdentityClientType.ServiceAccount)
         {
             var userId = _userService.GetProperUserId(User)!.Value;
             var org = await _organizationRepository.GetByIdAsync(organizationId);

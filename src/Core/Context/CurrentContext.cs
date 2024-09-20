@@ -39,7 +39,7 @@ public class CurrentContext : ICurrentContext
     public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
-    public virtual ClientType ClientType { get; set; }
+    public virtual IdentityClientType ClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
 
     public CurrentContext(
@@ -151,11 +151,11 @@ public class CurrentContext : ICurrentContext
         var clientType = GetClaimValue(claimsDict, Claims.Type);
         if (clientType != null)
         {
-            Enum.TryParse(clientType, out ClientType c);
+            Enum.TryParse(clientType, out IdentityClientType c);
             ClientType = c;
         }
 
-        if (ClientType == ClientType.ServiceAccount)
+        if (ClientType == IdentityClientType.ServiceAccount)
         {
             ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }

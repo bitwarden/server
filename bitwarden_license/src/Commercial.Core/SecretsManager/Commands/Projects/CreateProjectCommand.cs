@@ -28,16 +28,16 @@ public class CreateProjectCommand : ICreateProjectCommand
         _currentContext = currentContext;
     }
 
-    public async Task<Project> CreateAsync(Project project, Guid id, ClientType clientType)
+    public async Task<Project> CreateAsync(Project project, Guid id, IdentityClientType clientType)
     {
-        if (clientType != ClientType.User && clientType != ClientType.ServiceAccount)
+        if (clientType != IdentityClientType.User && clientType != IdentityClientType.ServiceAccount)
         {
             throw new NotFoundException();
         }
 
         var createdProject = await _projectRepository.CreateAsync(project);
 
-        if (clientType == ClientType.User)
+        if (clientType == IdentityClientType.User)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId, id);
 
@@ -52,7 +52,7 @@ public class CreateProjectCommand : ICreateProjectCommand
             await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
 
         }
-        else if (clientType == ClientType.ServiceAccount)
+        else if (clientType == IdentityClientType.ServiceAccount)
         {
             var serviceAccountProjectAccessPolicy = new ServiceAccountProjectAccessPolicy()
             {
