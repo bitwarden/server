@@ -21,7 +21,7 @@ public class StripeEventsController(
         : "https://dashboard.stripe.com";
 
     [HttpPost("inspect")]
-    public async Task<Ok<InspectEventsResponseBody>> InspectEventsAsync([FromBody] EventIDsRequestBody requestBody)
+    public async Task<Ok<EventsResponseBody>> InspectEventsAsync([FromBody] EventIDsRequestBody requestBody)
     {
         var inspected = new ConcurrentBag<EventResponseBody>();
 
@@ -32,17 +32,15 @@ public class StripeEventsController(
             inspected.Add(Map(@event));
         });
 
-        var response = new InspectEventsResponseBody { Events = inspected.ToList() };
+        var response = new EventsResponseBody { Events = inspected.ToList() };
 
         return TypedResults.Ok(response);
     }
 
     [HttpPost]
-    public async Task<Ok<ProcessEventsResponseBody>> ProcessEventsAsync([FromBody] EventIDsRequestBody requestBody)
+    public async Task<Ok<EventsResponseBody>> ProcessEventsAsync([FromBody] EventIDsRequestBody requestBody)
     {
-        var successful = new ConcurrentBag<EventResponseBody>();
-
-        var failed = new ConcurrentBag<EventResponseBody>();
+        var events = new ConcurrentBag<EventResponseBody>();
 
         await Parallel.ForEachAsync(requestBody.EventIDs, async (eventId, cancellationToken) =>
         {
@@ -52,15 +50,15 @@ public class StripeEventsController(
             {
                 await stripeEventProcessor.ProcessEventAsync(@event);
 
-                successful.Add(Map(@event));
+                events.Add(Map(@event));
             }
             catch (Exception exception)
             {
-                failed.Add(Map(@event, exception.Message));
+                events.Add(Map(@event, exception.Message));
             }
         });
 
-        var response = new ProcessEventsResponseBody { Successful = successful.ToList(), Failed = failed.ToList() };
+        var response = new EventsResponseBody { Events = events };
 
         return TypedResults.Ok(response);
     }

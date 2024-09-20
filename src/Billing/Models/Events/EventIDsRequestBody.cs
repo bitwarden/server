@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Bit.Billing.Models;
+namespace Bit.Billing.Models.Events;
 
 public class EventIDsRequestBody
 {

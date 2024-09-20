@@ -2,7 +2,7 @@
 
 namespace Bit.Billing.Models.Events;
 
-public class InspectEventsResponseBody
+public class EventsResponseBody
 {
     [JsonPropertyName("events")]
     public IEnumerable<EventResponseBody> Events { get; set; }
