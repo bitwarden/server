@@ -12,19 +12,19 @@ public enum AccessClientType
 
 public static class AccessClientHelper
 {
-    public static AccessClientType ToAccessClient(IdentityClientType clientType, bool bypassAccessCheck = false)
+    public static AccessClientType ToAccessClient(IdentityClientType identityClientType, bool bypassAccessCheck = false)
     {
         if (bypassAccessCheck)
         {
             return AccessClientType.NoAccessCheck;
         }
 
-        return clientType switch
+        return identityClientType switch
         {
             IdentityClientType.User => AccessClientType.User,
             IdentityClientType.Organization => AccessClientType.Organization,
             IdentityClientType.ServiceAccount => AccessClientType.ServiceAccount,
-            _ => throw new ArgumentOutOfRangeException(nameof(clientType), clientType, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(identityClientType), identityClientType, null),
         };
     }
 }
