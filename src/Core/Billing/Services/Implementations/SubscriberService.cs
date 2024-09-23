@@ -213,10 +213,15 @@ public class SubscriberService(
     {
         ArgumentNullException.ThrowIfNull(subscriber);
 
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        var customer = await GetCustomer(subscriber, new CustomerGetOptions
         {
             Expand = ["default_source", "invoice_settings.default_payment_method", "subscriptions", "tax_ids"]
         });
+
+        if (customer == null)
+        {
+            return PaymentMethod.Empty;
+        }
 
         var accountCredit = customer.Balance * -1 / 100;
 
