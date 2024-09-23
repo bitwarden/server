@@ -9,10 +9,6 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 public class Organization : Core.AdminConsole.Entities.Organization
 {
-    // Shadow properties - to be introduced by https://bitwarden.atlassian.net/browse/PM-10863
-    public bool LimitCollectionCreation { get => LimitCollectionCreationDeletion; set => LimitCollectionCreationDeletion = value; }
-    public bool LimitCollectionDeletion { get => LimitCollectionCreationDeletion; set => LimitCollectionCreationDeletion = value; }
-
     public virtual ICollection<Cipher> Ciphers { get; set; }
     public virtual ICollection<OrganizationUser> OrganizationUsers { get; set; }
     public virtual ICollection<Group> Groups { get; set; }
