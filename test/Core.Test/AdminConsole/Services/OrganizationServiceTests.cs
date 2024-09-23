@@ -1866,6 +1866,24 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSubscription(organizationId, 0, null));
     }
 
+    [Theory]
+    [SecretsManagerOrganizationCustomize]
+    [BitAutoData("You cannot have more Password Manager seats than Secrets Manager seats.", -1)]
+    public async Task UpdateSubscription_PmSeatAdjustmentLessThanSmSeats_Throws(
+        string expectedMessage,
+        int seatAdjustment,
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Seats = 100;
+        organization.SmSeats = 100;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        var actual = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id, seatAdjustment, null));
+        Assert.Contains(expectedMessage, actual.Message);
+    }
+
     [Theory, PaidOrganizationCustomize]
     [BitAutoData(0, 100, null, true, "")]
     [BitAutoData(0, 100, 100, true, "")]
