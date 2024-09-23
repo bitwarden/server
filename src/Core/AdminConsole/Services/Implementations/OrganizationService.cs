@@ -241,12 +241,9 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        if (organization.UseSecretsManager)
+        if (organization.UseSecretsManager && organization.Seats + seatAdjustment < organization.SmSeats)
         {
-            if (organization.Seats + seatAdjustment < organization.SmSeats)
-            {
-                throw new BadRequestException("You cannot have more Password Manager seats than Secrets Manager seats.");
-            }
+            throw new BadRequestException("You cannot have more Password Manager seats than Secrets Manager seats.");
         }
 
         var newSeatCount = organization.Seats + seatAdjustment;
