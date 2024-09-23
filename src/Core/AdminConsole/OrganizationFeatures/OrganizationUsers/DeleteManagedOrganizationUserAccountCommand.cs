@@ -77,14 +77,14 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
     private async Task RepositoryDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus = null)
     {
-        if (deletingUserId.HasValue && orgUser.UserId.Value == deletingUserId.Value)
-        {
-            throw new BadRequestException("You cannot delete yourself.");
-        }
-
         if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
         {
             throw new BadRequestException("You cannot delete a user with Invited status.");
+        }
+
+        if (deletingUserId.HasValue && orgUser.UserId.Value == deletingUserId.Value)
+        {
+            throw new BadRequestException("You cannot delete yourself.");
         }
 
         if (orgUser.Type == OrganizationUserType.Owner)

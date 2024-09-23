@@ -241,7 +241,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenDeletingYourself_ReturnsErrorMessage(
         SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
-        OrganizationUser orgUser,
+        [OrganizationUser] OrganizationUser orgUser,
         Guid deletingUserId)
     {
         // Arrange
