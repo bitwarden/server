@@ -25,7 +25,7 @@ public interface IOrganizationService
     /// </summary>
     /// <returns>A tuple containing the new organization, the initial organizationUser (if any) and the default collection (if any)</returns>
 #nullable enable
-    Task<(Organization organization, OrganizationUser? organizationUser, Collection? defaultCollection)> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
+    Task<(Organization organization, OrganizationUser? organizationUser, Collection? defaultCollection)> SignUpAsync(OrganizationSignup organizationSignup);
 
     Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
 #nullable disable

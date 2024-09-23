@@ -255,6 +255,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             dbContext.EmergencyAccesses.RemoveRange(
                 dbContext.EmergencyAccesses.Where(ea => ea.GrantorId == user.Id || ea.GranteeId == user.Id));
             dbContext.Sends.RemoveRange(dbContext.Sends.Where(s => s.UserId == user.Id));
+            dbContext.NotificationStatuses.RemoveRange(dbContext.NotificationStatuses.Where(ns => ns.UserId == user.Id));
+            dbContext.Notifications.RemoveRange(dbContext.Notifications.Where(n => n.UserId == user.Id));
 
             var mappedUser = Mapper.Map<User>(user);
             dbContext.Users.Remove(mappedUser);

@@ -27,6 +27,8 @@ public class EventResponseModel : IResponseModel
         Device = ev.DeviceType;
         IpAddress = ev.IpAddress;
         InstallationId = ev.InstallationId;
+        SecretId = ev.SecretId;
+        ServiceAccountId = ev.ServiceAccountId;
     }
 
     /// <summary>
@@ -89,4 +91,14 @@ public class EventResponseModel : IResponseModel
     /// </summary>
     /// <example>172.16.254.1</example>
     public string IpAddress { get; set; }
+    /// <summary>
+    /// The unique identifier of the related secret that the event describes.
+    /// </summary>
+    /// <example>e68b8629-85eb-4929-92c0-b84464976ba4</example>
+    public Guid? SecretId { get; set; }
+    /// <summary>
+    /// The unique identifier of the related service account that the event describes.
+    /// </summary>
+    /// <example>e68b8629-85eb-4929-92c0-b84464976ba4</example>
+    public Guid? ServiceAccountId { get; set; }
 }

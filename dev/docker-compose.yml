@@ -2,13 +2,14 @@ version: "3.9"
 
 services:
   mssql:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD}
       MSSQL_PID: Developer
     volumes:
-      - edgesql_dev_data:/var/opt/mssql
+      - mssql_dev_data:/var/opt/mssql
       - ../util/Migrator:/mnt/migrator/
       - ./helpers/mssql:/mnt/helpers
       - ./.data/mssql:/mnt/data
@@ -58,7 +59,9 @@ services:
     container_name: bw-mysql
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
+    command: 
+      - --default-authentication-plugin=mysql_native_password
+      - --innodb-print-all-deadlocks=ON
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: vault_dev
@@ -107,6 +110,6 @@ services:
       - proxy
 
 volumes:
-  edgesql_dev_data:
+  mssql_dev_data:
   postgres_dev_data:
   mysql_dev_data:

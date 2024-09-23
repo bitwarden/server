@@ -86,4 +86,13 @@ public interface IUserService
     /// We force these users to the web to migrate their encryption scheme.
     /// </summary>
     Task<bool> IsLegacyUser(string userId);
+
+    /// <summary>
+    /// Indicates if the user is managed by any organization.
+    /// </summary>
+    /// <remarks>
+    /// A managed user is a user whose email domain matches one of the Organization's verified domains.
+    /// The organization must be enabled and be on an Enterprise plan.
+    /// </remarks>
+    Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
 }

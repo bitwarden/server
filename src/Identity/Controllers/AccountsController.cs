@@ -75,7 +75,7 @@ public class AccountsController : Controller
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
         var user = model.ToUser();
-        var identityResult = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
+        var identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         // delaysEnabled false is only for the new registration with email verification process
         return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
@@ -144,22 +144,45 @@ public class AccountsController : Controller
     {
         var user = model.ToUser();
 
-        // Users will either have an org invite token or an email verification token - not both.
+        // Users will either have an emailed token or an email verification token - not both.
 
         IdentityResult identityResult = null;
         var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
 
         if (!string.IsNullOrEmpty(model.OrgInviteToken) && model.OrganizationUserId.HasValue)
         {
-            identityResult = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
+            identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
                 model.OrgInviteToken, model.OrganizationUserId);
 
             return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
         }
 
-        identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
+        if (!string.IsNullOrEmpty(model.OrgSponsoredFreeFamilyPlanToken))
+        {
+            identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
+
+            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+        }
+
+        if (!string.IsNullOrEmpty(model.AcceptEmergencyAccessInviteToken) && model.AcceptEmergencyAccessId.HasValue)
+        {
+            identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
+                model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
+
+            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+        }
+
+        if (string.IsNullOrEmpty(model.EmailVerificationToken))
+        {
+            throw new BadRequestException("Invalid registration finish request");
+        }
+
+        identityResult =
+            await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
+                model.EmailVerificationToken);
 
         return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+
     }
 
     private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)
