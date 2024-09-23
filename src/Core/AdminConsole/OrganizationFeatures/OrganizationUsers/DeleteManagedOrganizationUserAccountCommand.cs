@@ -6,6 +6,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
+#nullable enable
+
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganizationUserAccountCommand
