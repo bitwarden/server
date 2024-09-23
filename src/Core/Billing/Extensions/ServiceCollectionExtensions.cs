@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Caches.Implementations;
-using Bit.Core.Billing.Migration;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 
