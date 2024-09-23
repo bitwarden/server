@@ -45,6 +45,8 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { orgUser.Id });
 
         await RepositoryDeleteUserAsync(organizationId, orgUser, deletingUserId, managementStatus);
+
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Deleted);
     }
 
     public async Task<IEnumerable<(Guid, string)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
@@ -72,10 +74,12 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             }
         }
 
+        await LogDeletedOrganizationUsersAsync(orgUsers, results);
+
         return results;
     }
 
-    private async Task RepositoryDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus = null)
+    private async Task RepositoryDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus)
     {
         if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
         {
@@ -112,6 +116,30 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         }
 
         await _userService.DeleteAsync(userToDelete);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Deleted);
+    }
+
+    private async Task LogDeletedOrganizationUsersAsync(
+        IEnumerable<OrganizationUser> orgUsers,
+        IEnumerable<(Guid, string)> results)
+    {
+        var eventDate = DateTime.UtcNow;
+        var events = new List<(OrganizationUser, EventType, DateTime?)>();
+
+        foreach (var r in results)
+        {
+            var orgUser = orgUsers.FirstOrDefault(ou => ou.Id == r.Item1);
+            // If the user was not found or there was an error, we skip logging the event
+            if (orgUser == null || !string.IsNullOrEmpty(r.Item2))
+            {
+                continue;
+            }
+
+            events.Add((orgUser, EventType.OrganizationUser_Deleted, (DateTime?)eventDate));
+        }
+
+        if (events.Any())
+        {
+            await _eventService.LogOrganizationUserEventsAsync(events);
+        }
     }
 }
