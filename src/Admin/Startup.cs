@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Services;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Migration;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -90,6 +91,7 @@ public class Startup
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
+        services.AddProviderMigration();
 
 #if OSS
         services.AddOosServices();

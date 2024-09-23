@@ -15,6 +15,5 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IOrganizationBillingService, OrganizationBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
-        services.AddProviderMigration();
     }
 }
