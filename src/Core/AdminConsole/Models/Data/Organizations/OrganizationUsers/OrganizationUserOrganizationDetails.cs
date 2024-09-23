@@ -54,6 +54,9 @@ public class OrganizationUserOrganizationDetails
     public bool UsePasswordManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+    // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
 }

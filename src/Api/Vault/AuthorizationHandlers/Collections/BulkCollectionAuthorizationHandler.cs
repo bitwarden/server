@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.Diagnostics;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -101,7 +102,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
                 break;
 
             case null:
-                // requirement isn't actually nullable but since we use the 
+                // requirement isn't actually nullable but since we use the
                 // not null when trick it makes the compiler think that requirement
                 // could actually be nullable.
                 throw new UnreachableException();
@@ -123,8 +124,14 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return true;
         }
 
+        var organizationAbility = await GetOrganizationAbilityAsync(org);
+
+        var limitCollectionCreationEnabled = !(_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
+            ? organizationAbility is { LimitCollectionCreation: false }
+            : organizationAbility is { LimitCollectionCreationDeletion: false });
+
         // If the limit collection management setting is disabled, allow any user to create collections
-        if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
+        if (!limitCollectionCreationEnabled)
         {
             return true;
         }
@@ -256,8 +263,15 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // Ensure acting user has manage permissions for all collections being deleted
         // If LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
         var organizationAbility = await GetOrganizationAbilityAsync(org);
-        var canDeleteManagedCollections = organizationAbility is { LimitCollectionCreationDeletion: false } ||
-                                          org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
+
+        var limitCollectionDeletionEnabled = !(_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
+            ? organizationAbility is { LimitCollectionDeletion: false }
+            : organizationAbility is { LimitCollectionCreationDeletion: false });
+
+        var canDeleteManagedCollections =
+            !limitCollectionDeletionEnabled ||
+            org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
+
         if (canDeleteManagedCollections && await CanManageCollectionsAsync(resources, org))
         {
             return true;
