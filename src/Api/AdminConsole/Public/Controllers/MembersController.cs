@@ -31,6 +31,7 @@ public class MembersController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -44,7 +45,8 @@ public class MembersController : Controller
         IPaymentService paymentService,
         IOrganizationRepository organizationRepository,
         IFeatureService featureService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -58,6 +60,7 @@ public class MembersController : Controller
         _organizationRepository = organizationRepository;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     /// <summary>
@@ -243,7 +246,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _organizationService.RemoveUserAsync(_currentContext.OrganizationId.Value, id, null);
+        await _removeOrganizationUserCommand.RemoveUserAsync(_currentContext.OrganizationId.Value, id, null);
         return new OkResult();
     }
 

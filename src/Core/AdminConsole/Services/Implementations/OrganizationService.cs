@@ -73,6 +73,7 @@ public class OrganizationService : IOrganizationService
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -107,7 +108,8 @@ public class OrganizationService : IOrganizationService
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationBillingService organizationBillingService)
+        IOrganizationBillingService organizationBillingService,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -142,6 +144,7 @@ public class OrganizationService : IOrganizationService
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationBillingService = organizationBillingService;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1059,7 +1062,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
-        if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, includeProvider: true))
+        if (!invitedAreAllOwners && !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -1605,55 +1608,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
-    {
-        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-    }
-
-    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId,
-        EventSystemUser systemUser)
-    {
-        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, systemUser);
-    }
-
-    private async Task<OrganizationUser> RepositoryDeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
-    {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("User not valid.");
-        }
-
-        if (deletingUserId.HasValue && orgUser.UserId == deletingUserId.Value)
-        {
-            throw new BadRequestException("You cannot remove yourself.");
-        }
-
-        if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue &&
-            !await _currentContext.OrganizationOwner(organizationId))
-        {
-            throw new BadRequestException("Only owners can delete other owners.");
-        }
-
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        await _organizationUserRepository.DeleteAsync(orgUser);
-
-        if (orgUser.UserId.HasValue)
-        {
-            await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
-        }
-
-        return orgUser;
-    }
-
     public async Task RemoveUserAsync(Guid organizationId, Guid userId)
     {
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
@@ -1662,7 +1616,7 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }))
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -1689,7 +1643,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Users invalid.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -1734,18 +1688,6 @@ public class OrganizationService : IOrganizationService
         }
 
         return result;
-    }
-
-    public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true)
-    {
-        var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
-        var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
-        bool hasOtherOwner = confirmedOwnersIds.Except(organizationUsersId).Any();
-        if (!hasOtherOwner && includeProvider)
-        {
-            return (await _providerUserRepository.GetManyByOrganizationAsync(organizationId, ProviderUserStatusType.Confirmed)).Any();
-        }
-        return hasOtherOwner;
     }
 
     public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
@@ -2042,13 +1984,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _groupRepository.UpdateUsersAsync(group.Id, users);
-    }
-
-    private async Task<IEnumerable<OrganizationUser>> GetConfirmedOwnersAsync(Guid organizationId)
-    {
-        var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
-            OrganizationUserType.Owner);
-        return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
     }
 
     private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
@@ -2355,7 +2290,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Already revoked.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }, includeProvider: true))
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -2376,7 +2311,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Users invalid.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }

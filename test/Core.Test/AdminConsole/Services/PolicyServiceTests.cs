@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Auth.Entities;
@@ -350,6 +351,7 @@ public class PolicyServiceTests
 
         var userService = Substitute.For<IUserService>();
         var organizationService = Substitute.For<IOrganizationService>();
+        var removeOrganizationUserCommand = sutProvider.GetDependency<IRemoveOrganizationUserCommand>();
 
         userService.TwoFactorIsEnabledAsync(orgUserDetailUserInvited).Returns(false);
         userService.TwoFactorIsEnabledAsync(orgUserDetailUserAcceptedWith2FA).Returns(true);
@@ -362,20 +364,20 @@ public class PolicyServiceTests
 
         await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
 
-        await organizationService.Received()
+        await removeOrganizationUserCommand.Received()
             .RemoveUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWithout2FA.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().Received()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserAcceptedWithout2FA.Email);
 
-        await organizationService.DidNotReceive()
+        await removeOrganizationUserCommand.DidNotReceive()
             .RemoveUserAsync(policy.OrganizationId, orgUserDetailUserInvited.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserInvited.Email);
-        await organizationService.DidNotReceive()
+        await removeOrganizationUserCommand.DidNotReceive()
             .RemoveUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWith2FA.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserAcceptedWith2FA.Email);
-        await organizationService.DidNotReceive()
+        await removeOrganizationUserCommand.DidNotReceive()
             .RemoveUserAsync(policy.OrganizationId, orgUserDetailAdmin.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailAdmin.Email);
@@ -458,6 +460,7 @@ public class PolicyServiceTests
 
         var userService = Substitute.For<IUserService>();
         var organizationService = Substitute.For<IOrganizationService>();
+        var removeOrganizationUserCommand = sutProvider.GetDependency<IRemoveOrganizationUserCommand>();
 
         userService.TwoFactorIsEnabledAsync(orgUserDetailUserWith2FANoMP).Returns(true);
         userService.TwoFactorIsEnabledAsync(orgUserDetailUserWithout2FA).Returns(false);
@@ -470,7 +473,7 @@ public class PolicyServiceTests
 
         Assert.Contains("Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
 
-        await organizationService.DidNotReceiveWithAnyArgs()
+        await removeOrganizationUserCommand.DidNotReceiveWithAnyArgs()
             .RemoveUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);
 
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
