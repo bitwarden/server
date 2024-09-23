@@ -26,6 +26,7 @@
     <EmbeddedResource Include="HelperScripts\2023-12-04_00_Down_GrantIndexes.sql" />
     <EmbeddedResource Include="HelperScripts\2024-04-25_00_EnableOrgsCollectionEnhancements.sql" />
     <EmbeddedResource Include="HelperScripts\2024-08-26_00_FinalFlexibleCollectionsDataMigrations.sql" />
+    <EmbeddedResource Include="HelperScripts\2024-09-05_00_SyncDuoVersionFourMetadataToVersionTwo.sql" />
   </ItemGroup>
 
 </Project>
