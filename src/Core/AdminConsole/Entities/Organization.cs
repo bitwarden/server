@@ -93,6 +93,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// If set to false, any organization member can create a collection, and any member can delete a collection that
     /// they have Can Manage permissions for.
     /// </summary>
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; }
 
     /// <summary>
