@@ -78,6 +78,9 @@ public class Startup
                 Public = true,
                 MaxAge = TimeSpan.FromDays(7)
             };
+
+            context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; script-src 'none'");
+
             await next();
         });
 

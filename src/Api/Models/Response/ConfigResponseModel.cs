@@ -11,6 +11,7 @@ public class ConfigResponseModel : ResponseModel
     public ServerConfigResponseModel Server { get; set; }
     public EnvironmentConfigResponseModel Environment { get; set; }
     public IDictionary<string, object> FeatureStates { get; set; }
+    public ServerSettingsResponseModel Settings { get; set; }
 
     public ConfigResponseModel() : base("config")
     {
@@ -18,6 +19,7 @@ public class ConfigResponseModel : ResponseModel
         GitHash = AssemblyHelpers.GetGitHash();
         Environment = new EnvironmentConfigResponseModel();
         FeatureStates = new Dictionary<string, object>();
+        Settings = new ServerSettingsResponseModel();
     }
 
     public ConfigResponseModel(
@@ -36,6 +38,10 @@ public class ConfigResponseModel : ResponseModel
             Sso = globalSettings.BaseServiceUri.Sso
         };
         FeatureStates = featureStates;
+        Settings = new ServerSettingsResponseModel
+        {
+            DisableUserRegistration = globalSettings.DisableUserRegistration
+        };
     }
 }
 
@@ -53,4 +59,9 @@ public class EnvironmentConfigResponseModel
     public string Identity { get; set; }
     public string Notifications { get; set; }
     public string Sso { get; set; }
+}
+
+public class ServerSettingsResponseModel
+{
+    public bool DisableUserRegistration { get; set; }
 }

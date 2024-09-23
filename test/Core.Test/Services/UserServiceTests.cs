@@ -276,6 +276,51 @@ public class UserServiceTests
             .VerifyHashedPassword(user, "hashed_test_password", secret);
     }
 
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithManagingEnabledOrganization_ReturnsTrue(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseSso = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithManagingDisabledOrganization_ReturnsFalse(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = false;
+        organization.UseSso = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithOrganizationUseSsoFalse_ReturnsFalse(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseSso = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.False(result);
+    }
+
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {

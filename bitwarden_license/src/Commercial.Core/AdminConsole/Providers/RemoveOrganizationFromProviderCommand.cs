@@ -155,7 +155,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 DaysUntilDue = 30
             });
 
-            await _subscriberService.RemovePaymentMethod(organization);
+            await _subscriberService.RemovePaymentSource(organization);
         }
 
         await _mailService.SendProviderUpdatePaymentMethod(
