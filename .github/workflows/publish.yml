@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
-      deployment-id: ${{ steps.deployment.outputs.deployment-id }}
+      deployment-id: ${{ steps.deployment.outputs.deployment_id }}
       release-version: ${{ steps.version-output.outputs.version }}
     steps:
       - name: Version output
