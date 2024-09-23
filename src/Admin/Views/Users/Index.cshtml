@@ -1,6 +1,4 @@
 ﻿@model UsersModel
-@inject Bit.Core.Services.IUserService userService
-@inject Bit.Core.Services.IFeatureService featureService
 @{
     ViewData["Title"] = "Users";
 }
@@ -70,30 +68,13 @@
                             {
                                 <i class="fa fa-times-circle-o fa-lg fa-fw text-muted" title="Email Not Verified"></i>
                             }
-                            @if (featureService.IsEnabled(Bit.Core.FeatureFlagKeys.MembersTwoFAQueryOptimization))
+                            @if(user.TwoFactorEnabled)
                             {
-                                var usersTwoFactorIsEnabled = TempData["UsersTwoFactorIsEnabled"] as IEnumerable<(Guid userId, bool twoFactorIsEnabled)>;
-                                var matchingUser2Fa = usersTwoFactorIsEnabled?.FirstOrDefault(tuple => tuple.userId == user.Id);
-
-                                @if(matchingUser2Fa is { twoFactorIsEnabled: true })
-                                {
-                                    <i class="fa fa-lock fa-lg fa-fw" title="2FA Enabled"></i>
-                                }
-                                else
-                                {
-                                    <i class="fa fa-unlock fa-lg fa-fw text-muted" title="2FA Not Enabled"></i>
-                                }
+                                <i class="fa fa-lock fa-lg fa-fw" title="2FA Enabled"></i>
                             }
                             else
                             {
-                                @if(await userService.TwoFactorIsEnabledAsync(user))
-                                {
-                                    <i class="fa fa-lock fa-lg fa-fw" title="2FA Enabled"></i>
-                                }
-                                else
-                                {
-                                    <i class="fa fa-unlock fa-lg fa-fw text-muted" title="2FA Not Enabled"></i>
-                                }
+                                <i class="fa fa-unlock fa-lg fa-fw text-muted" title="2FA Not Enabled"></i>
                             }
                         </td>
                     </tr>
