@@ -44,6 +44,9 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             ProviderId = x.p.Id,
             ProviderName = x.p.Name,
             PlanType = x.o.PlanType,
+            LimitCollectionCreation = x.o.LimitCollectionCreation,
+            LimitCollectionDeletion = x.o.LimitCollectionDeletion,
+            // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
             LimitCollectionCreationDeletion = x.o.LimitCollectionCreationDeletion,
             AllowAdminAccessToAllCollectionItems = x.o.AllowAdminAccessToAllCollectionItems,
         });

@@ -53,8 +53,11 @@ public class OrganizationLicense : ILicense
         UseSecretsManager = org.UseSecretsManager;
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
+
+        // Deprecated. Left for backwards compatibility with old license versions.
         LimitCollectionCreationDeletion = org.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
+        //
 
         if (subscriptionInfo?.Subscription == null)
         {
@@ -138,8 +141,12 @@ public class OrganizationLicense : ILicense
     public bool UseSecretsManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+
+    // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
     public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
+    //
+
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
@@ -150,7 +157,14 @@ public class OrganizationLicense : ILicense
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
-    /// getting out of date license errors</remarks>
+    /// getting out of date license errors
+    /// </remarks>
+    /// <remarks>
+    /// ⚠ This is important! We are on this license version because of new
+    /// properties that were added for versions 14 and 15. These properties
+    /// were later removed! When you increment to version 16 please delete
+    /// this comment.
+    /// </remarks>
     public const int CurrentLicenseFileVersion = 14;
     private bool ValidLicenseVersion
     {
@@ -366,12 +380,6 @@ public class OrganizationLicense : ILicense
                         organization.SmSeats == SmSeats &&
                         organization.SmServiceAccounts == SmServiceAccounts;
             }
-
-            /*
-             * Version 14 added LimitCollectionCreationDeletion and Version 15 added AllowAdminAccessToAllCollectionItems,
-             * however these are just user settings and it is not worth failing validation if they mismatch.
-             * They are intentionally excluded.
-             */
 
             return valid;
         }

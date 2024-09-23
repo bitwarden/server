@@ -705,9 +705,15 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
-            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion,
-            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems,
         };
+
+        // These fields are being removed from consideration when processing
+        // licenses.
+        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
+        {
+            organization.LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
+            organization.AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
+        }
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
 
