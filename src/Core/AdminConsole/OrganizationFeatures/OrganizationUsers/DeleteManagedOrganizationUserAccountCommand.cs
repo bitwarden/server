@@ -57,7 +57,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         }
 
         await _userService.DeleteAsync(user);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deleted, null);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deleted);
     }
 
     public async Task<IEnumerable<(Guid OrganizationUserId, string? ErrorMessage)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
