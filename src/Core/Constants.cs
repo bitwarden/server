@@ -105,7 +105,6 @@ public static class FeatureFlagKeys
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string ItemShare = "item-share";
-    public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
