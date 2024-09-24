@@ -41,18 +41,25 @@ public class OrganizationSale
             SubscriptionSetup = GetSubscriptionSetup(upgrade)
         };
 
-    private static CustomerSetup? GetCustomerSetup(OrganizationSignup signup)
+    private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
     {
+        var customerSetup = new CustomerSetup { Coupon = signup.IsFromProvider
+            ? StripeConstants.CouponIDs.MSPDiscount35
+            : signup.IsFromSecretsManagerTrial
+                ? StripeConstants.CouponIDs.SecretsManagerStandalone
+                : null
+        };
+
         if (!signup.PaymentMethodType.HasValue)
         {
-            return null;
+            return customerSetup;
         }
 
-        var tokenizedPaymentSource = new TokenizedPaymentSource(
+        customerSetup.TokenizedPaymentSource = new TokenizedPaymentSource(
             signup.PaymentMethodType!.Value,
             signup.PaymentToken);
 
-        var taxInformation = new TaxInformation(
+        customerSetup.TaxInformation = new TaxInformation(
             signup.TaxInfo.BillingAddressCountry,
             signup.TaxInfo.BillingAddressPostalCode,
             signup.TaxInfo.TaxIdNumber,
@@ -61,18 +68,7 @@ public class OrganizationSale
             signup.TaxInfo.BillingAddressCity,
             signup.TaxInfo.BillingAddressState);
 
-        var coupon = signup.IsFromProvider
-            ? StripeConstants.CouponIDs.MSPDiscount35
-            : signup.IsFromSecretsManagerTrial
-                ? StripeConstants.CouponIDs.SecretsManagerStandalone
-                : null;
-
-        return new CustomerSetup
-        {
-            TokenizedPaymentSource = tokenizedPaymentSource,
-            TaxInformation = taxInformation,
-            Coupon = coupon
-        };
+        return customerSetup;
     }
 
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)

@@ -4,7 +4,9 @@
 
 public class CustomerSetup
 {
-    public required TokenizedPaymentSource TokenizedPaymentSource { get; set; }
-    public required TaxInformation TaxInformation { get; set; }
+    public TokenizedPaymentSource? TokenizedPaymentSource { get; set; }
+    public TaxInformation? TaxInformation { get; set; }
     public string? Coupon { get; set; }
+
+    public bool IsBillable => TokenizedPaymentSource != null && TaxInformation != null;
 }

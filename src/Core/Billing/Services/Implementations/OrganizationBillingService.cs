@@ -19,6 +19,8 @@ using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
+#nullable enable
+
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
     IGlobalSettings globalSettings,
@@ -53,7 +55,7 @@ public class OrganizationBillingService(
         await organizationRepository.ReplaceAsync(organization);
     }
 
-    public async Task<OrganizationMetadata> GetMetadata(Guid organizationId)
+    public async Task<OrganizationMetadata?> GetMetadata(Guid organizationId)
     {
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
@@ -90,7 +92,7 @@ public class OrganizationBillingService(
                 new CustomerSetup
                 {
                     TokenizedPaymentSource = tokenizedPaymentSource,
-                    TaxInformation = taxInformation,
+                    TaxInformation = taxInformation
                 });
 
             organization.Gateway = GatewayType.Stripe;
@@ -110,37 +112,12 @@ public class OrganizationBillingService(
     private async Task<Customer> CreateCustomerAsync(
         Organization organization,
         CustomerSetup customerSetup,
-        List<string> expand = null)
+        List<string>? expand = null)
     {
-        if (customerSetup.TokenizedPaymentSource is not
-            {
-                Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
-                Token: not null and not ""
-            })
-        {
-            logger.LogError(
-                "Cannot create customer for organization ({OrganizationID}) without a valid payment source",
-                organization.Id);
-
-            throw new BillingException();
-        }
-
-        if (customerSetup.TaxInformation is not { Country: not null and not "", PostalCode: not null and not "" })
-        {
-            logger.LogError(
-                "Cannot create customer for organization ({OrganizationID}) without valid tax information",
-                organization.Id);
-
-            throw new BillingException();
-        }
-
-        var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
-
         var organizationDisplayName = organization.DisplayName();
 
         var customerCreateOptions = new CustomerCreateOptions
         {
-            Address = address,
             Coupon = customerSetup.Coupon,
             Description = organization.DisplayBusinessName(),
             Email = organization.BillingEmail,
@@ -159,22 +136,50 @@ public class OrganizationBillingService(
             Metadata = new Dictionary<string, string>
             {
                 { "region", globalSettings.BaseServiceUri.CloudRegion }
-            },
-            Tax = new CustomerTaxOptions
-            {
-                ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
-            },
-            TaxIdData = taxIdData
+            }
         };
-
-        var (type, token) = customerSetup.TokenizedPaymentSource;
 
         var braintreeCustomerId = "";
 
-        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-        switch (type)
+        if (customerSetup.IsBillable)
         {
-            case PaymentMethodType.BankAccount:
+            if (customerSetup.TokenizedPaymentSource is not
+                {
+                    Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
+                    Token: not null and not ""
+                })
+            {
+                logger.LogError(
+                    "Cannot create customer for organization ({OrganizationID}) without a valid payment source",
+                    organization.Id);
+
+                throw new BillingException();
+            }
+
+            if (customerSetup.TaxInformation is not { Country: not null and not "", PostalCode: not null and not "" })
+            {
+                logger.LogError(
+                    "Cannot create customer for organization ({OrganizationID}) without valid tax information",
+                    organization.Id);
+
+                throw new BillingException();
+            }
+
+            var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
+
+            customerCreateOptions.Address = address;
+            customerCreateOptions.Tax = new CustomerTaxOptions
+            {
+                ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
+            };
+            customerCreateOptions.TaxIdData = taxIdData;
+
+            var (type, token) = customerSetup.TokenizedPaymentSource;
+
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+            switch (type)
+            {
+                case PaymentMethodType.BankAccount:
                 {
                     var setupIntent =
                         (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
@@ -191,13 +196,13 @@ public class OrganizationBillingService(
 
                     break;
                 }
-            case PaymentMethodType.Card:
+                case PaymentMethodType.Card:
                 {
                     customerCreateOptions.PaymentMethod = token;
                     customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = token;
                     break;
                 }
-            case PaymentMethodType.PayPal:
+                case PaymentMethodType.PayPal:
                 {
                     braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(organization, token);
 
@@ -205,12 +210,13 @@ public class OrganizationBillingService(
 
                     break;
                 }
-            default:
+                default:
                 {
                     logger.LogError("Cannot create customer for organization ({OrganizationID}) using payment method type ({PaymentMethodType}) as it is not supported", organization.Id, type.ToString());
 
                     throw new BillingException();
                 }
+            }
         }
 
         try
@@ -241,19 +247,22 @@ public class OrganizationBillingService(
 
         async Task Revert()
         {
-            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-            switch (type)
+            if (customerSetup.IsBillable)
             {
-                case PaymentMethodType.BankAccount:
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+                switch (customerSetup.TokenizedPaymentSource!.Type)
+                {
+                    case PaymentMethodType.BankAccount:
                     {
                         await setupIntentCache.Remove(organization.Id);
                         break;
                     }
-                case PaymentMethodType.PayPal:
+                    case PaymentMethodType.PayPal:
                     {
                         await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
                         break;
                     }
+                }
             }
         }
     }
@@ -334,7 +343,7 @@ public class OrganizationBillingService(
                 ["organizationId"] = organizationId.ToString()
             },
             OffSession = true,
-            TrialPeriodDays = plan.TrialPeriodDays,
+            TrialPeriodDays = plan.TrialPeriodDays
         };
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
