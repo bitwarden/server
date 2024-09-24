@@ -85,7 +85,7 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         var secrets = await _secretRepository.GetManyDetailsByOrganizationIdAsync(organizationId, userId, accessClient);
 
@@ -136,7 +136,7 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         var access = await _secretRepository.AccessToSecretAsync(id, userId, accessClient);
 
@@ -145,7 +145,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        if (_currentContext.ClientType == ClientType.ServiceAccount)
+        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
         {
             await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
 
@@ -167,7 +167,7 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         var secrets = await _secretRepository.GetManyDetailsByProjectIdAsync(projectId, userId, accessClient);
 
@@ -311,7 +311,7 @@ public class SecretsController : Controller
 
     private async Task LogSecretsRetrievalAsync(Guid organizationId, IEnumerable<Secret> secrets)
     {
-        if (_currentContext.ClientType == ClientType.ServiceAccount)
+        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
         {
             var userId = _userService.GetProperUserId(User)!.Value;
             var org = await _organizationRepository.GetByIdAsync(organizationId);
