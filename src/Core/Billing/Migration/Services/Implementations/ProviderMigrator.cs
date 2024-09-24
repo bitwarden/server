@@ -146,7 +146,7 @@ public class ProviderMigrator(
                 PlanType = PlanType.TeamsMonthly,
                 SeatMinimum = teamsSeats,
                 PurchasedSeats = 0,
-                AllocatedSeats = 0
+                AllocatedSeats = teamsSeats
             });
 
             logger.LogInformation("CB: Created Teams plan for provider ({ProviderID}) with a seat minimum of {Seats}",
@@ -188,7 +188,7 @@ public class ProviderMigrator(
                 PlanType = PlanType.EnterpriseMonthly,
                 SeatMinimum = enterpriseSeats,
                 PurchasedSeats = 0,
-                AllocatedSeats = 0
+                AllocatedSeats = enterpriseSeats
             });
 
             logger.LogInformation("CB: Created Enterprise plan for provider ({ProviderID}) with a seat minimum of {Seats}",
