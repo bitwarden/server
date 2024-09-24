@@ -9,7 +9,12 @@
  *
  ***************************************************************/
 
--- Drop an index that refers to the column
+-- Create the new index (without the column) before we drop the old index
+PRINT N'Creating index IX_OrganizationUser_UserIdOrganizationIdStatusV2...';
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatusV2]
+    ON [dbo].[OrganizationUser]([UserId] ASC, [OrganizationId] ASC, [Status] ASC);
+
+-- Drop the old index that refers to the column
 PRINT N'Dropping index IX_OrganizationUser_UserIdOrganizationIdStatus...';
 DROP INDEX IF EXISTS [IX_OrganizationUser_UserIdOrganizationIdStatus]
     ON [dbo].[OrganizationUser];
@@ -31,11 +36,6 @@ BEGIN
         [AccessAll]
 END
 GO
-
--- Recreate the index without the column
-PRINT N'Recreating index IX_OrganizationUser_UserIdOrganizationIdStatus...';
-CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatus]
-    ON [dbo].[OrganizationUser]([UserId] ASC, [OrganizationId] ASC, [Status] ASC);
 
 -- Refresh views
 IF OBJECT_ID('[dbo].[OrganizationUserView]') IS NOT NULL

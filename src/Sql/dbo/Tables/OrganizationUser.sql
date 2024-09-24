@@ -19,7 +19,7 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatus]
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatusV2]
     ON [dbo].[OrganizationUser]([UserId] ASC, [OrganizationId] ASC, [Status] ASC);
 
 
