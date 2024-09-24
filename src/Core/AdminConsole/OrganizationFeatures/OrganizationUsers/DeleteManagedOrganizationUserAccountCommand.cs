@@ -42,7 +42,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
         {
-            throw new NotFoundException("Organization user not found.");
+            throw new NotFoundException("Member not found.");
         }
 
         var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { orgUser.Id });
@@ -65,7 +65,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                 var orgUser = orgUsers.FirstOrDefault(ou => ou.Id == orgUserId);
                 if (orgUser == null || orgUser.OrganizationId != organizationId)
                 {
-                    throw new NotFoundException("Organization user not found.");
+                    throw new NotFoundException("Member not found.");
                 }
 
                 await RepositoryDeleteUserAsync(organizationId, orgUser, deletingUserId, managementStatus);
@@ -86,7 +86,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     {
         if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
         {
-            throw new BadRequestException("You cannot delete a user with Invited status.");
+            throw new BadRequestException("You cannot delete a member with Invited status.");
         }
 
         if (deletingUserId.HasValue && orgUser.UserId.Value == deletingUserId.Value)
@@ -109,13 +109,13 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
         if (!managementStatus.TryGetValue(orgUser.Id, out var isManaged) || !isManaged)
         {
-            throw new BadRequestException("User is not managed by the organization.");
+            throw new BadRequestException("Member is not managed by the organization.");
         }
 
         var userToDelete = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
         if (userToDelete == null)
         {
-            throw new NotFoundException("User not found.");
+            throw new NotFoundException("Member not found.");
         }
 
         await _userService.DeleteAsync(userToDelete);
