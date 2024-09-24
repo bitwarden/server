@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20240909181749_GenerateDuoSDKVersion4TwoFactorMetadata")]
+    partial class GenerateDuoSDKVersion4TwoFactorMetadata
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -687,53 +690,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("WebAuthnCredential", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ClientOrganizationMigrationRecord", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("GatewayCustomerId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("GatewaySubscriptionId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int?>("MaxAutoscaleSeats")
-                        .HasColumnType("integer");
-
-                    b.Property<short?>("MaxStorageGb")
-                        .HasColumnType("smallint");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<byte>("PlanType")
-                        .HasColumnType("smallint");
-
-                    b.Property<Guid>("ProviderId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Seats")
-                        .HasColumnType("integer");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("smallint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProviderId", "OrganizationId")
-                        .IsUnique();
-
-                    b.ToTable("ClientOrganizationMigrationRecord", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1274,6 +1230,11 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AccessAll")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("AccessSecretsManager")
                         .HasColumnType("boolean");
 
@@ -1634,77 +1595,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("User", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Body")
-                        .HasColumnType("text");
-
-                    b.Property<byte>("ClientType")
-                        .HasColumnType("smallint");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("Global")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<byte>("Priority")
-                        .HasColumnType("smallint");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Title")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("UserId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate")
-                        .IsDescending(false, false, false, false, true, true)
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("Notification", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.NotificationStatus", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("NotificationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ReadDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("UserId", "NotificationId")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("NotificationId");
-
-                    b.ToTable("NotificationStatus", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
@@ -2495,40 +2385,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
 
                     b.Navigation("Provider");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("Organization");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.NotificationStatus", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", "Notification")
-                        .WithMany()
-                        .HasForeignKey("NotificationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Notification");
 
                     b.Navigation("User");
                 });

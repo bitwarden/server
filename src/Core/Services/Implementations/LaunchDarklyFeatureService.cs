@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Context;
+using Bit.Core.Identity;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using LaunchDarkly.Logging;
@@ -153,9 +154,9 @@ public class LaunchDarklyFeatureService : IFeatureService
 
         var builder = LaunchDarkly.Sdk.Context.MultiBuilder();
 
-        switch (_currentContext.ClientType)
+        switch (_currentContext.IdentityClientType)
         {
-            case Identity.ClientType.User:
+            case IdentityClientType.User:
                 {
                     ContextBuilder ldUser;
                     if (_currentContext.UserId.HasValue)
@@ -182,7 +183,7 @@ public class LaunchDarklyFeatureService : IFeatureService
                 }
                 break;
 
-            case Identity.ClientType.Organization:
+            case IdentityClientType.Organization:
                 {
                     if (_currentContext.OrganizationId.HasValue)
                     {
@@ -196,7 +197,7 @@ public class LaunchDarklyFeatureService : IFeatureService
                 }
                 break;
 
-            case Identity.ClientType.ServiceAccount:
+            case IdentityClientType.ServiceAccount:
                 {
                     if (_currentContext.UserId.HasValue)
                     {
