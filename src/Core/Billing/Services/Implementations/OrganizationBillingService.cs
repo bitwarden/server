@@ -180,42 +180,42 @@ public class OrganizationBillingService(
             switch (type)
             {
                 case PaymentMethodType.BankAccount:
-                {
-                    var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
-                        .FirstOrDefault();
-
-                    if (setupIntent == null)
                     {
-                        logger.LogError("Cannot create customer for organization ({OrganizationID}) without a setup intent for their bank account", organization.Id);
+                        var setupIntent =
+                            (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
+                            .FirstOrDefault();
+
+                        if (setupIntent == null)
+                        {
+                            logger.LogError("Cannot create customer for organization ({OrganizationID}) without a setup intent for their bank account", organization.Id);
+
+                            throw new BillingException();
+                        }
+
+                        await setupIntentCache.Set(organization.Id, setupIntent.Id);
+
+                        break;
+                    }
+                case PaymentMethodType.Card:
+                    {
+                        customerCreateOptions.PaymentMethod = token;
+                        customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = token;
+                        break;
+                    }
+                case PaymentMethodType.PayPal:
+                    {
+                        braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(organization, token);
+
+                        customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
+
+                        break;
+                    }
+                default:
+                    {
+                        logger.LogError("Cannot create customer for organization ({OrganizationID}) using payment method type ({PaymentMethodType}) as it is not supported", organization.Id, type.ToString());
 
                         throw new BillingException();
                     }
-
-                    await setupIntentCache.Set(organization.Id, setupIntent.Id);
-
-                    break;
-                }
-                case PaymentMethodType.Card:
-                {
-                    customerCreateOptions.PaymentMethod = token;
-                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = token;
-                    break;
-                }
-                case PaymentMethodType.PayPal:
-                {
-                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(organization, token);
-
-                    customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
-
-                    break;
-                }
-                default:
-                {
-                    logger.LogError("Cannot create customer for organization ({OrganizationID}) using payment method type ({PaymentMethodType}) as it is not supported", organization.Id, type.ToString());
-
-                    throw new BillingException();
-                }
             }
         }
 
@@ -253,15 +253,15 @@ public class OrganizationBillingService(
                 switch (customerSetup.TokenizedPaymentSource!.Type)
                 {
                     case PaymentMethodType.BankAccount:
-                    {
-                        await setupIntentCache.Remove(organization.Id);
-                        break;
-                    }
+                        {
+                            await setupIntentCache.Remove(organization.Id);
+                            break;
+                        }
                     case PaymentMethodType.PayPal:
-                    {
-                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                        break;
-                    }
+                        {
+                            await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                            break;
+                        }
                 }
             }
         }

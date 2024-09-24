@@ -43,7 +43,9 @@ public class OrganizationSale
 
     private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
     {
-        var customerSetup = new CustomerSetup { Coupon = signup.IsFromProvider
+        var customerSetup = new CustomerSetup
+        {
+            Coupon = signup.IsFromProvider
             ? StripeConstants.CouponIDs.MSPDiscount35
             : signup.IsFromSecretsManagerTrial
                 ? StripeConstants.CouponIDs.SecretsManagerStandalone
