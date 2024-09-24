@@ -241,11 +241,6 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        if (organization.UseSecretsManager && organization.Seats + seatAdjustment < organization.SmSeats)
-        {
-            throw new BadRequestException("You cannot have more Password Manager seats than Secrets Manager seats.");
-        }
-
         var newSeatCount = organization.Seats + seatAdjustment;
         if (maxAutoscaleSeats.HasValue && newSeatCount > maxAutoscaleSeats.Value)
         {
@@ -361,6 +356,11 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
                     $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
             }
+        }
+
+        if (organization.UseSecretsManager && newSeatTotal < organization.SmSeats)
+        {
+            throw new BadRequestException("You cannot have more Password Manager seats than Secrets Manager seats.");
         }
 
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
