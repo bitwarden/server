@@ -30,7 +30,7 @@ public class CreateProjectCommandTests
             .CreateAsync(Arg.Any<Project>())
             .Returns(data);
 
-        await sutProvider.Sut.CreateAsync(data, userId, sutProvider.GetDependency<ICurrentContext>().ClientType);
+        await sutProvider.Sut.CreateAsync(data, userId, sutProvider.GetDependency<ICurrentContext>().IdentityClientType);
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
             .CreateAsync(Arg.Is(data));
