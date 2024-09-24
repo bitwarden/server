@@ -10,10 +10,6 @@ public class Permissions
     public bool CreateNewCollections { get; set; }
     public bool EditAnyCollection { get; set; }
     public bool DeleteAnyCollection { get; set; }
-    [Obsolete("Pre-Flexible Collections logic.")]
-    public bool EditAssignedCollections { get; set; }
-    [Obsolete("Pre-Flexible Collections logic.")]
-    public bool DeleteAssignedCollections { get; set; }
     public bool ManageGroups { get; set; }
     public bool ManagePolicies { get; set; }
     public bool ManageSso { get; set; }
@@ -30,8 +26,6 @@ public class Permissions
         (CreateNewCollections, "createnewcollections"),
         (EditAnyCollection, "editanycollection"),
         (DeleteAnyCollection, "deleteanycollection"),
-        (EditAssignedCollections, "editassignedcollections"),
-        (DeleteAssignedCollections, "deleteassignedcollections"),
         (ManageGroups, "managegroups"),
         (ManagePolicies, "managepolicies"),
         (ManageSso, "managesso"),
