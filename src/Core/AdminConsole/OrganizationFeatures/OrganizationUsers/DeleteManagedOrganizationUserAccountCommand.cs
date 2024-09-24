@@ -39,25 +39,37 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        if (organizationUser == null || organizationUser.OrganizationId != organizationId)
         {
             throw new NotFoundException("Member not found.");
         }
 
-        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { orgUser.Id });
+        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { organizationUserId });
+        var hasOtherConfirmedOwners = await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true);
 
-        await RepositoryDeleteUserAsync(organizationId, orgUser, deletingUserId, managementStatus);
+        await ValidateDeleteUserAsync(organizationId, organizationUser, deletingUserId, managementStatus, hasOtherConfirmedOwners);
 
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Deleted);
+        var user = await _userRepository.GetByIdAsync(organizationUser.UserId!.Value);
+        if (user == null)
+        {
+            throw new NotFoundException("Member not found.");
+        }
+
+        await _userService.DeleteAsync(user);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deleted, null);
     }
 
-    public async Task<IEnumerable<(Guid, string)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
+    public async Task<IEnumerable<(Guid OrganizationUserId, string? ErrorMessage)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
     {
-        var results = new List<(Guid, string)>();
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
-        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
+        var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId!.Value).ToList();
+        var users = await _userRepository.GetManyAsync(userIds);
 
+        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
+        var hasOtherConfirmedOwners = await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
+
+        var results = new List<(Guid OrganizationUserId, string? ErrorMessage)>();
         foreach (var orgUserId in orgUserIds)
         {
             try
@@ -68,12 +80,20 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                     throw new NotFoundException("Member not found.");
                 }
 
-                await RepositoryDeleteUserAsync(organizationId, orgUser, deletingUserId, managementStatus);
-                results.Add((orgUserId, ""));
+                await ValidateDeleteUserAsync(organizationId, orgUser, deletingUserId, managementStatus, hasOtherConfirmedOwners);
+
+                var user = users.FirstOrDefault(u => u.Id == orgUser.UserId);
+                if (user == null)
+                {
+                    throw new NotFoundException("Member not found.");
+                }
+
+                await _userService.DeleteAsync(user);
+                results.Add((orgUserId, string.Empty));
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                results.Add((orgUserId, e.Message));
+                results.Add((orgUserId, ex.Message));
             }
         }
 
@@ -82,7 +102,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         return results;
     }
 
-    private async Task RepositoryDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus)
+    private async Task ValidateDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus, bool hasOtherConfirmedOwners)
     {
         if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
         {
@@ -101,7 +121,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                 throw new BadRequestException("Only owners can delete other owners.");
             }
 
-            if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }, includeProvider: true))
+            if (!hasOtherConfirmedOwners)
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -111,33 +131,25 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         {
             throw new BadRequestException("Member is not managed by the organization.");
         }
-
-        var userToDelete = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
-        if (userToDelete == null)
-        {
-            throw new NotFoundException("Member not found.");
-        }
-
-        await _userService.DeleteAsync(userToDelete);
     }
 
     private async Task LogDeletedOrganizationUsersAsync(
         IEnumerable<OrganizationUser> orgUsers,
-        IEnumerable<(Guid, string)> results)
+        IEnumerable<(Guid OrgUserId, string? ErrorMessage)> results)
     {
         var eventDate = DateTime.UtcNow;
-        var events = new List<(OrganizationUser, EventType, DateTime?)>();
+        var events = new List<(OrganizationUser OrgUser, EventType Event, DateTime? EventDate)>();
 
-        foreach (var r in results)
+        foreach (var (orgUserId, errorMessage) in results)
         {
-            var orgUser = orgUsers.FirstOrDefault(ou => ou.Id == r.Item1);
+            var orgUser = orgUsers.FirstOrDefault(ou => ou.Id == orgUserId);
             // If the user was not found or there was an error, we skip logging the event
-            if (orgUser == null || !string.IsNullOrEmpty(r.Item2))
+            if (orgUser == null || !string.IsNullOrEmpty(errorMessage))
             {
                 continue;
             }
 
-            events.Add((orgUser, EventType.OrganizationUser_Deleted, (DateTime?)eventDate));
+            events.Add((orgUser, EventType.OrganizationUser_Deleted, eventDate));
         }
 
         if (events.Any())
