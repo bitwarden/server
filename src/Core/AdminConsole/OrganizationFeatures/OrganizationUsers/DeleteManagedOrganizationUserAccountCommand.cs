@@ -16,6 +16,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     private readonly IEventService _eventService;
     private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationService _organizationService;
     public DeleteManagedOrganizationUserAccountCommand(
@@ -23,6 +24,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         IEventService eventService,
         IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
         IOrganizationUserRepository organizationUserRepository,
+        IUserRepository userRepository,
         ICurrentContext currentContext,
         IOrganizationService organizationService)
     {
@@ -30,6 +32,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         _eventService = eventService;
         _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
         _organizationUserRepository = organizationUserRepository;
+        _userRepository = userRepository;
         _currentContext = currentContext;
         _organizationService = organizationService;
     }
@@ -109,7 +112,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             throw new BadRequestException("User is not managed by the organization.");
         }
 
-        var userToDelete = await _userService.GetUserByIdAsync(orgUser.UserId.Value);
+        var userToDelete = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
         if (userToDelete == null)
         {
             throw new NotFoundException("User not found.");

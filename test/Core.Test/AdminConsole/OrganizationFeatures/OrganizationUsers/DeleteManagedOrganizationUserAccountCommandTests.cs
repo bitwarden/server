@@ -26,8 +26,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         // Arrange
         organizationUser.UserId = user.Id;
 
-        sutProvider.GetDependency<IUserService>()
-            .GetUserByIdAsync(user.Id)
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(user.Id)
             .Returns(user);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -217,8 +217,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser2.Id, true } });
 
-        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user1.Id).Returns(user1);
-        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user2.Id).Returns(user2);
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user1.Id).Returns(user1);
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user2.Id).Returns(user2);
 
         // Act
         var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUser1.Id, orgUser2.Id }, null);
@@ -400,8 +400,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser3.Id, false } });
 
-        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user1.Id).Returns(user1);
-        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user3.Id).Returns(user3);
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user1.Id).Returns(user1);
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user3.Id).Returns(user3);
 
         // Act
         var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUser1.Id, orgUser2.Id, orgUser3.Id }, null);
