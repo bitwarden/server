@@ -358,7 +358,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        if (organization.UseSecretsManager && newSeatTotal < organization.SmSeats)
+        if (organization.UseSecretsManager && organization.Seats + seatAdjustment < organization.SmSeats)
         {
             throw new BadRequestException("You cannot have more Password Manager seats than Secrets Manager seats.");
         }
@@ -1181,20 +1181,41 @@ public class OrganizationService : IOrganizationService
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
             // Revert autoscaling
-            if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
-            {
-                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value);
-            }
+            var seatAdjustment = initialSeatCount.HasValue && currentOrganization.Seats.HasValue
+                ? initialSeatCount.Value - currentOrganization.Seats.Value
+                : 0;
 
-            // Revert SmSeat autoscaling
-            if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
-                currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
+            var smSeatAdjustment = initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue
+                ? initialSmSeatCount.Value - currentOrganization.SmSeats.Value
+                : 0;
+
+            // There is a possibility that the initial state may have a lower PM seat count than SM seat count.
+            // In this case we need to revert in the opposite order
+            if (seatAdjustment != 0 && smSeatAdjustment != 0 && initialSeatCount.Value > currentOrganization.SmSeats.Value)
             {
                 var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
                 {
                     SmSeats = initialSmSeatCount.Value
                 };
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
+                await AdjustSeatsAsync(organization, seatAdjustment);
+            }
+            else
+            {
+                // Otherwise continue in the same order
+                if (seatAdjustment != 0)
+                {
+                    await AdjustSeatsAsync(organization, seatAdjustment);
+                }
+
+                if (smSeatAdjustment != 0)
+                {
+                    var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
+                    {
+                        SmSeats = initialSmSeatCount.Value
+                    };
+                    await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
+                }
             }
 
             exceptions.Add(e);
