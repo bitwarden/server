@@ -22,7 +22,6 @@ public static class DeviceTypes
         DeviceType.LinuxCLI
     ];
 
-
     public static IReadOnlyCollection<DeviceType> BrowserExtensionTypes { get; } =
     [
         DeviceType.ChromeExtension,
@@ -45,7 +44,7 @@ public static class DeviceTypes
         DeviceType.UnknownBrowser
     ];
 
-    private static ClientType ToClientType(DeviceType? deviceType)
+    public static ClientType ToClientType(DeviceType? deviceType)
     {
         return deviceType switch
         {
