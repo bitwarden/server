@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core;
@@ -22,6 +21,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
