@@ -23,7 +23,6 @@ public class UsersController : Controller
     private readonly IPaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
-    private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public UsersController(
@@ -32,7 +31,6 @@ public class UsersController : Controller
         IPaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
-        IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _userRepository = userRepository;
@@ -40,7 +38,6 @@ public class UsersController : Controller
         _paymentService = paymentService;
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
-        _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
@@ -63,7 +60,7 @@ public class UsersController : Controller
 
         return View(new UsersModel
         {
-            Items = users.Select(user => UserModel.MapUserModel(user, twoFactorAuthLookup)).ToList(),
+            Items = UserModel.MapUserModels(users, twoFactorAuthLookup).ToList(),
             Email = string.IsNullOrWhiteSpace(email) ? null : email,
             Page = page,
             Count = count,
@@ -74,13 +71,17 @@ public class UsersController : Controller
     public async Task<IActionResult> View(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
+
         if (user == null)
         {
             return RedirectToAction("Index");
         }
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
-        return View(new UserViewModel(user, ciphers));
+
+        var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+
+        return View(new UserViewModel(UserModel.MapUserModel(user, isTwoFactorEnabled), ciphers));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -95,7 +96,8 @@ public class UsersController : Controller
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
-        return View(new UserEditModel(user, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
+        var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        return View(new UserEditModel(UserModel.MapUserModel(user, isTwoFactorEnabled), ciphers, billingInfo, billingHistoryInfo, _globalSettings));
     }
 
     [HttpPost]

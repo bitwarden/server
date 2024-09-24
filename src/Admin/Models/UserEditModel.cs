@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Models;
-using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -12,7 +11,7 @@ public class UserEditModel : UserViewModel
     public UserEditModel() { }
 
     public UserEditModel(
-        User user,
+        UserModel user,
         IEnumerable<Cipher> ciphers,
         BillingInfo billingInfo,
         BillingHistoryInfo billingHistoryInfo,
