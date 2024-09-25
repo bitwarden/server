@@ -1,0 +1,4 @@
+component:
+  admin:
+    labels:
+      "testing": "this-is-a-test"
