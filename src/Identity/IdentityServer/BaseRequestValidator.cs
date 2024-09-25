@@ -27,6 +27,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IEventService _eventService;
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
+    private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoWebTokenProvider;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly ILogger _logger;
@@ -46,6 +47,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        IOrganizationDuoUniversalTokenProvider organizationDuoWebTokenProvider,
+        IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         ILogger logger,
@@ -62,6 +65,8 @@ public abstract class BaseRequestValidator<T> where T : class
         _eventService = eventService;
         _deviceValidator = deviceValidator;
         _twoFactorAuthenticationValidator = twoFactorAuthenticationValidator;
+        _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
+        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _logger = logger;
@@ -326,7 +331,7 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// checks to see if a user is trying to log into a new device 
+    /// checks to see if a user is trying to log into a new device
     /// and has reached the maximum number of failed login attempts.
     /// </summary>
     /// <param name="unknownDevice">boolean</param>
