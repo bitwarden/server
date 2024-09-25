@@ -21,6 +21,7 @@ public class LaunchDarklyFeatureService : IFeatureService
 
     private const string _contextAttributeClientVersion = "client-version";
     private const string _contextAttributeDeviceType = "device-type";
+    private const string _contextAttributeClientType = "client-type";
     private const string _contextAttributeOrganizations = "organizations";
 
     public LaunchDarklyFeatureService(
@@ -149,6 +150,7 @@ public class LaunchDarklyFeatureService : IFeatureService
             if (_currentContext.DeviceType.HasValue)
             {
                 builder.Set(_contextAttributeDeviceType, (int)_currentContext.DeviceType.Value);
+                builder.Set(_contextAttributeClientType, (int)DeviceTypes.ToClientType(_currentContext.DeviceType.Value));
             }
         }
 
