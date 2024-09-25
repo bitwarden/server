@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.NotificationCenter.Enums;
+namespace Bit.Core.Enums;
 
 public enum ClientType : byte
 {

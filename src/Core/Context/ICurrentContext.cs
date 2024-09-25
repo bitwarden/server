@@ -23,7 +23,7 @@ public interface ICurrentContext
     List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
-    ClientType ClientType { get; set; }
+    IdentityClientType IdentityClientType { get; set; }
     bool IsBot { get; set; }
     bool MaybeBot { get; set; }
     int? BotScore { get; set; }
