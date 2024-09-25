@@ -15,6 +15,8 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -70,6 +72,7 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IOrganizationBillingService _organizationBillingService;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -103,7 +106,8 @@ public class OrganizationService : IOrganizationService
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
         IFeatureService featureService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IOrganizationBillingService organizationBillingService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -137,6 +141,7 @@ public class OrganizationService : IOrganizationService
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _organizationBillingService = organizationBillingService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -498,8 +503,7 @@ public class OrganizationService : IOrganizationService
     /// <summary>
     /// Create a new organization in a cloud environment
     /// </summary>
-    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(OrganizationSignup signup,
-        bool provider = false)
+    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(OrganizationSignup signup)
     {
         var plan = StaticStore.GetPlan(signup.Plan);
 
@@ -507,7 +511,7 @@ public class OrganizationService : IOrganizationService
 
         if (signup.UseSecretsManager)
         {
-            if (provider)
+            if (signup.IsFromProvider)
             {
                 throw new BadRequestException(
                     "Organizations with a Managed Service Provider do not support Secrets Manager.");
@@ -515,7 +519,7 @@ public class OrganizationService : IOrganizationService
             ValidateSecretsManagerPlan(plan, signup);
         }
 
-        if (!provider)
+        if (!signup.IsFromProvider)
         {
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
@@ -566,7 +570,7 @@ public class OrganizationService : IOrganizationService
                                              signup.AdditionalServiceAccounts.GetValueOrDefault();
         }
 
-        if (plan.Type == PlanType.Free && !provider)
+        if (plan.Type == PlanType.Free && !signup.IsFromProvider)
         {
             var adminCount =
                 await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
@@ -577,13 +581,23 @@ public class OrganizationService : IOrganizationService
         }
         else if (plan.Type != PlanType.Free)
         {
-            await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                signup.PremiumAccessAddon, signup.TaxInfo, provider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+            var deprecateStripeSourcesAPI = _featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI);
+
+            if (deprecateStripeSourcesAPI)
+            {
+                var sale = OrganizationSale.From(organization, signup);
+                await _organizationBillingService.Finalize(sale);
+            }
+            else
+            {
+                await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
+                    signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                    signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
+                    signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+            }
         }
 
-        var ownerId = provider ? default : signup.Owner.Id;
+        var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;
         var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
@@ -1591,15 +1605,15 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
+    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
+    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
     }
 
-    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId,
+    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
+    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId,
         EventSystemUser systemUser)
     {
         var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null);
@@ -1640,7 +1654,7 @@ public class OrganizationService : IOrganizationService
         return orgUser;
     }
 
-    public async Task DeleteUserAsync(Guid organizationId, Guid userId)
+    public async Task RemoveUserAsync(Guid organizationId, Guid userId)
     {
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
         if (orgUser == null)
@@ -1662,7 +1676,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
+    public async Task<List<Tuple<OrganizationUser, string>>> RemoveUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUsersId,
         Guid? deletingUserId)
     {

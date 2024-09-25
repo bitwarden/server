@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -102,6 +103,37 @@ public class SubscriberService(
         }
     }
 
+    public async Task<string> CreateBraintreeCustomer(
+        ISubscriber subscriber,
+        string paymentMethodNonce)
+    {
+        var braintreeCustomerId =
+            subscriber.BraintreeCustomerIdPrefix() +
+            subscriber.Id.ToString("N").ToLower() +
+            CoreHelpers.RandomString(3, upper: false, numeric: false);
+
+        var customerResult = await braintreeGateway.Customer.CreateAsync(new CustomerRequest
+        {
+            Id = braintreeCustomerId,
+            CustomFields = new Dictionary<string, string>
+            {
+                [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
+                [subscriber.BraintreeCloudRegionField()] = globalSettings.BaseServiceUri.CloudRegion
+            },
+            Email = subscriber.BillingEmailAddress(),
+            PaymentMethodNonce = paymentMethodNonce,
+        });
+
+        if (customerResult.IsSuccess())
+        {
+            return customerResult.Target.Id;
+        }
+
+        logger.LogError("Failed to create Braintree customer for subscriber ({ID})", subscriber.Id);
+
+        throw new BillingException();
+    }
+
     public async Task<Customer> GetCustomer(
         ISubscriber subscriber,
         CustomerGetOptions customerGetOptions = null)
@@ -181,10 +213,15 @@ public class SubscriberService(
     {
         ArgumentNullException.ThrowIfNull(subscriber);
 
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
+        var customer = await GetCustomer(subscriber, new CustomerGetOptions
         {
             Expand = ["default_source", "invoice_settings.default_payment_method", "subscriptions", "tax_ids"]
         });
+
+        if (customer == null)
+        {
+            return PaymentMethod.Empty;
+        }
 
         var accountCredit = customer.Balance * -1 / 100;
 
@@ -530,7 +567,7 @@ public class SubscriberService(
                         }
                     }
 
-                    braintreeCustomerId = await CreateBraintreeCustomerAsync(subscriber, token);
+                    braintreeCustomerId = await CreateBraintreeCustomer(subscriber, token);
 
                     await AddBraintreeCustomerIdAsync(customer, braintreeCustomerId);
 
@@ -554,7 +591,7 @@ public class SubscriberService(
 
         var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
         {
-            Expand = ["tax_ids"]
+            Expand = ["subscriptions", "tax", "tax_ids"]
         });
 
         await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
@@ -591,6 +628,23 @@ public class SubscriberService(
                 });
             }
         }
+
+        if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+        {
+            await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                new SubscriptionUpdateOptions
+                {
+                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
+                    DefaultTaxRates = []
+                });
+        }
+
+        return;
+
+        bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
+            => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
+               (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
+               localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
     }
 
     public async Task VerifyBankAccount(
@@ -646,37 +700,6 @@ public class SubscriberService(
         {
             Metadata = metadata
         });
-    }
-
-    private async Task<string> CreateBraintreeCustomerAsync(
-        ISubscriber subscriber,
-        string paymentMethodNonce)
-    {
-        var braintreeCustomerId =
-            subscriber.BraintreeCustomerIdPrefix() +
-            subscriber.Id.ToString("N").ToLower() +
-            CoreHelpers.RandomString(3, upper: false, numeric: false);
-
-        var customerResult = await braintreeGateway.Customer.CreateAsync(new CustomerRequest
-        {
-            Id = braintreeCustomerId,
-            CustomFields = new Dictionary<string, string>
-            {
-                [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
-                [subscriber.BraintreeCloudRegionField()] = globalSettings.BaseServiceUri.CloudRegion
-            },
-            Email = subscriber.BillingEmailAddress(),
-            PaymentMethodNonce = paymentMethodNonce,
-        });
-
-        if (customerResult.IsSuccess())
-        {
-            return customerResult.Target.Id;
-        }
-
-        logger.LogError("Failed to create Braintree customer for subscriber ({ID})", subscriber.Id);
-
-        throw new BillingException();
     }
 
     private async Task<PaymentSource> GetPaymentSourceAsync(

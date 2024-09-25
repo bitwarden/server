@@ -15,7 +15,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -24,6 +23,8 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
@@ -198,71 +199,6 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_HandlesNullPermissionsObject(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-        organizationUsers.First().Permissions = "null";
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_SetsDeprecatedCustomPermissionstoFalse(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-
-        var customUser = organizationUsers.First();
-        customUser.Type = OrganizationUserType.Custom;
-        customUser.Permissions = CoreHelpers.ClassToJsonData(new Permissions
-        {
-            AccessReports = true,
-            EditAssignedCollections = true,
-            DeleteAssignedCollections = true,
-            AccessEventLogs = true
-        });
-
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        var customUserResponse = response.Data.First(r => r.Id == organizationUsers.First().Id);
-        Assert.Equal(OrganizationUserType.Custom, customUserResponse.Type);
-        Assert.True(customUserResponse.Permissions.AccessReports);
-        Assert.True(customUserResponse.Permissions.AccessEventLogs);
-        Assert.False(customUserResponse.Permissions.EditAssignedCollections);
-        Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_DowngradesCustomUsersWithDeprecatedPermissions(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-
-        var customUser = organizationUsers.First();
-        customUser.Type = OrganizationUserType.Custom;
-        customUser.Permissions = CoreHelpers.ClassToJsonData(new Permissions
-        {
-            EditAssignedCollections = true,
-            DeleteAssignedCollections = true,
-        });
-
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        var customUserResponse = response.Data.First(r => r.Id == organizationUsers.First().Id);
-        Assert.Equal(OrganizationUserType.User, customUserResponse.Type);
-        Assert.False(customUserResponse.Permissions.EditAssignedCollections);
-        Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task GetAccountRecoveryDetails_ReturnsDetails(
         Guid organizationId,
         OrganizationUserBulkRequestModel bulkRequestModel,
@@ -317,7 +253,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
             .Received(1)
-            .DeleteUserAsync(orgId, id);
+            .DeleteUserAsync(orgId, id, currentUser.Id);
     }
 
     [Theory]
@@ -371,23 +307,23 @@ public class OrganizationUsersControllerTests
         Guid orgId,
         SecureOrganizationUserBulkRequestModel model,
         User currentUser,
-        List<(OrganizationUser, string)> deleteResults,
+        List<(Guid, string)> deleteResults,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(currentUser, model.Secret).Returns(true);
         sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
-            .DeleteManyUsersAsync(orgId, model.Ids)
+            .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id)
             .Returns(deleteResults);
 
         var response = await sutProvider.Sut.BulkDeleteAccount(orgId, model);
 
         Assert.Equal(deleteResults.Count, response.Data.Count());
-        Assert.True(response.Data.All(r => deleteResults.Any(res => res.Item1.Id == r.Id && res.Item2 == r.Error)));
+        Assert.True(response.Data.All(r => deleteResults.Any(res => res.Item1 == r.Id && res.Item2 == r.Error)));
         await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
             .Received(1)
-            .DeleteManyUsersAsync(orgId, model.Ids);
+            .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
     }
 
     [Theory]
@@ -442,6 +378,8 @@ public class OrganizationUsersControllerTests
         }
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
             .Returns(organizationAbility);
+
+        sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>().GetOrganizationUserUserDetails(Arg.Any<OrganizationUserUserDetailsQueryRequest>()).Returns(organizationUsers);
 
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
             user: Arg.Any<ClaimsPrincipal>(),

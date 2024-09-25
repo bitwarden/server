@@ -13,3 +13,12 @@ CREATE TABLE [dbo].[OrganizationDomain] (
 );
 
 GO
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_OrganizationIdVerifiedDate]
+    ON [dbo].[OrganizationDomain] ([OrganizationId],[VerifiedDate]);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_VerifiedDate]
+    ON [dbo].[OrganizationDomain] ([VerifiedDate])
+    INCLUDE ([OrganizationId],[DomainName]);
+GO

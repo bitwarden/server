@@ -16,6 +16,8 @@
 @await Html.PartialAsync("_ViewInformation", Model)
 @await Html.PartialAsync("Admins", Model)
 <form method="post" id="edit-form">
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+    <input type="hidden" asp-for="Type" readonly>
     <h2>General</h2>
     <dl class="row">
         <dt class="col-sm-4 col-lg-3">Name</dt>

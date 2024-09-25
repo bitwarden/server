@@ -23,6 +23,9 @@ public class GetOrganizationUsersManagementStatusQuery : IGetOrganizationUsersMa
         {
             // Users can only be managed by an Organization that is enabled and can have organization domains
             var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+
+            // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
+            // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
             if (organizationAbility is { Enabled: true, UseSso: true })
             {
                 // Get all organization users with claimed domains by the organization
