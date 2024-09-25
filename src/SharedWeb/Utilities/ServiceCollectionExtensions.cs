@@ -371,8 +371,8 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
-        services.AddScoped<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
-        services.AddScoped<ITemporaryDuoWebV4SDKService, TemporaryDuoWebV4SDKService>();
+        services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
+        services.AddScoped<IDuoTokenProvider, DuoTokenProvider>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
@@ -413,7 +413,7 @@ public static class ServiceCollectionExtensions
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
-            .AddTokenProvider<DuoWebTokenProvider>(
+            .AddTokenProvider<DuoUniversalTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Duo))
             .AddTokenProvider<TwoFactorRememberTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))
