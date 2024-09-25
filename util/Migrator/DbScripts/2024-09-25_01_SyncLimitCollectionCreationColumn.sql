@@ -1,6 +1,8 @@
 -- Sync existing data
 UPDATE [dbo].[Organization]
 SET
-  [LimitCollectionCreation] = [LimitCollectionCreationDeletion],
-  [LimitCollectionDeletion] = [LimitCollectionCreationDeletion]
+  [LimitCollectionCreation] = 1,
+  [LimitCollectionDeletion] = 1
+WHERE [LimitCollectionCreationDeletion] = 1
 GO
+
