@@ -44,6 +44,8 @@ using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
 
+#nullable enable
+
 namespace Bit.Core.Test.Services;
 
 [SutProviderCustomize]
@@ -1866,15 +1868,21 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         await applicationCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
     }
 
-    private void RestoreRevokeUser_Setup(Organization organization,
-        OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
+    private void RestoreRevokeUser_Setup(
+        Organization organization,
+        OrganizationUser? requestingOrganizationUser,
+        OrganizationUser targetOrganizationUser,
+        SutProvider<OrganizationService> sutProvider)
     {
-        organizationUser.OrganizationId = organization.Id;
+        if (requestingOrganizationUser != null)
+        {
+            requestingOrganizationUser.OrganizationId = organization.Id;
+        }
+        targetOrganizationUser.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationUser.OrganizationId).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(requestingOrganizationUser != null && requestingOrganizationUser.Type is OrganizationUserType.Owner);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(requestingOrganizationUser != null && (requestingOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin));
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
@@ -1884,7 +1892,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     public async Task RevokeUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
     {
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
@@ -1898,7 +1906,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     [Theory, BitAutoData]
     public async Task RevokeUser_WithEventSystemUser_Success(Organization organization, [OrganizationUser] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<OrganizationService> sutProvider)
     {
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, null, organizationUser, sutProvider);
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
@@ -1913,7 +1921,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     public async Task RestoreUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
     {
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -1928,7 +1936,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     [Theory, BitAutoData]
     public async Task RestoreUser_WithEventSystemUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<OrganizationService> sutProvider)
     {
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, null, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -1945,7 +1953,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.UserId = owner.Id;
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -1963,11 +1971,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Custom)]
-    public async Task RestoreUser_AdminRestoreOwner_Fails(OrganizationUserType restoringUserType, Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser restoringUser,
+    public async Task RestoreUser_AdminRestoreOwner_Fails(OrganizationUserType restoringUserType,
+        Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser restoringUser,
         [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
     {
         restoringUser.Type = restoringUserType;
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, restoringUser, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -1990,7 +1999,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.Status = userStatus;
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -2015,7 +2024,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         secondOrganizationUser.UserId = organizationUser.UserId;
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -2044,7 +2053,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -2072,17 +2081,17 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.Email = null;
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
-
         userService.TwoFactorIsEnabledAsync(Arg.Any<ITwoFactorProvidersUser>()).Returns(false);
+
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
@@ -2103,7 +2112,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -2132,7 +2141,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         secondOrganizationUser.UserId = organizationUser.UserId;
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -2168,7 +2177,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         secondOrganizationUser.UserId = organizationUser.UserId;
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -2203,14 +2212,16 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
 
         organizationUser.Email = null;
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
+
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
+
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
@@ -2233,7 +2244,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
 
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
-        RestoreRevokeUser_Setup(organization, organizationUser, sutProvider);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
