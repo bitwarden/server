@@ -3,7 +3,6 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Context;
@@ -236,7 +235,6 @@ public class DevicesController : Controller
         return device != null;
     }
 
-    [RequireFeature(FeatureFlagKeys.DeviceTrustLogging)]
     [HttpPost("lost-trust")]
     public void PostLostTrust()
     {
