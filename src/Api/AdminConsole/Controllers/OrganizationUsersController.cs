@@ -554,8 +554,7 @@ public class OrganizationUsersController : Controller
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
-        var userId = _userService.GetProperUserId(User);
-        await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, userId);
+        await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
     }
 
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
@@ -580,8 +579,7 @@ public class OrganizationUsersController : Controller
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
-        var userId = _userService.GetProperUserId(User);
-        var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, userId);
+        var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
             new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
