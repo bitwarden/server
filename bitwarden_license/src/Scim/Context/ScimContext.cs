@@ -13,7 +13,7 @@ public class ScimContext : IScimContext
     private bool _builtHttpContext;
 
     // See IP list from Ping in docs: https://support.pingidentity.com/s/article/PingOne-IP-Addresses
-    private readonly HashSet<string> _pingIpAddresses =
+    private static readonly HashSet<string> _pingIpAddresses =
     [
         "18.217.152.87",
         "52.14.10.143",
