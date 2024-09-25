@@ -2,7 +2,7 @@
 
 #nullable enable
 
-public class CustomerSetup
+public class PaymentSetup
 {
     public TokenizedPaymentSource? TokenizedPaymentSource { get; set; }
     public TaxInformation? TaxInformation { get; set; }

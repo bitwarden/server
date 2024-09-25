@@ -6,20 +6,20 @@ namespace Bit.Core.Billing.Models.Sales;
 
 public class SubscriptionSetup
 {
-    public required Plan Plan { get; set; }
-    public required PasswordManager PasswordManagerOptions { get; set; }
-    public SecretsManager? SecretsManagerOptions { get; set; }
+    public required Plan Plan { get; init; }
+    public required PasswordManager PasswordManagerOptions { get; init; }
+    public SecretsManager? SecretsManagerOptions { get; init; }
 
     public class PasswordManager
     {
-        public required int Seats { get; set; }
-        public short? Storage { get; set; }
-        public bool? PremiumAccess { get; set; }
+        public required int Seats { get; init; }
+        public short? Storage { get; init; }
+        public bool? PremiumAccess { get; init; }
     }
 
     public class SecretsManager
     {
-        public required int Seats { get; set; }
-        public int? ServiceAccounts { get; set; }
+        public required int Seats { get; init; }
+        public int? ServiceAccounts { get; init; }
     }
 }

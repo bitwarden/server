@@ -12,16 +12,16 @@ public class OrganizationSale
 
     public void Deconstruct(
         out Organization organization,
-        out CustomerSetup? customerSetup,
+        out PaymentSetup? customerSetup,
         out SubscriptionSetup subscriptionSetup)
     {
         organization = Organization;
-        customerSetup = CustomerSetup;
+        customerSetup = PaymentSetup;
         subscriptionSetup = SubscriptionSetup;
     }
 
     public required Organization Organization { get; init; }
-    public CustomerSetup? CustomerSetup { get; init; }
+    public PaymentSetup? PaymentSetup { get; private init; }
     public required SubscriptionSetup SubscriptionSetup { get; init; }
 
     public static OrganizationSale From(
@@ -29,7 +29,7 @@ public class OrganizationSale
         OrganizationSignup signup) => new()
         {
             Organization = organization,
-            CustomerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null,
+            PaymentSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null,
             SubscriptionSetup = GetSubscriptionSetup(signup)
         };
 
@@ -41,9 +41,9 @@ public class OrganizationSale
             SubscriptionSetup = GetSubscriptionSetup(upgrade)
         };
 
-    private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
+    private static PaymentSetup GetCustomerSetup(OrganizationSignup signup)
     {
-        var customerSetup = new CustomerSetup
+        var paymentSetup = new PaymentSetup
         {
             Coupon = signup.IsFromProvider
             ? StripeConstants.CouponIDs.MSPDiscount35
@@ -54,14 +54,14 @@ public class OrganizationSale
 
         if (!signup.PaymentMethodType.HasValue)
         {
-            return customerSetup;
+            return paymentSetup;
         }
 
-        customerSetup.TokenizedPaymentSource = new TokenizedPaymentSource(
+        paymentSetup.TokenizedPaymentSource = new TokenizedPaymentSource(
             signup.PaymentMethodType!.Value,
             signup.PaymentToken);
 
-        customerSetup.TaxInformation = new TaxInformation(
+        paymentSetup.TaxInformation = new TaxInformation(
             signup.TaxInfo.BillingAddressCountry,
             signup.TaxInfo.BillingAddressPostalCode,
             signup.TaxInfo.TaxIdNumber,
@@ -70,7 +70,7 @@ public class OrganizationSale
             signup.TaxInfo.BillingAddressCity,
             signup.TaxInfo.BillingAddressState);
 
-        return customerSetup;
+        return paymentSetup;
     }
 
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)

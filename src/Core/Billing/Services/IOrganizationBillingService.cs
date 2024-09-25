@@ -13,7 +13,7 @@ public interface IOrganizationBillingService
     /// <para>
     /// The method first checks to see if the
     /// provided <see cref="OrganizationSale.Organization"/> already has a Stripe <see cref="Stripe.Customer"/> using the <see cref="Organization.GatewayCustomerId"/>.
-    /// If it doesn't, the method creates one using the <paramref name="sale"/>'s <see cref="OrganizationSale.CustomerSetup"/>. The method then creates a Stripe <see cref="Stripe.Subscription"/>
+    /// If it doesn't, the method creates one using the <paramref name="sale"/>'s <see cref="OrganizationSale.PaymentSetup"/>. The method then creates a Stripe <see cref="Stripe.Subscription"/>
     /// for the created or existing customer using the provided <see cref="OrganizationSale.SubscriptionSetup"/>.
     /// </para>
     /// </summary>

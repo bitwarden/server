@@ -16,6 +16,12 @@ public interface IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
+    Task<Invoice> FinalizeInvoice(
+        string invoiceId,
+        InvoiceFinalizeOptions invoiceFinalizeOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
     Task<Invoice> GetInvoice(
         string invoiceId,
         InvoiceGetOptions invoiceGetOptions = null,

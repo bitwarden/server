@@ -46,14 +46,6 @@ public interface IStripeEventUtilityService
     /// <returns>A task representing the asynchronous operation. The task result contains a boolean value indicating whether the invoice payment attempt was successful.</returns>
     Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false);
 
-
-    /// <summary>
-    /// Determines whether an invoice should be attempted to be paid based on certain criteria.
-    /// </summary>
-    /// <param name="invoice">The invoice to be evaluated.</param>
-    /// <returns>A boolean value indicating whether the invoice should be attempted to be paid.</returns>
-    bool ShouldAttemptToPayInvoice(Invoice invoice);
-
     /// <summary>
     /// The ID for the premium annual plan.
     /// </summary>

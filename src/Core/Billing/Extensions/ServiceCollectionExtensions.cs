@@ -11,6 +11,7 @@ public static class ServiceCollectionExtensions
 {
     public static void AddBillingOperations(this IServiceCollection services)
     {
+        services.AddTransient<IPremiumBillingService, PremiumBillingService>();
         services.AddTransient<IOrganizationBillingService, OrganizationBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();

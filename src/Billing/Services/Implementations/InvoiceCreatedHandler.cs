@@ -1,35 +1,54 @@
-﻿using Event = Stripe.Event;
+﻿using Bit.Billing.Constants;
+using Stripe;
 
 namespace Bit.Billing.Services.Implementations;
 
-public class InvoiceCreatedHandler : IInvoiceCreatedHandler
+public class InvoiceCreatedHandler(
+    ILogger<InvoiceCreatedHandler> logger,
+    IStripeEventService stripeEventService,
+    IStripeEventUtilityService stripeEventUtilityService,
+    IProviderEventService providerEventService)
+    : IInvoiceCreatedHandler
 {
-    private readonly IStripeEventService _stripeEventService;
-    private readonly IStripeEventUtilityService _stripeEventUtilityService;
-    private readonly IProviderEventService _providerEventService;
-
-    public InvoiceCreatedHandler(
-        IStripeEventService stripeEventService,
-        IStripeEventUtilityService stripeEventUtilityService,
-        IProviderEventService providerEventService)
-    {
-        _stripeEventService = stripeEventService;
-        _stripeEventUtilityService = stripeEventUtilityService;
-        _providerEventService = providerEventService;
-    }
-
     /// <summary>
     /// Handles the <see cref="HandledStripeWebhook.InvoiceCreated"/> event type from Stripe.
     /// </summary>
     /// <param name="parsedEvent"></param>
     public async Task HandleAsync(Event parsedEvent)
     {
-        var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-        if (_stripeEventUtilityService.ShouldAttemptToPayInvoice(invoice))
+        try
         {
-            await _stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
+            var invoice = await stripeEventService.GetInvoice(parsedEvent, true, ["customer"]);
+
+            var usingPayPal = invoice.Customer?.Metadata.ContainsKey("btCustomerId") ?? false;
+
+            if (usingPayPal && invoice is
+                {
+                    AmountDue: > 0,
+                    Paid: false,
+                    CollectionMethod: "charge_automatically",
+                    BillingReason:
+                        "subscription_create" or
+                        "subscription_cycle" or
+                        "automatic_pending_invoice_item_invoice",
+                    SubscriptionId: not null and not ""
+                })
+            {
+                await stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to attempt paying for invoice while handling 'invoice.created' event");
         }
 
-        await _providerEventService.TryRecordInvoiceLineItems(parsedEvent);
+        try
+        {
+            await providerEventService.TryRecordInvoiceLineItems(parsedEvent);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to record provider invoice line items while handling 'invoice.created' event");
+        }
     }
 }
