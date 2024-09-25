@@ -1188,7 +1188,6 @@ public class OrganizationService : IOrganizationService
                 var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
                 {
                     SmSeats = initialSmSeatCount.Value
-
                 };
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
             }
