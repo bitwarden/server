@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -55,6 +56,7 @@ public class OrganizationsController : Controller
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -74,7 +76,8 @@ public class OrganizationsController : Controller
         IPushNotificationService pushNotificationService,
         IProviderRepository providerRepository,
         IProviderBillingService providerBillingService,
-        IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -94,6 +97,7 @@ public class OrganizationsController : Controller
         _providerRepository = providerRepository;
         _providerBillingService = providerBillingService;
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -231,7 +235,7 @@ public class OrganizationsController : Controller
         }
 
 
-        await _organizationService.RemoveUserAsync(orgGuidId, user.Id);
+        await _removeOrganizationUserCommand.RemoveUserAsync(orgGuidId, user.Id);
     }
 
     [HttpDelete("{id}")]

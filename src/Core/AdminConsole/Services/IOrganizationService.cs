@@ -55,7 +55,6 @@ public interface IOrganizationService
         Guid confirmingUserId, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync_vNext(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId);
-    Task RemoveUserAsync(Guid organizationId, Guid userId);
     Task<List<Tuple<OrganizationUser, string>>> RemoveUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);

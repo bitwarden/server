@@ -157,7 +157,7 @@ public class TwoFactorController : Controller
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
 
-        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
+        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
         return new TwoFactorProviderResponseModel(model.Type.Value, user);
     }
 
@@ -412,7 +412,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorProviderResponseModel> PutDisable([FromBody] TwoFactorProviderRequestModel model)
     {
         var user = await CheckAsync(model, false);
-        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
+        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
         var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
         return response;
     }
@@ -453,8 +453,7 @@ public class TwoFactorController : Controller
     [AllowAnonymous]
     public async Task PostRecover([FromBody] TwoFactorRecoveryRequestModel model)
     {
-        if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode,
-                _organizationService))
+        if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
         {
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "Invalid information. Try again.");

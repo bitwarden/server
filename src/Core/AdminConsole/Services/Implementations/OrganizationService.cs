@@ -1608,28 +1608,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task RemoveUserAsync(Guid organizationId, Guid userId)
-    {
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-        if (orgUser == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        await _organizationUserRepository.DeleteAsync(orgUser);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-
-        if (orgUser.UserId.HasValue)
-        {
-            await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
-        }
-    }
-
     public async Task<List<Tuple<OrganizationUser, string>>> RemoveUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUsersId,
         Guid? deletingUserId)
