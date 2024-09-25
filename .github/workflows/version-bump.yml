@@ -169,7 +169,7 @@ jobs:
         run: git push -u origin $PR_BRANCH
 
       - name: Generate GH App token
-        uses: actions/create-github-app-token@3378cda945da322a8db4b193e19d46352ebe2de5 # v1.10.4
+        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
         id: app-token
         with:
           app-id: ${{ secrets.BW_GHAPP_ID }}
