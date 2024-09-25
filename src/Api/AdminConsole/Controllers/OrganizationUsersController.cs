@@ -525,7 +525,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.RemoveUsersAsync(orgGuidId, model.Ids, userId.Value);
+        var result = await _removeOrganizationUserCommand.RemoveUsersAsync(orgGuidId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }

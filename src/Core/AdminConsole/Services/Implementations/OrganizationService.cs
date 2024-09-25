@@ -1608,66 +1608,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task<List<Tuple<OrganizationUser, string>>> RemoveUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUsersId,
-        Guid? deletingUserId)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
-        var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
-            .ToList();
-
-        if (!filteredUsers.Any())
-        {
-            throw new BadRequestException("Users invalid.");
-        }
-
-        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        var deletingUserIsOwner = false;
-        if (deletingUserId.HasValue)
-        {
-            deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
-        }
-
-        var result = new List<Tuple<OrganizationUser, string>>();
-        var deletedUserIds = new List<Guid>();
-        foreach (var orgUser in filteredUsers)
-        {
-            try
-            {
-                if (deletingUserId.HasValue && orgUser.UserId == deletingUserId)
-                {
-                    throw new BadRequestException("You cannot remove yourself.");
-                }
-
-                if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue && !deletingUserIsOwner)
-                {
-                    throw new BadRequestException("Only owners can delete other owners.");
-                }
-
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-
-                if (orgUser.UserId.HasValue)
-                {
-                    await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
-                }
-                result.Add(Tuple.Create(orgUser, ""));
-                deletedUserIds.Add(orgUser.Id);
-            }
-            catch (BadRequestException e)
-            {
-                result.Add(Tuple.Create(orgUser, e.Message));
-            }
-
-            await _organizationUserRepository.DeleteManyAsync(deletedUserIds);
-        }
-
-        return result;
-    }
-
     public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
     {
         // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
