@@ -4,6 +4,8 @@ using Bit.Core.Billing.Models.Sales;
 
 namespace Bit.Core.Billing.Services;
 
+#nullable enable
+
 public interface IOrganizationBillingService
 {
     /// <summary>
@@ -29,7 +31,7 @@ public interface IOrganizationBillingService
     /// </summary>
     /// <param name="organizationId">The ID of the organization to retrieve metadata for.</param>
     /// <returns>An <see cref="OrganizationMetadata"/> record.</returns>
-    Task<OrganizationMetadata> GetMetadata(Guid organizationId);
+    Task<OrganizationMetadata?> GetMetadata(Guid organizationId);
 
     /// <summary>
     /// Updates the provided <paramref name="organization"/>'s payment source and tax information.
