@@ -53,14 +53,16 @@ public class RemoveOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RemoveUser_NotFound_Throws(SutProvider<RemoveOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
+    public async Task RemoveUser_NotFound_ThrowsException(SutProvider<RemoveOrganizationUserCommand> sutProvider,
+        Guid organizationId, Guid organizationUserId)
     {
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, null));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RemoveUser_MismatchingOrganizationId_Throws(SutProvider<RemoveOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
+    public async Task RemoveUser_MismatchingOrganizationId_ThrowsException(
+        SutProvider<RemoveOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)
@@ -74,7 +76,8 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUser_InvalidUser(OrganizationUser organizationUser, OrganizationUser deletingUser,
+    public async Task RemoveUser_InvalidUser_ThrowsException(
+        OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -87,7 +90,7 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUser_RemoveYourself(OrganizationUser deletingUser, SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    public async Task RemoveUser_RemoveYourself_ThrowsException(OrganizationUser deletingUser, SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
@@ -99,7 +102,7 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUser_NonOwnerRemoveOwner(
+    public async Task RemoveUser_NonOwnerRemoveOwner_ThrowsException(
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
@@ -136,7 +139,7 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUsers_FilterInvalid(OrganizationUser organizationUser, OrganizationUser deletingUser,
+    public async Task RemoveUsers_FilterInvalid_ThrowsException(OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -150,7 +153,7 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUsers_RemoveYourself(
+    public async Task RemoveUsers_RemoveYourself_ThrowsException(
         OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
@@ -167,7 +170,7 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUsers_NonOwnerRemoveOwner(
+    public async Task RemoveUsers_NonOwnerRemoveOwner_ThrowsException(
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser orgUser2,
@@ -188,7 +191,7 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUsers_LastOwner(
+    public async Task RemoveUsers_LastOwner_ThrowsException(
         [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
