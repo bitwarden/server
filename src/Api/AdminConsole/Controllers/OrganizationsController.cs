@@ -158,7 +158,22 @@ public class OrganizationsController : Controller
 
     [HttpPost("")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<OrganizationResponseModel> Post([FromBody] OrganizationCreateRequestBase model)
+    public async Task<OrganizationResponseModel> Post([FromBody] OrganizationCreateRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var organizationSignup = model.ToOrganizationSignup(user);
+        var result = await _organizationService.SignUpAsync(organizationSignup);
+        return new OrganizationResponseModel(result.Item1);
+    }
+
+    [HttpPost("create-without-payment")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<OrganizationResponseModel> CreateWithoutPaymentAsync([FromBody] OrganizationNoPaymentCreateRequest model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
