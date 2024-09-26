@@ -124,8 +124,7 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.Leave(orgId.ToString()));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
         Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
             exception.Message);
@@ -159,7 +158,7 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-        await _sut.Leave(orgId.ToString());
+        await _sut.Leave(orgId);
 
         await _removeOrganizationUserCommand.Received(1).RemoveUserAsync(orgId, user.Id);
     }

@@ -218,24 +218,22 @@ public class OrganizationsController : Controller
     }
 
     [HttpPost("{id}/leave")]
-    public async Task Leave(string id)
+    public async Task Leave(Guid id)
     {
-        var orgGuidId = new Guid(id);
-        if (!await _currentContext.OrganizationUser(orgGuidId))
+        if (!await _currentContext.OrganizationUser(id))
         {
             throw new NotFoundException();
         }
 
         var user = await _userService.GetUserByPrincipalAsync(User);
 
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector && user.UsesKeyConnector)
         {
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }
 
-
-        await _removeOrganizationUserCommand.RemoveUserAsync(orgGuidId, user.Id);
+        await _removeOrganizationUserCommand.RemoveUserAsync(id, user.Id);
     }
 
     [HttpDelete("{id}")]
