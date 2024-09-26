@@ -73,7 +73,6 @@ public class OrganizationService : IOrganizationService
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationBillingService _organizationBillingService;
-    private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -108,8 +107,7 @@ public class OrganizationService : IOrganizationService
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationBillingService organizationBillingService,
-        IOrganizationSubscriptionService organizationSubscriptionService)
+        IOrganizationBillingService organizationBillingService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -144,7 +142,6 @@ public class OrganizationService : IOrganizationService
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationBillingService = organizationBillingService;
-        _organizationSubscriptionService = organizationSubscriptionService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -593,19 +590,10 @@ public class OrganizationService : IOrganizationService
             }
             else
             {
-                if (signup.PaymentMethodType != null)
-                {
-                    await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                        signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
-                }
-                else
-                {
-                    await _organizationSubscriptionService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
-                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
-                }
+                await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
+                       signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                       signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
+                       signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
             }
         }
 
