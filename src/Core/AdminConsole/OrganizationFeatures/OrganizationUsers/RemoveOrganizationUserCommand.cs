@@ -61,18 +61,9 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
         ValidateDeleteUser(organizationId, organizationUser);
 
-        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUser!.Id }))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
+        await RepositoryDeleteUserAsync(organizationUser, null);
 
-        await _organizationUserRepository.DeleteAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
-
-        if (organizationUser.UserId.HasValue)
-        {
-            await DeleteAndPushUserRegistrationAsync(organizationId, organizationUser.UserId.Value);
-        }
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> RemoveUsersAsync(Guid organizationId,
