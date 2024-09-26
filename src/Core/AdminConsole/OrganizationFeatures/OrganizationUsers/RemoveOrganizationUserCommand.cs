@@ -38,41 +38,40 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
     public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
-        var orgUser = await ValidateDeleteUserAsync(organizationId, organizationUserId);
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        ValidateDeleteUser(organizationId, organizationUser);
 
-        await RepositoryDeleteUserAsync(orgUser, deletingUserId);
+        await RepositoryDeleteUserAsync(organizationUser, deletingUserId);
 
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
     }
 
     public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, EventSystemUser eventSystemUser)
     {
-        var orgUser = await ValidateDeleteUserAsync(organizationId, organizationUserId);
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        ValidateDeleteUser(organizationId, organizationUser);
 
-        await RepositoryDeleteUserAsync(orgUser, null);
+        await RepositoryDeleteUserAsync(organizationUser, null);
 
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, eventSystemUser);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
     }
 
     public async Task RemoveUserAsync(Guid organizationId, Guid userId)
     {
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-        if (orgUser == null)
-        {
-            throw new NotFoundException();
-        }
+        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+        ValidateDeleteUser(organizationId, organizationUser);
 
-        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }))
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUser!.Id }))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        await _organizationUserRepository.DeleteAsync(orgUser);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
+        await _organizationUserRepository.DeleteAsync(organizationUser);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
 
-        if (orgUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
-            await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
+            await DeleteAndPushUserRegistrationAsync(organizationId, organizationUser.UserId.Value);
         }
     }
 
@@ -136,15 +135,12 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         return result;
     }
 
-    private async Task<OrganizationUser> ValidateDeleteUserAsync(Guid organizationId, Guid organizationUserId)
+    private void ValidateDeleteUser(Guid organizationId, OrganizationUser orgUser)
     {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
         {
             throw new NotFoundException("User not found.");
         }
-
-        return orgUser;
     }
 
     private async Task RepositoryDeleteUserAsync(OrganizationUser orgUser, Guid? deletingUserId)
