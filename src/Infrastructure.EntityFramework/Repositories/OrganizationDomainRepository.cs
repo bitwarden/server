@@ -95,6 +95,28 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return ssoDetails;
     }
 
+    public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetailData>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
+    {
+        var domainName = new MailAddress(email).Host;
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        return await (from o in dbContext.Organizations
+                      from od in o.Domains
+                      join s in dbContext.SsoConfigs on o.Id equals s.OrganizationId into sJoin
+                      from s in sJoin.DefaultIfEmpty()
+                      where od.DomainName == domainName && o.Enabled
+                      select new VerifiedOrganizationDomainSsoDetailData(
+                          o.Id,
+                          o.Name,
+                          od.DomainName,
+                           o.SsoConfigs.Any(sc => sc.Enabled),
+                          o.Identifier,
+                          od.VerifiedDate ?? DateTime.UtcNow))
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
     public async Task<Core.Entities.OrganizationDomain?> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
     {
         using var scope = ServiceScopeFactory.CreateScope();

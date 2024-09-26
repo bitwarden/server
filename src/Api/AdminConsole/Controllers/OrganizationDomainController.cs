@@ -133,6 +133,24 @@ public class OrganizationDomainController : Controller
         return new OrganizationDomainSsoDetailsResponseModel(ssoResult);
     }
 
+    [AllowAnonymous]
+    [HttpPost("domain/verified")]
+    public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
+        [FromBody] OrganizationDomainSsoDetailsRequestModel model)
+    {
+        var ssoResults = (await _organizationDomainRepository
+            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email))
+            .ToList();
+
+        if (ssoResults is null || ssoResults.Count == 0)
+        {
+            throw new NotFoundException("Claimed org domain not found");
+        }
+
+        return new VerifiedOrganizationDomainSsoDetailsResponseModel(
+            ssoResults.Select(ssoResult => new VerifiedOrganizationDomainSsoDetailResponseModel(ssoResult)));
+    }
+
     private async Task ValidateOrganizationAccessAsync(Guid orgIdGuid)
     {
         if (!await _currentContext.ManageSso(orgIdGuid))
