@@ -1867,7 +1867,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, SecretsManagerOrganizationCustomize]
-    [BitAutoData("You cannot have more Password Manager seats than Secrets Manager seats.", -1)]
+    [BitAutoData("You cannot have more Secrets Manager seats than Password Manager seats.", -1)]
     public async Task UpdateSubscription_PmSeatAdjustmentLessThanSmSeats_Throws(string expectedMessage,
         int seatAdjustment, Organization organization, SutProvider<OrganizationService> sutProvider)
     {
