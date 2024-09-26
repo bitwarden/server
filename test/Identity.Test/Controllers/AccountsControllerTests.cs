@@ -86,7 +86,7 @@ public class AccountsControllerTests : IDisposable
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default
         };
-        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult(userKdfInfo));
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
@@ -97,7 +97,7 @@ public class AccountsControllerTests : IDisposable
     [Fact]
     public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
     {
-        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation>(null!));
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
@@ -111,7 +111,7 @@ public class AccountsControllerTests : IDisposable
         var passwordHash = "abcdef";
         var token = "123456";
         var userGuid = new Guid();
-        _registerUserCommand.RegisterUserWithOptionalOrgInvite(Arg.Any<User>(), passwordHash, token, userGuid)
+        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid)
                     .Returns(Task.FromResult(IdentityResult.Success));
         var request = new RegisterRequestModel
         {
@@ -125,7 +125,7 @@ public class AccountsControllerTests : IDisposable
 
         await _sut.PostRegister(request);
 
-        await _registerUserCommand.Received(1).RegisterUserWithOptionalOrgInvite(Arg.Any<User>(), passwordHash, token, userGuid);
+        await _registerUserCommand.Received(1).RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class AccountsControllerTests : IDisposable
         var passwordHash = "abcdef";
         var token = "123456";
         var userGuid = new Guid();
-        _registerUserCommand.RegisterUserWithOptionalOrgInvite(Arg.Any<User>(), passwordHash, token, userGuid)
+        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid)
                     .Returns(Task.FromResult(IdentityResult.Failed()));
         var request = new RegisterRequestModel
         {
@@ -219,7 +219,7 @@ public class AccountsControllerTests : IDisposable
 
         var user = model.ToUser();
 
-        _registerUserCommand.RegisterUserWithOptionalOrgInvite(Arg.Any<User>(), masterPasswordHash, orgInviteToken, organizationUserId)
+        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), masterPasswordHash, orgInviteToken, organizationUserId)
             .Returns(Task.FromResult(IdentityResult.Success));
 
         // Act
@@ -227,7 +227,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        await _registerUserCommand.Received(1).RegisterUserWithOptionalOrgInvite(Arg.Is<User>(u =>
+        await _registerUserCommand.Received(1).RegisterUserViaOrganizationInviteToken(Arg.Is<User>(u =>
             u.Email == user.Email &&
             u.MasterPasswordHint == user.MasterPasswordHint &&
             u.Kdf == user.Kdf &&
@@ -270,7 +270,7 @@ public class AccountsControllerTests : IDisposable
             new IdentityError { Code = duplicateUserEmailErrorCode, Description = duplicateUserEmailErrorDesc }
         );
 
-        _registerUserCommand.RegisterUserWithOptionalOrgInvite(Arg.Is<User>(u =>
+        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Is<User>(u =>
                 u.Email == user.Email &&
                 u.MasterPasswordHint == user.MasterPasswordHint &&
                 u.Kdf == user.Kdf &&

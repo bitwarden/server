@@ -1025,7 +1025,7 @@ public class ProviderBillingServiceTests
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSeatMinimums(provider, -10, 100));
 
     [Theory, BitAutoData]
-    public async Task UpdateSeatMinimums_NoPurchasedSeats_SyncsStripeWithNewSeatMinimum(
+    public async Task UpdateSeatMinimums_NoPurchasedSeats_AllocatedHigherThanIncomingMinimum_UpdatesPurchasedSeats_SyncsStripeWithNewSeatMinimum(
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider)
     {
@@ -1062,8 +1062,70 @@ public class ProviderBillingServiceTests
 
         var providerPlans = new List<ProviderPlan>
         {
-            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 0 },
-            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0 }
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 0, AllocatedSeats = 20 },
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0, AllocatedSeats = 25 }
+        };
+
+        providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
+
+        await sutProvider.Sut.UpdateSeatMinimums(provider, 30, 20);
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 30));
+
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
+            providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly && providerPlan.SeatMinimum == 20 && providerPlan.PurchasedSeats == 5));
+
+        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(
+                options =>
+                    options.Items.Count == 2 &&
+                    options.Items.ElementAt(0).Id == enterpriseLineItemId &&
+                    options.Items.ElementAt(0).Quantity == 30 &&
+                    options.Items.ElementAt(1).Id == teamsLineItemId &&
+                    options.Items.ElementAt(1).Quantity == 25));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateSeatMinimums_NoPurchasedSeats_AllocatedLowerThanIncomingMinimum_SyncsStripeWithNewSeatMinimum(
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+
+        const string enterpriseLineItemId = "enterprise_line_item_id";
+        const string teamsLineItemId = "teams_line_item_id";
+
+        var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+        var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager.StripeProviderPortalSeatPlanId;
+
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = enterpriseLineItemId,
+                        Price = new Price { Id = enterprisePriceId }
+                    },
+                    new SubscriptionItem
+                    {
+                        Id = teamsLineItemId,
+                        Price = new Price { Id = teamsPriceId }
+                    }
+                ]
+            }
+        };
+
+        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 0, AllocatedSeats = 40 },
+            new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0, AllocatedSeats = 15 }
         };
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);

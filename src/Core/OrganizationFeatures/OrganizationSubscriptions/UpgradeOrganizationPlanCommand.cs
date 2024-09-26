@@ -5,6 +5,8 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -34,6 +36,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
+    private readonly IFeatureService _featureService;
+    private readonly IOrganizationBillingService _organizationBillingService;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -47,7 +51,9 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         ICurrentContext currentContext,
         IServiceAccountRepository serviceAccountRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService,
+        IFeatureService featureService,
+        IOrganizationBillingService organizationBillingService)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -61,6 +67,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _serviceAccountRepository = serviceAccountRepository;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
+        _featureService = featureService;
+        _organizationBillingService = organizationBillingService;
     }
 
     public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
@@ -216,9 +224,27 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
-                newPlan, upgrade);
-            success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
+            if (_featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
+            {
+                var sale = OrganizationSale.From(organization, upgrade);
+                await _organizationBillingService.Finalize(sale);
+            }
+            else
+            {
+                try
+                {
+                    paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
+                        newPlan, upgrade);
+                    success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
+                }
+                catch
+                {
+                    await _paymentService.CancelAndRecoverChargesAsync(organization);
+                    organization.GatewayCustomerId = null;
+                    await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+                    throw;
+                }
+            }
         }
         else
         {

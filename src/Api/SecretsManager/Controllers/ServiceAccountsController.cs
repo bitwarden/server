@@ -81,7 +81,7 @@ public class ServiceAccountsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         var results =
             await _serviceAccountSecretsDetailsQuery.GetManyByOrganizationIdAsync(organizationId, userId, accessClient,
