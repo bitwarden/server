@@ -590,10 +590,20 @@ public class OrganizationService : IOrganizationService
             }
             else
             {
-                await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                       signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                       signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                       signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                if (signup.PaymentMethodType != null)
+                {
+                    await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
+                        signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                }
+                else
+                {
+                    await _paymentService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
+                        signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                }
+
             }
         }
 
