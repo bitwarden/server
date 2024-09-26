@@ -33,22 +33,8 @@ public class RemoveOrganizationUserCommandTests
 
         await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
 
+        await organizationUserRepository.Received(1).DeleteAsync(organizationUser);
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RemoveUser_WithEventSystemUser_Success(
-        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
-        EventSystemUser eventSystemUser,
-        SutProvider<RemoveOrganizationUserCommand> sutProvider)
-    {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-
-        await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, eventSystemUser);
-
-        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
     }
 
     [Theory]
@@ -130,12 +116,104 @@ public class RemoveOrganizationUserCommandTests
 
         organizationUser.OrganizationId = deletingUser.OrganizationId;
         organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-        hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, new[] { organizationUser.Id }, true).Returns(false);
+        hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
+            deletingUser.OrganizationId,
+            Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)), Arg.Any<bool>())
+            .Returns(false);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, null));
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
-        hasConfirmedOwnersExceptQuery.Received(1).HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)), true);
+        hasConfirmedOwnersExceptQuery
+            .Received(1)
+            .HasConfirmedOwnersExceptAsync(
+                organizationUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)), true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_WithEventSystemUser_Success(
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
+        EventSystemUser eventSystemUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
+
+        await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, eventSystemUser);
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_ByUserId_Success(
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        organizationUserRepository
+            .GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(
+                organizationUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
+                Arg.Any<bool>())
+            .Returns(true);
+
+        await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.UserId.Value);
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_ByUserId_NotFound_ThrowsException(SutProvider<RemoveOrganizationUserCommand> sutProvider,
+        Guid organizationId, Guid userId)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RemoveUserAsync(organizationId, userId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_ByUserId_InvalidUser_ThrowsException(OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        organizationUserRepository.GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value).Returns(organizationUser);
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.RemoveUserAsync(Guid.NewGuid(), organizationUser.UserId.Value));
+        Assert.Contains("User not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_ByUserId_RemovingLastOwner_ThrowsException(
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var hasConfirmedOwnersExceptQuery = sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>();
+
+        organizationUserRepository.GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value).Returns(organizationUser);
+        hasConfirmedOwnersExceptQuery
+            .HasConfirmedOwnersExceptAsync(
+                organizationUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
+                Arg.Any<bool>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.UserId.Value));
+        Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+        hasConfirmedOwnersExceptQuery
+            .Received(1)
+            .HasConfirmedOwnersExceptAsync(
+                organizationUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
+                Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
