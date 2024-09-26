@@ -6,6 +6,7 @@ public class StripeFacade : IStripeFacade
 {
     private readonly ChargeService _chargeService = new();
     private readonly CustomerService _customerService = new();
+    private readonly EventService _eventService = new();
     private readonly InvoiceService _invoiceService = new();
     private readonly PaymentMethodService _paymentMethodService = new();
     private readonly SubscriptionService _subscriptionService = new();
@@ -18,6 +19,13 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _chargeService.GetAsync(chargeId, chargeGetOptions, requestOptions, cancellationToken);
+
+    public async Task<Event> GetEvent(
+        string eventId,
+        EventGetOptions eventGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _eventService.GetAsync(eventId, eventGetOptions, requestOptions, cancellationToken);
 
     public async Task<Customer> GetCustomer(
         string customerId,
