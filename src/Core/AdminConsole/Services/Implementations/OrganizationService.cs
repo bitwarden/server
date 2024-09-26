@@ -360,7 +360,7 @@ public class OrganizationService : IOrganizationService
 
         if (organization.UseSecretsManager && organization.Seats + seatAdjustment < organization.SmSeats)
         {
-            throw new BadRequestException("You cannot have more Password Manager seats than Secrets Manager seats.");
+            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
