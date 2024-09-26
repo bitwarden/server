@@ -5,9 +5,9 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -30,11 +30,11 @@ public class TwoFactorController : Controller
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
-    private readonly GlobalSettings _globalSettings;
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
     private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
     private readonly IFeatureService _featureService;
+    private readonly IDuoTokenProvider _duoTokenProvider;
     private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
     private readonly bool _TwoFactorAuthenticatorTokenFeatureFlagEnabled;
@@ -48,17 +48,18 @@ public class TwoFactorController : Controller
         ICurrentContext currentContext,
         IVerifyAuthRequestCommand verifyAuthRequestCommand,
         IFeatureService featureService,
+        IDuoTokenProvider duoTokenProvider,
         IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
-        _globalSettings = globalSettings;
         _userManager = userManager;
         _currentContext = currentContext;
         _verifyAuthRequestCommand = verifyAuthRequestCommand;
         _featureService = featureService;
+        _duoTokenProvider = duoTokenProvider;
         _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
         _TwoFactorAuthenticatorTokenFeatureFlagEnabled = _featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken);
@@ -200,21 +201,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
     {
         var user = await CheckAsync(model, true);
-        try
-        {
-            // for backwards compatibility - will be removed with PM-8107
-            DuoApi duoApi = null;
-            if (model.ClientId != null && model.ClientSecret != null)
-            {
-                duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
-            }
-            else
-            {
-                duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
-            }
-            await duoApi.JSONApiCall("GET", "/auth/v2/check");
-        }
-        catch (DuoException)
+        if(!await _duoTokenProvider.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
@@ -257,21 +244,7 @@ public class TwoFactorController : Controller
         }
 
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
-        try
-        {
-            // for backwards compatibility - will be removed with PM-8107
-            DuoApi duoApi = null;
-            if (model.ClientId != null && model.ClientSecret != null)
-            {
-                duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
-            }
-            else
-            {
-                duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
-            }
-            await duoApi.JSONApiCall("GET", "/auth/v2/check");
-        }
-        catch (DuoException)
+        if(!await _duoTokenProvider.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
