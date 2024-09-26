@@ -1,8 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+
+using System.ComponentModel;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -10,7 +15,9 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
-public class SingleOrgPolicyStrategy : IPolicyStrategy
+public record SingleOrgRequirement(bool SingleOrgRequired);
+
+public class SingleOrgPolicyDefinition : IPolicyDefinition<SingleOrgRequirement>
 {
     public PolicyType Type => PolicyType.SingleOrg;
 
@@ -19,26 +26,45 @@ public class SingleOrgPolicyStrategy : IPolicyStrategy
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly ICurrentContext _currentContext;
 
-    public SingleOrgPolicyStrategy(
+    public SingleOrgPolicyDefinition(
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository,
-        ISsoConfigRepository ssoConfigRepository)
+        ISsoConfigRepository ssoConfigRepository,
+        ICurrentContext currentContext)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _policyRepository = policyRepository;
         _ssoConfigRepository = ssoConfigRepository;
+        _currentContext = currentContext;
     }
 
-    public async Task HandleEnable(Policy policy, Guid? savingUserId)
+
+    public Predicate<(OrganizationUser orgUser, Policy policy)> Filter => tuple =>
+        tuple.orgUser is not { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
+
+    public (Func<SingleOrgRequirement, Policy, SingleOrgRequirement> reducer, SingleOrgRequirement initialValue) Reducer() =>
+        ((SingleOrgRequirement init, Policy next, SingleOrgRequirement ) => new SingleOrgRequirement(true), new SingleOrgRequirement(false));
+
+    public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    {
+        if (currentPolicy is null or { Enabled: false } && modifiedPolicy is { Enabled: true })
+        {
+            await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId);
+        }
+    }
+
+    private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
     {
         // Remove non-compliant users
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
-        var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+        var savingUserId = _currentContext.UserId;
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
             throw new NotFoundException("Organization not found.");
@@ -70,30 +96,34 @@ public class SingleOrgPolicyStrategy : IPolicyStrategy
         }
     }
 
-    public async Task HandleDisable(Policy policy, Guid? savingUserId)
+    public async Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
+        var organizationId = modifiedPolicy.OrganizationId;
+
         // Do not allow this policy to be disabled if a dependent policy is still enabled
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(policy.OrganizationId);
+        var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
         if (policies.Any(p => p.Type == PolicyType.RequireSso && p.Enabled))
         {
-            throw new BadRequestException("Single Sign-On Authentication policy is enabled.");
+            return "Single Sign-On Authentication policy is enabled.";
         }
 
         if (policies.Any(p => p.Type == PolicyType.MaximumVaultTimeout && p.Enabled))
         {
-            throw new BadRequestException("Maximum Vault Timeout policy is enabled.");
+            return "Maximum Vault Timeout policy is enabled.";
         }
 
         if (policies.Any(p => p.Type == PolicyType.ResetPassword && p.Enabled))
         {
-            throw new BadRequestException("Account Recovery policy is enabled.");
+            return "Account Recovery policy is enabled.";
         }
 
         // Do not allow this policy to be disabled if Key Connector is being used
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policy.OrganizationId);
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
-            throw new BadRequestException("Key Connector is enabled.");
+            return "Key Connector is enabled.";
         }
+
+        return null;
     }
 }

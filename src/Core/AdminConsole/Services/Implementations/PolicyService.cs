@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -21,7 +23,7 @@ public class PolicyService : IPolicyService
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly GlobalSettings _globalSettings;
-    private readonly IEnumerable<IPolicyStrategy> _policyStrategies;
+    private readonly IEnumerable<IPolicyDefinition<,>> _policyStrategies;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -30,7 +32,7 @@ public class PolicyService : IPolicyService
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
         GlobalSettings globalSettings,
-        IEnumerable<IPolicyStrategy> policyStrategies)
+        IEnumerable<IPolicyDefinition<,>> policyStrategies)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -56,22 +58,18 @@ public class PolicyService : IPolicyService
             throw new BadRequestException("This organization cannot use policies.");
         }
 
-        var currentPolicyIsEnabled =
-            policy.Id != default &&
-            (await _policyRepository.GetByIdAsync(policy.Id))?.Enabled == true;
+        var policyDefinition = _policyStrategies.Single(strategy => strategy.Type == policy.Type);
+        var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
 
-        var policyStrategy = _policyStrategies.Single(strategy => strategy.Type == policy.Type);
-        if (!currentPolicyIsEnabled && policy.Enabled)
+        // Validate
+        var validationError = await policyDefinition.ValidateAsync(currentPolicy, policy);
+        if (validationError != null)
         {
-            await policyStrategy.HandleEnable(policy, savingUserId);
-        }
-        else if (currentPolicyIsEnabled && !policy.Enabled)
-        {
-            await policyStrategy.HandleDisable(policy, savingUserId);
+            throw new BadRequestException(validationError);
         }
 
-        // Note: If the policy's Enabled state is not changing, no handler actions are called.
-        // This may need to be changed in the future if a policy has additional requirements.
+        // Run side effects
+        await policyDefinition.OnSaveSideEffectsAsync(currentPolicy, policy);
 
         var now = DateTime.UtcNow;
         if (policy.Id == default)
