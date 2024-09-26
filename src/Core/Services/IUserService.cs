@@ -1,11 +1,10 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Vault.Entities;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
@@ -19,8 +18,8 @@ public interface IUserService
     Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal);
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
-    Task<IdentityResult> RegisterUserAsync(User user, string masterPassword, string token, Guid? orgUserId);
-    Task<IdentityResult> RegisterUserAsync(User user);
+    Task<IdentityResult> CreateUserAsync(User user);
+    Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
     Task SendTwoFactorEmailAsync(User user);
     Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
@@ -39,8 +38,6 @@ public interface IUserService
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
         KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
-    Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-        IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
@@ -69,6 +66,7 @@ public interface IUserService
     Task<bool> CheckPasswordAsync(User user, string password);
     Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
     Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
+    [Obsolete("Use ITwoFactorIsEnabledQuery instead.")]
     Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
     Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
@@ -79,5 +77,29 @@ public interface IUserService
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
-    Task<bool> VerifySecretAsync(User user, string secret);
+    Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
+
+
+    void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
+
+    /// <summary>
+    /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
+    /// We force these users to the web to migrate their encryption scheme.
+    /// </summary>
+    Task<bool> IsLegacyUser(string userId);
+
+    /// <summary>
+    /// Indicates if the user is managed by any organization.
+    /// </summary>
+    /// <remarks>
+    /// A managed user is a user whose email domain matches one of the Organization's verified domains.
+    /// The organization must be enabled and be on an Enterprise plan.
+    /// </remarks>
+    Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
+
+    /// <summary>
+    /// Gets the organization that manages the user.
+    /// </summary>
+    /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
+    Task<Organization> GetOrganizationManagingUserAsync(Guid userId);
 }

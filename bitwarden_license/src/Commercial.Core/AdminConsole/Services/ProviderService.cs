@@ -4,8 +4,12 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -15,6 +19,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Stripe;
@@ -38,13 +43,19 @@ public class ProviderService : IProviderService
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IFeatureService _featureService;
+    private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
+    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IProviderBillingService _providerBillingService;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IStripeAdapter stripeAdapter)
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
+        IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
+        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -59,9 +70,13 @@ public class ProviderService : IProviderService
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
+        _featureService = featureService;
+        _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
+        _applicationCacheService = applicationCacheService;
+        _providerBillingService = providerBillingService;
     }
 
-    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
+    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
         if (owner == null)
@@ -86,8 +101,24 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        provider.Status = ProviderStatusType.Created;
-        await _providerRepository.UpsertAsync(provider);
+        if (!_featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        {
+            provider.Status = ProviderStatusType.Created;
+            await _providerRepository.UpsertAsync(provider);
+        }
+        else
+        {
+            if (taxInfo == null || string.IsNullOrEmpty(taxInfo.BillingAddressCountry) || string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+            {
+                throw new BadRequestException("Both address and postal code are required to set up your provider.");
+            }
+            var customer = await _providerBillingService.SetupCustomer(provider, taxInfo);
+            provider.GatewayCustomerId = customer.Id;
+            var subscription = await _providerBillingService.SetupSubscription(provider);
+            provider.GatewaySubscriptionId = subscription.Id;
+            provider.Status = ProviderStatusType.Billable;
+            await _providerRepository.UpsertAsync(provider);
+        }
 
         providerUser.Key = key;
         await _providerUserRepository.ReplaceAsync(providerUser);
@@ -360,6 +391,7 @@ public class ProviderService : IProviderService
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
         ThrowOnInvalidPlanType(organization.PlanType);
 
         if (organization.UseSecretsManager)
@@ -423,11 +455,15 @@ public class ProviderService : IProviderService
             return;
         }
 
-        var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
-        var extractedPlanType = PlanTypeMappings(organization);
-        if (subscriptionItem != null)
+        if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId,
+                GetStripeSeatPlanId(organization.PlanType));
+            var extractedPlanType = PlanTypeMappings(organization);
+            if (subscriptionItem != null)
+            {
+                await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            }
         }
 
         await _organizationRepository.UpsertAsync(organization);
@@ -507,9 +543,15 @@ public class ProviderService : IProviderService
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
         OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
     {
-        ThrowOnInvalidPlanType(organizationSignup.Plan);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
 
-        var (organization, _, defaultCollection) = await _organizationService.SignUpAsync(organizationSignup, true);
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && provider.IsBillable();
+
+        ThrowOnInvalidPlanType(organizationSignup.Plan, consolidatedBillingEnabled);
+
+        var (organization, _, defaultCollection) = consolidatedBillingEnabled
+            ? await _organizationService.SignupClientAsync(organizationSignup)
+            : await _organizationService.SignUpAsync(organizationSignup);
 
         var providerOrganization = new ProviderOrganization
         {
@@ -521,9 +563,9 @@ public class ProviderService : IProviderService
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        // If using Flexible Collections, give the owner Can Manage access over the default collection
+        // Give the owner Can Manage access over the default collection
         // The orgUser is not available when the org is created so we have to do it here as part of the invite
-        var defaultOwnerAccess = organization.FlexibleCollections && defaultCollection != null
+        var defaultOwnerAccess = defaultCollection != null
             ?
             [
                 new CollectionAccessSelection
@@ -536,17 +578,13 @@ public class ProviderService : IProviderService
             ]
             : Array.Empty<CollectionAccessSelection>();
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id,
+        await _organizationService.InviteUsersAsync(organization.Id, user.Id, systemUser: null,
             new (OrganizationUserInvite, string)[]
             {
                 (
                     new OrganizationUserInvite
                     {
                         Emails = new[] { clientOwnerEmail },
-
-                        // If using Flexible Collections, AccessAll is deprecated and set to false.
-                        // If not using Flexible Collections, set AccessAll to true (previous behavior)
-                        AccessAll = !organization.FlexibleCollections,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
                         Collections = defaultOwnerAccess,
@@ -594,6 +632,44 @@ public class ProviderService : IProviderService
         }
     }
 
+    public async Task InitiateDeleteAsync(Provider provider, string providerAdminEmail)
+    {
+        if (string.IsNullOrWhiteSpace(provider.Name))
+        {
+            throw new BadRequestException("Provider name not found.");
+        }
+        var providerAdmin = await _userRepository.GetByEmailAsync(providerAdminEmail);
+        if (providerAdmin == null)
+        {
+            throw new BadRequestException("Provider admin not found.");
+        }
+
+        var providerAdminOrgUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, providerAdmin.Id);
+        if (providerAdminOrgUser == null || providerAdminOrgUser.Status != ProviderUserStatusType.Confirmed ||
+            providerAdminOrgUser.Type != ProviderUserType.ProviderAdmin)
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+
+        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider, 1));
+        await _mailService.SendInitiateDeletProviderEmailAsync(providerAdminEmail, provider, token);
+    }
+
+    public async Task DeleteAsync(Provider provider, string token)
+    {
+        if (!_providerDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.IsValid(provider))
+        {
+            throw new BadRequestException("Invalid token.");
+        }
+        await DeleteAsync(provider);
+    }
+
+    public async Task DeleteAsync(Provider provider)
+    {
+        await _providerRepository.DeleteAsync(provider);
+        await _applicationCacheService.DeleteProviderAbilityAsync(provider.Id);
+    }
+
     private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
     {
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
@@ -611,8 +687,13 @@ public class ProviderService : IProviderService
         return confirmedOwnersIds.Except(providerUserIds).Any();
     }
 
-    private void ThrowOnInvalidPlanType(PlanType requestedType)
+    private void ThrowOnInvalidPlanType(PlanType requestedType, bool consolidatedBillingEnabled = false)
     {
+        if (consolidatedBillingEnabled && requestedType is not (PlanType.TeamsMonthly or PlanType.EnterpriseMonthly))
+        {
+            throw new BadRequestException($"Providers cannot manage organizations with the plan type {requestedType}. Only Teams (Monthly) and Enterprise (Monthly) are allowed.");
+        }
+
         if (ProviderDisallowedOrganizationTypes.Contains(requestedType))
         {
             throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");

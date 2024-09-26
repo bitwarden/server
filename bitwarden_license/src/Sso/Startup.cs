@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -6,7 +7,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
-using Duende.IdentityServer.Extensions;
+using Duende.IdentityServer.Services;
 using Microsoft.IdentityModel.Logging;
 using Stripe;
 
@@ -80,6 +81,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
+        services.AddBillingOperations();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880
@@ -108,7 +110,7 @@ public class Startup
             var uri = new Uri(globalSettings.BaseServiceUri.Sso);
             app.Use(async (ctx, next) =>
             {
-                ctx.SetIdentityServerOrigin($"{uri.Scheme}://{uri.Host}");
+                ctx.RequestServices.GetRequiredService<IServerUrls>().Origin = $"{uri.Scheme}://{uri.Host}";
                 await next();
             });
         }

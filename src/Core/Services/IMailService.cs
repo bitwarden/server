@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 
@@ -10,6 +11,12 @@ public interface IMailService
 {
     Task SendWelcomeEmailAsync(User user);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
+    Task SendRegistrationVerificationEmailAsync(string email, string token);
+    Task SendTrialInitiationSignupEmailAsync(
+        string email,
+        string token,
+        ProductTierType productTier,
+        IEnumerable<ProductType> products);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
@@ -78,5 +85,8 @@ public interface IMailService
     Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier);
     Task SendTrialInitiationEmailAsync(string email);
+    Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
+    Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
+    Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
 }
 

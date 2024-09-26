@@ -30,13 +30,9 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
     public async Task<IReadOnlyList<Send>> ValidateAsync(User user, IEnumerable<SendWithIdRequestModel> sends)
     {
         var result = new List<Send>();
-        if (sends == null || !sends.Any())
-        {
-            return result;
-        }
 
         var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
-        if (existingSends == null || !existingSends.Any())
+        if (existingSends == null || existingSends.Count == 0)
         {
             return result;
         }
@@ -46,7 +42,7 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
             var send = sends.FirstOrDefault(c => c.Id == existing.Id);
             if (send == null)
             {
-                throw new BadRequestException("All existing folders must be included in the rotation.");
+                throw new BadRequestException("All existing sends must be included in the rotation.");
             }
 
             result.Add(send.ToSend(existing, _sendService));

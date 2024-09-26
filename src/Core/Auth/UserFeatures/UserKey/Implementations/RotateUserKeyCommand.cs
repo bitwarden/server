@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -20,6 +21,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPushNotificationService _pushService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
+    private readonly IWebAuthnCredentialRepository _credentialRepository;
 
     /// <summary>
     /// Instantiates a new <see cref="RotateUserKeyCommand"/>
@@ -35,7 +37,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
     public RotateUserKeyCommand(IUserService userService, IUserRepository userRepository,
         ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
         IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
-        IPushNotificationService pushService, IdentityErrorDescriber errors)
+        IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository)
     {
         _userService = userService;
         _userRepository = userRepository;
@@ -46,6 +48,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
         _organizationUserRepository = organizationUserRepository;
         _pushService = pushService;
         _identityErrorDescriber = errors;
+        _credentialRepository = credentialRepository;
     }
 
     /// <inheritdoc />
@@ -68,7 +71,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
         user.Key = model.Key;
         user.PrivateKey = model.PrivateKey;
         if (model.Ciphers.Any() || model.Folders.Any() || model.Sends.Any() || model.EmergencyAccesses.Any() ||
-            model.OrganizationUsers.Any())
+            model.OrganizationUsers.Any() || model.WebAuthnKeys.Any())
         {
             List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
 
@@ -97,6 +100,11 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
             {
                 saveEncryptedDataActions.Add(
                     _organizationUserRepository.UpdateForKeyRotation(user.Id, model.OrganizationUsers));
+            }
+
+            if (model.WebAuthnKeys.Any())
+            {
+                saveEncryptedDataActions.Add(_credentialRepository.UpdateKeysForRotationAsync(user.Id, model.WebAuthnKeys));
             }
 
             await _userRepository.UpdateUserKeyAndEncryptedDataAsync(user, saveEncryptedDataActions);

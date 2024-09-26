@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -229,35 +230,52 @@ public class OrganizationLicense : ILicense
 
     public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
-        if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
+        var errorMessages = new StringBuilder();
+
+        if (!Enabled)
         {
-            exception = "Invalid license. Your organization is disabled or the license has expired.";
-            return false;
+            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
+        }
+
+        if (Issued > DateTime.UtcNow)
+        {
+            errorMessages.AppendLine("The license hasn't been issued yet.");
+        }
+
+        if (Expires < DateTime.UtcNow)
+        {
+            errorMessages.AppendLine("The license has expired.");
         }
 
         if (!ValidLicenseVersion)
         {
-            exception = $"Version {Version} is not supported.";
-            return false;
+            errorMessages.AppendLine($"Version {Version} is not supported.");
         }
 
-        if (InstallationId != globalSettings.Installation.Id || !SelfHost)
+        if (InstallationId != globalSettings.Installation.Id)
         {
-            exception = "Invalid license. Make sure your license allows for on-premise " +
-                        "hosting of organizations and that the installation id matches your current installation.";
-            return false;
+            errorMessages.AppendLine("The installation ID does not match the current installation.");
+        }
+
+        if (!SelfHost)
+        {
+            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
         }
 
         if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
         {
-            exception = "Premium licenses cannot be applied to an organization. "
-                        + "Upload this license from your personal account settings page.";
-            return false;
+            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
+                                     "Upload this license from your personal account settings page.");
         }
 
         if (!licensingService.VerifyLicense(this))
         {
-            exception = "Invalid license.";
+            errorMessages.AppendLine("The license verification failed.");
+        }
+
+        if (errorMessages.Length > 0)
+        {
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
             return false;
         }
 
@@ -337,6 +355,10 @@ public class OrganizationLicense : ILicense
                 valid = organization.UseCustomPermissions == UseCustomPermissions;
             }
 
+            /*Version 12 added ExpirationWithoutDatePeriod, but that property is informational only and is not saved
+            to the Organization object. It's validated as part of the hash but does not need to be validated here.
+            */
+
             if (valid && Version >= 13)
             {
                 valid = organization.UseSecretsManager == UseSecretsManager &&
@@ -345,23 +367,16 @@ public class OrganizationLicense : ILicense
                         organization.SmServiceAccounts == SmServiceAccounts;
             }
 
-            // Restore validity check when Flexible Collections are enabled for cloud and self-host
-            // https://bitwarden.atlassian.net/browse/AC-1875
-            // if (valid && Version >= 14)
-            // {
-            //     valid = organization.LimitCollectionCreationDeletion == LimitCollectionCreationDeletion;
-            // }
-            // if (valid && Version >= 15)
-            // {
-            //     valid = organization.AllowAdminAccessToAllCollectionItems == AllowAdminAccessToAllCollectionItems;
-            // }
+            /*
+             * Version 14 added LimitCollectionCreationDeletion and Version 15 added AllowAdminAccessToAllCollectionItems,
+             * however these are just user settings and it is not worth failing validation if they mismatch.
+             * They are intentionally excluded.
+             */
 
             return valid;
         }
-        else
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
+
+        throw new NotSupportedException($"Version {Version} is not supported.");
     }
 
     public bool VerifySignature(X509Certificate2 certificate)

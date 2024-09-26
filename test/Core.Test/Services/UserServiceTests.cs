@@ -89,10 +89,10 @@ public class UserServiceTests
             .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
             .Returns(Task.FromResult(true));
         userTwoFactorTokenProvider
-            .GenerateAsync("2faEmail:" + email, Arg.Any<UserManager<User>>(), user)
+            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
             .Returns(Task.FromResult(token));
 
-        sutProvider.Sut.RegisterTokenProvider("Email", userTwoFactorTokenProvider);
+        sutProvider.Sut.RegisterTokenProvider("Custom_Email", userTwoFactorTokenProvider);
 
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
@@ -274,6 +274,51 @@ public class UserServiceTests
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .Received(shouldCheck.HasFlag(ShouldCheck.Password) ? 1 : 0)
             .VerifyHashedPassword(user, "hashed_test_password", secret);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithManagingEnabledOrganization_ReturnsTrue(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseSso = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithManagingDisabledOrganization_ReturnsFalse(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = false;
+        organization.UseSso = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithOrganizationUseSsoFalse_ReturnsFalse(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseSso = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.False(result);
     }
 
     private static void SetupUserAndDevice(User user,

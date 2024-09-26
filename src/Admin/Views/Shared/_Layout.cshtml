@@ -14,6 +14,7 @@
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
     var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
     var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
+    var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin ||
                         canGenerateLicense || canManageTaxRates || canManageStripeSubscriptions;
@@ -27,17 +28,7 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>@ViewData["Title"] - Bitwarden Admin Portal</title>
 
-    <link rel="stylesheet" href="~/css/webfonts.css" />
-    <environment include="Development">
-        <link rel="stylesheet" href="~/lib/font-awesome/css/font-awesome.css" />
-        <link rel="stylesheet" href="~/css/site.css" />
-        <link rel="stylesheet" href="~/lib/toastr/toastr.css" />
-    </environment>
-    <environment exclude="Development">
-        <link rel="stylesheet" href="~/lib/font-awesome/css/font-awesome.min.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/lib/toastr/toastr.min.css" />
-    </environment>
+    <link rel="stylesheet" href="~/assets/site.css" asp-append-version="true" />
 </head>
 <body>
     <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
@@ -117,6 +108,12 @@
                                                 Manage Stripe Subscriptions
                                             </a>
                                         }
+                                        @if (canProcessStripeEvents)
+                                        {
+                                            <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
+                                                Process Stripe Events
+                                            </a>
+                                        }
                                     </div>
                                 </li>
                             }
@@ -153,24 +150,21 @@
         &copy; @DateTime.Now.Year, Bitwarden Inc.
     </footer>
 
-    <environment include="Development">
-        <script src="~/lib/jquery/jquery.js"></script>
-        <script src="~/lib/popper/popper.js"></script>
-        <script src="~/lib/bootstrap/js/bootstrap.js"></script>
-        <script src="~/lib/toastr/toastr.min.js"></script>
-    </environment>
-    <environment exclude="Development">
-        <script src="~/lib/jquery/jquery.min.js" asp-append-version="true"></script>
-        <script src="~/lib/popper/popper.min.js" asp-append-version="true"></script>
-        <script src="~/lib/bootstrap/js/bootstrap.min.js" asp-append-version="true"></script>
-        <script src="~/lib/toastr/toastr.min.js" asp-append-version="true"></script>
-    </environment>
+    <script src="~/assets/site.js" asp-append-version="true"></script>
 
     @if (TempData["Error"] != null)
     {
         <script>
             $(document).ready(function () {
                 toastr.error("@TempData["Error"]")
+            });
+        </script>
+    }
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            $(document).ready(function () {
+                toastr.success("@TempData["Success"]")
             });
         </script>
     }

@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
+using Bit.Core.Exceptions;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.Helpers;
@@ -54,5 +55,64 @@ public class SendRequestModelTests
         Assert.False(root.TryGetProperty("Notes", out var _));
         var name = AssertHelper.AssertJsonProperty(root, "Name", JsonValueKind.String).GetString();
         Assert.Equal("encrypted_name", name);
+    }
+
+    [Fact]
+    public void ValidateEdit_DeletionDateInPast_ThrowsBadRequestException()
+    {
+        var send = new SendRequestModel
+        {
+            DeletionDate = DateTime.UtcNow.AddMinutes(-5)
+        };
+
+        Assert.Throws<BadRequestException>(() => send.ValidateEdit());
+    }
+
+    [Fact]
+    public void ValidateEdit_DeletionDateTooFarInFuture_ThrowsBadRequestException()
+    {
+        var send = new SendRequestModel
+        {
+            DeletionDate = DateTime.UtcNow.AddDays(32)
+        };
+
+        Assert.Throws<BadRequestException>(() => send.ValidateEdit());
+    }
+
+    [Fact]
+    public void ValidateEdit_ExpirationDateInPast_ThrowsBadRequestException()
+    {
+        var send = new SendRequestModel
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-5)
+        };
+
+        Assert.Throws<BadRequestException>(() => send.ValidateEdit());
+    }
+
+    [Fact]
+    public void ValidateEdit_ExpirationDateGreaterThanDeletionDate_ThrowsBadRequestException()
+    {
+        var send = new SendRequestModel
+        {
+            DeletionDate = DateTime.UtcNow.AddDays(1),
+            ExpirationDate = DateTime.UtcNow.AddDays(2)
+        };
+
+        Assert.Throws<BadRequestException>(() => send.ValidateEdit());
+    }
+
+    [Fact]
+    public void ValidateEdit_ValidDates_Success()
+    {
+        var send = new SendRequestModel
+        {
+            DeletionDate = DateTime.UtcNow.AddDays(10),
+            ExpirationDate = DateTime.UtcNow.AddDays(5)
+        };
+
+        Exception ex = Record.Exception(() => send.ValidateEdit());
+
+        Assert.Null(ex);
     }
 }

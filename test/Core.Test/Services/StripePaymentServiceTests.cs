@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -724,7 +725,6 @@ public class StripePaymentServiceTests
             AmountDue = 0
         });
         stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
-        featureService.IsEnabled(FeatureFlagKeys.PM5766AutomaticTax).Returns(true);
 
         var upgrade = new OrganizationUpgrade()
         {

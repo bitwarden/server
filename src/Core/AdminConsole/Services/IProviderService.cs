@@ -7,7 +7,7 @@ namespace Bit.Core.AdminConsole.Services;
 
 public interface IProviderService
 {
-    Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key);
+    Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null);
     Task UpdateAsync(Provider provider, bool updateBilling = false);
 
     Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite);
@@ -26,5 +26,8 @@ public interface IProviderService
     Task LogProviderAccessToOrganizationAsync(Guid organizationId);
     Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail);
+    Task InitiateDeleteAsync(Provider provider, string providerAdminEmail);
+    Task DeleteAsync(Provider provider, string token);
+    Task DeleteAsync(Provider provider);
 }
 

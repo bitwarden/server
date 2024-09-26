@@ -33,10 +33,6 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationService _organizationService;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
-    private readonly IFeatureService _featureService;
-
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
@@ -50,8 +46,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         IPasswordHasher<User> passwordHasher,
         GlobalSettings globalSettings,
         IOrganizationService organizationService,
-        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
-        IFeatureService featureService)
+        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -65,7 +60,6 @@ public class EmergencyAccessService : IEmergencyAccessService
         _globalSettings = globalSettings;
         _organizationService = organizationService;
         _dataProtectorTokenizer = dataProtectorTokenizer;
-        _featureService = featureService;
     }
 
     public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
@@ -333,7 +327,9 @@ public class EmergencyAccessService : IEmergencyAccessService
 
         var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
 
-        grantor.MasterPassword = _passwordHasher.HashPassword(grantor, newMasterPasswordHash);
+        await _userService.UpdatePasswordHash(grantor, newMasterPasswordHash);
+        grantor.RevisionDate = DateTime.UtcNow;
+        grantor.LastPasswordChangeDate = grantor.RevisionDate;
         grantor.Key = key;
         // Disable TwoFactor providers since they will otherwise block logins
         grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
@@ -345,7 +341,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         {
             if (o.Type != OrganizationUserType.Owner)
             {
-                await _organizationService.DeleteUserAsync(o.OrganizationId, grantor.Id);
+                await _organizationService.RemoveUserAsync(o.OrganizationId, grantor.Id);
             }
         }
     }
@@ -393,7 +389,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: false);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, withOrganizations: false);
 
         return new EmergencyAccessViewData
         {
@@ -411,7 +407,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var cipher = await _cipherRepository.GetByIdAsync(cipherId, emergencyAccess.GrantorId, UseFlexibleCollections);
+        var cipher = await _cipherRepository.GetByIdAsync(cipherId, emergencyAccess.GrantorId);
         return await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
     }
 

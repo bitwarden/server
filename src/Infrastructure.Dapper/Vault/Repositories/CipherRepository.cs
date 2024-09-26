@@ -24,16 +24,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[CipherDetails_ReadByIdUserId_V2]"
-            : $"[{Schema}].[CipherDetails_ReadByIdUserId]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CipherDetails>(
-                sprocName,
+                $"[{Schema}].[CipherDetails_ReadByIdUserId]",
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -81,14 +77,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true)
+    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
     {
         string sprocName = null;
         if (withOrganizations)
         {
-            sprocName = useFlexibleCollections
-                ? $"[{Schema}].[CipherDetails_ReadByUserId_V2]"
-                : $"[{Schema}].[CipherDetails_ReadByUserId]";
+            sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]";
         }
         else
         {
@@ -249,16 +243,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Delete_V2]"
-            : $"[{Schema}].[Cipher_Delete]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_Delete]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
@@ -286,16 +276,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, bool useFlexibleCollections)
+    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Move_V2]"
-            : $"[{Schema}].[Cipher_Move]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_Move]",
                 new { Ids = ids.ToGuidIdArrayTVP(), FolderId = folderId, UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
@@ -378,170 +364,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 cmd.ExecuteNonQuery();
             }
         };
-    }
-
-    public Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            connection.Open();
-
-            using (var transaction = connection.BeginTransaction())
-            {
-                try
-                {
-                    // 1. Update user.
-
-                    using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
-                        cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
-                        cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
-
-                        if (string.IsNullOrWhiteSpace(user.PrivateKey))
-                        {
-                            cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value;
-                        }
-                        else
-                        {
-                            cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
-                        }
-
-                        cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
-                        cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value = user.AccountRevisionDate;
-                        cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value = user.LastKeyRotationDate;
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    // 2. Create temp tables to bulk copy into.
-
-                    var sqlCreateTemp = @"
-                            SELECT TOP 0 *
-                            INTO #TempCipher
-                            FROM [dbo].[Cipher]
-
-                            SELECT TOP 0 *
-                            INTO #TempFolder
-                            FROM [dbo].[Folder]
-
-                            SELECT TOP 0 *
-                            INTO #TempSend
-                            FROM [dbo].[Send]";
-
-                    using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
-                    {
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    // 3. Bulk copy into temp tables.
-
-                    if (ciphers.Any())
-                    {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "#TempCipher";
-                            var dataTable = BuildCiphersTable(bulkCopy, ciphers);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    if (folders.Any())
-                    {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "#TempFolder";
-                            var dataTable = BuildFoldersTable(bulkCopy, folders);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    if (sends.Any())
-                    {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "#TempSend";
-                            var dataTable = BuildSendsTable(bulkCopy, sends);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    // 4. Insert into real tables from temp tables and clean up.
-
-                    var sql = string.Empty;
-
-                    if (ciphers.Any())
-                    {
-                        sql += @"
-                                UPDATE
-                                    [dbo].[Cipher]
-                                SET
-                                    [Data] = TC.[Data],
-                                    [Attachments] = TC.[Attachments],
-                                    [RevisionDate] = TC.[RevisionDate],
-                                    [Key] = TC.[Key]
-                                FROM
-                                    [dbo].[Cipher] C
-                                INNER JOIN
-                                    #TempCipher TC ON C.Id = TC.Id
-                                WHERE
-                                    C.[UserId] = @UserId";
-                    }
-
-                    if (folders.Any())
-                    {
-                        sql += @"
-                                UPDATE
-                                    [dbo].[Folder]
-                                SET
-                                    [Name] = TF.[Name],
-                                    [RevisionDate] = TF.[RevisionDate]
-                                FROM
-                                    [dbo].[Folder] F
-                                INNER JOIN
-                                    #TempFolder TF ON F.Id = TF.Id
-                                WHERE
-                                    F.[UserId] = @UserId";
-                    }
-
-                    if (sends.Any())
-                    {
-                        sql += @"
-                                UPDATE
-                                    [dbo].[Send]
-                                SET
-                                    [Key] = TS.[Key],
-                                    [RevisionDate] = TS.[RevisionDate]
-                                FROM
-                                    [dbo].[Send] S
-                                INNER JOIN
-                                    #TempSend TS ON S.Id = TS.Id
-                                WHERE
-                                    S.[UserId] = @UserId";
-                    }
-
-                    sql += @"
-                            DROP TABLE #TempCipher
-                            DROP TABLE #TempFolder
-                            DROP TABLE #TempSend";
-
-                    using (var cmd = new SqlCommand(sql, connection, transaction))
-                    {
-                        cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = user.Id;
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    transaction.Commit();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
-            }
-        }
-
-        return Task.FromResult(0);
     }
 
     public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers)
@@ -743,31 +565,23 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_SoftDelete_V2]"
-            : $"[{Schema}].[Cipher_SoftDelete]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_SoftDelete]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
     }
 
-    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Restore_V2]"
-            : $"[{Schema}].[Cipher_Restore]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteScalarAsync<DateTime>(
-                sprocName,
+                $"[{Schema}].[Cipher_Restore]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -936,6 +750,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         collectionsTable.Columns.Add(creationDateColumn);
         var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
         collectionsTable.Columns.Add(revisionDateColumn);
+        var externalIdColumn = new DataColumn(nameof(c.ExternalId), typeof(string));
+        collectionsTable.Columns.Add(externalIdColumn);
 
         foreach (DataColumn col in collectionsTable.Columns)
         {
@@ -955,6 +771,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[nameColumn] = collection.Name;
             row[creationDateColumn] = collection.CreationDate;
             row[revisionDateColumn] = collection.RevisionDate;
+            row[externalIdColumn] = collection.ExternalId;
 
             collectionsTable.Rows.Add(row);
         }

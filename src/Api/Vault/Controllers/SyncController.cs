@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -32,9 +33,6 @@ public class SyncController : Controller
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
-
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     public SyncController(
         IUserService userService,
@@ -81,7 +79,7 @@ public class SyncController : Controller
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
 
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: UseFlexibleCollections, withOrganizations: hasEnabledOrgs);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
@@ -90,16 +88,30 @@ public class SyncController : Controller
 
         if (hasEnabledOrgs)
         {
-            collections = await _collectionRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
-            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
+            collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationUserDetails,
-            providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
-            collectionCiphersGroupDict, excludeDomains, policies, sends);
+        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user, organizationUserDetails);
+
+        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
+            managedByOrganizationId, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
+    }
+
+    private async Task<Guid?> GetManagedByOrganizationIdAsync(User user, IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) ||
+            !organizationUserDetails.Any(o => o.Enabled && o.UseSso))
+        {
+            return null;
+        }
+
+        var organizationManagingUser = await _userService.GetOrganizationManagingUserAsync(user.Id);
+        return organizationManagingUser?.Id;
     }
 }

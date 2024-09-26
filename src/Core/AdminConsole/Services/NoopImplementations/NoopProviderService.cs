@@ -7,7 +7,7 @@ namespace Bit.Core.AdminConsole.Services.NoopImplementations;
 
 public class NoopProviderService : IProviderService
 {
-    public Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key) => throw new NotImplementedException();
+    public Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null) => throw new NotImplementedException();
 
     public Task UpdateAsync(Provider provider, bool updateBilling = false) => throw new NotImplementedException();
 
@@ -35,4 +35,7 @@ public class NoopProviderService : IProviderService
 
     public Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid userId) => throw new NotImplementedException();
     public Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail) => throw new NotImplementedException();
+    public Task InitiateDeleteAsync(Provider provider, string providerAdminEmail) => throw new NotImplementedException();
+    public Task DeleteAsync(Provider provider, string token) => throw new NotImplementedException();
+    public Task DeleteAsync(Provider provider) => throw new NotImplementedException();
 }

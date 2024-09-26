@@ -43,20 +43,12 @@ public class SubscriptionResponseModel : ResponseModel
     public DateTime? Expiration { get; set; }
 }
 
-public class BillingCustomerDiscount
+public class BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
 {
-    public BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
-    {
-        Id = discount.Id;
-        Active = discount.Active;
-        PercentOff = discount.PercentOff;
-        AppliesTo = discount.AppliesTo;
-    }
-
-    public string Id { get; }
-    public bool Active { get; }
-    public decimal? PercentOff { get; }
-    public List<string> AppliesTo { get; }
+    public string Id { get; } = discount.Id;
+    public bool Active { get; } = discount.Active;
+    public decimal? PercentOff { get; } = discount.PercentOff;
+    public List<string> AppliesTo { get; } = discount.AppliesTo;
 }
 
 public class BillingSubscription

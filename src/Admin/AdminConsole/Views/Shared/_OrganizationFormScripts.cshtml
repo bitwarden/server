@@ -1,6 +1,8 @@
 @inject IWebHostEnvironment HostingEnvironment
 @using Bit.Admin.Utilities
+@using Bit.Core.Billing.Enums
 @using Bit.Core.Enums
+@using Bit.Core.Utilities
 @model OrganizationEditModel
 
 <script>
@@ -52,50 +54,38 @@
     })();
 
     function togglePlanFeatures(planType) {
-        switch(planType) {
-            case '@((byte)PlanType.TeamsMonthly2019)':
-            case '@((byte)PlanType.TeamsAnnually2019)':
-            case '@((byte)PlanType.TeamsMonthly2020)':
-            case '@((byte)PlanType.TeamsAnnually2020)':
-            case '@((byte)PlanType.TeamsMonthly)':
-            case '@((byte)PlanType.TeamsAnnually)':
-            case '@((byte)PlanType.TeamsStarter)':
-                document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
-                document.getElementById('@(nameof(Model.UseSso))').checked = false;
-                document.getElementById('@(nameof(Model.UseGroups))').checked = true;
-                document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
-                document.getElementById('@(nameof(Model.UseEvents))').checked = true;
-                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
-                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;
-                document.getElementById('@(nameof(Model.UseTotp))').checked = true;
-                document.getElementById('@(nameof(Model.Use2fa))').checked = true;
-                document.getElementById('@(nameof(Model.UseApi))').checked = true;
-                document.getElementById('@(nameof(Model.SelfHost))').checked = false;
-                document.getElementById('@(nameof(Model.UseResetPassword))').checked = false;
-                document.getElementById('@(nameof(Model.UseScim))').checked = false;
-            break;
+        const plan = getPlan(planType);
 
-            case '@((byte)PlanType.EnterpriseMonthly2019)':
-            case '@((byte)PlanType.EnterpriseAnnually2019)':
-            case '@((byte)PlanType.EnterpriseMonthly2020)':
-            case '@((byte)PlanType.EnterpriseAnnually2020)':
-            case '@((byte)PlanType.EnterpriseMonthly)':
-            case '@((byte)PlanType.EnterpriseAnnually)':
-                document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
-                document.getElementById('@(nameof(Model.UseSso))').checked = true;
-                document.getElementById('@(nameof(Model.UseGroups))').checked = true;
-                document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
-                document.getElementById('@(nameof(Model.UseEvents))').checked = true;
-                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
-                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = true;
-                document.getElementById('@(nameof(Model.UseTotp))').checked = true;
-                document.getElementById('@(nameof(Model.Use2fa))').checked = true;
-                document.getElementById('@(nameof(Model.UseApi))').checked = true;
-                document.getElementById('@(nameof(Model.SelfHost))').checked = true;
-                document.getElementById('@(nameof(Model.UseResetPassword))').checked = true;
-                document.getElementById('@(nameof(Model.UseScim))').checked = true;
-            break;
+        if (!plan) {
+            return;
         }
+
+        console.log(plan);
+
+        document.getElementById('@(nameof(Model.SelfHost))').checked = plan.hasSelfHost;
+
+        document.getElementById('@(nameof(Model.Use2fa))').checked = plan.has2fa;
+        document.getElementById('@(nameof(Model.UseApi))').checked = plan.hasApi;
+        document.getElementById('@(nameof(Model.UseGroups))').checked = plan.hasGroups;
+        document.getElementById('@(nameof(Model.UsePolicies))').checked = plan.hasPolicies;
+        document.getElementById('@(nameof(Model.UseSso))').checked = plan.hasSso;
+        document.getElementById('@(nameof(Model.UseScim))').checked = plan.hasScim;
+        document.getElementById('@(nameof(Model.UseDirectory))').checked = plan.hasDirectory;
+        document.getElementById('@(nameof(Model.UseEvents))').checked = plan.hasEvents;
+        document.getElementById('@(nameof(Model.UseResetPassword))').checked = plan.hasResetPassword;
+        document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = plan.hasCustomPermissions;
+        // use key connector is intentionally omitted
+
+        document.getElementById('@(nameof(Model.UseTotp))').checked = plan.hasTotp;
+        document.getElementById('@(nameof(Model.UsersGetPremium))').checked = plan.usersGetPremium;
+
+        document.getElementById('@(nameof(Model.MaxStorageGb))').value =
+            document.getElementById('@(nameof(Model.MaxStorageGb))').value ||
+            plan.passwordManager.baseStorageGb ||
+            1;
+        document.getElementById('@(nameof(Model.Seats))').value = document.getElementById('@(nameof(Model.Seats))').value ||
+            plan.passwordManager.baseSeats ||
+            1;
     }
 
     function unlinkProvider(id) {
@@ -128,7 +118,7 @@
         document.getElementById('@(nameof(Model.SmSeats))').value = Math.max(@Model.OccupiedSmSeatsCount, 1);
 
         // Service accounts
-        const baseServiceAccounts = getPlan(planType)?.baseServiceAccount ?? 0;
+        const baseServiceAccounts = getPlan(planType)?.secretsManager?.baseServiceAccount ?? 0;
         if (planType !== '@((byte)PlanType.Free)' && @Model.ServiceAccountsCount > baseServiceAccounts) {
             document.getElementById('@(nameof(Model.SmServiceAccounts))').value = @Model.ServiceAccountsCount;
         } else {

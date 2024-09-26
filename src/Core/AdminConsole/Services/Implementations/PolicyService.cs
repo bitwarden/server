@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -24,6 +25,8 @@ public class PolicyService : IPolicyService
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -33,7 +36,9 @@ public class PolicyService : IPolicyService
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
         IMailService mailService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IFeatureService featureService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -43,6 +48,8 @@ public class PolicyService : IPolicyService
         _ssoConfigRepository = ssoConfigRepository;
         _mailService = mailService;
         _globalSettings = globalSettings;
+        _featureService = featureService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
@@ -59,50 +66,11 @@ public class PolicyService : IPolicyService
             throw new BadRequestException("This organization cannot use policies.");
         }
 
-        // Handle dependent policy checks
-        switch (policy.Type)
-        {
-            case PolicyType.SingleOrg:
-                if (!policy.Enabled)
-                {
-                    await RequiredBySsoAsync(org);
-                    await RequiredByVaultTimeoutAsync(org);
-                    await RequiredByKeyConnectorAsync(org);
-                    await RequiredByAccountRecoveryAsync(org);
-                }
-                break;
-
-            case PolicyType.RequireSso:
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                else
-                {
-                    await RequiredByKeyConnectorAsync(org);
-                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
-                }
-                break;
-
-            case PolicyType.ResetPassword:
-                if (!policy.Enabled || policy.GetDataModel<ResetPasswordDataModel>()?.AutoEnrollEnabled == false)
-                {
-                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
-                }
-
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                break;
-
-            case PolicyType.MaximumVaultTimeout:
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                break;
-        }
+        // FIXME: This method will throw a bunch of errors based on if the
+        // policy that is being applied requires some other policy that is
+        // not enabled. It may be advisable to refactor this into a domain
+        // object and get this kind of stuff out of the service.
+        await HandleDependentPoliciesAsync(policy, org);
 
         var now = DateTime.UtcNow;
         if (policy.Id == default(Guid))
@@ -110,62 +78,24 @@ public class PolicyService : IPolicyService
             policy.CreationDate = now;
         }
 
-        if (policy.Enabled)
-        {
-            var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
-            if (!currentPolicy?.Enabled ?? true)
-            {
-                var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
-                    policy.OrganizationId);
-                var removableOrgUsers = orgUsers.Where(ou =>
-                    ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
-                    ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
-                    ou.UserId != savingUserId);
-                switch (policy.Type)
-                {
-                    case PolicyType.TwoFactorAuthentication:
-                        // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
-                        foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
-                        {
-                            if (!await userService.TwoFactorIsEnabledAsync(orgUser))
-                            {
-                                if (!orgUser.HasMasterPassword)
-                                {
-                                    throw new BadRequestException(
-                                        "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
-                                }
-
-                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                    savingUserId);
-                                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                    org.DisplayName(), orgUser.Email);
-                            }
-                        }
-                        break;
-                    case PolicyType.SingleOrg:
-                        var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
-                                removableOrgUsers.Select(ou => ou.UserId.Value));
-                        foreach (var orgUser in removableOrgUsers)
-                        {
-                            if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
-                                        && ou.OrganizationId != org.Id
-                                        && ou.Status != OrganizationUserStatusType.Invited))
-                            {
-                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                    savingUserId);
-                                await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
-                                    org.DisplayName(), orgUser.Email);
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
         policy.RevisionDate = now;
-        await _policyRepository.UpsertAsync(policy);
-        await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+
+        // We can exit early for disable operations, because they are
+        // simpler.
+        if (!policy.Enabled)
+        {
+            await SetPolicyConfiguration(policy);
+            return;
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        {
+            await EnablePolicy_vNext(policy, org, organizationService, savingUserId);
+            return;
+        }
+
+        await EnablePolicy(policy, org, userService, organizationService, savingUserId);
+        return;
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
@@ -284,5 +214,170 @@ public class PolicyService : IPolicyService
         {
             throw new BadRequestException("Trusted device encryption is on and requires this policy.");
         }
+    }
+
+    private async Task HandleDependentPoliciesAsync(Policy policy, Organization org)
+    {
+        switch (policy.Type)
+        {
+            case PolicyType.SingleOrg:
+                if (!policy.Enabled)
+                {
+                    await RequiredBySsoAsync(org);
+                    await RequiredByVaultTimeoutAsync(org);
+                    await RequiredByKeyConnectorAsync(org);
+                    await RequiredByAccountRecoveryAsync(org);
+                }
+                break;
+
+            case PolicyType.RequireSso:
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
+                }
+                else
+                {
+                    await RequiredByKeyConnectorAsync(org);
+                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
+                }
+                break;
+
+            case PolicyType.ResetPassword:
+                if (!policy.Enabled || policy.GetDataModel<ResetPasswordDataModel>()?.AutoEnrollEnabled == false)
+                {
+                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
+                }
+
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
+                }
+                break;
+
+            case PolicyType.MaximumVaultTimeout:
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
+                }
+                break;
+        }
+    }
+
+    private async Task SetPolicyConfiguration(Policy policy)
+    {
+        await _policyRepository.UpsertAsync(policy);
+        await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+    }
+
+    private async Task EnablePolicy(Policy policy, Organization org, IUserService userService, IOrganizationService organizationService, Guid? savingUserId)
+    {
+        var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
+        if (!currentPolicy?.Enabled ?? true)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
+            var removableOrgUsers = orgUsers.Where(ou =>
+                ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
+                ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
+                ou.UserId != savingUserId);
+            switch (policy.Type)
+            {
+                case PolicyType.TwoFactorAuthentication:
+                    // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
+                    foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
+                    {
+                        if (!await userService.TwoFactorIsEnabledAsync(orgUser))
+                        {
+                            if (!orgUser.HasMasterPassword)
+                            {
+                                throw new BadRequestException(
+                                    "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
+                            }
+
+                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
+                                savingUserId);
+                            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                                org.DisplayName(), orgUser.Email);
+                        }
+                    }
+                    break;
+                case PolicyType.SingleOrg:
+                    var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
+                            removableOrgUsers.Select(ou => ou.UserId.Value));
+                    foreach (var orgUser in removableOrgUsers)
+                    {
+                        if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
+                                    && ou.OrganizationId != org.Id
+                                    && ou.Status != OrganizationUserStatusType.Invited))
+                        {
+                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
+                                savingUserId);
+                            await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
+                                org.DisplayName(), orgUser.Email);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        await SetPolicyConfiguration(policy);
+    }
+
+    private async Task EnablePolicy_vNext(Policy policy, Organization org, IOrganizationService organizationService, Guid? savingUserId)
+    {
+        var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
+        if (!currentPolicy?.Enabled ?? true)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(policy.OrganizationId);
+            var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
+            var removableOrgUsers = orgUsers.Where(ou =>
+                ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
+                ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
+                ou.UserId != savingUserId);
+            switch (policy.Type)
+            {
+                case PolicyType.TwoFactorAuthentication:
+                    // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
+                    foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
+                    {
+                        var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == orgUser.Id).twoFactorIsEnabled;
+                        if (!userTwoFactorEnabled)
+                        {
+                            if (!orgUser.HasMasterPassword)
+                            {
+                                throw new BadRequestException(
+                                    "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
+                            }
+
+                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
+                                savingUserId);
+                            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                                org.DisplayName(), orgUser.Email);
+                        }
+                    }
+                    break;
+                case PolicyType.SingleOrg:
+                    var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
+                            removableOrgUsers.Select(ou => ou.UserId.Value));
+                    foreach (var orgUser in removableOrgUsers)
+                    {
+                        if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
+                                    && ou.OrganizationId != org.Id
+                                    && ou.Status != OrganizationUserStatusType.Invited))
+                        {
+                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
+                                savingUserId);
+                            await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
+                                org.DisplayName(), orgUser.Email);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        await SetPolicyConfiguration(policy);
     }
 }

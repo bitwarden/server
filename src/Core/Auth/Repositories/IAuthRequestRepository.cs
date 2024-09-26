@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 
+#nullable enable
+
 namespace Bit.Core.Repositories;
 
 public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>
@@ -9,4 +11,5 @@ public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>
     Task<ICollection<AuthRequest>> GetManyByUserIdAsync(Guid userId);
     Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(Guid organizationId, IEnumerable<Guid> ids);
+    Task UpdateManyAsync(IEnumerable<AuthRequest> authRequests);
 }

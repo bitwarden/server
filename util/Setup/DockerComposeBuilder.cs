@@ -42,10 +42,6 @@ public class DockerComposeBuilder
     {
         public TemplateModel(Context context)
         {
-            if (!string.IsNullOrWhiteSpace(context.Config.ComposeVersion))
-            {
-                ComposeVersion = context.Config.ComposeVersion;
-            }
             MssqlDataDockerVolume = context.Config.DatabaseDockerVolume;
             EnableKeyConnector = context.Config.EnableKeyConnector;
             EnableScim = context.Config.EnableScim;
@@ -65,7 +61,6 @@ public class DockerComposeBuilder
             }
         }
 
-        public string ComposeVersion { get; set; } = "3";
         public bool MssqlDataDockerVolume { get; set; }
         public bool EnableKeyConnector { get; set; }
         public bool EnableScim { get; set; }

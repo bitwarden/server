@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -11,7 +12,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
-using Duende.IdentityServer.Extensions;
+using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
@@ -108,6 +109,10 @@ public class Startup
                 options.SaveTokens = false;
                 options.GetClaimsFromUserInfoEndpoint = true;
 
+                // Some browsers (safari) won't allow Secure cookies to be set on a http connection
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
                 options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
                 {
                     OnRedirectToIdentityProvider = context =>
@@ -141,6 +146,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
+        services.AddBillingOperations();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880
@@ -178,7 +184,7 @@ public class Startup
             var uri = new Uri(globalSettings.BaseServiceUri.Identity);
             app.Use(async (ctx, next) =>
             {
-                ctx.SetIdentityServerOrigin($"{uri.Scheme}://{uri.Host}");
+                ctx.RequestServices.GetRequiredService<IServerUrls>().Origin = $"{uri.Scheme}://{uri.Host}";
                 await next();
             });
         }

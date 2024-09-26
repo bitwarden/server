@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
@@ -9,11 +10,15 @@ using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,11 +37,14 @@ public class ProvidersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderService _providerService;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IUserService _userService;
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
+    private readonly IProviderBillingService _providerBillingService;
+    private readonly string _stripeUrl;
+    private readonly string _braintreeMerchantUrl;
+    private readonly string _braintreeMerchantId;
 
     public ProvidersController(
         IOrganizationRepository organizationRepository,
@@ -47,11 +55,12 @@ public class ProvidersController : Controller
         IProviderService providerService,
         GlobalSettings globalSettings,
         IApplicationCacheService applicationCacheService,
-        IReferenceEventService referenceEventService,
         IUserService userService,
         ICreateProviderCommand createProviderCommand,
         IFeatureService featureService,
-        IProviderPlanRepository providerPlanRepository)
+        IProviderPlanRepository providerPlanRepository,
+        IProviderBillingService providerBillingService,
+        IWebHostEnvironment webHostEnvironment)
     {
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
@@ -61,11 +70,14 @@ public class ProvidersController : Controller
         _providerService = providerService;
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
-        _referenceEventService = referenceEventService;
         _userService = userService;
         _createProviderCommand = createProviderCommand;
         _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
+        _providerBillingService = providerBillingService;
+        _stripeUrl = webHostEnvironment.GetStripeUrl();
+        _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
+        _braintreeMerchantId = globalSettings.Braintree.MerchantId;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -100,8 +112,8 @@ public class ProvidersController : Controller
         return View(new CreateProviderModel
         {
             OwnerEmail = ownerEmail,
-            TeamsMinimumSeats = teamsMinimumSeats,
-            EnterpriseMinimumSeats = enterpriseMinimumSeats
+            TeamsMonthlySeatMinimum = teamsMinimumSeats,
+            EnterpriseMonthlySeatMinimum = enterpriseMinimumSeats
         });
     }
 
@@ -119,8 +131,11 @@ public class ProvidersController : Controller
         switch (provider.Type)
         {
             case ProviderType.Msp:
-                await _createProviderCommand.CreateMspAsync(provider, model.OwnerEmail, model.TeamsMinimumSeats,
-                    model.EnterpriseMinimumSeats);
+                await _createProviderCommand.CreateMspAsync(
+                    provider,
+                    model.OwnerEmail,
+                    model.TeamsMonthlySeatMinimum,
+                    model.EnterpriseMonthlySeatMinimum);
                 break;
             case ProviderType.Reseller:
                 await _createProviderCommand.CreateResellerAsync(provider);
@@ -147,21 +162,13 @@ public class ProvidersController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await GetEditModel(id);
         if (provider == null)
         {
             return RedirectToAction("Index");
         }
 
-        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
-        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        if (isConsolidatedBillingEnabled)
-        {
-            var providerPlan = await _providerPlanRepository.GetByProviderId(id);
-            return View(new ProviderEditModel(provider, users, providerOrganizations, providerPlan));
-        }
-        return View(new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>()));
+        return View(provider);
     }
 
     [HttpPost]
@@ -170,27 +177,89 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
         var provider = await _providerRepository.GetByIdAsync(id);
+
         if (provider == null)
         {
             return RedirectToAction("Index");
         }
 
+        if (provider.Type != model.Type)
+        {
+            var oldModel = await GetEditModel(id);
+            ModelState.AddModelError(nameof(model.Type), "Provider type cannot be changed.");
+            return View(oldModel);
+        }
+
+        if (!ModelState.IsValid)
+        {
+            var oldModel = await GetEditModel(id);
+            ModelState[nameof(ProviderEditModel.BillingEmail)]!.RawValue = oldModel.BillingEmail;
+            return View(oldModel);
+        }
+
         model.ToProvider(provider);
+
         await _providerRepository.ReplaceAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
-        if (isConsolidatedBillingEnabled)
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
         {
-            model.ToProviderPlan(providerPlans);
-            foreach (var providerPlan in providerPlans)
+            return RedirectToAction("Edit", new { id });
+        }
+
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+
+        if (providerPlans.Count == 0)
+        {
+            var newProviderPlans = new List<ProviderPlan>
             {
-                await _providerPlanRepository.ReplaceAsync(providerPlan);
+                new () { ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum = model.TeamsMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 },
+                new () { ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum = model.EnterpriseMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 }
+            };
+
+            foreach (var newProviderPlan in newProviderPlans)
+            {
+                await _providerPlanRepository.CreateAsync(newProviderPlan);
             }
+        }
+        else
+        {
+            await _providerBillingService.UpdateSeatMinimums(
+                provider,
+                model.EnterpriseMonthlySeatMinimum,
+                model.TeamsMonthlySeatMinimum);
         }
 
         return RedirectToAction("Edit", new { id });
+    }
+
+    private async Task<ProviderEditModel> GetEditModel(Guid id)
+    {
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider == null)
+        {
+            return null;
+        }
+
+        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+
+        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        {
+            return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>());
+        }
+
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+
+        return new ProviderEditModel(
+            provider, users, providerOrganizations,
+            providerPlans.ToList(), GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
     }
 
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
@@ -267,12 +336,100 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        var flexibleCollectionsSignupEnabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsSignup);
-        var flexibleCollectionsV1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1);
-        var organization = model.CreateOrganization(provider, flexibleCollectionsSignupEnabled, flexibleCollectionsV1Enabled);
+        var organization = model.CreateOrganization(provider);
         await _organizationService.CreatePendingOrganization(organization, model.Owners, User, _userService, model.SalesAssistedTrialStarted);
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
+    }
+
+    [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> Delete(Guid id, string providerName)
+    {
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            return BadRequest("Invalid provider name");
+        }
+
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+
+        if (providerOrganizations.Count > 0)
+        {
+            return BadRequest("You must unlink all clients before you can delete a provider");
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(id);
+
+        if (provider is null)
+        {
+            return BadRequest("Provider does not exist");
+        }
+
+        if (!string.Equals(providerName.Trim(), provider.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Invalid provider name");
+        }
+
+        await _providerService.DeleteAsync(provider);
+        return NoContent();
+    }
+
+    [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> DeleteInitiation(Guid id, string providerEmail)
+    {
+        var emailAttribute = new EmailAddressAttribute();
+        if (!emailAttribute.IsValid(providerEmail))
+        {
+            return BadRequest("Invalid provider admin email");
+        }
+
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider != null)
+        {
+            try
+            {
+                await _providerService.InitiateDeleteAsync(provider, providerEmail);
+            }
+            catch (BadRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        return NoContent();
+    }
+
+    private string GetGatewayCustomerUrl(Provider provider)
+    {
+        if (!provider.Gateway.HasValue || string.IsNullOrEmpty(provider.GatewayCustomerId))
+        {
+            return null;
+        }
+
+        return provider.Gateway switch
+        {
+            GatewayType.Stripe => $"{_stripeUrl}/customers/{provider.GatewayCustomerId}",
+            GatewayType.PayPal => $"{_braintreeMerchantUrl}/{_braintreeMerchantId}/${provider.GatewayCustomerId}",
+            _ => null
+        };
+    }
+
+    private string GetGatewaySubscriptionUrl(Provider provider)
+    {
+        if (!provider.Gateway.HasValue || string.IsNullOrEmpty(provider.GatewaySubscriptionId))
+        {
+            return null;
+        }
+
+        return provider.Gateway switch
+        {
+            GatewayType.Stripe => $"{_stripeUrl}/subscriptions/{provider.GatewaySubscriptionId}",
+            GatewayType.PayPal => $"{_braintreeMerchantUrl}/{_braintreeMerchantId}/subscriptions/${provider.GatewaySubscriptionId}",
+            _ => null
+        };
     }
 }

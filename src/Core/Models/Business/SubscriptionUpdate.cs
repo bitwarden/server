@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
@@ -48,5 +48,6 @@ public abstract class SubscriptionUpdate
         => plan.Type is
             >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
             or PlanType.FamiliesAnnually
+            or PlanType.TeamsStarter2023
             or PlanType.TeamsStarter;
 }
