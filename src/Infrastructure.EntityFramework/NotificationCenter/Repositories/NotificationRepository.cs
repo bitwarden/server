@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using AutoMapper;
-using Bit.Core.NotificationCenter.Enums;
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;

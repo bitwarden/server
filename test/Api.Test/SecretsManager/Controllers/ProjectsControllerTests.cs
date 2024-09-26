@@ -115,12 +115,12 @@ public class ProjectsControllerTests
 
         var resultProject = data.ToProject(orgId);
 
-        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default, sutProvider.GetDependency<ICurrentContext>().ClientType)
+        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default, sutProvider.GetDependency<ICurrentContext>().IdentityClientType)
             .ReturnsForAnyArgs(resultProject);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(orgId, data));
         await sutProvider.GetDependency<ICreateProjectCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().ClientType);
+            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().IdentityClientType);
     }
 
     [Theory]
@@ -138,7 +138,7 @@ public class ProjectsControllerTests
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(orgId, data));
 
         await sutProvider.GetDependency<ICreateProjectCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().ClientType);
+            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().IdentityClientType);
     }
 
     [Theory]
@@ -153,13 +153,13 @@ public class ProjectsControllerTests
 
         var resultProject = data.ToProject(orgId);
 
-        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default, sutProvider.GetDependency<ICurrentContext>().ClientType)
+        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default, sutProvider.GetDependency<ICurrentContext>().IdentityClientType)
             .ReturnsForAnyArgs(resultProject);
 
         await sutProvider.Sut.CreateAsync(orgId, data);
 
         await sutProvider.GetDependency<ICreateProjectCommand>().Received(1)
-            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().ClientType);
+            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().IdentityClientType);
     }
 
     [Theory]
