@@ -314,11 +314,5 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
-        {
-            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
-            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
-        }
     }
 }
