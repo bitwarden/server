@@ -1,5 +1,6 @@
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
@@ -14,7 +15,7 @@ namespace Bit.Core.Auth.Identity;
 /// </summary>
 public interface IDuoTokenProvider
 {
-    Task<Duo.Client> BuildDuoClientAsync(TwoFactorProvider provider);
+    Task<bool> ValidateDuoConfiguration(string clientId, string clientSecret, string host);
 }
 
 /// <summary>
@@ -34,8 +35,11 @@ public class DuoTokenProvider : IDuoTokenProvider
 
     protected bool HasProperMetaData(TwoFactorProvider provider)
     {
-        return provider?.MetaData != null && provider.MetaData.ContainsKey("ClientId") &&
-            provider.MetaData.ContainsKey("ClientSecret") && provider.MetaData.ContainsKey("Host");
+        return provider?.MetaData != null && 
+               provider.MetaData.ContainsKey("ClientId") &&
+               provider.MetaData.ContainsKey("ClientSecret") && 
+               provider.MetaData.ContainsKey("Host") &&
+               DuoUtilities.ValidHost((string)provider.MetaData["Host"]);
     }
 
     protected async Task<string> GenerateAuthUrlAsync(
@@ -43,7 +47,7 @@ public class DuoTokenProvider : IDuoTokenProvider
         IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
         User user)
     {
-        var duoClient = await BuildDuoClientAsync(provider);
+        var duoClient = await BuildDuoTwoFactorClientAsync(provider);
         if (duoClient == null)
         {
             return null;
@@ -69,7 +73,7 @@ public class DuoTokenProvider : IDuoTokenProvider
         User user,
         string token)
     {
-        var duoClient = await BuildDuoClientAsync(provider);
+        var duoClient = await BuildDuoTwoFactorClientAsync(provider);
         if (duoClient == null)
         {
             return false;
@@ -96,7 +100,7 @@ public class DuoTokenProvider : IDuoTokenProvider
     /// </summary>
     /// <param name="provider">TwoFactorProvider Duo or OrganizationDuo</param>
     /// <returns>Duo.Client object or null</returns>
-    public async Task<Duo.Client> BuildDuoClientAsync(TwoFactorProvider provider)
+    protected async Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider)
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
         // to redirect back to the initiating client
@@ -115,5 +119,20 @@ public class DuoTokenProvider : IDuoTokenProvider
             return null;
         }
         return client;
+    }
+
+    /// <summary>
+    /// Generates a Duo.Client object for use with Duo SDK v4. This combines the health check and the client generation
+    /// </summary>
+    /// <param name="clientId"></param>
+    /// <param name="clientSecret"></param>
+    /// <param name="host"></param>
+    /// <returns></returns>
+    public async Task<bool> ValidateDuoConfiguration(string clientId, string clientSecret, string host)
+    {
+        // The AuthURI isn't important for this health check so we pass in a non-empty string
+        var client = new Duo.ClientBuilder(clientId, clientSecret, host, "non-empty").Build();
+
+        return await client.DoHealthCheck(false);
     }
 }

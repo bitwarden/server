@@ -3,7 +3,6 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Fido2NetLib;
 
@@ -102,18 +101,6 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         });
         existingOrg.SetTwoFactorProviders(providers);
         return existingOrg;
-    }
-
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (!DuoApi.ValidHost(Host)) // TODO replace with DuoUniversal
-        {
-            yield return new ValidationResult("Host is invalid.", [nameof(Host)]);
-        }
-        if (string.IsNullOrWhiteSpace(ClientSecret) && string.IsNullOrWhiteSpace(ClientId))
-        {
-            yield return new ValidationResult("ClientSecret or ClientId are invalid", [nameof(ClientSecret), nameof(ClientId)]);
-        }
     }
 }
 
