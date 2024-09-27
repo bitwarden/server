@@ -26,15 +26,18 @@ public class OrganizationCreateRequestModel : IValidatableObject
 
     public PlanType PlanType { get; set; }
 
-    [Required] public string Key { get; set; }
+    [Required]
+    public string Key { get; set; }
 
     public OrganizationKeysRequestModel Keys { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public string PaymentToken { get; set; }
 
-    [Range(0, int.MaxValue)] public int AdditionalSeats { get; set; }
+    [Range(0, int.MaxValue)]
+    public int AdditionalSeats { get; set; }
 
-    [Range(0, 99)] public short? AdditionalStorageGb { get; set; }
+    [Range(0, 99)]
+    public short? AdditionalStorageGb { get; set; }
 
     public bool PremiumAccessAddon { get; set; }
 
@@ -54,15 +57,19 @@ public class OrganizationCreateRequestModel : IValidatableObject
 
     public string BillingAddressPostalCode { get; set; }
 
-    [StringLength(2)] public string BillingAddressCountry { get; set; }
+    [StringLength(2)]
+    public string BillingAddressCountry { get; set; }
 
     public int? MaxAutoscaleSeats { get; set; }
 
-    [Range(0, int.MaxValue)] public int? AdditionalSmSeats { get; set; }
+    [Range(0, int.MaxValue)]
+    public int? AdditionalSmSeats { get; set; }
 
-    [Range(0, int.MaxValue)] public int? AdditionalServiceAccounts { get; set; }
+    [Range(0, int.MaxValue)]
+    public int? AdditionalServiceAccounts { get; set; }
 
-    [Required] public bool UseSecretsManager { get; set; }
+    [Required]
+    public bool UseSecretsManager { get; set; }
 
     public bool IsFromSecretsManagerTrial { get; set; }
 
