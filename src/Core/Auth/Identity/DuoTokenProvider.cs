@@ -1,6 +1,5 @@
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
@@ -31,15 +30,6 @@ public class DuoTokenProvider : IDuoTokenProvider
     {
         _currentContext = currentContext;
         _globalSettings = globalSettings;
-    }
-
-    protected bool HasProperMetaData(TwoFactorProvider provider)
-    {
-        return provider?.MetaData != null && 
-               provider.MetaData.ContainsKey("ClientId") &&
-               provider.MetaData.ContainsKey("ClientSecret") && 
-               provider.MetaData.ContainsKey("Host") &&
-               DuoUtilities.ValidHost((string)provider.MetaData["Host"]);
     }
 
     protected async Task<string> GenerateAuthUrlAsync(
