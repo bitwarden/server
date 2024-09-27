@@ -108,4 +108,70 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.Pm3478RefactorOrganizationUserApi)
             .Returns(true);
     }
+
+    // TESTS WITH FLAG DISABLED - TO BE DELETED IN FLAG CLEANUP
+
+    [Theory, CurrentContextOrganizationCustomize]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task FlagDisabled_ReadAll_AnyMemberOfOrg_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+
+        var context = new AuthorizationHandlerContext(
+            new[] { OrganizationUserUserDetailsOperations.ReadAll },
+            new ClaimsPrincipal(),
+            new OrganizationScope(organization.Id));
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+
+    [Theory, BitAutoData, CurrentContextOrganizationCustomize]
+    public async Task FlagDisabled_ReadAll_ProviderUser_Success(
+        CurrentContextOrganization organization,
+        SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
+    {
+        organization.Type = OrganizationUserType.User;
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(organization.Id)
+            .Returns(true);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { OrganizationUserUserDetailsOperations.ReadAll },
+            new ClaimsPrincipal(),
+            new OrganizationScope(organization.Id));
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task FlagDisabled_ReadAll_NotMember_NoSuccess(
+        CurrentContextOrganization organization,
+        SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { OrganizationUserUserDetailsOperations.ReadAll },
+            new ClaimsPrincipal(),
+            new OrganizationScope(organization.Id)
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.False(context.HasSucceeded);
+    }
 }
