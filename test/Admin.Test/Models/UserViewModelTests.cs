@@ -1,18 +1,17 @@
 ﻿#nullable enable
 
-using AutoFixture;
 using Bit.Admin.Models;
 using Bit.Core.Entities;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Admin.Test.Models;
 
 public class UserViewModelTests
 {
-    [Fact]
-    public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserHasTwoFactorEnabled_ThenReturnsTrue()
+    [Theory]
+    [BitAutoData]
+    public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserHasTwoFactorEnabled_ThenReturnsTrue(User user)
     {
-        var fixture = new Fixture();
-        var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)>
         {
             (user.Id, true)
@@ -23,11 +22,10 @@ public class UserViewModelTests
         Assert.True(actual);
     }
 
-    [Fact]
-    public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserDoesNotHaveTwoFactorEnabled_ThenReturnsFalse()
+    [Theory]
+    [BitAutoData]
+    public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserDoesNotHaveTwoFactorEnabled_ThenReturnsFalse(User user)
     {
-        var fixture = new Fixture();
-        var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)>
         {
             (Guid.NewGuid(), true)
@@ -38,11 +36,10 @@ public class UserViewModelTests
         Assert.False(actual);
     }
 
-    [Fact]
-    public void IsTwoFactorEnabled_GivenUserAndIsNotInLookup_WhenUserDoesNotHaveTwoFactorEnabled_ThenReturnsFalse()
+    [Theory]
+    [BitAutoData]
+    public void IsTwoFactorEnabled_GivenUserAndIsNotInLookup_WhenUserDoesNotHaveTwoFactorEnabled_ThenReturnsFalse(User user)
     {
-        var fixture = new Fixture();
-        var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)>();
 
         var actual = UserViewModel.IsTwoFactorEnabled(user, lookup);
@@ -50,12 +47,10 @@ public class UserViewModelTests
         Assert.False(actual);
     }
 
-    [Fact]
-    public void MapUserViewModel_GivenUser_WhenPopulated_ThenMapsToUserViewModel()
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_GivenUser_WhenPopulated_ThenMapsToUserViewModel(User user)
     {
-        var fixture = new Fixture();
-        var user = fixture.Create<User>();
-
         var actual = UserViewModel.MapViewModel(user, true);
 
         Assert.Equal(actual.Id, user.Id);
@@ -78,11 +73,10 @@ public class UserViewModelTests
         Assert.Equal(actual.LicenseKey, user.LicenseKey);
     }
 
-    [Fact]
-    public void MapUserViewModel_GivenUserWithTwoFactorEnabled_WhenPopulated_ThenMapsToUserViewModel()
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_GivenUserWithTwoFactorEnabled_WhenPopulated_ThenMapsToUserViewModel(User user)
     {
-        var fixture = new Fixture();
-        var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)> { (user.Id, true) };
 
         var actual = UserViewModel.MapViewModel(user, lookup);
@@ -90,11 +84,10 @@ public class UserViewModelTests
         Assert.True(actual.TwoFactorEnabled);
     }
 
-    [Fact]
-    public void MapUserViewModel_GivenUserWithoutTwoFactorEnabled_WhenPopulated_ThenTwoFactorIsEnabled()
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_GivenUserWithoutTwoFactorEnabled_WhenPopulated_ThenTwoFactorIsEnabled(User user)
     {
-        var fixture = new Fixture();
-        var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)> { (user.Id, false) };
 
         var actual = UserViewModel.MapViewModel(user, lookup);
@@ -102,11 +95,10 @@ public class UserViewModelTests
         Assert.False(actual.TwoFactorEnabled);
     }
 
-    [Fact]
-    public void MapUserViewModel_GivenUser_WhenNotInLookUpList_ThenTwoFactorIsDisabled()
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_GivenUser_WhenNotInLookUpList_ThenTwoFactorIsDisabled(User user)
     {
-        var fixture = new Fixture();
-        var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)> { (Guid.NewGuid(), true) };
 
         var actual = UserViewModel.MapViewModel(user, lookup);
