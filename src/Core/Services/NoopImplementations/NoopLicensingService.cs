@@ -41,7 +41,12 @@ public class NoopLicensingService : ILicensingService
 
     public byte[] SignLicense(ILicense license)
     {
-        return new byte[0];
+        return [];
+    }
+
+    public string GenerateToken(ILicense license)
+    {
+        return string.Empty;
     }
 
     public Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization)

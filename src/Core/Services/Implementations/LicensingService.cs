@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
@@ -19,16 +20,14 @@ public class LicensingService : ILicensingService
     private readonly IGlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly ILogger<LicensingService> _logger;
 
-    private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
+    private readonly Dictionary<Guid, DateTime> _userCheckCache = new();
 
     public LicensingService(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IWebHostEnvironment environment,
         ILogger<LicensingService> logger,
@@ -36,7 +35,6 @@ public class LicensingService : ILicensingService
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _logger = logger;
         _globalSettings = globalSettings;
@@ -44,22 +42,8 @@ public class LicensingService : ILicensingService
         var certThumbprint = environment.IsDevelopment() ?
             "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
             "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
-        if (_globalSettings.SelfHosted)
-        {
-            _certificate = CoreHelpers.GetEmbeddedCertificateAsync(environment.IsDevelopment() ? "licensing_dev.cer" : "licensing.cer", null)
-                .GetAwaiter().GetResult();
-        }
-        else if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
-            CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
-        {
-            _certificate = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                "licensing.pfx", _globalSettings.LicenseCertificatePassword)
-                .GetAwaiter().GetResult();
-        }
-        else
-        {
-            _certificate = CoreHelpers.GetCertificate(certThumbprint);
-        }
+
+        _certificate = GetCertificate(environment, globalSettings, certThumbprint);
 
         if (_certificate == null || !_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(certThumbprint),
             StringComparison.InvariantCultureIgnoreCase))
@@ -81,7 +65,8 @@ public class LicensingService : ILicensingService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
+
+        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
             "Validating licenses for {NumberOfOrganizations} organizations.", enabledOrgs.Count);
 
         var exceptions = new List<Exception>();
@@ -110,10 +95,9 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (!license.VerifySignature(_certificate))
+                if (!VerifyLicense(license))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid signature.");
-                    continue;
                 }
             }
             catch (Exception ex)
@@ -128,19 +112,6 @@ public class LicensingService : ILicensingService
         }
     }
 
-    private async Task DisableOrganizationAsync(Organization org, ILicense license, string reason)
-    {
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
-            "Organization {0} ({1}) has an invalid license and is being disabled. Reason: {2}",
-            org.Id, org.DisplayName(), reason);
-        org.Enabled = false;
-        org.ExpirationDate = license?.Expires ?? DateTime.UtcNow;
-        org.RevisionDate = DateTime.UtcNow;
-        await _organizationRepository.ReplaceAsync(org);
-
-        await _mailService.SendLicenseExpiredAsync(new List<string> { org.BillingEmail }, org.DisplayName());
-    }
-
     public async Task ValidateUsersAsync()
     {
         if (!_globalSettings.SelfHosted)
@@ -149,7 +120,7 @@ public class LicensingService : ILicensingService
         }
 
         var premiumUsers = await _userRepository.GetManyByPremiumAsync(true);
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
+        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
             "Validating premium for {0} users.", premiumUsers.Count);
 
         foreach (var user in premiumUsers)
@@ -179,19 +150,83 @@ public class LicensingService : ILicensingService
             {
                 return user.Premium;
             }
-            else
-            {
-                _userCheckCache[user.Id] = now;
-            }
+
+            _userCheckCache[user.Id] = now;
         }
         else
         {
             _userCheckCache.Add(user.Id, now);
         }
 
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
-            "Validating premium license for user {0}({1}).", user.Id, user.Email);
+        _logger.LogInformation(
+            Core.Constants.BypassFiltersEventId,
+            null,
+            "Validating premium license for user {UserId}({UserEmail}).",
+            user.Id, user.Email);
         return await ProcessUserValidationAsync(user);
+    }
+
+    public bool VerifyLicense(ILicense license)
+    {
+        using var rsa = _certificate.GetRSAPublicKey();
+
+        if (rsa is null)
+        {
+            throw new InvalidOperationException("Could not get RSA public key.");
+        }
+
+        return rsa.VerifyData(
+            license.EncodedData,
+            license.SignatureBytes,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
+    }
+
+    public byte[] SignLicense(ILicense license)
+    {
+        if (_globalSettings.SelfHosted)
+        {
+            throw new InvalidOperationException("Cannot sign licenses on self-hosted instances");
+        }
+
+        if (!_certificate.HasPrivateKey)
+        {
+            throw new InvalidOperationException("Cannot sign licenses using a certificate without a private key");
+        }
+
+        using var rsa = _certificate.GetRSAPrivateKey();
+
+        if (rsa is null)
+        {
+            throw new InvalidOperationException("Could not get RSA private key when attempting to sign license");
+        }
+
+        return rsa.SignData(license.EncodedData, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+    }
+
+    public string GenerateToken(ILicense license)
+    {
+        if (_globalSettings.SelfHosted || !_certificate.HasPrivateKey)
+        {
+            throw new InvalidOperationException("Cannot generate tokens.");
+        }
+
+        return license.ToToken(_certificate);
+    }
+
+    public Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization) =>
+        ReadOrganizationLicenseAsync(organization.Id);
+
+    public async Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId)
+    {
+        var filePath = Path.Combine(_globalSettings.LicenseDirectory, "organization", $"{organizationId}.json");
+        if (!File.Exists(filePath))
+        {
+            return null;
+        }
+
+        await using var fs = File.OpenRead(filePath);
+        return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
     }
 
     private async Task<bool> ProcessUserValidationAsync(User user)
@@ -209,7 +244,7 @@ public class LicensingService : ILicensingService
             return false;
         }
 
-        if (!license.VerifySignature(_certificate))
+        if (!VerifyLicense(license))
         {
             await DisablePremiumAsync(user, license, "Invalid signature.");
             return false;
@@ -220,31 +255,33 @@ public class LicensingService : ILicensingService
 
     private async Task DisablePremiumAsync(User user, ILicense license, string reason)
     {
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
-            "User {0}({1}) has an invalid license and premium is being disabled. Reason: {2}",
+        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
+            "User {UserId}({UserEmail}) has an invalid license and premium is being disabled. Reason: {Reason}",
             user.Id, user.Email, reason);
 
         user.Premium = false;
         user.PremiumExpirationDate = license?.Expires ?? DateTime.UtcNow;
         user.RevisionDate = DateTime.UtcNow;
+
         await _userRepository.ReplaceAsync(user);
 
         await _mailService.SendLicenseExpiredAsync(new List<string> { user.Email });
     }
 
-    public bool VerifyLicense(ILicense license)
+    private async Task DisableOrganizationAsync(Organization org, ILicense license, string reason)
     {
-        return license.VerifySignature(_certificate);
-    }
+        _logger.LogInformation(
+            Core.Constants.BypassFiltersEventId,
+            null,
+            "Organization {OrganizationId} ({OrganizationDisplayName}) has an invalid license and is being disabled. Reason: {Reason}",
+            org.Id, org.DisplayName(), reason);
 
-    public byte[] SignLicense(ILicense license)
-    {
-        if (_globalSettings.SelfHosted || !_certificate.HasPrivateKey)
-        {
-            throw new InvalidOperationException("Cannot sign licenses.");
-        }
+        org.Enabled = false;
+        org.ExpirationDate = license?.Expires ?? DateTime.UtcNow;
+        org.RevisionDate = DateTime.UtcNow;
 
-        return license.Sign(_certificate);
+        await _organizationRepository.ReplaceAsync(org);
+        await _mailService.SendLicenseExpiredAsync(new List<string> { org.BillingEmail }, org.DisplayName());
     }
 
     private UserLicense ReadUserLicense(User user)
@@ -259,17 +296,22 @@ public class LicensingService : ILicensingService
         return JsonSerializer.Deserialize<UserLicense>(data);
     }
 
-    public Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization) =>
-        ReadOrganizationLicenseAsync(organization.Id);
-    public async Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId)
+    private X509Certificate2 GetCertificate(IWebHostEnvironment environment, IGlobalSettings globalSettings, string certThumbprint)
     {
-        var filePath = Path.Combine(_globalSettings.LicenseDirectory, "organization", $"{organizationId}.json");
-        if (!File.Exists(filePath))
+        if (_globalSettings.SelfHosted)
         {
-            return null;
+            return CoreHelpers.GetEmbeddedCertificateAsync(environment.IsDevelopment() ? "licensing_dev.cer" : "licensing.cer", null)
+                .GetAwaiter().GetResult();
         }
 
-        using var fs = File.OpenRead(filePath);
-        return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
+        if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
+            CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
+        {
+            return CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
+                    "licensing.pfx", _globalSettings.LicenseCertificatePassword)
+                .GetAwaiter().GetResult();
+        }
+
+        return CoreHelpers.GetCertificate(certThumbprint);
     }
 }
