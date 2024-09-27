@@ -93,6 +93,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IRemoveOrganizationUserCommand, RemoveOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
+        services.AddScoped<IDeleteManagedOrganizationUserAccountCommand, DeleteManagedOrganizationUserAccountCommand>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)

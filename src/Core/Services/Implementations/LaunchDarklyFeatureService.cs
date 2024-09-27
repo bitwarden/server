@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Context;
+using Bit.Core.Identity;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using LaunchDarkly.Logging;
@@ -20,6 +21,7 @@ public class LaunchDarklyFeatureService : IFeatureService
 
     private const string _contextAttributeClientVersion = "client-version";
     private const string _contextAttributeDeviceType = "device-type";
+    private const string _contextAttributeClientType = "client-type";
     private const string _contextAttributeOrganizations = "organizations";
 
     public LaunchDarklyFeatureService(
@@ -148,14 +150,15 @@ public class LaunchDarklyFeatureService : IFeatureService
             if (_currentContext.DeviceType.HasValue)
             {
                 builder.Set(_contextAttributeDeviceType, (int)_currentContext.DeviceType.Value);
+                builder.Set(_contextAttributeClientType, (int)DeviceTypes.ToClientType(_currentContext.DeviceType.Value));
             }
         }
 
         var builder = LaunchDarkly.Sdk.Context.MultiBuilder();
 
-        switch (_currentContext.ClientType)
+        switch (_currentContext.IdentityClientType)
         {
-            case Identity.ClientType.User:
+            case IdentityClientType.User:
                 {
                     ContextBuilder ldUser;
                     if (_currentContext.UserId.HasValue)
@@ -182,7 +185,7 @@ public class LaunchDarklyFeatureService : IFeatureService
                 }
                 break;
 
-            case Identity.ClientType.Organization:
+            case IdentityClientType.Organization:
                 {
                     if (_currentContext.OrganizationId.HasValue)
                     {
@@ -196,7 +199,7 @@ public class LaunchDarklyFeatureService : IFeatureService
                 }
                 break;
 
-            case Identity.ClientType.ServiceAccount:
+            case IdentityClientType.ServiceAccount:
                 {
                     if (_currentContext.UserId.HasValue)
                     {
