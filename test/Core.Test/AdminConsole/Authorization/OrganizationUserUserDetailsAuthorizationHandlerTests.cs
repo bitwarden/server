@@ -136,7 +136,6 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         Assert.True(context.HasSucceeded);
     }
 
-
     [Theory, BitAutoData, CurrentContextOrganizationCustomize]
     public async Task FlagDisabled_ReadAll_ProviderUser_Success(
         CurrentContextOrganization organization,
