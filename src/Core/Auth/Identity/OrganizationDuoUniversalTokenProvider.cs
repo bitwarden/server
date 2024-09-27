@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
@@ -33,7 +34,7 @@ public class OrganizationDuoUniversalTokenProvider : DuoTokenProvider, IOrganiza
 
         var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
         var canGenerate = organization.TwoFactorProviderIsEnabled(TwoFactorProviderType.OrganizationDuo)
-            && HasProperMetaData(provider);
+            && DuoUtilities.HasProperDuoMetadata(provider);;
         return Task.FromResult(canGenerate);
     }
 
@@ -69,7 +70,7 @@ public class OrganizationDuoUniversalTokenProvider : DuoTokenProvider, IOrganiza
         }
 
         var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-        if (!HasProperMetaData(provider))
+        if (!DuoUtilities.HasProperDuoMetadata(provider))
         {
             return null;
         }

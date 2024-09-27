@@ -45,7 +45,7 @@ public class TwoFactorDuoResponseModel : ResponseModel
             }
             if (provider.MetaData.TryGetValue("ClientSecret", out var clientSecret))
             {
-                ClientSecret = MaskKey((string)clientSecret);
+                ClientSecret = MaskSecret((string)clientSecret);
             }
             if (provider.MetaData.TryGetValue("ClientId", out var clientId))
             {
@@ -58,14 +58,14 @@ public class TwoFactorDuoResponseModel : ResponseModel
         }
     }
 
-    private static string MaskKey(string key)
+    private static string MaskSecret(string secret)
     {
-        if (string.IsNullOrWhiteSpace(key) || key.Length <= 6)
+        if (string.IsNullOrWhiteSpace(secret) || secret.Length <= 6)
         {
-            return key;
+            return secret;
         }
 
         // Mask all but the first 6 characters.
-        return string.Concat(key.AsSpan(0, 6), new string('*', key.Length - 6));
+        return string.Concat(secret.AsSpan(0, 6), new string('*', secret.Length - 6));
     }
 }

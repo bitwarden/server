@@ -1,8 +1,19 @@
-﻿namespace Bit.Core.Auth.Utilities;
+﻿using Bit.Core.Auth.Models;
+
+namespace Bit.Core.Auth.Utilities;
 
 public class DuoUtilities
 {
-    public static bool ValidHost(string host)
+    public static bool HasProperDuoMetadata(TwoFactorProvider provider)
+    {
+        return provider?.MetaData != null && 
+               provider.MetaData.ContainsKey("ClientId") &&
+               provider.MetaData.ContainsKey("ClientSecret") && 
+               provider.MetaData.ContainsKey("Host") &&
+               ValidDuoHost((string)provider.MetaData["Host"]);
+    }
+
+    public static bool ValidDuoHost(string host)
     {
         if (Uri.TryCreate($"https://{host}", UriKind.Absolute, out var uri))
         {
@@ -13,4 +24,3 @@ public class DuoUtilities
         throw new ArgumentException("Invalid Duo host configured.", nameof(host));
     }
 }
-
