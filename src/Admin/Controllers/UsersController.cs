@@ -64,20 +64,20 @@ public class UsersController : Controller
         var skip = (page - 1) * count;
         var users = await _userRepository.SearchAsync(email, skip, count);
 
-        var userModels = new List<UserModel>();
+        var userModels = new List<UserViewModel>();
 
         if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
         {
             var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
 
-            userModels = UserModel.MapUserModels(users, twoFactorAuthLookup).ToList();
+            userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
         }
         else
         {
             foreach (var user in users)
             {
                 var isTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
-                userModels.Add(UserModel.MapUserModel(user, isTwoFactorEnabled));
+                userModels.Add(UserViewModel.MapViewModel(user, isTwoFactorEnabled));
             }
         }
 
@@ -104,7 +104,7 @@ public class UsersController : Controller
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
 
-        return View(new UserViewModel(UserModel.MapUserModel(user, isTwoFactorEnabled), ciphers));
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -120,7 +120,7 @@ public class UsersController : Controller
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        return View(new UserEditModel(UserModel.MapUserModel(user, isTwoFactorEnabled), ciphers, billingInfo, billingHistoryInfo, _globalSettings));
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
     }
 
     [HttpPost]

@@ -6,7 +6,7 @@ using Bit.Core.Entities;
 
 namespace Admin.Test.Models;
 
-public class UserModelTests
+public class UserViewModelTests
 {
     [Fact]
     public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserHasTwoFactorEnabled_ThenReturnsTrue()
@@ -18,7 +18,7 @@ public class UserModelTests
             (user.Id, true)
         };
 
-        var actual = UserModel.IsTwoFactorEnabled(user, lookup);
+        var actual = UserViewModel.IsTwoFactorEnabled(user, lookup);
 
         Assert.True(actual);
     }
@@ -33,7 +33,7 @@ public class UserModelTests
             (Guid.NewGuid(), true)
         };
 
-        var actual = UserModel.IsTwoFactorEnabled(user, lookup);
+        var actual = UserViewModel.IsTwoFactorEnabled(user, lookup);
 
         Assert.False(actual);
     }
@@ -45,18 +45,18 @@ public class UserModelTests
         var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)>();
 
-        var actual = UserModel.IsTwoFactorEnabled(user, lookup);
+        var actual = UserViewModel.IsTwoFactorEnabled(user, lookup);
 
         Assert.False(actual);
     }
 
     [Fact]
-    public void MapUserModel_GivenUser_WhenPopulated_ThenMapsToUserModel()
+    public void MapUserViewModel_GivenUser_WhenPopulated_ThenMapsToUserViewModel()
     {
         var fixture = new Fixture();
         var user = fixture.Create<User>();
 
-        var actual = UserModel.MapUserModel(user, true);
+        var actual = UserViewModel.MapViewModel(user, true);
 
         Assert.Equal(actual.Id, user.Id);
         Assert.Equal(actual.Email, user.Email);
@@ -79,37 +79,37 @@ public class UserModelTests
     }
 
     [Fact]
-    public void MapUserModel_GivenUserWithTwoFactorEnabled_WhenPopulated_ThenMapsToUserModel()
+    public void MapUserViewModel_GivenUserWithTwoFactorEnabled_WhenPopulated_ThenMapsToUserViewModel()
     {
         var fixture = new Fixture();
         var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)> { (user.Id, true) };
 
-        var actual = UserModel.MapUserModel(user, lookup);
+        var actual = UserViewModel.MapViewModel(user, lookup);
 
         Assert.True(actual.TwoFactorEnabled);
     }
 
     [Fact]
-    public void MapUserModel_GivenUserWithoutTwoFactorEnabled_WhenPopulated_ThenTwoFactorIsEnabled()
+    public void MapUserViewModel_GivenUserWithoutTwoFactorEnabled_WhenPopulated_ThenTwoFactorIsEnabled()
     {
         var fixture = new Fixture();
         var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)> { (user.Id, false) };
 
-        var actual = UserModel.MapUserModel(user, lookup);
+        var actual = UserViewModel.MapViewModel(user, lookup);
 
         Assert.False(actual.TwoFactorEnabled);
     }
 
     [Fact]
-    public void MapUserModel_GivenUser_WhenNotInLookUpList_ThenTwoFactorIsDisabled()
+    public void MapUserViewModel_GivenUser_WhenNotInLookUpList_ThenTwoFactorIsDisabled()
     {
         var fixture = new Fixture();
         var user = fixture.Create<User>();
         var lookup = new List<(Guid, bool)> { (Guid.NewGuid(), true) };
 
-        var actual = UserModel.MapUserModel(user, lookup);
+        var actual = UserViewModel.MapViewModel(user, lookup);
 
         Assert.False(actual.TwoFactorEnabled);
     }
