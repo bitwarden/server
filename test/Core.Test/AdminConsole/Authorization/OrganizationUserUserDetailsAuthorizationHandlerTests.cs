@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -23,6 +24,7 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         CurrentContextOrganization organization,
         SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
     {
+        EnableFeatureFlag(sutProvider);
         organization.Type = userType;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
@@ -46,6 +48,7 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         CurrentContextOrganization organization,
         SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
     {
+        EnableFeatureFlag(sutProvider);
         organization.Type = OrganizationUserType.User;
         sutProvider.GetDependency<ICurrentContext>()
             .ProviderUserForOrgAsync(organization.Id)
@@ -66,6 +69,7 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         CurrentContextOrganization organization,
         SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
     {
+        EnableFeatureFlag(sutProvider);
         organization.Type = OrganizationUserType.User;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
@@ -85,6 +89,7 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
         CurrentContextOrganization organization,
         SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
     {
+        EnableFeatureFlag(sutProvider);
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
@@ -96,5 +101,11 @@ public class OrganizationUserUserDetailsAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.False(context.HasSucceeded);
+    }
+
+    private void EnableFeatureFlag(SutProvider<OrganizationUserUserDetailsAuthorizationHandler> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.Pm3478RefactorOrganizationUserApi)
+            .Returns(true);
     }
 }
