@@ -29,12 +29,12 @@ public class
             not null when requirement == NotificationOperations.Read => CanRead(notification),
             not null when requirement == NotificationOperations.Create => await CanCreate(notification),
             not null when requirement == NotificationOperations.Update => await CanUpdate(notification),
-            _ => false
+            _ => throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement))
         };
 
         if (authorized)
         {
-            context.Succeed(requirement!);
+            context.Succeed(requirement);
         }
     }
 

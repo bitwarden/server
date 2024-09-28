@@ -29,12 +29,12 @@ public class NotificationStatusAuthorizationHandler : AuthorizationHandler<Notif
             not null when requirement == NotificationStatusOperations.Read => CanRead(notificationStatus),
             not null when requirement == NotificationStatusOperations.Create => CanCreate(notificationStatus),
             not null when requirement == NotificationStatusOperations.Update => CanUpdate(notificationStatus),
-            _ => false
+            _ => throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement))
         };
 
         if (authorized)
         {
-            context.Succeed(requirement!);
+            context.Succeed(requirement);
         }
     }
 
