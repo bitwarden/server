@@ -29,7 +29,7 @@ public class CreateNotificationStatusCommand : ICreateNotificationStatusCommand
 
     public async Task<NotificationStatus> CreateAsync(NotificationStatus notificationStatus)
     {
-        var notification = _notificationRepository.GetByIdAsync(notificationStatus.NotificationId);
+        var notification = await _notificationRepository.GetByIdAsync(notificationStatus.NotificationId);
         if (notification == null)
         {
             throw new NotFoundException();
