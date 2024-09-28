@@ -13,24 +13,18 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
 {
     private readonly ICurrentContext _currentContext;
     private readonly IAuthorizationService _authorizationService;
-    private readonly ICreateNotificationStatusCommand _createNotificationStatusCommand;
-    private readonly IUpdateNotificationStatusCommand _updateNotificationStatusCommand;
     private readonly INotificationRepository _notificationRepository;
     private readonly INotificationStatusRepository _notificationStatusRepository;
 
     public MarkNotificationDeletedCommand(ICurrentContext currentContext,
         IAuthorizationService authorizationService,
         INotificationRepository notificationRepository,
-        INotificationStatusRepository notificationStatusRepository,
-        ICreateNotificationStatusCommand createNotificationStatusCommand,
-        IUpdateNotificationStatusCommand updateNotificationStatusCommand)
+        INotificationStatusRepository notificationStatusRepository)
     {
         _currentContext = currentContext;
         _authorizationService = authorizationService;
         _notificationRepository = notificationRepository;
         _notificationStatusRepository = notificationStatusRepository;
-        _createNotificationStatusCommand = createNotificationStatusCommand;
-        _updateNotificationStatusCommand = updateNotificationStatusCommand;
     }
 
     public async Task MarkDeletedAsync(Guid notificationId)
@@ -72,7 +66,7 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
                 throw new NotFoundException();
             }
 
-            await _createNotificationStatusCommand.CreateAsync(notificationStatus);
+            await _notificationStatusRepository.CreateAsync(notificationStatus);
         }
         else
         {
@@ -85,7 +79,7 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
 
             notificationStatus.DeletedDate = DateTime.UtcNow;
 
-            await _updateNotificationStatusCommand.UpdateAsync(notificationStatus);
+            await _notificationStatusRepository.UpdateAsync(notificationStatus);
         }
     }
 }
