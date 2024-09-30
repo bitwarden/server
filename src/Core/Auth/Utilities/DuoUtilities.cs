@@ -6,9 +6,9 @@ public class DuoUtilities
 {
     public static bool HasProperDuoMetadata(TwoFactorProvider provider)
     {
-        return provider?.MetaData != null && 
+        return provider?.MetaData != null &&
                provider.MetaData.ContainsKey("ClientId") &&
-               provider.MetaData.ContainsKey("ClientSecret") && 
+               provider.MetaData.ContainsKey("ClientSecret") &&
                provider.MetaData.ContainsKey("Host") &&
                ValidDuoHost((string)provider.MetaData["Host"]);
     }

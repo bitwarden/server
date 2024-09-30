@@ -22,7 +22,7 @@ public class UserTwoFactorDuoResponseModelTests
         }
         catch (ArgumentNullException e)
         {
-        // Assert
+            // Assert
             Assert.Equal("Value cannot be null. (Parameter 'user')", e.Message);
         }
     }

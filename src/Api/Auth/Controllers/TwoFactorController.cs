@@ -202,7 +202,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
     {
         var user = await CheckAsync(model, true);
-        if(!await _duoTokenProvider.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
+        if (!await _duoTokenProvider.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
@@ -233,7 +233,7 @@ public class TwoFactorController : Controller
         await CheckAsync(model, false);
         var organization = await CheckOrganizationAsync(new Guid(id));
 
-        if(!await _duoTokenProvider.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
+        if (!await _duoTokenProvider.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
@@ -427,7 +427,8 @@ public class TwoFactorController : Controller
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
-    private async Task<Organization> CheckOrganizationAsync(Guid organizationId){
+    private async Task<Organization> CheckOrganizationAsync(Guid organizationId)
+    {
         if (!await _currentContext.ManagePolicies(organizationId))
         {
             throw new NotFoundException();

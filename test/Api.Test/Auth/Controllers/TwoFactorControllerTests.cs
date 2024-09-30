@@ -1,18 +1,18 @@
-﻿using Xunit;
-using NSubstitute;
-using Bit.Api.Auth.Controllers;
-using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.AutoFixture;
-using Bit.Core.Services;
-using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Core.Entities;
-using Bit.Api.Auth.Models.Response.TwoFactor;
-using Bit.Core.Exceptions;
+﻿using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Response.TwoFactor;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Services;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Api.Test.Auth.Controllers;
 
@@ -33,7 +33,6 @@ public class TwoFactorControllerTests
 
         // Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(result);
-
     }
 
     [Theory, BitAutoData]
@@ -175,7 +174,7 @@ public class TwoFactorControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ManagePolicies(default)
             .ReturnsForAnyArgs(true);
-        
+
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(default)
             .ReturnsForAnyArgs(null as Organization);
@@ -242,7 +241,7 @@ public class TwoFactorControllerTests
             .ReturnsForAnyArgs(true);
 
         // Act
-        var result = 
+        var result =
             await sutProvider.Sut.PutOrganizationDuo(organization.Id.ToString(), request);
 
         // Assert
@@ -284,7 +283,8 @@ public class TwoFactorControllerTests
             .ReturnsForAnyArgs(true);
     }
 
-    private void SetupCheckOrganizationAsyncToPass(SutProvider<TwoFactorController> sutProvider, Organization organization){
+    private void SetupCheckOrganizationAsyncToPass(SutProvider<TwoFactorController> sutProvider, Organization organization)
+    {
         sutProvider.GetDependency<ICurrentContext>()
             .ManagePolicies(default)
             .ReturnsForAnyArgs(true);
