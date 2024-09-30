@@ -35,7 +35,7 @@ public class OrganizationUsersControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PutResetPasswordEnrollment_InivitedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
+    public async Task PutResetPasswordEnrollment_InvitedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
         User user, OrganizationUser orgUser, SutProvider<OrganizationUsersController> sutProvider)
     {
         orgUser.Status = Core.Enums.OrganizationUserStatusType.Invited;

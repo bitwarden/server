@@ -19,19 +19,22 @@ public class CollectController : Controller
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IFeatureService _featureService;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectController(
         ICurrentContext currentContext,
         IEventService eventService,
         ICipherRepository cipherRepository,
         IOrganizationRepository organizationRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IApplicationCacheService applicationCacheService)
     {
         _currentContext = currentContext;
         _eventService = eventService;
         _cipherRepository = cipherRepository;
         _organizationRepository = organizationRepository;
         _featureService = featureService;
+        _applicationCacheService = applicationCacheService;
     }
 
     [HttpPost]
@@ -77,7 +80,21 @@ public class CollectController : Controller
                     }
                     if (cipher == null)
                     {
-                        continue;
+                        // When the user cannot access the cipher directly, check if the organization allows for
+                        // admin/owners access to all collections and the user can access the cipher from that perspective.
+                        if (!eventModel.OrganizationId.HasValue)
+                        {
+                            continue;
+                        }
+
+                        cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value);
+                        var cipherBelongsToOrg = cipher.OrganizationId == eventModel.OrganizationId;
+                        var org = _currentContext.GetOrganization(eventModel.OrganizationId.Value);
+
+                        if (!cipherBelongsToOrg || org == null || cipher == null)
+                        {
+                            continue;
+                        }
                     }
                     if (!ciphersCache.ContainsKey(eventModel.CipherId.Value))
                     {

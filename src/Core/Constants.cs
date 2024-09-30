@@ -123,7 +123,6 @@ public static class FeatureFlagKeys
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
-    public const string AC2828_ProviderPortalMembersPage = "AC-2828_provider-portal-members-page";
     public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
@@ -142,6 +141,8 @@ public static class FeatureFlagKeys
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
+    public const string TrialPayment = "PM-8163-trial-payment";
+    public const string Pm3478RefactorOrganizationUserApi = "pm-3478-refactor-organizationuser-api";
 
     public static List<string> GetAllKeys()
     {
