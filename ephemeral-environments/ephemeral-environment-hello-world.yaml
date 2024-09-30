@@ -1,8 +1,3 @@
-component:
-  admin:
-    image:
-      name: bitwardenprod.azurecr.io/admin
-      tag: ephemeral-environment-hello-world@sha256:d461fa2e97d187d7458b8efccd31892a3de780416de594436b158e591e1881d6
 extensions:
   dbClient:
     enabled: true
