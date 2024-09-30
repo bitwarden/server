@@ -1,15 +1,14 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Attributes;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Models.Business;
@@ -113,16 +112,15 @@ public class UserLicense : ILicense
     [LicenseIgnore]
     public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
+    [LicenseIgnore]
+    [JsonIgnore]
+    public byte[] EncodedData => this.EncodeLicense(p => p.ShouldIncludePropertyOnLicense(Version));
 
     [LicenseIgnore]
     [JsonIgnore]
-    public byte[] EncodedData => ComputeEncodedData(p => ShouldIncludeProperty(p));
-
-    [LicenseIgnore]
-    [JsonIgnore]
-    public byte[] EncodedHash => SHA256.HashData(
-        ComputeEncodedData(
-            p => ShouldIncludeProperty(p, LicenseIgnoreCondition.OnHash)));
+    public byte[] EncodedHash =>
+        SHA256.HashData(
+            this.EncodeLicense(p => p.ShouldIncludePropertyOnLicense(Version, LicenseIgnoreCondition.OnHash)));
 
     private bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
 
@@ -218,47 +216,5 @@ public class UserLicense : ILicense
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateJwtSecurityToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
-    }
-
-    /// <summary>
-    /// Converts the license to an encoded byte array (string)
-    /// </summary>
-    /// <param name="shouldIncludeProperty"></param>
-    /// <returns></returns>
-    /// <exception cref="NotSupportedException"></exception>
-    private byte[] ComputeEncodedData(Func<PropertyInfo, bool> shouldIncludeProperty)
-    {
-        if (!ValidLicenseVersion)
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
-
-        var props = typeof(OrganizationLicense)
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(shouldIncludeProperty)
-            .OrderBy(p => p.Name)
-            .Select(p => $"{p.Name}:{CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
-            .Aggregate((c, n) => $"{c}|{n}");
-
-        var data = $"license:user|{props}";
-
-        return Encoding.UTF8.GetBytes(data);
-    }
-
-    /// <summary>
-    /// Determines whether a property should be included when encoding the license data
-    /// </summary>
-    /// <param name="p"></param>
-    /// <param name="additionalCondition"></param>
-    /// <returns></returns>
-    private bool ShouldIncludeProperty(
-        PropertyInfo p,
-        LicenseIgnoreCondition additionalCondition = LicenseIgnoreCondition.Always)
-    {
-        var licenseIgnoreAttribute = p.GetCustomAttribute<LicenseIgnoreAttribute>();
-        var shouldNotIgnore = licenseIgnoreAttribute is null || licenseIgnoreAttribute.Condition != additionalCondition;
-        var versionIsSupported = (p.GetCustomAttribute<LicenseVersionAttribute>()?.Version ?? 1) <= Version;
-
-        return shouldNotIgnore && versionIsSupported;
     }
 }
