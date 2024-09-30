@@ -36,14 +36,6 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             throw new BadRequestException("License is already in use by another organization.");
         }
 
-        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception) &&
-            selfHostedOrganization.CanUseLicense(license, out exception);
-
-        if (!canUse)
-        {
-            throw new BadRequestException(exception);
-        }
-
         await WriteLicenseFileAsync(selfHostedOrganization, license);
         await UpdateOrganizationAsync(selfHostedOrganization, license);
     }

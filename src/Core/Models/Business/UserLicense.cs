@@ -122,46 +122,7 @@ public class UserLicense : ILicense
         SHA256.HashData(
             this.EncodeLicense(p => p.ShouldIncludePropertyOnLicense(Version, LicenseIgnoreCondition.OnHash)));
 
-    private bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
-
-    public bool CanUse(User user, out string exception)
-    {
-        var errorMessages = new StringBuilder();
-
-        if (Issued > DateTime.UtcNow)
-        {
-            errorMessages.AppendLine("The license hasn't been issued yet.");
-        }
-
-        if (Expires < DateTime.UtcNow)
-        {
-            errorMessages.AppendLine("The license has expired.");
-        }
-
-        if (Version != 1)
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
-
-        if (!user.EmailVerified)
-        {
-            errorMessages.AppendLine("The user's email is not verified.");
-        }
-
-        if (!user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase))
-        {
-            errorMessages.AppendLine("The user's email does not match the license email.");
-        }
-
-        if (errorMessages.Length > 0)
-        {
-            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
-            return false;
-        }
-
-        exception = "";
-        return true;
-    }
+    public bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
 
     public bool VerifyData(User user)
     {

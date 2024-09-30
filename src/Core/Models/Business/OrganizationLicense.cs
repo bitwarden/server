@@ -262,62 +262,7 @@ public class OrganizationLicense : ILicense
         SHA256.HashData(
             this.EncodeLicense(p => p.ShouldIncludePropertyOnLicense(Version, LicenseIgnoreCondition.OnHash)));
 
-    private bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
-
-    public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
-    {
-        var errorMessages = new StringBuilder();
-
-        if (!Enabled)
-        {
-            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
-        }
-
-        if (Issued > DateTime.UtcNow)
-        {
-            errorMessages.AppendLine("The license hasn't been issued yet.");
-        }
-
-        if (Expires < DateTime.UtcNow)
-        {
-            errorMessages.AppendLine("The license has expired.");
-        }
-
-        if (!ValidLicenseVersion)
-        {
-            errorMessages.AppendLine($"Version {Version} is not supported.");
-        }
-
-        if (InstallationId != globalSettings.Installation.Id)
-        {
-            errorMessages.AppendLine("The installation ID does not match the current installation.");
-        }
-
-        if (!SelfHost)
-        {
-            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
-        }
-
-        if (LicenseType != null && LicenseType != Core.Enums.LicenseType.Organization)
-        {
-            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
-                                     "Upload this license from your personal account settings page.");
-        }
-
-        if (!licensingService.VerifyLicense(this))
-        {
-            errorMessages.AppendLine("The license verification failed.");
-        }
-
-        if (errorMessages.Length > 0)
-        {
-            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
-            return false;
-        }
-
-        exception = string.Empty;
-        return true;
-    }
+    public bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
 
     public bool VerifyData(Organization organization, IGlobalSettings globalSettings)
     {

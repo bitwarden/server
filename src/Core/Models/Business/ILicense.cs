@@ -16,5 +16,6 @@ public interface ILicense
     byte[] SignatureBytes { get; }
     byte[] EncodedData { get; }
     byte[] EncodedHash { get; }
+    bool ValidLicenseVersion { get; }
     string ToToken(X509Certificate2 certificate);
 }

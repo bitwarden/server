@@ -106,7 +106,7 @@ public class LicensingService : ILicensingService
             }
         }
 
-        if (exceptions.Any())
+        if (exceptions.Count != 0)
         {
             throw new AggregateException("There were one or more exceptions while validating organizations.", exceptions);
         }
@@ -120,8 +120,12 @@ public class LicensingService : ILicensingService
         }
 
         var premiumUsers = await _userRepository.GetManyByPremiumAsync(true);
-        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
-            "Validating premium for {0} users.", premiumUsers.Count);
+
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            null,
+            "Validating premium for {PremiumUsersCount} users.",
+            premiumUsers.Count);
 
         foreach (var user in premiumUsers)
         {

@@ -49,7 +49,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly IDeviceRepository _deviceRepository;
-    private readonly ILicensingService _licensingService;
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
@@ -84,7 +83,6 @@ public class OrganizationService : IOrganizationService
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
         IDeviceRepository deviceRepository,
-        ILicensingService licensingService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
@@ -118,7 +116,6 @@ public class OrganizationService : IOrganizationService
         _pushNotificationService = pushNotificationService;
         _pushRegistrationService = pushRegistrationService;
         _deviceRepository = deviceRepository;
-        _licensingService = licensingService;
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
@@ -645,12 +642,6 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
-        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception);
-        if (!canUse)
-        {
-            throw new BadRequestException(exception);
-        }
-
         if (license.PlanType != PlanType.Custom &&
             StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled) == null)
         {

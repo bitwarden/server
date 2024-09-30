@@ -2,6 +2,7 @@
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Utilities;
+using Bit.Core.Billing.Licenses.ValidateLicense;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -28,6 +29,7 @@ public class SelfHostedOrganizationLicensesController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserService _userService;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
+    private readonly IValidateLicenseCommandHandler _validateLicenseCommandHandler;
 
     public SelfHostedOrganizationLicensesController(
         ICurrentContext currentContext,
@@ -36,7 +38,7 @@ public class SelfHostedOrganizationLicensesController : Controller
         IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
         IUserService userService,
-        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand)
+        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand, IValidateLicenseCommandHandler validateLicenseCommandHandler)
     {
         _currentContext = currentContext;
         _selfHostedGetOrganizationLicenseQuery = selfHostedGetOrganizationLicenseQuery;
@@ -45,6 +47,7 @@ public class SelfHostedOrganizationLicensesController : Controller
         _organizationRepository = organizationRepository;
         _userService = userService;
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
+        _validateLicenseCommandHandler = validateLicenseCommandHandler;
     }
 
     [HttpPost("")]
@@ -60,6 +63,12 @@ public class SelfHostedOrganizationLicensesController : Controller
         if (license == null)
         {
             throw new BadRequestException("Invalid license");
+        }
+
+        var licenseValidationResult = _validateLicenseCommandHandler.Handle(new ValidateLicenseCommand { License = license });
+        if (!licenseValidationResult.Succeeded)
+        {
+            throw new BadRequestException($"Invalid license. {string.Join(' ', licenseValidationResult.Errors)}");
         }
 
         var result = await _organizationService.SignUpAsync(license, user, model.Key,
@@ -80,6 +89,12 @@ public class SelfHostedOrganizationLicensesController : Controller
         if (license == null)
         {
             throw new BadRequestException("Invalid license");
+        }
+
+        var licenseValidationResult = _validateLicenseCommandHandler.Handle(new ValidateLicenseCommand { License = license });
+        if (!licenseValidationResult.Succeeded)
+        {
+            throw new BadRequestException($"Invalid license: {string.Join(' ', licenseValidationResult.Errors)}");
         }
 
         var selfHostedOrganizationDetails = await _organizationRepository.GetSelfHostedOrganizationDetailsById(orgIdGuid);
@@ -117,6 +132,13 @@ public class SelfHostedOrganizationLicensesController : Controller
 
         var license =
             await _selfHostedGetOrganizationLicenseQuery.GetLicenseAsync(selfHostedOrganizationDetails, billingSyncConnection);
+
+        var licenseValidationResult = _validateLicenseCommandHandler.Handle(new ValidateLicenseCommand { License = license });
+        if (!licenseValidationResult.Succeeded)
+        {
+            throw new BadRequestException($"Invalid license: {string.Join(' ', licenseValidationResult.Errors)}");
+        }
+
         var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
 
         await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, currentOrganization);
