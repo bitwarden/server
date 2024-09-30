@@ -2,6 +2,7 @@ component:
   admin:
     image:
       name: bitwardenprod.azurecr.io/admin
+      tag: dev
 extensions:
   dbClient:
     enabled: true
