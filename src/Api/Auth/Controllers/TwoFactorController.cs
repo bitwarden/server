@@ -3,6 +3,8 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
@@ -202,14 +204,8 @@ public class TwoFactorController : Controller
         [FromBody] SecretVerificationRequestModel model)
     {
         await CheckAsync(model, false, true);
+        var organization = await CheckOrganizationAsync(new Guid(id));
 
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
         var response = new TwoFactorDuoResponseModel(organization);
         return response;
     }
@@ -220,14 +216,8 @@ public class TwoFactorController : Controller
         [FromBody] UpdateTwoFactorDuoRequestModel model)
     {
         await CheckAsync(model, false);
+        var organization = await CheckOrganizationAsync(new Guid(id));
 
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
         if(!await _duoTokenProvider.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
         {
             throw new BadRequestException(
@@ -379,19 +369,8 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorProviderResponseModel> PutOrganizationDisable(string id,
         [FromBody] TwoFactorProviderRequestModel model)
     {
-        var user = await CheckAsync(model, false);
-
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
+        await CheckAsync(model, false);
+        var organization = await CheckOrganizationAsync(new Guid(id));
 
         await _organizationService.DisableTwoFactorProviderAsync(organization, model.Type.Value);
         var response = new TwoFactorProviderResponseModel(model.Type.Value, organization);
@@ -431,6 +410,15 @@ public class TwoFactorController : Controller
         [FromBody] DeviceVerificationRequestModel model)
     {
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
+    }
+
+    private async Task<Organization> CheckOrganizationAsync(Guid organizationId){
+        if (!await _currentContext.ManagePolicies(organizationId))
+        {
+            throw new NotFoundException();
+        }
+        var organization = await _organizationRepository.GetByIdAsync(organizationId) ?? throw new NotFoundException();
+        return organization;
     }
 
     private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium,

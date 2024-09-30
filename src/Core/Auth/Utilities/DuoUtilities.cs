@@ -21,6 +21,6 @@ public class DuoUtilities
                 uri.Host.StartsWith("api-") &&
                 (uri.Host.EndsWith(".duosecurity.com") || uri.Host.EndsWith(".duofederal.com"));
         }
-        throw new ArgumentException("Invalid Duo host configured.", nameof(host));
+        return false;
     }
 }

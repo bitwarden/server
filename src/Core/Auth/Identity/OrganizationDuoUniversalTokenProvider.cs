@@ -34,7 +34,7 @@ public class OrganizationDuoUniversalTokenProvider : DuoTokenProvider, IOrganiza
 
         var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
         var canGenerate = organization.TwoFactorProviderIsEnabled(TwoFactorProviderType.OrganizationDuo)
-            && DuoUtilities.HasProperDuoMetadata(provider);;
+            && DuoUtilities.HasProperDuoMetadata(provider);
         return Task.FromResult(canGenerate);
     }
 

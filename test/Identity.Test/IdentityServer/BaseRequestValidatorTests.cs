@@ -31,6 +31,8 @@ public class BaseRequestValidatorTests
     private readonly IEventService _eventService;
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
+    private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly ILogger<BaseRequestValidatorTests> _logger;
@@ -51,6 +53,8 @@ public class BaseRequestValidatorTests
         _eventService = Substitute.For<IEventService>();
         _deviceValidator = Substitute.For<IDeviceValidator>();
         _twoFactorAuthenticationValidator = Substitute.For<ITwoFactorAuthenticationValidator>();
+        _organizationDuoUniversalTokenProvider = Substitute.For<IOrganizationDuoUniversalTokenProvider>();
+        _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _mailService = Substitute.For<IMailService>();
         _logger = Substitute.For<ILogger<BaseRequestValidatorTests>>();
@@ -68,6 +72,8 @@ public class BaseRequestValidatorTests
             _eventService,
             _deviceValidator,
             _twoFactorAuthenticationValidator,
+            _organizationDuoUniversalTokenProvider,
+            _organizationRepository,
             _organizationUserRepository,
             _mailService,
             _logger,
@@ -102,7 +108,7 @@ public class BaseRequestValidatorTests
 
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
 
-        // Assert        
+        // Assert
         await _eventService.Received(1)
                            .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
                                              Core.Enums.EventType.User_FailedLogIn);
@@ -113,7 +119,7 @@ public class BaseRequestValidatorTests
     /* Logic path
     ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
                  |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
-                            (self hosted) |-> _logger.LogWarning() 
+                            (self hosted) |-> _logger.LogWarning()
                                           |-> SetErrorResult
     */
     [Theory, BitAutoData]
@@ -140,7 +146,7 @@ public class BaseRequestValidatorTests
 
     /* Logic path
     ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
-                 |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync 
+                 |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
                                           |-> SetErrorResult
     */
     [Theory, BitAutoData]
@@ -229,7 +235,7 @@ public class BaseRequestValidatorTests
         context.CustomValidatorRequestContext.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(1);
         _globalSettings.DisableEmailNewDevice = false;
 
-        context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device 
+        context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device
 
         _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
                          .Returns(device);
@@ -259,7 +265,7 @@ public class BaseRequestValidatorTests
         context.CustomValidatorRequestContext.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(1);
         _globalSettings.DisableEmailNewDevice = false;
 
-        context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device 
+        context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device
 
         _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
                          .Returns(device);
@@ -307,7 +313,7 @@ public class BaseRequestValidatorTests
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert       
+        // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal("SSO authentication is required.", errorResponse.Message);
