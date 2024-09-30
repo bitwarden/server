@@ -1,3 +1,4 @@
+component:
 extensions:
   dbClient:
     enabled: true
