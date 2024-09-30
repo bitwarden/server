@@ -71,12 +71,12 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         }
     }
 
-    public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetailData>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
+    public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         return await connection
-            .QueryAsync<VerifiedOrganizationDomainSsoDetailData>(
+            .QueryAsync<VerifiedOrganizationDomainSsoDetail>(
                 $"[{Schema}].[VerifiedOrganizationDomainSsoDetails_ReadByEmail]",
                 new { Email = email },
                 commandType: CommandType.StoredProcedure);

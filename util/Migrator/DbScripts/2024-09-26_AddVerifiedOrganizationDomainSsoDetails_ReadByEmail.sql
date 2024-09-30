@@ -10,10 +10,7 @@ SELECT @Domain = SUBSTRING(@Email, CHARINDEX( '@', @Email) + 1, LEN(@Email))
 
 SELECT
     O.Id AS OrganizationId,
-    O.[Name] AS OrganizationName,
-    S.Enabled AS SsoAvailable,
     O.Identifier AS OrganizationIdentifier,
-    OD.VerifiedDate,
     OD.DomainName
 FROM [dbo].[OrganizationView] O
     INNER JOIN [dbo].[OrganizationDomainView] OD ON O.Id = OD.OrganizationId
@@ -21,4 +18,5 @@ FROM [dbo].[OrganizationView] O
 WHERE OD.DomainName = @Domain
     AND O.Enabled = 1
     AND OD.VerifiedDate IS NOT NULL
+    AND (P.Id is NULL OR (P.Id IS NOT NULL AND P.[Type] = 4)) -- SSO Type
 END

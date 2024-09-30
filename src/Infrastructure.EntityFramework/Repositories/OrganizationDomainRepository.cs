@@ -95,7 +95,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return ssoDetails;
     }
 
-    public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetailData>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
+    public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
     {
         var domainName = new MailAddress(email).Host;
 
@@ -105,14 +105,15 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
                       from od in o.Domains
                       join s in dbContext.SsoConfigs on o.Id equals s.OrganizationId into sJoin
                       from s in sJoin.DefaultIfEmpty()
-                      where od.DomainName == domainName && o.Enabled
-                      select new VerifiedOrganizationDomainSsoDetailData(
+                      where od.DomainName == domainName
+                            && o.Enabled
+                            && s.Enabled
+                            && od.VerifiedDate != null
+                      select new VerifiedOrganizationDomainSsoDetail(
                           o.Id,
                           o.Name,
                           od.DomainName,
-                           o.SsoConfigs.Any(sc => sc.Enabled),
-                          o.Identifier,
-                          od.VerifiedDate ?? DateTime.UtcNow))
+                          o.Identifier))
             .AsNoTracking()
             .ToListAsync();
     }

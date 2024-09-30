@@ -5,7 +5,7 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class VerifiedOrganizationDomainSsoDetailResponseModel : ResponseModel
 {
-    public VerifiedOrganizationDomainSsoDetailResponseModel(VerifiedOrganizationDomainSsoDetailData data)
+    public VerifiedOrganizationDomainSsoDetailResponseModel(VerifiedOrganizationDomainSsoDetail data)
         : base("verifiedOrganizationDomainSsoDetails")
     {
         if (data is null)
@@ -13,14 +13,9 @@ public class VerifiedOrganizationDomainSsoDetailResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(data));
         }
 
-        SsoAvailable = data.SsoAvailable;
         DomainName = data.DomainName;
         OrganizationIdentifier = data.OrganizationIdentifier;
-        VerifiedDate = data.VerifiedDate;
     }
-
-    public bool SsoAvailable { get; }
     public string DomainName { get; }
     public string OrganizationIdentifier { get; }
-    public DateTime VerifiedDate { get; }
 }

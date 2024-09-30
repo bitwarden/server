@@ -322,14 +322,14 @@ public class OrganizationDomainControllerTests
         OrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).Returns(Array.Empty<VerifiedOrganizationDomainSsoDetailData>());
+            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).Returns(Array.Empty<VerifiedOrganizationDomainSsoDetail>());
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrgDomainSsoDetails(model));
     }
 
     [Theory, BitAutoData]
     public async Task GetVerifiedOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetails_WhenEmailHasClaimedDomain(
-        OrganizationDomainSsoDetailsRequestModel model, IEnumerable<VerifiedOrganizationDomainSsoDetailData> ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
+        OrganizationDomainSsoDetailsRequestModel model, IEnumerable<VerifiedOrganizationDomainSsoDetail> ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
