@@ -8,7 +8,7 @@ namespace Bit.Core.Billing.Models.Sales;
 
 public class PremiumUserSale
 {
-    private PremiumUserSale() {}
+    private PremiumUserSale() { }
 
     public required User User { get; set; }
     public required CustomerSetup CustomerSetup { get; set; }

@@ -44,11 +44,11 @@ public class PremiumUserBillingService(
                 when subscription.Status == StripeConstants.SubscriptionStatus.Incomplete:
             case { Type: not PaymentMethodType.PayPal }
                 when subscription.Status == StripeConstants.SubscriptionStatus.Active:
-            {
-                user.Premium = true;
-                user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
-                break;
-            }
+                {
+                    user.Premium = true;
+                    user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
+                    break;
+                }
         }
 
         user.Gateway = GatewayType.Stripe;
@@ -125,37 +125,37 @@ public class PremiumUserBillingService(
         switch (paymentMethodType)
         {
             case PaymentMethodType.BankAccount:
-            {
-                var setupIntent =
-                    (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
-                    .FirstOrDefault();
-
-                if (setupIntent == null)
                 {
-                    logger.LogError("Cannot create customer for user ({UserID}) without a setup intent for their bank account", user.Id);
+                    var setupIntent =
+                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
+                        .FirstOrDefault();
+
+                    if (setupIntent == null)
+                    {
+                        logger.LogError("Cannot create customer for user ({UserID}) without a setup intent for their bank account", user.Id);
+                        throw new BillingException();
+                    }
+
+                    await setupIntentCache.Set(user.Id, setupIntent.Id);
+                    break;
+                }
+            case PaymentMethodType.Card:
+                {
+                    customerCreateOptions.PaymentMethod = paymentMethodToken;
+                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethodToken;
+                    break;
+                }
+            case PaymentMethodType.PayPal:
+                {
+                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(user, paymentMethodToken);
+                    customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
+                    break;
+                }
+            default:
+                {
+                    logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethodType.ToString());
                     throw new BillingException();
                 }
-
-                await setupIntentCache.Set(user.Id, setupIntent.Id);
-                break;
-            }
-            case PaymentMethodType.Card:
-            {
-                customerCreateOptions.PaymentMethod = paymentMethodToken;
-                customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethodToken;
-                break;
-            }
-            case PaymentMethodType.PayPal:
-            {
-                braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(user, paymentMethodToken);
-                customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
-                break;
-            }
-            default:
-            {
-                logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethodType.ToString());
-                throw new BillingException();
-            }
         }
 
         try
@@ -188,15 +188,15 @@ public class PremiumUserBillingService(
             switch (customerSetup.TokenizedPaymentSource!.Type)
             {
                 case PaymentMethodType.BankAccount:
-                {
-                    await setupIntentCache.Remove(user.Id);
-                    break;
-                }
+                    {
+                        await setupIntentCache.Remove(user.Id);
+                        break;
+                    }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
-                {
-                    await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                    break;
-                }
+                    {
+                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                        break;
+                    }
             }
         }
     }
