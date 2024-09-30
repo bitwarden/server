@@ -24,7 +24,6 @@ public class UserTwoFactorDuoRequestModelTests
         var result = model.ToUser(existingUser);
 
         // Assert
-        // IKey and SKey should be the same as ClientId and ClientSecret
         Assert.True(result.GetTwoFactorProviders().ContainsKey(TwoFactorProviderType.Duo));
         Assert.Equal("clientId", result.GetTwoFactorProviders()[TwoFactorProviderType.Duo].MetaData["ClientId"]);
         Assert.Equal("clientSecret", result.GetTwoFactorProviders()[TwoFactorProviderType.Duo].MetaData["ClientSecret"]);
@@ -52,7 +51,6 @@ public class UserTwoFactorDuoRequestModelTests
         var result = model.ToUser(existingUser);
 
         // Assert
-        // IKey and SKey should be the same as ClientId and ClientSecret
         Assert.True(result.GetTwoFactorProviders().ContainsKey(TwoFactorProviderType.Duo));
         Assert.Equal("newClientId", result.GetTwoFactorProviders()[TwoFactorProviderType.Duo].MetaData["ClientId"]);
         Assert.Equal("newClientSecret", result.GetTwoFactorProviders()[TwoFactorProviderType.Duo].MetaData["ClientSecret"]);

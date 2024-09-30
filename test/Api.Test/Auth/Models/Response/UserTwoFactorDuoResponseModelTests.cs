@@ -10,6 +10,25 @@ public class UserTwoFactorDuoResponseModelTests
 {
     [Theory]
     [BitAutoData]
+    public void User_WithDuo_UserNull_ThrowsArgumentException(User user)
+    {
+        // Arrange
+        user.TwoFactorProviders = GetTwoFactorDuoProvidersJson();
+
+        // Act
+        try
+        {
+            var model = new TwoFactorDuoResponseModel(null as User);
+        }
+        catch (ArgumentNullException e)
+        {
+        // Assert
+            Assert.Equal("Value cannot be null. (Parameter 'user')", e.Message);
+        }
+    }
+
+    [Theory]
+    [BitAutoData]
     public void User_WithDuo_ShouldBuildModel(User user)
     {
         // Arrange
@@ -18,7 +37,7 @@ public class UserTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(user);
 
-        // Assert Even if both versions are present priority is given to v4 data
+        // Assert
         Assert.NotNull(model);
         Assert.Equal("clientId", model.ClientId);
         Assert.Equal("secret************", model.ClientSecret);
@@ -34,7 +53,7 @@ public class UserTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(user);
 
-        /// Assert
+        // Assert
         Assert.False(model.Enabled);
     }
 
@@ -48,7 +67,7 @@ public class UserTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(user);
 
-        /// Assert
+        // Assert
         Assert.False(model.Enabled);
     }
 
@@ -62,7 +81,7 @@ public class UserTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(user);
 
-        /// Assert
+        // Assert
         Assert.False(model.Enabled);
     }
 

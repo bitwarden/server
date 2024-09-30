@@ -48,6 +48,9 @@ public abstract class BaseTokenProviderTests<T>
         userService
             .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType, user)
             .Returns(true);
+        userService
+            .CanAccessPremium(user)
+            .Returns(true);
     }
 
     protected static UserManager<User> SubstituteUserManager()
