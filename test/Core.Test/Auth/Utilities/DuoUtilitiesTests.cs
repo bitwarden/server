@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Models;
+﻿using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
