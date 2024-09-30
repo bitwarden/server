@@ -2,11 +2,13 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -135,6 +137,7 @@ public class OrganizationDomainController : Controller
 
     [AllowAnonymous]
     [HttpPost("domain/verified")]
+    [RequireFeature(FeatureFlagKeys.VerifiedSsoDomainEndpoint)]
     public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
         [FromBody] OrganizationDomainSsoDetailsRequestModel model)
     {

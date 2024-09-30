@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
+    public const string VerifiedSsoDomainEndpoint = "PLACEHOLDER";
 
     public static List<string> GetAllKeys()
     {
