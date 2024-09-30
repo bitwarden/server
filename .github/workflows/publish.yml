@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
-      deployment-id: ${{ steps.deployment.outputs.deployment-id }}
+      deployment-id: ${{ steps.deployment.outputs.deployment_id }}
       release-version: ${{ steps.version-output.outputs.version }}
     steps:
       - name: Version output
@@ -99,7 +99,7 @@ jobs:
           echo "Github Release Option: $RELEASE_OPTION"
 
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
 
       - name: Set up project name
         id: setup

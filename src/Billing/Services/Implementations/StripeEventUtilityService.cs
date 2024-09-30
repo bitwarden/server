@@ -206,6 +206,12 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                         transaction.PaymentMethodType = PaymentMethodType.Card;
                         transaction.Details = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}";
                     }
+                    else if (charge.PaymentMethodDetails.UsBankAccount != null)
+                    {
+                        var usBankAccount = charge.PaymentMethodDetails.UsBankAccount;
+                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                        transaction.Details = $"{usBankAccount.BankName}, *{usBankAccount.Last4}";
+                    }
                     else if (charge.PaymentMethodDetails.AchDebit != null)
                     {
                         var achDebit = charge.PaymentMethodDetails.AchDebit;

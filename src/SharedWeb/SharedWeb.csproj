@@ -7,7 +7,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.7.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.8.0" />
   </ItemGroup>
 
 </Project>

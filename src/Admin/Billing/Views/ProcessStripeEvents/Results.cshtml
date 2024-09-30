@@ -1,0 +1,49 @@
+@using Bit.Admin.Billing.Models.ProcessStripeEvents
+@model Bit.Admin.Billing.Models.ProcessStripeEvents.EventsResponseBody
+
+@{
+    var title = Model.ActionType == EventActionType.Inspect ? "Inspect Stripe Events" : "Process Stripe Events";
+    ViewData["Title"] = title;
+}
+
+<h1>@title</h1>
+<h2>Results</h2>
+
+<div class="table-responsive">
+    @if (!Model.Events.Any())
+    {
+        <p>No data found.</p>
+    }
+    else
+    {
+        <table class="table table-striped table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>API Version</th>
+                <th>Created</th>
+                @if (Model.ActionType == EventActionType.Process)
+                {
+                    <th>Processing Error</th>
+                }
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var eventResponseBody in Model.Events)
+            {
+                <tr>
+                    <td><a href="@eventResponseBody.URL">@eventResponseBody.Id</a></td>
+                    <td>@eventResponseBody.Type</td>
+                    <td>@eventResponseBody.APIVersion</td>
+                    <td>@eventResponseBody.CreatedUTC</td>
+                    @if (Model.ActionType == EventActionType.Process)
+                    {
+                        <td>@eventResponseBody.ProcessingError</td>
+                    }
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
