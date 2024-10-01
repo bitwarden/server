@@ -10,6 +10,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 ENV ASPNETCORE_URLS http://+:5000
+ENV WELCOME hello
 WORKDIR /app
 EXPOSE 5000
 COPY obj/build-output/publish .
