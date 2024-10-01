@@ -20,3 +20,4 @@ WHERE OD.DomainName = @Domain
     AND OD.VerifiedDate IS NOT NULL
     AND (P.Id is NULL OR (P.Id IS NOT NULL AND P.[Type] = 4)) -- SSO Type
 END
+GO
