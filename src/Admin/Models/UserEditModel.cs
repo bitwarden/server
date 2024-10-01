@@ -7,18 +7,23 @@ using Bit.Core.Vault.Entities;
 
 namespace Bit.Admin.Models;
 
-public class UserEditModel : UserViewModel
+public class UserEditModel
 {
-    public UserEditModel() { }
+    public UserEditModel()
+    {
+
+    }
 
     public UserEditModel(
         User user,
+        bool isTwoFactorEnabled,
         IEnumerable<Cipher> ciphers,
         BillingInfo billingInfo,
         BillingHistoryInfo billingHistoryInfo,
         GlobalSettings globalSettings)
-        : base(user, ciphers)
     {
+        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers);
+
         BillingInfo = billingInfo;
         BillingHistoryInfo = billingHistoryInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -35,32 +40,32 @@ public class UserEditModel : UserViewModel
         PremiumExpirationDate = user.PremiumExpirationDate;
     }
 
-    public BillingInfo BillingInfo { get; set; }
-    public BillingHistoryInfo BillingHistoryInfo { get; set; }
+    public UserViewModel User { get; init; }
+    public BillingInfo BillingInfo { get; init; }
+    public BillingHistoryInfo BillingHistoryInfo { get; init; }
     public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
     public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
-    public string BraintreeMerchantId { get; set; }
+    public string BraintreeMerchantId { get; init; }
 
     [Display(Name = "Name")]
-    public string Name { get; set; }
+    public string Name { get; init; }
     [Required]
     [Display(Name = "Email")]
-    public string Email { get; set; }
+    public string Email { get; init; }
     [Display(Name = "Email Verified")]
-    public bool EmailVerified { get; set; }
+    public bool EmailVerified { get; init; }
     [Display(Name = "Premium")]
-    public bool Premium { get; set; }
+    public bool Premium { get; init; }
     [Display(Name = "Max. Storage GB")]
-    public short? MaxStorageGb { get; set; }
+    public short? MaxStorageGb { get; init; }
     [Display(Name = "Gateway")]
-    public Core.Enums.GatewayType? Gateway { get; set; }
+    public Core.Enums.GatewayType? Gateway { get; init; }
     [Display(Name = "Gateway Customer Id")]
-    public string GatewayCustomerId { get; set; }
+    public string GatewayCustomerId { get; init; }
     [Display(Name = "Gateway Subscription Id")]
-    public string GatewaySubscriptionId { get; set; }
+    public string GatewaySubscriptionId { get; init; }
     [Display(Name = "License Key")]
-    public string LicenseKey { get; set; }
+    public string LicenseKey { get; init; }
     [Display(Name = "Premium Expiration Date")]
-    public DateTime? PremiumExpirationDate { get; set; }
-
+    public DateTime? PremiumExpirationDate { get; init; }
 }
