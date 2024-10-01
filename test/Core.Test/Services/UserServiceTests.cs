@@ -60,7 +60,7 @@ public class UserServiceTests
         sutProvider.GetDependency<Settings.IGlobalSettings>().SelfHosted = true;
         sutProvider.GetDependency<Settings.IGlobalSettings>().LicenseDirectory = tempDir.Directory;
         sutProvider.GetDependency<ILicensingService>()
-            .VerifyLicense(userLicense)
+            .VerifyLicenseSignature(userLicense)
             .Returns(true);
 
         await sutProvider.Sut.UpdateLicenseAsync(user, userLicense);

@@ -95,7 +95,7 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (!VerifyLicense(license))
+                if (!VerifyLicenseSignature(license))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid signature.");
                 }
@@ -170,7 +170,7 @@ public class LicensingService : ILicensingService
         return await ProcessUserValidationAsync(user);
     }
 
-    public bool VerifyLicense(ILicense license)
+    public bool VerifyLicenseSignature(ILicense license)
     {
         using var rsa = _certificate.GetRSAPublicKey();
 
@@ -248,7 +248,7 @@ public class LicensingService : ILicensingService
             return false;
         }
 
-        if (!VerifyLicense(license))
+        if (!VerifyLicenseSignature(license))
         {
             await DisablePremiumAsync(user, license, "Invalid signature.");
             return false;

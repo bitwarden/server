@@ -9,7 +9,7 @@ public interface ILicensingService
     Task ValidateOrganizationsAsync();
     Task ValidateUsersAsync();
     Task<bool> ValidateUserPremiumAsync(User user);
-    bool VerifyLicense(ILicense license);
+    bool VerifyLicenseSignature(ILicense license);
     byte[] SignLicense(ILicense license);
     string GenerateToken(ILicense license);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization);

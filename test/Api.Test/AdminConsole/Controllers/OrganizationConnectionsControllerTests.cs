@@ -103,7 +103,7 @@ public class OrganizationConnectionsControllerTests
             .Returns(organizationLicense);
 
         sutProvider.GetDependency<ILicensingService>()
-            .VerifyLicense(organizationLicense)
+            .VerifyLicenseSignature(organizationLicense)
             .Returns(false);
 
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateConnection(model));
@@ -129,7 +129,7 @@ public class OrganizationConnectionsControllerTests
             .Returns(organizationLicense);
 
         sutProvider.GetDependency<ILicensingService>()
-            .VerifyLicense(organizationLicense)
+            .VerifyLicenseSignature(organizationLicense)
             .Returns(true);
 
         await sutProvider.Sut.CreateConnection(model);
@@ -242,7 +242,7 @@ public class OrganizationConnectionsControllerTests
             .Returns(organizationLicense);
 
         sutProvider.GetDependency<ILicensingService>()
-            .VerifyLicense(organizationLicense)
+            .VerifyLicenseSignature(organizationLicense)
             .Returns(true);
 
         var expected = new OrganizationConnectionResponseModel(updated, typeof(BillingSyncConfig));
@@ -290,7 +290,7 @@ public class OrganizationConnectionsControllerTests
         organizationLicense.Trial = true;
 
         sutProvider.GetDependency<ILicensingService>()
-                    .VerifyLicense(organizationLicense)
+                    .VerifyLicenseSignature(organizationLicense)
                     .Returns(false);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateConnection(existing.Id, model));

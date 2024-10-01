@@ -186,7 +186,7 @@ public class OrganizationConnectionsController : Controller
             throw new BadRequestException($"Cannot create a {typedModel.Type} connection outside of a self-hosted instance.");
         }
         var license = await _licensingService.ReadOrganizationLicenseAsync(typedModel.OrganizationId);
-        if (!_licensingService.VerifyLicense(license))
+        if (!_licensingService.VerifyLicenseSignature(license))
         {
             throw new BadRequestException("Cannot verify license file.");
         }

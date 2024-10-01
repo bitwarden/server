@@ -34,7 +34,7 @@ public class NoopLicensingService : ILicensingService
         return Task.FromResult(user.Premium);
     }
 
-    public bool VerifyLicense(ILicense license)
+    public bool VerifyLicenseSignature(ILicense license)
     {
         return true;
     }

@@ -72,9 +72,9 @@ public class ValidateLicenseCommandHandler(IGlobalSettings globalSettings, ILice
                                      "Upload this license from your personal account settings page.");
         }
 
-        if (!licensingService.VerifyLicense(license))
+        if (!licensingService.VerifyLicenseSignature(license))
         {
-            errorMessages.Add("The license verification failed.");
+            errorMessages.Add("The license signature verification failed.");
         }
 
         if (errorMessages.Count > 0)
@@ -123,9 +123,9 @@ public class ValidateLicenseCommandHandler(IGlobalSettings globalSettings, ILice
                                      "Upload this license from the Organization settings page.");
         }
 
-        if (!licensingService.VerifyLicense(license))
+        if (!licensingService.VerifyLicenseSignature(license))
         {
-            errorMessages.Add("The license verification failed.");
+            errorMessages.Add("The license signature verification failed.");
         }
 
         if (errorMessages.Count > 0)

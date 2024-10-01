@@ -47,7 +47,7 @@ public class UpdateOrganizationLicenseCommandTests
         license.Version = OrganizationLicense.CurrentLicenseFileVersion;
         license.InstallationId = globalSettings.Installation.Id;
         license.LicenseType = LicenseType.Organization;
-        sutProvider.GetDependency<ILicensingService>().VerifyLicense(license).Returns(true);
+        sutProvider.GetDependency<ILicensingService>().VerifyLicenseSignature(license).Returns(true);
 
         // Passing values for SelfHostedOrganizationDetails.CanUseLicense
         // NSubstitute cannot override non-virtual members so we have to ensure the real method passes

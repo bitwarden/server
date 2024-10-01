@@ -899,7 +899,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IPaymentService paymentService = null;
         if (_globalSettings.SelfHosted)
         {
-            if (!_licenseService.VerifyLicense(license))
+            if (!_licenseService.VerifyLicenseSignature(license))
             {
                 throw new BadRequestException("Invalid license.");
             }
@@ -973,7 +973,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 + "Upload this license from the Organization settings page.");
         }
 
-        if (!_licenseService.VerifyLicense(license))
+        if (!_licenseService.VerifyLicenseSignature(license))
         {
             throw new BadRequestException("Invalid license.");
         }
