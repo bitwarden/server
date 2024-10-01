@@ -14,6 +14,10 @@
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Billing\Controllers\" />
+    <Folder Include="Billing\Models\" />
+  </ItemGroup>
 
   <Choose>
     <When Condition="!$(DefineConstants.Contains('OSS'))">
