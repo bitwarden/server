@@ -20,6 +20,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Billing.Licenses.ValidateLicense;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -71,6 +72,7 @@ public class AccountsController : Controller
         _organizationUserValidator;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyValidator;
+    private readonly IValidateLicenseCommandHandler _validateLicenseCommandHandler;
 
 
     public AccountsController(
@@ -95,8 +97,8 @@ public class AccountsController : Controller
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
-        )
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator,
+        IValidateLicenseCommandHandler validateLicenseCommandHandler)
     {
         _globalSettings = globalSettings;
         _organizationService = organizationService;
@@ -118,6 +120,7 @@ public class AccountsController : Controller
         _emergencyAccessValidator = emergencyAccessValidator;
         _organizationUserValidator = organizationUserValidator;
         _webauthnKeyValidator = webAuthnKeyValidator;
+        _validateLicenseCommandHandler = validateLicenseCommandHandler;
     }
 
 
@@ -637,13 +640,31 @@ public class AccountsController : Controller
             throw new BadRequestException("Invalid license.");
         }
 
-        var result = await _userService.SignUpPremiumAsync(user, model.PaymentToken,
-            model.PaymentMethodType.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license,
-            new TaxInfo
+        if (license is not null)
+        {
+            var licenseValidationResult = _validateLicenseCommandHandler.Handle(new ValidateLicenseCommand
             {
-                BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
+                License = license, User = user
             });
+
+            if (!licenseValidationResult.Succeeded)
+            {
+                throw new BadRequestException($"Invalid license: {string.Join(' ', licenseValidationResult.Errors)}");
+            }
+        }
+
+        var taxInfo = new TaxInfo
+        {
+            BillingAddressCountry = model.Country, BillingAddressPostalCode = model.PostalCode,
+        };
+
+        var result = await _userService.SignUpPremiumAsync(
+            user,
+            model.PaymentToken,
+            model.PaymentMethodType.Value,
+            model.AdditionalStorageGb.GetValueOrDefault(0),
+            license,
+            taxInfo);
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
@@ -734,6 +755,16 @@ public class AccountsController : Controller
         if (license == null)
         {
             throw new BadRequestException("Invalid license");
+        }
+
+        var licenseValidationResult = _validateLicenseCommandHandler.Handle(new ValidateLicenseCommand
+        {
+            License = license, User = user
+        });
+
+        if (!licenseValidationResult.Succeeded)
+        {
+            throw new BadRequestException($"Invalid license: {string.Join(' ', licenseValidationResult.Errors)}");
         }
 
         await _userService.UpdateLicenseAsync(user, license);

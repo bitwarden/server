@@ -877,8 +877,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return true;
     }
 
-    public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-        PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
+    public async Task<Tuple<bool, string>> SignUpPremiumAsync(
+        User user,
+        string paymentToken,
+        PaymentMethodType paymentMethodType,
+        short additionalStorageGb,
+        UserLicense license,
         TaxInfo taxInfo)
     {
         if (user.Premium)
@@ -895,14 +899,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IPaymentService paymentService = null;
         if (_globalSettings.SelfHosted)
         {
-            if (license == null || !_licenseService.VerifyLicense(license))
+            if (!_licenseService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");
-            }
-
-            if (!license.CanUse(user, out var exceptionMessage))
-            {
-                throw new BadRequestException(exceptionMessage);
             }
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -968,20 +967,15 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new InvalidOperationException("Licenses require self hosting.");
         }
 
-        if (license?.LicenseType != null && license.LicenseType != LicenseType.User)
+        if (license.LicenseType != null && license.LicenseType != LicenseType.User)
         {
             throw new BadRequestException("Organization licenses cannot be applied to a user. "
                 + "Upload this license from the Organization settings page.");
         }
 
-        if (license == null || !_licenseService.VerifyLicense(license))
+        if (!_licenseService.VerifyLicense(license))
         {
             throw new BadRequestException("Invalid license.");
-        }
-
-        if (!license.CanUse(user, out var exceptionMessage))
-        {
-            throw new BadRequestException(exceptionMessage);
         }
 
         var dir = $"{_globalSettings.LicenseDirectory}/user";
