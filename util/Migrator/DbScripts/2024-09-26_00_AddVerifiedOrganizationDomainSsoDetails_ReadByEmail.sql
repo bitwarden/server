@@ -14,6 +14,7 @@ SELECT
     OD.DomainName
 FROM [dbo].[OrganizationView] O
     INNER JOIN [dbo].[OrganizationDomainView] OD ON O.Id = OD.OrganizationId
+    LEFT JOIN [dbo].[PolicyView] P ON O.Id = P.OrganizationId
     LEFT JOIN [dbo].[Ssoconfig] S ON O.Id = S.OrganizationId
 WHERE OD.DomainName = @Domain
     AND O.Enabled = 1
