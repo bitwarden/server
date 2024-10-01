@@ -15,15 +15,10 @@ public class PremiumRequestModel : IValidatableObject
     public string Country { get; set; }
     public string PostalCode { get; set; }
 
-    public bool Validate(GlobalSettings globalSettings)
-    {
-        if (!(License == null && !globalSettings.SelfHosted) ||
-            (License != null && globalSettings.SelfHosted))
-        {
-            return false;
-        }
-        return globalSettings.SelfHosted || !string.IsNullOrWhiteSpace(Country);
-    }
+    public bool Validate(GlobalSettings globalSettings) =>
+        License == null &&
+        !globalSettings.SelfHosted &&
+        !string.IsNullOrWhiteSpace(Country);
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
