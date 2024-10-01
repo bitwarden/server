@@ -1,8 +1,0 @@
-helm:
-  parameters:
-  - name: component.admin.image.name
-    value: bitwardenprod.azurecr.io/admin
-    forcestring: true
-  - name: component.admin.image.tag
-    value: ephemeral-environment-hello-world@sha256:968bc67e79b6244200ec616c2dd8b512b76fe52466362212c8eb1017e6629c6b
-    forcestring: true
