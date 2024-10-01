@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
@@ -93,4 +94,10 @@ public interface IUserService
     /// The organization must be enabled and be on an Enterprise plan.
     /// </remarks>
     Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
+
+    /// <summary>
+    /// Gets the organization that manages the user.
+    /// </summary>
+    /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
+    Task<Organization> GetOrganizationManagingUserAsync(Guid userId);
 }

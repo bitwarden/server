@@ -86,7 +86,7 @@
 @if (canViewUserInformation)
 {
     <h2>User Information</h2>
-    @await Html.PartialAsync("_ViewInformation", Model)
+    @await Html.PartialAsync("_ViewInformation", Model.User)
 }
 @if (canViewBillingInformation)
 {

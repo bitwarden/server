@@ -3,10 +3,10 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -44,7 +44,6 @@ public class OrganizationUsersController : Controller
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
-    private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -66,7 +65,6 @@ public class OrganizationUsersController : Controller
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
@@ -87,7 +85,6 @@ public class OrganizationUsersController : Controller
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
-        _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
@@ -117,11 +114,27 @@ public class OrganizationUsersController : Controller
         return response;
     }
 
+    [HttpGet("mini-details")]
+    [RequireFeature(FeatureFlagKeys.Pm3478RefactorOrganizationUserApi)]
+    public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
+    {
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
+            OrganizationUserUserMiniDetailsOperations.ReadAll);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId);
+        return new ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>(
+            organizationUserUserDetails.Select(ou => new OrganizationUserUserMiniDetailsResponseModel(ou)));
+    }
+
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var authorized = (await _authorizationService.AuthorizeAsync(
-            User, OrganizationUserOperations.ReadAll(orgId))).Succeeded;
+            User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();

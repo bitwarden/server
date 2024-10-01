@@ -361,6 +361,11 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        if (organization.UseSecretsManager && organization.Seats + seatAdjustment < organization.SmSeats)
+        {
+            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+        }
+
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
@@ -593,10 +598,20 @@ public class OrganizationService : IOrganizationService
             }
             else
             {
-                await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                    signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                    signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                    signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                if (signup.PaymentMethodType != null)
+                {
+                    await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
+                        signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                }
+                else
+                {
+                    await _paymentService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
+                        signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                }
+
             }
         }
 
@@ -1179,12 +1194,7 @@ public class OrganizationService : IOrganizationService
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
             // Revert autoscaling
-            if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
-            {
-                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value);
-            }
-
-            // Revert SmSeat autoscaling
+            // Do this first so that SmSeats never exceed PM seats (due to current billing requirements)
             if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
                 currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
             {
@@ -1193,6 +1203,11 @@ public class OrganizationService : IOrganizationService
                     SmSeats = initialSmSeatCount.Value
                 };
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
+            }
+
+            if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
+            {
+                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value);
             }
 
             exceptions.Add(e);

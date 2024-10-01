@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfa
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
@@ -28,6 +29,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -141,6 +143,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
         services.AddScoped<IGetOrganizationUsersManagementStatusQuery, GetOrganizationUsersManagementStatusQuery>();
+
+        services.AddScoped<IAuthorizationHandler, OrganizationUserUserMiniDetailsAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
     }
 

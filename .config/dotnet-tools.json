@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "swashbuckle.aspnetcore.cli": {
-      "version": "6.7.3",
+      "version": "6.8.0",
       "commands": ["swagger"]
     },
     "dotnet-ef": {
