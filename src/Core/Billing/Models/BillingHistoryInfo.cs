@@ -38,6 +38,7 @@ public class BillingHistoryInfo
     {
         public BillingInvoice(Invoice inv)
         {
+            Id = inv.Id;
             Date = inv.Created;
             Url = inv.HostedInvoiceUrl;
             PdfUrl = inv.InvoicePdf;
@@ -46,6 +47,7 @@ public class BillingHistoryInfo
             Amount = inv.Total / 100M;
         }
 
+        public string Id { get; set; }
         public decimal Amount { get; set; }
         public DateTime? Date { get; set; }
         public string Url { get; set; }

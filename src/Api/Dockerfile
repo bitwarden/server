@@ -9,6 +9,7 @@ RUN apt-get update \
     gnupg \
     wget \
     software-properties-common \
+    krb5-user \
     && rm -rf /var/lib/apt/lists/*
 
 # Install sqlcmd (Go) command-line tools

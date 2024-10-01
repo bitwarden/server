@@ -667,7 +667,7 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
+        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup)
             .Returns((organization, null as OrganizationUser, new Collection()));
 
         var providerOrganization =
@@ -775,7 +775,7 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
+        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup)
             .Returns((organization, null as OrganizationUser, defaultCollection));
 
         var providerOrganization =

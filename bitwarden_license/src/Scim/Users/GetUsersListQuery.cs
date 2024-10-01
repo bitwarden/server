@@ -20,15 +20,16 @@ public class GetUsersListQuery : IGetUsersListQuery
         string externalIdFilter = null;
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            if (filter.StartsWith("userName eq "))
+            var filterLower = filter.ToLowerInvariant();
+            if (filterLower.StartsWith("username eq "))
             {
-                usernameFilter = filter.Substring(12).Trim('"').ToLowerInvariant();
+                usernameFilter = filterLower.Substring(12).Trim('"');
                 if (usernameFilter.Contains("@"))
                 {
                     emailFilter = usernameFilter;
                 }
             }
-            else if (filter.StartsWith("externalId eq "))
+            else if (filterLower.StartsWith("externalid eq "))
             {
                 externalIdFilter = filter.Substring(14).Trim('"');
             }
