@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core.Context;
 using Bit.Core.Entities;
