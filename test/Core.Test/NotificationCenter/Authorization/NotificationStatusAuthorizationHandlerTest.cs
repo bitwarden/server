@@ -25,7 +25,7 @@ public class NotificationStatusAuthorizationHandlerTests
 
     [Theory]
     [BitAutoData]
-    public async Task HandleAsync_UnsupportedProjectOperationRequirement_Throws(
+    public async Task HandleAsync_UnsupportedNotificationOperationRequirement_Throws(
         SutProvider<NotificationStatusAuthorizationHandler> sutProvider,
         NotificationStatus notificationStatus, ClaimsPrincipal claimsPrincipal)
     {
