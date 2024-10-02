@@ -5,8 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.NotificationCenter.Authorization;
 
-public class
-    NotificationAuthorizationHandler : AuthorizationHandler<NotificationOperationsRequirement, Notification>
+public class NotificationAuthorizationHandler : AuthorizationHandler<NotificationOperationsRequirement, Notification>
 {
     private readonly ICurrentContext _currentContext;
 
@@ -40,61 +39,30 @@ public class
 
     private bool CanRead(Notification notification)
     {
-        if (notification.UserId.HasValue && notification.UserId.Value != _currentContext.UserId!.Value)
-        {
-            return false;
-        }
+        var userMatching = !notification.UserId.HasValue || notification.UserId.Value == _currentContext.UserId!.Value;
+        var organizationMatching = !notification.OrganizationId.HasValue ||
+                                   _currentContext.GetOrganization(notification.OrganizationId.Value) != null;
 
-        if (notification.OrganizationId.HasValue &&
-            _currentContext.GetOrganization(notification.OrganizationId.Value) == null)
-        {
-            return false;
-        }
-
-        return true;
+        return notification.Global || (userMatching && organizationMatching);
     }
 
     private async Task<bool> CanCreate(Notification notification)
     {
-        if (notification.Global)
-        {
-            return false;
-        }
+        var organizationPermissionsMatching = !notification.OrganizationId.HasValue ||
+                                              await _currentContext.AccessReports(notification.OrganizationId.Value);
+        var userNoOrganizationMatching = !notification.UserId.HasValue || notification.OrganizationId.HasValue ||
+                                         notification.UserId.Value == _currentContext.UserId!.Value;
 
-        if (notification.OrganizationId.HasValue &&
-            !await _currentContext.AccessReports(notification.OrganizationId.Value))
-        {
-            return false;
-        }
-
-        if (!notification.OrganizationId.HasValue && notification.UserId.HasValue &&
-            notification.UserId.Value != _currentContext.UserId!.Value)
-        {
-            return false;
-        }
-
-        return true;
+        return !notification.Global && organizationPermissionsMatching && userNoOrganizationMatching;
     }
 
     private async Task<bool> CanUpdate(Notification notification)
     {
-        if (notification.Global)
-        {
-            return false;
-        }
+        var organizationPermissionsMatching = !notification.OrganizationId.HasValue ||
+                                              await _currentContext.AccessReports(notification.OrganizationId.Value);
+        var userNoOrganizationMatching = !notification.UserId.HasValue || notification.OrganizationId.HasValue ||
+                                         notification.UserId.Value == _currentContext.UserId!.Value;
 
-        if (notification.OrganizationId.HasValue &&
-            !await _currentContext.AccessReports(notification.OrganizationId.Value))
-        {
-            return false;
-        }
-
-        if (!notification.OrganizationId.HasValue && notification.UserId.HasValue &&
-            notification.UserId.Value != _currentContext.UserId!.Value)
-        {
-            return false;
-        }
-
-        return true;
+        return !notification.Global && organizationPermissionsMatching && userNoOrganizationMatching;
     }
 }
