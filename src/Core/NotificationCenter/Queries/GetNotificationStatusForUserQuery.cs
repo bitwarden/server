@@ -5,6 +5,7 @@ using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
 using Bit.Core.NotificationCenter.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.NotificationCenter.Queries;
@@ -38,12 +39,8 @@ public class GetNotificationStatusForUserQuery : IGetNotificationStatusForUserQu
             throw new NotFoundException();
         }
 
-        var authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
+        await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User,
             notificationStatus, NotificationStatusOperations.Read);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
 
         return notificationStatus;
     }

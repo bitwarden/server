@@ -5,6 +5,7 @@ using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.NotificationCenter.Commands;
@@ -40,12 +41,8 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
             throw new NotFoundException();
         }
 
-        var authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
-            notification, NotificationOperations.Read);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notification,
+            NotificationOperations.Read);
 
         var notificationStatus = await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(notificationId,
             _currentContext.UserId.Value);
@@ -59,23 +56,15 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
                 DeletedDate = DateTime.Now
             };
 
-            authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
-                notificationStatus, NotificationStatusOperations.Create);
-            if (!authorizationResult.Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notificationStatus,
+                NotificationStatusOperations.Create);
 
             await _notificationStatusRepository.CreateAsync(notificationStatus);
         }
         else
         {
-            authorizationResult = await _authorizationService.AuthorizeAsync(_currentContext.HttpContext.User,
-                notificationStatus, NotificationStatusOperations.Update);
-            if (!authorizationResult.Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notificationStatus,
+                NotificationStatusOperations.Update);
 
             notificationStatus.DeletedDate = DateTime.UtcNow;
 
