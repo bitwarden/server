@@ -959,17 +959,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new InvalidOperationException("Licenses require self hosting.");
         }
 
-        if (license.LicenseType != LicenseType.User)
-        {
-            throw new BadRequestException("Organization licenses cannot be applied to a user. "
-                + "Upload this license from the Organization settings page.");
-        }
-
-        if (!_licenseService.VerifyLicenseSignature(license))
-        {
-            throw new BadRequestException("Invalid license.");
-        }
-
         await _licenseService.WriteLicenseToDiskAsync(user.Id, license);
 
         user.Premium = license.Premium;
