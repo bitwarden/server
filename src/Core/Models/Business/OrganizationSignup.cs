@@ -14,4 +14,6 @@ public class OrganizationSignup : OrganizationUpgrade
     public string PaymentToken { get; set; }
     public int? MaxAutoscaleSeats { get; set; } = null;
     public string InitiationPath { get; set; }
+    public bool IsFromSecretsManagerTrial { get; set; }
+    public bool IsFromProvider { get; set; }
 }
