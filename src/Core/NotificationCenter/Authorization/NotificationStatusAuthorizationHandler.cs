@@ -15,13 +15,13 @@ public class NotificationStatusAuthorizationHandler : AuthorizationHandler<Notif
         _currentContext = currentContext;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
         NotificationStatusOperationsRequirement requirement,
         NotificationStatus notificationStatus)
     {
         if (!_currentContext.UserId.HasValue)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var authorized = requirement switch
@@ -36,6 +36,8 @@ public class NotificationStatusAuthorizationHandler : AuthorizationHandler<Notif
         {
             context.Succeed(requirement);
         }
+
+        return Task.CompletedTask;
     }
 
     private bool CanRead(NotificationStatus notificationStatus)
