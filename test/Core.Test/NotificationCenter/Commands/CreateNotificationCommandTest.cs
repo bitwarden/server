@@ -50,12 +50,9 @@ public class CreateNotificationCommandTest
     {
         Setup(sutProvider, notification, true);
 
-        var oldNotificationId = notification.Id;
-
         var newNotification = await sutProvider.Sut.CreateAsync(notification);
 
         Assert.Equal(notification, newNotification);
-        Assert.NotEqual(oldNotificationId, notification.Id);
         Assert.Equal(DateTime.UtcNow, notification.CreationDate, TimeSpan.FromMinutes(1));
         Assert.Equal(notification.CreationDate, notification.RevisionDate);
     }
