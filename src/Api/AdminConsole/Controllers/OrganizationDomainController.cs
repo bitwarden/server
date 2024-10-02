@@ -136,7 +136,7 @@ public class OrganizationDomainController : Controller
     }
 
     [AllowAnonymous]
-    [HttpPost("domain/verified")]
+    [HttpPost("domain/sso/verified")]
     [RequireFeature(FeatureFlagKeys.VerifiedSsoDomainEndpoint)]
     public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
         [FromBody] OrganizationDomainSsoDetailsRequestModel model)
@@ -144,11 +144,6 @@ public class OrganizationDomainController : Controller
         var ssoResults = (await _organizationDomainRepository
             .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email))
             .ToList();
-
-        if (ssoResults is null || ssoResults.Count == 0)
-        {
-            throw new NotFoundException("Claimed org domain not found");
-        }
 
         return new VerifiedOrganizationDomainSsoDetailsResponseModel(
             ssoResults.Select(ssoResult => new VerifiedOrganizationDomainSsoDetailResponseModel(ssoResult)));
