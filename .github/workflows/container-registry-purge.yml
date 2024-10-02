@@ -21,7 +21,7 @@ jobs:
         env:
           REGISTRY: bitwardenprod
           AGO_DUR_VER: "180d"
-          AGO_DUR: "30d"
+          AGO_DUR: "180d"
         run: |
           REPO_LIST=$(az acr repository list -n $REGISTRY -o tsv)
           for REPO in $REPO_LIST
