@@ -1,43 +1,42 @@
 ﻿@model UserViewModel
-@inject Bit.Core.Services.IUserService userService
 <dl class="row">
     <dt class="col-sm-4 col-lg-3">Id</dt>
-    <dd class="col-sm-8 col-lg-9"><code>@Model.User.Id</code></dd>
+    <dd class="col-sm-8 col-lg-9"><code>@Model.Id</code></dd>
 
     <dt class="col-sm-4 col-lg-3">Premium</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.Premium ? "Yes" : "No")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.Premium ? "Yes" : "No")</dd>
 
     <dt class="col-sm-4 col-lg-3">Premium Expires</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.PremiumExpirationDate?.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.PremiumExpirationDate?.ToString() ?? "-")</dd>
 
     <dt class="col-sm-4 col-lg-3">Email Verified</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.EmailVerified ? "Yes" : "No")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.EmailVerified ? "Yes" : "No")</dd>
 
     <dt class="col-sm-4 col-lg-3">Using 2FA</dt>
-    <dd class="col-sm-8 col-lg-9">@(await userService.TwoFactorIsEnabledAsync(Model.User) ? "Yes" : "No")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.TwoFactorEnabled ? "Yes" : "No")</dd>
 
     <dt class="col-sm-4 col-lg-3">Items</dt>
     <dd class="col-sm-8 col-lg-9">@Model.CipherCount</dd>
 
     <dt class="col-sm-4 col-lg-3">Vault Modified</dt>
-    <dd class="col-sm-8 col-lg-9">@Model.User.AccountRevisionDate.ToString()</dd>
+    <dd class="col-sm-8 col-lg-9">@Model.AccountRevisionDate.ToString()</dd>
 
     <dt class="col-sm-4 col-lg-3">Created</dt>
-    <dd class="col-sm-8 col-lg-9">@Model.User.CreationDate.ToString()</dd>
+    <dd class="col-sm-8 col-lg-9">@Model.CreationDate.ToString()</dd>
 
     <dt class="col-sm-4 col-lg-3">Modified</dt>
-    <dd class="col-sm-8 col-lg-9">@Model.User.RevisionDate.ToString()</dd>
+    <dd class="col-sm-8 col-lg-9">@Model.RevisionDate.ToString()</dd>
 
     <dt class="col-sm-4 col-lg-3">Last Email Address Change</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.LastEmailChangeDate?.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.LastEmailChangeDate?.ToString() ?? "-")</dd>
 
     <dt class="col-sm-4 col-lg-3">Last KDF Change</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.LastKdfChangeDate?.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.LastKdfChangeDate?.ToString() ?? "-")</dd>
 
     <dt class="col-sm-4 col-lg-3">Last Key Rotation</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.LastKeyRotationDate?.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.LastKeyRotationDate?.ToString() ?? "-")</dd>
 
     <dt class="col-sm-4 col-lg-3">Last Password Change</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.User.LastPasswordChangeDate?.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.LastPasswordChangeDate?.ToString() ?? "-")</dd>
 
 </dl>
