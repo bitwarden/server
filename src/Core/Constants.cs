@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string PersistPopupView = "persist-popup-view";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
+    public const string RemoveServerVersionHeader = "remove-server-version-header";
 
     public static List<string> GetAllKeys()
     {
