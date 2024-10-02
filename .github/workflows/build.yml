@@ -16,7 +16,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repo
         uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
@@ -29,7 +29,7 @@ jobs:
 
   build-artifacts:
     name: Build artifacts
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - lint
     strategy:
@@ -118,7 +118,7 @@ jobs:
 
   build-docker:
     name: Build Docker images
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       security-events: write
     needs: build-artifacts
@@ -288,7 +288,7 @@ jobs:
 
   upload:
     name: Upload
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-docker
     steps:
       - name: Check out repo
@@ -452,7 +452,7 @@ jobs:
 
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: lint
     defaults:
       run:
@@ -502,7 +502,7 @@ jobs:
 
   self-host-build:
     name: Trigger self-host build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-docker
     steps:
       - name: Log in to Azure - CI subscription
@@ -535,7 +535,7 @@ jobs:
   trigger-k8s-deploy:
     name: Trigger k8s deploy
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-docker
     steps:
       - name: Log in to Azure - CI subscription
@@ -569,7 +569,7 @@ jobs:
   check-failures:
     name: Check for failures
     if: always()
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - lint
       - build-artifacts

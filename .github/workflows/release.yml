@@ -21,7 +21,7 @@ env:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       release_version: ${{ steps.version.outputs.version }}
       branch-name: ${{ steps.branch.outputs.branch-name }}
@@ -55,7 +55,7 @@ jobs:
 
   release:
     name: Create GitHub release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: setup
     steps:
       - name: Download latest release Docker stubs

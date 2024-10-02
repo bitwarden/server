@@ -6,7 +6,7 @@ on:
 jobs:
   check-ld-secret:
     name: Check for LD secret
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       available: ${{ steps.check-ld-secret.outputs.available }}
     permissions:
@@ -24,7 +24,7 @@ jobs:
 
   refs:
     name: Code reference collection
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: check-ld-secret
     if: ${{ needs.check-ld-secret.outputs.available == 'true' }}
     permissions:

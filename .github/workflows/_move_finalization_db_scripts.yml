@@ -12,7 +12,7 @@ permissions:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       migration_filename_prefix: ${{ steps.prefix.outputs.prefix }}
       copy_finalization_scripts: ${{ steps.check-finalization-scripts-existence.outputs.copy_finalization_scripts }}
@@ -49,7 +49,7 @@ jobs:
 
   move-finalization-db-scripts:
     name: Move finalization database scripts
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: setup
     if: ${{ needs.setup.outputs.copy_finalization_scripts == 'true' }}
     steps:
