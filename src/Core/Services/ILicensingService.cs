@@ -14,4 +14,5 @@ public interface ILicensingService
     string GenerateToken(ILicense license);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId);
+    Task WriteLicenseToDiskAsync(Guid entityId, ILicense license);
 }

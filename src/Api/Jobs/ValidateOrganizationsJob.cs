@@ -16,7 +16,7 @@ public class ValidateOrganizationsJob : BaseJob
         _licensingService = licensingService;
     }
 
-    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
+    protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
         await _licensingService.ValidateOrganizationsAsync();
     }

@@ -39,7 +39,6 @@ public class OrganizationLicense : ILicense
         int? version = null)
     {
         Version = version.GetValueOrDefault(CurrentLicenseFileVersion);
-        LicenseType = Core.Enums.LicenseType.Organization;
         LicenseKey = org.LicenseKey;
         InstallationId = installationId;
         Id = org.Id;
@@ -231,7 +230,7 @@ public class OrganizationLicense : ILicense
     public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
 
     [LicenseIgnore]
-    public LicenseType? LicenseType { get; set; }
+    public LicenseType LicenseType { get; } = LicenseType.Organization;
 
     [LicenseIgnore]
     public string Signature { get; set; }
@@ -415,7 +414,7 @@ public class OrganizationLicense : ILicense
                 new Claim(nameof(LimitCollectionCreationDeletion), LimitCollectionCreationDeletion.ToString()),
                 new Claim(nameof(AllowAdminAccessToAllCollectionItems), AllowAdminAccessToAllCollectionItems.ToString()),
                 new Claim(nameof(Trial), Trial.ToString()),
-                new Claim(nameof(LicenseType), LicenseType?.ToString() ?? string.Empty)
+                new Claim(nameof(LicenseType), LicenseType.ToString())
             ]),
             Issuer = "Bitwarden",
             Audience = Id.ToString(),

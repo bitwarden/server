@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -233,6 +234,25 @@ public class LicensingService : ILicensingService
         return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
     }
 
+    public async Task WriteLicenseToDiskAsync(Guid entityId, ILicense license)
+    {
+        if (string.IsNullOrWhiteSpace(_globalSettings.LicenseDirectory))
+        {
+            throw new InvalidOperationException("License directory is not configured in global settings.");
+        }
+
+        var directory = license.LicenseType switch
+        {
+            LicenseType.Organization => $"{_globalSettings.LicenseDirectory}/organization",
+            LicenseType.User => $"{_globalSettings.LicenseDirectory}/user",
+            _ => throw new InvalidOperationException("Invalid license type.")
+        };
+
+        Directory.CreateDirectory(directory);
+        await using var fs = File.OpenWrite(Path.Combine(directory, $"{entityId}.json"));
+        await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
+    }
+
     private async Task<bool> ProcessUserValidationAsync(User user)
     {
         var license = ReadUserLicense(user);
@@ -311,9 +331,11 @@ public class LicensingService : ILicensingService
         if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
             CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
         {
-            return CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                    "licensing.pfx", _globalSettings.LicenseCertificatePassword)
-                .GetAwaiter().GetResult();
+            return CoreHelpers.GetBlobCertificateAsync(
+                globalSettings.Storage.ConnectionString,
+                "certificates",
+                "licensing.pfx",
+                _globalSettings.LicenseCertificatePassword).GetAwaiter().GetResult();
         }
 
         return CoreHelpers.GetCertificate(certThumbprint);

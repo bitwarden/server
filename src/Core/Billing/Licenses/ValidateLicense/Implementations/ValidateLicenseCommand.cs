@@ -66,7 +66,7 @@ public class ValidateLicenseCommandHandler(IGlobalSettings globalSettings, ILice
             errorMessages.Add("The license does not allow for on-premise hosting of organizations.");
         }
 
-        if (license.LicenseType != null && license.LicenseType != LicenseType.Organization)
+        if (license.LicenseType != LicenseType.Organization)
         {
             errorMessages.Add("Premium licenses cannot be applied to an organization. " +
                                      "Upload this license from your personal account settings page.");
@@ -117,7 +117,7 @@ public class ValidateLicenseCommandHandler(IGlobalSettings globalSettings, ILice
             errorMessages.Add("The user's email does not match the license email.");
         }
 
-        if (license.LicenseType != null && license.LicenseType != LicenseType.User)
+        if (license.LicenseType != LicenseType.User)
         {
             errorMessages.Add("Organization licenses cannot be applied to a user. " +
                                      "Upload this license from the Organization settings page.");

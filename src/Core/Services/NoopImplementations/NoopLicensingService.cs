@@ -58,4 +58,9 @@ public class NoopLicensingService : ILicensingService
     {
         return Task.FromResult<OrganizationLicense>(null);
     }
+
+    public Task WriteLicenseToDiskAsync(Guid entityId, ILicense license)
+    {
+        return Task.CompletedTask;
+    }
 }

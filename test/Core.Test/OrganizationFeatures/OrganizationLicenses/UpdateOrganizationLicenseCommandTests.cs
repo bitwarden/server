@@ -46,7 +46,6 @@ public class UpdateOrganizationLicenseCommandTests
         license.Expires = DateTime.Now.AddDays(1);
         license.Version = OrganizationLicense.CurrentLicenseFileVersion;
         license.InstallationId = globalSettings.Installation.Id;
-        license.LicenseType = LicenseType.Organization;
         sutProvider.GetDependency<ILicensingService>().VerifyLicenseSignature(license).Returns(true);
 
         // Passing values for SelfHostedOrganizationDetails.CanUseLicense
@@ -79,10 +78,12 @@ public class UpdateOrganizationLicenseCommandTests
                 .Received(1)
                 .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
                     org => AssertPropertyEqual(license, org,
-                        "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
-                        "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires", "ExpirationWithoutGracePeriod") &&
-                         // Same property but different name, use explicit mapping
-                         org.ExpirationDate == license.Expires));
+                               "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType", "Hash",
+                               "Signature", "SignatureBytes", "InstallationId", "Expires",
+                               "ExpirationWithoutGracePeriod", "Token", "EncodedData", "EncodedHash",
+                               "ValidLicenseVersion") &&
+                           // Same property but different name, use explicit mapping
+                           org.ExpirationDate == license.Expires));
         }
         finally
         {

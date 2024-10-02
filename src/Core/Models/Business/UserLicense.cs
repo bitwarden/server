@@ -32,7 +32,6 @@ public class UserLicense : ILicense
         ILicensingService licenseService,
         int? version = null)
     {
-        LicenseType = Core.Enums.LicenseType.User;
         LicenseKey = user.LicenseKey;
         Id = user.Id;
         Name = user.Name;
@@ -54,7 +53,7 @@ public class UserLicense : ILicense
 
     public UserLicense(User user, ILicensingService licenseService, int? version = null)
     {
-        LicenseType = Core.Enums.LicenseType.User;
+        LicenseType = LicenseType.User;
         LicenseKey = user.LicenseKey;
         Id = user.Id;
         Name = user.Name;
@@ -100,7 +99,7 @@ public class UserLicense : ILicense
     public string Hash { get; set; }
 
     [LicenseIgnore]
-    public LicenseType? LicenseType { get; set; }
+    public LicenseType LicenseType { get; } = LicenseType.User;
 
     [LicenseIgnore]
     public string Signature { get; set; }
@@ -165,7 +164,7 @@ public class UserLicense : ILicense
                 new Claim(nameof(Refresh), Refresh.ToString()),
                 new Claim(nameof(Expires), Expires.ToString()),
                 new Claim(nameof(Trial), Trial.ToString()),
-                new Claim(nameof(LicenseType), LicenseType?.ToString() ?? string.Empty)
+                new Claim(nameof(LicenseType), LicenseType.ToString())
             ]),
             Issuer = "Bitwarden",
             Audience = Id.ToString(),

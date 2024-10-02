@@ -899,15 +899,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IPaymentService paymentService = null;
         if (_globalSettings.SelfHosted)
         {
-            if (!_licenseService.VerifyLicenseSignature(license))
-            {
-                throw new BadRequestException("Invalid license.");
-            }
-
-            var dir = $"{_globalSettings.LicenseDirectory}/user";
-            Directory.CreateDirectory(dir);
-            using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
-            await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
+            await _licenseService.WriteLicenseToDiskAsync(user.Id, license);
         }
         else
         {
@@ -967,7 +959,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new InvalidOperationException("Licenses require self hosting.");
         }
 
-        if (license.LicenseType != null && license.LicenseType != LicenseType.User)
+        if (license.LicenseType != LicenseType.User)
         {
             throw new BadRequestException("Organization licenses cannot be applied to a user. "
                 + "Upload this license from the Organization settings page.");
@@ -978,10 +970,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        var dir = $"{_globalSettings.LicenseDirectory}/user";
-        Directory.CreateDirectory(dir);
-        using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
-        await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
+        await _licenseService.WriteLicenseToDiskAsync(user.Id, license);
 
         user.Premium = license.Premium;
         user.RevisionDate = DateTime.UtcNow;

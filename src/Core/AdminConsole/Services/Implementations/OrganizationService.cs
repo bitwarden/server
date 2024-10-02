@@ -72,6 +72,7 @@ public class OrganizationService : IOrganizationService
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly ILicensingService _licensingService;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -105,7 +106,7 @@ public class OrganizationService : IOrganizationService
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationBillingService organizationBillingService)
+        IOrganizationBillingService organizationBillingService, ILicensingService licensingService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -139,6 +140,7 @@ public class OrganizationService : IOrganizationService
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationBillingService = organizationBillingService;
+        _licensingService = licensingService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -702,10 +704,7 @@ public class OrganizationService : IOrganizationService
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
 
-        var dir = $"{_globalSettings.LicenseDirectory}/organization";
-        Directory.CreateDirectory(dir);
-        await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
-        await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
+        await _licensingService.WriteLicenseToDiskAsync(organization.Id, license);
         return (result.organization, result.organizationUser);
     }
 
