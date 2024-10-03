@@ -4,7 +4,7 @@ using Bit.Core.NotificationCenter.Models.Filter;
 
 namespace Bit.Core.NotificationCenter.Queries.Interfaces;
 
-public interface IGetNotificationsForUserQuery
+public interface IGetNotificationStatusDetailsForUserQuery
 {
-    Task<IEnumerable<Notification>> GetByUserIdStatusFilterAsync(NotificationStatusFilter statusFilter);
+    Task<IEnumerable<NotificationStatusDetails>> GetByUserIdStatusFilterAsync(NotificationStatusFilter statusFilter);
 }
