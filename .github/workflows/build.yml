@@ -595,7 +595,7 @@ jobs:
               workflow_id: '_update_ephemeral_tags.yml',
               ref: 'BRE-349-create-git-hub-workflow-to-update-ephemeral-environment-values-file',
               inputs: {
-                ephemeral_env_branch: '${{ github.ref_name }}'
+                ephemeral_env_branch: '${{ github.head_ref }}'
               }
             })
 
