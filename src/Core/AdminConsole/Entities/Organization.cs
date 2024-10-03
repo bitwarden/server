@@ -94,6 +94,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// they have Can Manage permissions for.
     /// </summary>
     public bool LimitCollectionCreationDeletion { get; set; }
+
     /// <summary>
     /// If set to true, admins, owners, and some custom users can read/write all collections and items in the Admin Console.
     /// If set to false, users generally need collection-level permissions to read/write a collection or its items.

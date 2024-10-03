@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_Update]
+CREATE PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -51,11 +51,16 @@
     @MaxAutoscaleSmSeats INT = null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCreationDeletion BIT = 0,
+    @LimitCollectionCreationDeletion BIT = null, -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
+    @LimitCollectionCreation BIT = null,
+    @LimitCollectionDeletion BIT = null,
     @AllowAdminAccessToAllCollectionItems BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
+
+    SET @LimitCollectionCreation = COALESCE(@LimitCollectionCreation, @LimitCollectionCreationDeletion, 0);
+    SET @LimitCollectionDeletion = COALESCE(@LimitCollectionDeletion, @LimitCollectionCreationDeletion, 0);
 
     UPDATE
         [dbo].[Organization]
@@ -111,7 +116,9 @@ BEGIN
         [MaxAutoscaleSmSeats] = @MaxAutoscaleSmSeats,
         [MaxAutoscaleSmServiceAccounts] = @MaxAutoscaleSmServiceAccounts,
         [SecretsManagerBeta] = @SecretsManagerBeta,
-        [LimitCollectionCreationDeletion] = @LimitCollectionCreationDeletion,
+        [LimitCollectionCreationDeletion] = COALESCE(@LimitCollectionCreation, @LimitCollectionDeletion, 0),
+        [LimitCollectionCreation] = @LimitCollectionCreation,
+        [LimitCollectionDeletion] = @LimitCollectionDeletion,
         [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems
     WHERE
         [Id] = @Id
