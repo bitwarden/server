@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20240925202404_SyncOrganizationLimitCollectionCreationDeletionColumn")]
+    partial class SyncOrganizationLimitCollectionCreationDeletionColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
@@ -674,53 +677,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("WebAuthnCredential", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ClientOrganizationMigrationRecord", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GatewayCustomerId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GatewaySubscriptionId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("MaxAutoscaleSeats")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<short?>("MaxStorageGb")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<byte>("PlanType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("ProviderId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Seats")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProviderId", "OrganizationId")
-                        .IsUnique();
-
-                    b.ToTable("ClientOrganizationMigrationRecord", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem", b =>
