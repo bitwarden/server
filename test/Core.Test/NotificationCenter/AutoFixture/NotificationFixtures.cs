@@ -1,4 +1,5 @@
-﻿using AutoFixture;
+﻿#nullable enable
+using AutoFixture;
 using AutoFixture.Dsl;
 using AutoFixture.Kernel;
 using Bit.Core.NotificationCenter.Entities;
@@ -51,14 +52,12 @@ public class NotificationListCustomization(int count) : ICustomization
     }
 }
 
-public class NotificationCustomizeAttribute(bool global = true)
-    : BitCustomizeAttribute
+public class NotificationCustomizeAttribute(bool global = true) : BitCustomizeAttribute
 {
     public override ICustomization GetCustomization() => new NotificationCustomization(global);
 }
 
-public class NotificationListCustomizeAttribute(int count)
-    : BitCustomizeAttribute
+public class NotificationListCustomizeAttribute(int count) : BitCustomizeAttribute
 {
     public override ICustomization GetCustomization() => new NotificationListCustomization(count);
 }

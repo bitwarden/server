@@ -1,4 +1,5 @@
-﻿using AutoFixture;
+﻿#nullable enable
+using AutoFixture;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 
