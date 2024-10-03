@@ -20,7 +20,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Billing.Licenses.ValidateLicense;
+using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -644,7 +644,8 @@ public class AccountsController : Controller
         {
             var licenseValidationResult = _validateLicenseCommandHandler.Handle(new ValidateLicenseCommand
             {
-                License = license, User = user
+                License = license,
+                User = user
             });
 
             if (!licenseValidationResult.Succeeded)
@@ -655,7 +656,8 @@ public class AccountsController : Controller
 
         var taxInfo = new TaxInfo
         {
-            BillingAddressCountry = model.Country, BillingAddressPostalCode = model.PostalCode,
+            BillingAddressCountry = model.Country,
+            BillingAddressPostalCode = model.PostalCode,
         };
 
         var result = await _userService.SignUpPremiumAsync(
@@ -759,7 +761,8 @@ public class AccountsController : Controller
 
         var licenseValidationResult = _validateLicenseCommandHandler.Handle(new ValidateLicenseCommand
         {
-            License = license, User = user
+            License = license,
+            User = user
         });
 
         if (!licenseValidationResult.Succeeded)

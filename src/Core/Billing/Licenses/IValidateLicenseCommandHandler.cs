@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Common;
 
-namespace Bit.Core.Billing.Licenses.ValidateLicense;
+namespace Bit.Core.Billing.Licenses;
 
 public interface IValidateLicenseCommandHandler
 {

@@ -2,7 +2,7 @@
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Utilities;
-using Bit.Core.Billing.Licenses.ValidateLicense;
+using Bit.Core.Billing.Licenses;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;

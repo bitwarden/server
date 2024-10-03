@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Caches.Implementations;
-using Bit.Core.Billing.Licenses.ValidateLicense;
+using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 

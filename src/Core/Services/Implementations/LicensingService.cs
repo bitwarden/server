@@ -58,6 +58,7 @@ public class LicensingService : ILicensingService
         }
     }
 
+    // This one is just used in ValidateOrganizationsJob and the logic can be moved there
     public async Task ValidateOrganizationsAsync()
     {
         if (!_globalSettings.SelfHosted)
@@ -113,6 +114,7 @@ public class LicensingService : ILicensingService
         }
     }
 
+    // This one is just used in ValidateUsersJob and the logic can be moved there
     public async Task ValidateUsersAsync()
     {
         if (!_globalSettings.SelfHosted)
@@ -148,7 +150,7 @@ public class LicensingService : ILicensingService
 
         // Only check once per day
         var now = DateTime.UtcNow;
-        if (_userCheckCache.ContainsKey(user.Id))
+        if (!_userCheckCache.TryAdd(user.Id, now))
         {
             var lastCheck = _userCheckCache[user.Id];
             if (lastCheck < now && now - lastCheck < TimeSpan.FromDays(1))
@@ -158,16 +160,13 @@ public class LicensingService : ILicensingService
 
             _userCheckCache[user.Id] = now;
         }
-        else
-        {
-            _userCheckCache.Add(user.Id, now);
-        }
 
         _logger.LogInformation(
-            Core.Constants.BypassFiltersEventId,
+            Constants.BypassFiltersEventId,
             null,
             "Validating premium license for user {UserId}({UserEmail}).",
             user.Id, user.Email);
+
         return await ProcessUserValidationAsync(user);
     }
 
@@ -279,16 +278,18 @@ public class LicensingService : ILicensingService
 
     private async Task DisablePremiumAsync(User user, ILicense license, string reason)
     {
-        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
+        _logger.LogInformation(Constants.BypassFiltersEventId,
+            null,
             "User {UserId}({UserEmail}) has an invalid license and premium is being disabled. Reason: {Reason}",
-            user.Id, user.Email, reason);
+            user.Id,
+            user.Email,
+            reason);
 
         user.Premium = false;
         user.PremiumExpirationDate = license?.Expires ?? DateTime.UtcNow;
         user.RevisionDate = DateTime.UtcNow;
 
         await _userRepository.ReplaceAsync(user);
-
         await _mailService.SendLicenseExpiredAsync(new List<string> { user.Email });
     }
 

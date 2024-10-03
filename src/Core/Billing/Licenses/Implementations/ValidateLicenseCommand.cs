@@ -1,13 +1,13 @@
 ﻿#nullable enable
-using Bit.Core.Models.Common;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Common;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Models.Business;
 
 // ReSharper disable once CheckNamespace
-namespace Bit.Core.Billing.Licenses.ValidateLicense;
+namespace Bit.Core.Billing.Licenses;
 
 public class ValidateLicenseCommand
 {
