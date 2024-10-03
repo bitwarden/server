@@ -122,24 +122,6 @@ public class UserLicense : ILicense
 
     public bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
 
-    public bool VerifyData(User user)
-    {
-        if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
-        {
-            return false;
-        }
-
-        if (Version == 1)
-        {
-            return
-                user.LicenseKey != null && user.LicenseKey.Equals(LicenseKey) &&
-                user.Premium == Premium &&
-                user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
-        }
-
-        throw new NotSupportedException($"Version {Version} is not supported.");
-    }
-
     public string ToToken(X509Certificate2 certificate)
     {
         if (!certificate.HasPrivateKey)

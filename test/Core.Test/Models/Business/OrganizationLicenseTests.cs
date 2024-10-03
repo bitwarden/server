@@ -29,30 +29,6 @@ public class OrganizationLicenseTests
     }
 
     /// <summary>
-    /// Verifies that when the license file is loaded from disk using the current OrganizationLicense class,
-    /// it matches the Organization it was generated for.
-    /// This guards against the risk that properties added in later versions are accidentally included in the validation
-    /// </summary>
-    [Theory]
-    [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion)] // Previous version (this property is 1 behind)
-    [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion + 1)] // Current version
-    public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion)
-    {
-        var license = OrganizationLicenseFileFixtures.GetVersion(licenseVersion);
-
-        // These licenses will naturally expire over time, but we still want them to be able to test
-        license.Expires = DateTime.MaxValue;
-
-        var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
-        var globalSettings = Substitute.For<IGlobalSettings>();
-        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
-        {
-            Id = new Guid(OrganizationLicenseFileFixtures.InstallationId)
-        });
-        Assert.True(license.VerifyData(organization, globalSettings));
-    }
-
-    /// <summary>
     /// Helper used to generate a new json string to be added in OrganizationLicenseFileFixtures.
     /// Uncomment [Fact], run the test and copy the value of the `result` variable into OrganizationLicenseFileFixtures,
     /// following the instructions in that class.

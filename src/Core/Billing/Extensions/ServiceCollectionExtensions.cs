@@ -17,5 +17,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
         services.AddTransient<IValidateLicenseCommandHandler, ValidateLicenseCommandHandler>();
+        services.AddTransient<IValidateEntityAgainstLicenseCommandHandler, ValidateEntityAgainstLicenseCommandHandler>();
     }
 }

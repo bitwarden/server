@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Licenses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -23,6 +24,7 @@ public class LicensingService : ILicensingService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IMailService _mailService;
     private readonly ILogger<LicensingService> _logger;
+    private readonly IValidateEntityAgainstLicenseCommandHandler _validateEntityAgainstLicenseCommandHandler;
 
     private readonly Dictionary<Guid, DateTime> _userCheckCache = new();
 
@@ -32,13 +34,15 @@ public class LicensingService : ILicensingService
         IMailService mailService,
         IWebHostEnvironment environment,
         ILogger<LicensingService> logger,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IValidateEntityAgainstLicenseCommandHandler validateEntityAgainstLicenseCommandHandler)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
         _mailService = mailService;
         _logger = logger;
         _globalSettings = globalSettings;
+        _validateEntityAgainstLicenseCommandHandler = validateEntityAgainstLicenseCommandHandler;
 
         var certThumbprint = environment.IsDevelopment() ?
             "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
@@ -91,9 +95,13 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (!license.VerifyData(org, _globalSettings))
+                var dataValidationResult = _validateEntityAgainstLicenseCommandHandler.Handle(
+                    new ValidateEntityAgainstLicenseCommand { License = license, Organization = org }
+                );
+
+                if (!dataValidationResult.Succeeded)
                 {
-                    await DisableOrganizationAsync(org, license, "Invalid data.");
+                    await DisableOrganizationAsync(org, license, string.Join(' ', dataValidationResult.Errors));
                     continue;
                 }
 
@@ -261,9 +269,13 @@ public class LicensingService : ILicensingService
             return false;
         }
 
-        if (!license.VerifyData(user))
+        var dataValidationResult = _validateEntityAgainstLicenseCommandHandler.Handle(
+            new ValidateEntityAgainstLicenseCommand { License = license, User = user }
+        );
+
+        if (!dataValidationResult.Succeeded)
         {
-            await DisablePremiumAsync(user, license, "Invalid data.");
+            await DisablePremiumAsync(user, license, string.Join(' ', dataValidationResult.Errors));
             return false;
         }
 
