@@ -15,7 +15,7 @@ public partial class SyncOrganizationLimitCollectionCreationDeletionColumn : Mig
                     UPDATE Organization
                     SET
                       LimitCollectionCreation = LimitCollectionCreationDeletion,
-                      LimitCollectionDeletion = LimitCollectionDeletion;
+                      LimitCollectionDeletion = LimitCollectionCreationDeletion;
                 ");
     }
 
