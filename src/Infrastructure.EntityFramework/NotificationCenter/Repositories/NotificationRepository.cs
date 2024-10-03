@@ -48,13 +48,10 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
         if (statusFilter != null && (statusFilter.Read != null || statusFilter.Deleted != null))
         {
             query = from n in query
-                    where n.NotificationStatusUserId == userId &&
-                          (
-                              statusFilter.Read == null ||
-                              (statusFilter.Read == true ? n.ReadDate != null : n.ReadDate == null) ||
-                              statusFilter.Deleted == null ||
-                              (statusFilter.Deleted == true ? n.DeletedDate != null : n.DeletedDate == null)
-                          )
+                    where statusFilter.Read == null ||
+                          (statusFilter.Read == true ? n.ReadDate != null : n.ReadDate == null) ||
+                          statusFilter.Deleted == null ||
+                          (statusFilter.Deleted == true ? n.DeletedDate != null : n.DeletedDate == null)
                     select n;
         }
 

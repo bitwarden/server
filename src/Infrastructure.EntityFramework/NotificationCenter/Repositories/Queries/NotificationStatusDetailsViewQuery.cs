@@ -56,7 +56,6 @@ public class NotificationStatusDetailsViewQuery(Guid userId, ClientType clientTy
             Body = x.n.Body,
             CreationDate = x.n.CreationDate,
             RevisionDate = x.n.RevisionDate,
-            NotificationStatusUserId = x.ns != null ? x.ns.UserId : null,
             ReadDate = x.ns != null ? x.ns.ReadDate : null,
             DeletedDate = x.ns != null ? x.ns.DeletedDate : null,
         });

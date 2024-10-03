@@ -20,7 +20,6 @@ public class NotificationStatusDetails
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
     // Notification Status fields
-    public Guid? NotificationStatusUserId { get; set; }
     public DateTime? ReadDate { get; set; }
     public DateTime? DeletedDate { get; set; }
 }
