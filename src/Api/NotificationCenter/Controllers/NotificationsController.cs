@@ -1,10 +1,13 @@
 ﻿#nullable enable
+using System.Text.Json;
 using Bit.Api.Models.Response;
+using Bit.Api.NotificationCenter.Models;
 using Bit.Api.NotificationCenter.Models.Request;
 using Bit.Api.NotificationCenter.Models.Response;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,6 +35,7 @@ public class NotificationsController : Controller
     public async Task<ListResponseModel<NotificationResponseModel>> List(
         [FromQuery] NotificationFilterRequestModel filter)
     {
+        var continuationToken = ParseContinuationToken(filter.ContinuationToken);
         var notificationStatusFilter = new NotificationStatusFilter
         {
             Read = filter.ReadStatusFilter,
@@ -40,12 +44,27 @@ public class NotificationsController : Controller
 
         var notifications = await _getNotificationsForUserQuery.GetByUserIdStatusFilterAsync(notificationStatusFilter);
 
-        var filteredNotifications = notifications
-            .Where(n => n.RevisionDate >= filter.Start && n.RevisionDate < filter.End)
-            .Take(filter.PageSize);
+        if (continuationToken != null)
+        {
+            notifications = notifications
+                .Where(n => n.Priority <= continuationToken.Priority && n.RevisionDate < continuationToken.Date);
+        }
 
-        var responses = filteredNotifications.Select(n => new NotificationResponseModel(n));
-        return new ListResponseModel<NotificationResponseModel>(responses);
+        var responses = notifications
+            .Take(10)
+            .Select(n => new NotificationResponseModel(n))
+            .ToList();
+
+        var nextContinuationToken = responses.Count > 0 && responses.Count < 10
+            ? new NotificationContinuationToken
+            {
+                Priority = responses.Last().Priority,
+                Date = responses.Last().Date
+            }
+            : null;
+
+        return new ListResponseModel<NotificationResponseModel>(responses,
+            CreateContinuationToken(nextContinuationToken));
     }
 
     [HttpPatch("{id}/delete")]
@@ -58,5 +77,28 @@ public class NotificationsController : Controller
     public async Task MarkAsRead([FromRoute] Guid id)
     {
         await _markNotificationReadCommand.MarkReadAsync(id);
+    }
+
+    private NotificationContinuationToken? ParseContinuationToken(string? continuationToken)
+    {
+        if (continuationToken == null)
+        {
+            return null;
+        }
+
+        var decodedContinuationToken = CoreHelpers.Base64UrlDecodeString(continuationToken);
+        return JsonSerializer.Deserialize<NotificationContinuationToken>(decodedContinuationToken,
+            JsonHelpers.IgnoreCase);
+    }
+
+    private string? CreateContinuationToken(NotificationContinuationToken? notificationContinuationToken)
+    {
+        if (notificationContinuationToken == null)
+        {
+            return null;
+        }
+
+        var serializedContinuationToken = JsonSerializer.Serialize(notificationContinuationToken);
+        return CoreHelpers.Base64UrlEncodeString(serializedContinuationToken);
     }
 }
