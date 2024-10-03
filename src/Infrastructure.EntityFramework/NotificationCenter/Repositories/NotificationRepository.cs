@@ -1,14 +1,14 @@
 ﻿#nullable enable
 using AutoMapper;
 using Bit.Core.Enums;
-using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Repositories;
+using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Notification = Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification;
 
 namespace Bit.Infrastructure.EntityFramework.NotificationCenter.Repositories;
 

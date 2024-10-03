@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Enums;
 
-namespace Bit.Core.NotificationCenter.Entities;
+namespace Bit.Core.NotificationCenter.Models.Data;
 
 public class NotificationStatusDetails
 {

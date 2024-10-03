@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
 using Bit.Core.NotificationCenter.Repositories;

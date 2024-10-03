@@ -2,6 +2,7 @@
 using System.Data;
 using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Settings;

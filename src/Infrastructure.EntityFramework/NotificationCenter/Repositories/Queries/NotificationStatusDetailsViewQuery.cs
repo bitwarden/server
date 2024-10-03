@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using Bit.Core.Enums;
-using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
