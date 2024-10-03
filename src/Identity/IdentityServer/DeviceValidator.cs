@@ -69,17 +69,12 @@ public class DeviceValidator(
     public async Task<bool> KnownDeviceAsync(User user, ValidatedTokenRequest request) =>
         (await GetKnownDeviceAsync(user, GetDeviceFromRequest(request))) != default;
 
-    /*
-        This is called from a place in the code that has already verified the User is not null.
-        The user Check is safe but will almost always be true.
-    */
     protected async Task<Device> GetKnownDeviceAsync(User user, Device device)
     {
-        if (user == null)
+        if (user == null || device == null)
         {
             return default;
         }
-
         return await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
     }
 

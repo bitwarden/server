@@ -57,12 +57,29 @@ public class DeviceValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveDeviceAsync_Success(
+    public async void SaveDeviceAsync_UserIsNull_ShouldReturnNull(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        request = AddValidDeviceToRequest(request);
+
+        // Act
+        var device = await _sut.SaveDeviceAsync(null, request);
+
+        // Assert
+        Assert.Null(device);
+        await _mailService.DidNotReceive().SendNewDeviceLoggedInEmail(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void SaveDeviceAsync_ExistingUser_NewDevice_ReturnsDevice_SendsEmail(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user)
     {
         // Arrange
-        request = AddValidDeviceToREquest(request);
+        request = AddValidDeviceToRequest(request);
 
         user.CreationDate = DateTime.UtcNow - TimeSpan.FromMinutes(11);
         _globalSettings.DisableEmailNewDevice = false;
@@ -81,30 +98,13 @@ public class DeviceValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveDeviceAsync_UserIsNull_ShouldReturnNull(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
-    {
-        // Arrange
-        request = AddValidDeviceToREquest(request);
-
-        // Act
-        var device = await _sut.SaveDeviceAsync(null, request);
-
-        // Assert
-        Assert.Null(device);
-        await _mailService.DidNotReceive().SendNewDeviceLoggedInEmail(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
-    }
-
-    [Theory]
-    [BitAutoData]
     public async void SaveDeviceAsync_DeviceIsKnown_ShouldReturnDevice(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user,
         Device device)
     {
         // Arrange
-        request = AddValidDeviceToREquest(request);
+        request = AddValidDeviceToRequest(request);
 
         device.UserId = user.Id;
         device.Identifier = "DeviceIdentifier";
@@ -124,12 +124,12 @@ public class DeviceValidatorTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveDeviceAsync_DeviceUnknown_NewUser_ShouldSaveDevice_NoEmail(
+    public async void SaveDeviceAsync_NewUser_DeviceUnknown_ShouldSaveDevice_NoEmail(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user)
     {
         // Arrange
-        request = AddValidDeviceToREquest(request);
+        request = AddValidDeviceToRequest(request);
         user.CreationDate = DateTime.UtcNow;
         _deviceRepository.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>()).Returns(null as Device);
 
@@ -146,7 +146,72 @@ public class DeviceValidatorTests
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
     }
 
-    private ValidatedTokenRequest AddValidDeviceToREquest(ValidatedTokenRequest request)
+    [Theory]
+    [BitAutoData]
+    public async void KnownDeviceAsync_UserNull_ReturnsFalse(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        request = AddValidDeviceToRequest(request);
+
+        // Act
+        var result = await _sut.KnownDeviceAsync(null, request);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void KnownDeviceAsync_DeviceNull_ReturnsFalse(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        User user)
+    {
+        // Arrange
+        // Device raw data is null which will cause the device to be null
+
+        // Act
+        var result = await _sut.KnownDeviceAsync(user, request);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void KnownDeviceAsync_DeviceNotInDatabase_ReturnsFalse(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        User user)
+    {
+        // Arrange
+        request = AddValidDeviceToRequest(request);
+        _deviceRepository.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>())
+                         .Returns(null as Device);
+        // Act
+        var result = await _sut.KnownDeviceAsync(user, request);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void KnownDeviceAsync_UserAndDeviceValid_ReturnsTrue(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        User user,
+        Device device)
+    {
+        // Arrange
+        request = AddValidDeviceToRequest(request);
+        _deviceRepository.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>())
+                         .Returns(device);
+        // Act
+        var result = await _sut.KnownDeviceAsync(user, request);
+
+        // Assert
+        Assert.True(result);
+    }
+    private ValidatedTokenRequest AddValidDeviceToRequest(ValidatedTokenRequest request)
     {
         request.Raw["DeviceIdentifier"] = "DeviceIdentifier";
         request.Raw["DeviceType"] = "Android";
