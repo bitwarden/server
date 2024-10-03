@@ -91,6 +91,7 @@ public class Startup
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
+        services.AddHttpClient();
         services.AddProviderMigration();
 
 #if OSS

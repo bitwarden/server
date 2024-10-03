@@ -162,6 +162,7 @@ public static class RolePermissionMapping
                 Permission.Tools_ManageTaxRates,
                 Permission.Tools_ManageStripeSubscriptions,
                 Permission.Tools_CreateEditTransaction,
+                Permission.Tools_ProcessStripeEvents,
                 Permission.Tools_MigrateProviders
             }
         },
