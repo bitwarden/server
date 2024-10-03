@@ -90,9 +90,14 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("LimitCollectionCreation")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("LimitCollectionCreationDeletion")
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("LimitCollectionDeletion")
+                        .HasColumnType("boolean");
 
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
