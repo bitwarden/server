@@ -593,7 +593,7 @@ jobs:
               owner: 'bitwarden',
               repo: 'devops',
               workflow_id: '_update_ephemeral_tags.yml',
-              ref: 'BRE-349-create-git-hub-workflow-to-update-ephemeral-environment-values-file',
+              ref: 'main',
               inputs: {
                 ephemeral_env_branch: '${{ github.head_ref }}'
               }
