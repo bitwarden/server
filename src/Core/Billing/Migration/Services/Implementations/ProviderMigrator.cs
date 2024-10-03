@@ -157,6 +157,7 @@ public class ProviderMigrator(
             logger.LogInformation("CB: Teams plan already exists for provider ({ProviderID}), updating seat minimum", providerId);
 
             teamsProviderPlan.SeatMinimum = teamsSeats;
+            teamsProviderPlan.AllocatedSeats = teamsSeats;
 
             await providerPlanRepository.ReplaceAsync(teamsProviderPlan);
 
@@ -199,6 +200,7 @@ public class ProviderMigrator(
             logger.LogInformation("CB: Enterprise plan already exists for provider ({ProviderID}), updating seat minimum", providerId);
 
             enterpriseProviderPlan.SeatMinimum = enterpriseSeats;
+            enterpriseProviderPlan.AllocatedSeats = enterpriseSeats;
 
             await providerPlanRepository.ReplaceAsync(enterpriseProviderPlan);
 
