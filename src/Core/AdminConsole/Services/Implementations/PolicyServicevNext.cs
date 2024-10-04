@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Collections.Immutable;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -20,7 +21,7 @@ public class PolicyServicevNext : IPolicyServicevNext
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
     private readonly IPolicyRepository _policyRepository;
-    private readonly Dictionary<PolicyType, IPolicyDefinition> _policyDefinitions = new();
+    private readonly IReadOnlyDictionary<PolicyType, IPolicyDefinition> _policyDefinitions;
 
     public PolicyServicevNext(
         IApplicationCacheService applicationCacheService,
@@ -32,10 +33,9 @@ public class PolicyServicevNext : IPolicyServicevNext
         _eventService = eventService;
         _policyRepository = policyRepository;
 
-        foreach (var policyDefinition in policyDefinitions)
-        {
-           _policyDefinitions.Add(policyDefinition.Type, policyDefinition);
-        }
+        _policyDefinitions = ImmutableDictionary.CreateRange(
+            policyDefinitions.Select(def => KeyValuePair.Create(def.Type, def))
+        );
     }
 
     public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
