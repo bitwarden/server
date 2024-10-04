@@ -60,13 +60,15 @@ public class PolicyServicevNext : IPolicyServicevNext
         // If enabling this policy - check that all policy requirements are satisfied
         if (currentPolicy is not { Enabled: true } && policy.Enabled)
         {
-            foreach (var requiredPolicyType in policyDefinition.RequiredPolicies)
+            var missingRequiredPolicyTypes = policyDefinition.RequiredPolicies
+                .Where(requiredPolicyType =>
+                    allSavedPolicies.SingleOrDefault(p => p.Type == requiredPolicyType) is not { Enabled: true })
+                .ToList();
+
+            if (missingRequiredPolicyTypes.Count != 0)
             {
-                if (allSavedPolicies.SingleOrDefault(p => p.Type == requiredPolicyType) is not { Enabled: true })
-                {
-                    // TODO: would be better to reference the name instead of the enum
-                    throw new BadRequestException("Policy requires PolicyType " + requiredPolicyType + " to be enabled first.");
-                }
+                // TODO: would be better to reference the name instead of the enum
+                throw new BadRequestException("Policy requires PolicyType " + missingRequiredPolicyTypes.First() + " to be enabled first.");
             }
         }
 
