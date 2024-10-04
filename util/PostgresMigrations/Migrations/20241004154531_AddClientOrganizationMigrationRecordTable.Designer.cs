@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20241004140910_AddClientOrganizationMigrationRecordTable")]
+    [Migration("20241004154531_AddClientOrganizationMigrationRecordTable")]
     partial class AddClientOrganizationMigrationRecordTable
     {
         /// <inheritdoc />
