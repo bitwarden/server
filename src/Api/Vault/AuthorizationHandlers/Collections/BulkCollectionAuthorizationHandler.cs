@@ -126,9 +126,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         var organizationAbility = await GetOrganizationAbilityAsync(org);
 
-        var limitCollectionCreationEnabled = !(_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
-            ? organizationAbility is { LimitCollectionCreation: false }
-            : organizationAbility is { LimitCollectionCreationDeletion: false });
+        var limitCollectionCreationEnabled = _featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
+            ? organizationAbility is { LimitCollectionCreation: true }
+            : organizationAbility is { LimitCollectionCreationDeletion: true };
 
         // If the limit collection management setting is disabled, allow any user to create collections
         if (!limitCollectionCreationEnabled)
@@ -264,9 +264,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // If LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
         var organizationAbility = await GetOrganizationAbilityAsync(org);
 
-        var limitCollectionDeletionEnabled = !(_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
-            ? organizationAbility is { LimitCollectionDeletion: false }
-            : organizationAbility is { LimitCollectionCreationDeletion: false });
+        var limitCollectionDeletionEnabled = _featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
+            ? organizationAbility is { LimitCollectionDeletion: true }
+            : organizationAbility is { LimitCollectionCreationDeletion: true };
 
         var canDeleteManagedCollections =
             !limitCollectionDeletionEnabled ||
