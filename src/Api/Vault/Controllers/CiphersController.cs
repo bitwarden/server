@@ -420,7 +420,7 @@ public class CiphersController : Controller
 
         return false;
     }
-    
+
     /// <summary>
     /// TODO: Move this to its own authorization handler or equivalent service - AC-2062
     /// </summary>
