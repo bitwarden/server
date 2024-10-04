@@ -573,7 +573,7 @@ public abstract class BaseRequestValidator<T> where T : class
         return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
     }
 
-    #nullable enable
+#nullable enable
     /// <summary>
     /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
     /// </summary>
