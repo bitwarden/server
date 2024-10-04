@@ -57,7 +57,7 @@ public class OrganizationResponseModel : ResponseModel
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
-        // Deperectated: https://bitwarden.atlassian.net/browse/PM-10863
+        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
     }
