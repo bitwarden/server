@@ -19,35 +19,36 @@ public class PolicyService : IPolicyService
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly GlobalSettings _globalSettings;
-    private readonly IEnumerable<IPolicyDefinition<,>> _policyStrategies;
+    private readonly Dictionary<PolicyType, IPolicyDefinition> _policyDefinitions = new();
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
         IEventService eventService,
-        IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
         GlobalSettings globalSettings,
-        IEnumerable<IPolicyDefinition<,>> policyStrategies)
+        IEnumerable<IPolicyDefinition> policyDefinitions)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
-        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
         _globalSettings = globalSettings;
-        _policyStrategies = policyStrategies;
+
+        foreach (var policyDefinition in policyDefinitions)
+        {
+           _policyDefinitions.Add(policyDefinition.Type, policyDefinition);
+           // TODO: throw if any policyDefinition is missing
+        }
     }
 
     public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
         Guid? savingUserId)
     {
-        // TODO: this could use the cache
-        var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+        var org = await _applicationCacheService.GetOrganizationAbilityAsync(policy.OrganizationId);
         if (org == null)
         {
             throw new BadRequestException("Organization not found");
@@ -58,10 +59,40 @@ public class PolicyService : IPolicyService
             throw new BadRequestException("This organization cannot use policies.");
         }
 
-        var policyDefinition = _policyStrategies.Single(strategy => strategy.Type == policy.Type);
-        var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
+        var policyDefinition = _policyDefinitions[policy.Type];
+        var allSavedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(org.Id);
+        var currentPolicy = allSavedPolicies.SingleOrDefault(p => p.Id == policy.Id);
 
-        // Validate
+        // If enabling this policy - check that all policy requirements are satisfied
+        if (currentPolicy is not { Enabled: true } && policy.Enabled)
+        {
+            foreach (var requiredPolicyType in policyDefinition.RequiredPolicies)
+            {
+                if (allSavedPolicies.SingleOrDefault(p => p.Type == requiredPolicyType) is not { Enabled: true })
+                {
+                    // TODO: would be better to reference the name instead of the enum
+                    throw new BadRequestException("Policy requires PolicyType " + requiredPolicyType + " to be enabled first.");
+                }
+            }
+        }
+
+        // If disabling this policy - ensure it's not required by any other policy
+        if (currentPolicy is { Enabled: true } && !policy.Enabled)
+        {
+            var dependentPolicies = _policyDefinitions.Values
+                .Where(policyDef => policyDef.RequiredPolicies.Contains(policy.Type))
+                .Select(policyDef => policyDef.Type)
+                .Select(otherPolicyType => allSavedPolicies.SingleOrDefault(p => p.Type == otherPolicyType))
+                .Where(otherPolicy => otherPolicy is { Enabled: true })
+                .ToList();
+
+            if (dependentPolicies is { Count: > 0})
+            {
+                throw new BadRequestException("This policy is required by " + dependentPolicies.First() + ". Try disabling that policy first." );
+            }
+        }
+
+        // Run other validation
         var validationError = await policyDefinition.ValidateAsync(currentPolicy, policy);
         if (validationError != null)
         {

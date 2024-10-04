@@ -15,11 +15,10 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
-public record SingleOrgRequirement(bool SingleOrgRequired);
-
-public class SingleOrgPolicyDefinition : IPolicyDefinition<SingleOrgRequirement>
+public class SingleOrgPolicyDefinition : IPolicyDefinition
 {
     public PolicyType Type => PolicyType.SingleOrg;
+    public IEnumerable<PolicyType> RequiredPolicies => Array.Empty<PolicyType>();
 
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
@@ -43,13 +42,6 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition<SingleOrgRequirement>
         _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
     }
-
-
-    public Predicate<(OrganizationUser orgUser, Policy policy)> Filter => tuple =>
-        tuple.orgUser is not { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
-
-    public (Func<SingleOrgRequirement, Policy, SingleOrgRequirement> reducer, SingleOrgRequirement initialValue) Reducer() =>
-        ((SingleOrgRequirement init, Policy next, SingleOrgRequirement ) => new SingleOrgRequirement(true), new SingleOrgRequirement(false));
 
     public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
@@ -99,23 +91,6 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition<SingleOrgRequirement>
     public async Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
         var organizationId = modifiedPolicy.OrganizationId;
-
-        // Do not allow this policy to be disabled if a dependent policy is still enabled
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
-        if (policies.Any(p => p.Type == PolicyType.RequireSso && p.Enabled))
-        {
-            return "Single Sign-On Authentication policy is enabled.";
-        }
-
-        if (policies.Any(p => p.Type == PolicyType.MaximumVaultTimeout && p.Enabled))
-        {
-            return "Maximum Vault Timeout policy is enabled.";
-        }
-
-        if (policies.Any(p => p.Type == PolicyType.ResetPassword && p.Enabled))
-        {
-            return "Account Recovery policy is enabled.";
-        }
 
         // Do not allow this policy to be disabled if Key Connector is being used
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);

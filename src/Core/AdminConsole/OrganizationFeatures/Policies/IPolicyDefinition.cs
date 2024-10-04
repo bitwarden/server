@@ -6,7 +6,7 @@ using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
-public interface IPolicyDefinition<TRequirement>
+public interface IPolicyDefinition
 {
     /// <summary>
     /// The PolicyType that the strategy is responsible for handling.
@@ -14,23 +14,14 @@ public interface IPolicyDefinition<TRequirement>
     public PolicyType Type { get; }
 
     /// <summary>
-    /// A predicate function that returns true if a policy should be enforced against a user
-    /// and false otherwise. This does not need to check Organization.UsePolicies or Policy.Enabled.
+    /// PolicyTypes that must be enabled before this policy can be enabled, if any.
     /// </summary>
-    public Predicate<(OrganizationUser orgUser, Policy policy)> Filter { get; }
+    public IEnumerable<PolicyType> RequiredPolicies { get; }
 
-    /// <summary>
-    /// A reducer function that reduces Policies into policy requirements (as defined by TRequirement).
-    /// This is used to reconcile policies of the same type from different organizations and combine them into
-    /// a single object that represents the requirements of the domain.
-    /// </summary>
-    public (Func<TRequirement, Policy> reducer, TRequirement initialValue) Reducer { get;  }
-
-    // TODO: Currently interdependencies between policies must be checked in both definitions.
-    // TODO: Consider a separate definition for policy prerequisites that is automatically cross-checked on all handlers,
-    // TODO: so they can be declared once only.
     /// <summary>
     /// Validates a policy before saving it.
+    /// Basic interdependencies between policies are already handled by the <see cref="RequiredPolicies"/> definition.
+    /// Use this for additional or more complex validation, if any.
     /// </summary>
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <param name="modifiedPolicy">The modified policy to be saved</param>
@@ -44,13 +35,4 @@ public interface IPolicyDefinition<TRequirement>
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <param name="modifiedPolicy">The modified policy to be saved</param>
     public Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy);
-}
-
-public interface IPolicyDefinition<TRequirement, TData> : IPolicyDefinition<TRequirement>
-{
-    /// <summary>
-    /// A factory that transforms the untyped Policy.Data JSON object to a domain specific object,
-    /// usually used for additional policy configuration.
-    /// </summary>
-    public Func<object, TData>? DataFactory { get; }
 }
