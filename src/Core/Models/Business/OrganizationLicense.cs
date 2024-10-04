@@ -381,6 +381,13 @@ public class OrganizationLicense : ILicense
                         organization.SmServiceAccounts == SmServiceAccounts;
             }
 
+            /*
+            * Version 14 added LimitCollectionCreationDeletion and Version
+            * 15 added AllowAdminAccessToAllCollectionItems, however they
+            * are no longer used and are intentionally excluded from
+            * validation.
+            */
+
             return valid;
         }
 
