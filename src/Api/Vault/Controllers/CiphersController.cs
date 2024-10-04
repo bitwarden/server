@@ -910,6 +910,13 @@ public class CiphersController : Controller
             throw new BadRequestException(ModelState);
         }
 
+        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+        {
+            throw new BadRequestException("Accounts managed by an organization cannot be purged.");
+        }
+
         if (string.IsNullOrWhiteSpace(organizationId))
         {
             await _cipherRepository.DeleteByUserIdAsync(user.Id);
