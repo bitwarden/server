@@ -23,7 +23,6 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPolicyRepository _policyRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
 
@@ -31,14 +30,12 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
         ICurrentContext currentContext)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
-        _policyRepository = policyRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
     }
