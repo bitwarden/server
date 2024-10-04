@@ -7,6 +7,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 
@@ -278,7 +279,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         return providers[provider];
     }
 
-    public void UpdateFromLicense(OrganizationLicense license)
+    public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)
     {
         // The following properties are intentionally excluded from being updated:
         // - Id - self-hosted org will have its own unique Guid
@@ -313,6 +314,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-        AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
+        {
+            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
+            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
+        }
     }
 }
