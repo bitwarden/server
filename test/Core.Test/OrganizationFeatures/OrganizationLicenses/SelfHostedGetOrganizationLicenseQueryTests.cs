@@ -6,7 +6,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Settings;
-using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;

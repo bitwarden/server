@@ -4,7 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;

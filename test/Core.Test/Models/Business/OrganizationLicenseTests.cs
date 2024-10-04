@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
