@@ -111,5 +111,7 @@ public static class OrganizationLicenseFileFixtures
             SmServiceAccounts = 8,
             MaxAutoscaleSmSeats = 101,
             MaxAutoscaleSmServiceAccounts = 102,
+            LimitCollectionCreationDeletion = true,
+            AllowAdminAccessToAllCollectionItems = true,
         };
 }
