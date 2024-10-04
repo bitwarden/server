@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
 using Bit.Core.NotificationCenter.Repositories;
@@ -9,19 +9,20 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.NotificationCenter.Queries;
 
-public class GetNotificationsForUserQuery : IGetNotificationsForUserQuery
+public class GetNotificationStatusDetailsForUserQuery : IGetNotificationStatusDetailsForUserQuery
 {
     private readonly ICurrentContext _currentContext;
     private readonly INotificationRepository _notificationRepository;
 
-    public GetNotificationsForUserQuery(ICurrentContext currentContext,
+    public GetNotificationStatusDetailsForUserQuery(ICurrentContext currentContext,
         INotificationRepository notificationRepository)
     {
         _currentContext = currentContext;
         _notificationRepository = notificationRepository;
     }
 
-    public async Task<IEnumerable<Notification>> GetByUserIdStatusFilterAsync(NotificationStatusFilter statusFilter)
+    public async Task<IEnumerable<NotificationStatusDetails>> GetByUserIdStatusFilterAsync(
+        NotificationStatusFilter statusFilter)
     {
         if (!_currentContext.UserId.HasValue)
         {
