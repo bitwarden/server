@@ -4,11 +4,15 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Identity.IdentityServer;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation;
@@ -21,14 +25,15 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     private readonly IdentityApplicationFactory _factory;
     private readonly UserManager<User> _userManager;
     private readonly IAuthRequestRepository _authRequestRepository;
-
+    private readonly IDeviceService _deviceService;
+    
     public ResourceOwnerPasswordValidatorTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
 
         _userManager = _factory.GetService<UserManager<User>>();
         _authRequestRepository = _factory.GetService<IAuthRequestRepository>();
-
+        _deviceService = _factory.GetService<IDeviceService>();
     }
 
     [Fact]
@@ -91,8 +96,8 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     /// I would have liked to spy into the IUserService but by spying into the IUserService it 
     /// creates a Singleton that is not available to the UserManager<User> thus causing the 
     /// RegisterAsync() to create a the user in a different UserStore than the one the
-    /// UserManager<User> has access to. This is an assumption made from observing the behavior while
-    /// writing theses tests. I could be wrong.
+    /// UserManager<User> has access to (This is an assumption made from observing the behavior while
+    /// writing theses tests, I could be wrong).
     /// 
     /// For the time being, verifying that the user is not null confirms that the failure is due to
     /// a bad password.
@@ -106,6 +111,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         await EnsureUserCreatedAsync();
 
         // Verify the User is not null to ensure the failure is due to bad password
+        Assert.NotNull(await _userManager.FindByEmailAsync(DefaultUsername));
 
         // Act
         var context = await _factory.Server.PostAsync("/connect/token",
@@ -113,8 +119,6 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
             context => context.SetAuthEmail(DefaultUsername));
 
         // Assert
-        Assert.NotNull(await _userManager.FindByEmailAsync(DefaultUsername));
-
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
@@ -211,6 +215,39 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
         var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
         Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_DeviceSaveAsync_ReturnsNullDevice_ErrorResult()
+    {
+        // Arrange
+        var factory = new IdentityApplicationFactory();
+        
+        // Stub DeviceValidator
+        factory.SubstituteService<IDeviceValidator>(sub =>
+        {
+            sub.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+                .Returns(null as Device);
+        });
+        
+        // Add User
+        await EnsureUserCreatedAsync(factory);
+        var userManager = factory.GetService<UserManager<User>>();
+        var user = await userManager.FindByEmailAsync(DefaultUsername);
+        Assert.NotNull(user);
+
+        // Act
+        var context = await factory.Server.PostAsync("/connect/token",
+            GetFormUrlEncodedContent(),
+            context => context.SetAuthEmail(DefaultUsername));
+        
+        // Assert
+        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
+        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
+        Assert.Equal("No device information provided.", errorMessage);
     }
 
     private async Task EnsureUserCreatedAsync(IdentityApplicationFactory factory = null)

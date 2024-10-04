@@ -211,6 +211,7 @@ public class DeviceValidatorTests
         // Assert
         Assert.True(result);
     }
+    
     private ValidatedTokenRequest AddValidDeviceToRequest(ValidatedTokenRequest request)
     {
         request.Raw["DeviceIdentifier"] = "DeviceIdentifier";
