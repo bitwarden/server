@@ -1,0 +1,39 @@
+@using System.Text.Json
+@model Bit.Core.Billing.Migration.Models.ProviderMigrationResult
+@{
+    ViewData["Title"] = "Results";
+}
+
+<h1>Migrate Providers</h1>
+<h2>Migration Details: @Model.ProviderName</h2>
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Id</dt>
+    <dd class="col-sm-8 col-lg-9"><code>@Model.ProviderId</code></dd>
+
+    <dt class="col-sm-4 col-lg-3">Result</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.Result</dd>
+</dl>
+<h3>Client Organizations</h3>
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Result</th>
+            <th>Previous State</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var clientResult in Model.Clients)
+        {
+            <tr>
+                <td>@clientResult.OrganizationId</td>
+                <td>@clientResult.OrganizationName</td>
+                <td>@clientResult.Result</td>
+                <td><pre>@Html.Raw(JsonSerializer.Serialize(clientResult.PreviousState))</pre></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
