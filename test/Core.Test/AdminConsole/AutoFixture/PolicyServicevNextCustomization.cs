@@ -13,6 +13,13 @@ namespace Bit.Core.Test.AdminConsole.AutoFixture;
 /// </summary>
 public class PolicyServicevNextBuilder : ISpecimenBuilder
 {
+    private readonly IEnumerable<IPolicyDefinition> _policyDefinitions;
+
+    public PolicyServicevNextBuilder(IEnumerable<IPolicyDefinition> policyDefinitions)
+    {
+        _policyDefinitions = policyDefinitions;
+    }
+
     public object Create(object request, ISpecimenContext context)
     {
         var pi = request as ParameterInfo;
@@ -21,17 +28,25 @@ public class PolicyServicevNextBuilder : ISpecimenBuilder
 
         if (pi.Member.DeclaringType != typeof(PolicyServicevNext) ||
             pi.ParameterType != typeof(IEnumerable<IPolicyDefinition>))
+        {
             return new NoSpecimen();
+        }
 
-        return Array.Empty<IPolicyDefinition>();
+        return _policyDefinitions;
     }
 }
 
 public class PolicyServicevNextCustomization : ICustomization
 {
+    private readonly IEnumerable<IPolicyDefinition> _policyDefinitions;
+
+    public PolicyServicevNextCustomization(IEnumerable<IPolicyDefinition> policyDefinitions = null)
+    {
+        _policyDefinitions = policyDefinitions ?? new List<IPolicyDefinition>();
+    }
     public void Customize(IFixture fixture)
     {
-        fixture.Customizations.Add(new PolicyServicevNextBuilder());
+        fixture.Customizations.Add(new PolicyServicevNextBuilder(_policyDefinitions));
     }
 }
 
