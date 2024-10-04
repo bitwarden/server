@@ -1264,7 +1264,6 @@ public class BulkCollectionAuthorizationHandlerTests
                 {
                     LimitCollectionCreation = true,
                     LimitCollectionDeletion = true,
-                    LimitCollectionCreationDeletion = true,
                     AllowAdminAccessToAllCollectionItems = true
                 }
             }
@@ -1349,8 +1348,6 @@ public class BulkCollectionAuthorizationHandlerTests
         organizationAbility.Id = organization.Id;
         organizationAbility.LimitCollectionCreation = limitCollectionCreation;
         organizationAbility.LimitCollectionDeletion = limitCollectionDeletion;
-        // Deprecated: remove with https://bitwarden.atlassian.net/browse/PM-10863
-        organizationAbility.LimitCollectionCreationDeletion = limitCollectionCreation || limitCollectionDeletion;
         organizationAbility.AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems;
 
 

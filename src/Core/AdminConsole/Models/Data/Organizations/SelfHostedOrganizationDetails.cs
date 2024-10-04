@@ -146,8 +146,6 @@ public class SelfHostedOrganizationDetails : Organization
             OwnersNotifiedOfAutoscaling = OwnersNotifiedOfAutoscaling,
             LimitCollectionCreation = LimitCollectionCreation,
             LimitCollectionDeletion = LimitCollectionDeletion,
-            // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-            LimitCollectionCreationDeletion = LimitCollectionCreationDeletion,
             AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
             Status = Status
         };

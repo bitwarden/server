@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System.Diagnostics;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -126,9 +125,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         var organizationAbility = await GetOrganizationAbilityAsync(org);
 
-        var limitCollectionCreationEnabled = _featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
-            ? organizationAbility is { LimitCollectionCreation: true }
-            : organizationAbility is { LimitCollectionCreationDeletion: true };
+        var limitCollectionCreationEnabled = !(organizationAbility is { LimitCollectionCreation: false });
 
         // If the limit collection management setting is disabled, allow any user to create collections
         if (!limitCollectionCreationEnabled)
@@ -253,20 +250,18 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return true;
         }
 
-        // If AllowAdminAccessToAllCollectionItems is true, Owners and Admins can delete any collection, regardless of LimitCollectionCreationDeletion setting
+        // If AllowAdminAccessToAllCollectionItems is true, Owners and Admins can delete any collection, regardless of LimitCollectionDeletion setting
         if (await AllowAdminAccessToAllCollectionItems(org) && org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
         {
             return true;
         }
 
-        // If LimitCollectionCreationDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
+        // If LimitCollectionDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
         // Ensure acting user has manage permissions for all collections being deleted
-        // If LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
+        // If LimitCollectionDeletion is true, only Owners and Admins can delete collections they manage
         var organizationAbility = await GetOrganizationAbilityAsync(org);
 
-        var limitCollectionDeletionEnabled = _featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
-            ? organizationAbility is { LimitCollectionDeletion: true }
-            : organizationAbility is { LimitCollectionCreationDeletion: true };
+        var limitCollectionDeletionEnabled = !(organizationAbility is { LimitCollectionDeletion: false });
 
         var canDeleteManagedCollections =
             !limitCollectionDeletionEnabled ||

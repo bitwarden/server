@@ -707,14 +707,6 @@ public class OrganizationService : IOrganizationService
             SmServiceAccounts = license.SmServiceAccounts,
         };
 
-        // These fields are being removed from consideration when processing
-        // licenses.
-        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
-        {
-            organization.LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
-            organization.AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
-        }
-
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
 
         var dir = $"{_globalSettings.LicenseDirectory}/organization";
