@@ -514,7 +514,6 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{id}/collection-management")]
-    [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
