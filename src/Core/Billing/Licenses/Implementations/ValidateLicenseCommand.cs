@@ -51,7 +51,7 @@ public class ValidateLicenseCommandHandler(IGlobalSettings globalSettings, ILice
             errorMessages.Add("The license has expired.");
         }
 
-        if (license.ValidLicenseVersion)
+        if (!license.ValidLicenseVersion)
         {
             errorMessages.Add($"Version {license.Version} is not supported.");
         }
@@ -102,9 +102,9 @@ public class ValidateLicenseCommandHandler(IGlobalSettings globalSettings, ILice
             errorMessages.Add("The license has expired.");
         }
 
-        if (license.ValidLicenseVersion)
+        if (!license.ValidLicenseVersion)
         {
-            throw new NotSupportedException($"Version {license.Version} is not supported.");
+            errorMessages.Add($"Version {license.Version} is not supported.");
         }
 
         if (!user.EmailVerified)

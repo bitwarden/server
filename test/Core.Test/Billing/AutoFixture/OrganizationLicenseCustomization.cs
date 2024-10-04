@@ -17,6 +17,7 @@ public class OrganizationLicenseCustomization : ICustomization
             .With(o => o.Signature, Guid.NewGuid().ToString().Replace('-', '+'))
             .With(o => o.Issued, DateTime.UtcNow.AddDays(-10))
             .With(o => o.Expires, DateTime.UtcNow.AddDays(10))
+            .With(o => o.SelfHost, true)
             .With(o => o.Version, OrganizationLicense.CurrentLicenseFileVersion + 1)
             .With(o => o.InstallationId, Guid.Empty)
             .With(o => o.Enabled, true)
