@@ -1,4 +1,31 @@
-CREATE PROCEDURE [dbo].[Notification_ReadByUserIdAndStatus]
+-- View NotificationStatusDetailsView
+
+IF EXISTS(SELECT *
+          FROM sys.views
+          WHERE [Name] = 'NotificationStatusDetailsView')
+BEGIN
+DROP VIEW [dbo].[NotificationStatusDetailsView]
+END
+GO
+
+CREATE VIEW [dbo].[NotificationStatusDetailsView]
+AS
+SELECT
+    N.*,
+    NS.UserId AS NotificationStatusUserId,
+    NS.ReadDate,
+    NS.DeletedDate
+FROM
+    [dbo].[Notification] AS N
+LEFT JOIN
+    [dbo].[NotificationStatus] as NS
+ON
+    N.[Id] = NS.[NotificationId]
+GO
+
+-- Stored Procedure Notification_ReadByUserIdAndStatus
+
+CREATE OR ALTER PROCEDURE [dbo].[Notification_ReadByUserIdAndStatus]
     @UserId UNIQUEIDENTIFIER,
     @ClientType TINYINT,
     @Read BIT,
@@ -31,3 +58,4 @@ BEGIN
                            1, 0) = 1))))
     ORDER BY [Priority] DESC, n.[CreationDate] DESC
 END
+GO
