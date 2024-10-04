@@ -35,7 +35,6 @@ public class PolicyServicevNext : IPolicyServicevNext
         foreach (var policyDefinition in policyDefinitions)
         {
            _policyDefinitions.Add(policyDefinition.Type, policyDefinition);
-           // TODO: throw if any policyDefinition is missing
         }
     }
 
