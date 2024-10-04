@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.Models.Api;
-using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
+using Bit.Core.NotificationCenter.Models.Data;
 
 namespace Bit.Api.NotificationCenter.Models.Response;
 
@@ -9,19 +9,21 @@ public class NotificationResponseModel : ResponseModel
 {
     private const string _objectName = "notification";
 
-    public NotificationResponseModel(Notification notification, string obj = _objectName)
+    public NotificationResponseModel(NotificationStatusDetails notificationStatusDetails, string obj = _objectName)
         : base(obj)
     {
-        if (notification == null)
+        if (notificationStatusDetails == null)
         {
-            throw new ArgumentNullException(nameof(notification));
+            throw new ArgumentNullException(nameof(notificationStatusDetails));
         }
 
-        Id = notification.Id;
-        Priority = notification.Priority;
-        Title = notification.Title;
-        Body = notification.Body;
-        Date = notification.RevisionDate;
+        Id = notificationStatusDetails.Id;
+        Priority = notificationStatusDetails.Priority;
+        Title = notificationStatusDetails.Title;
+        Body = notificationStatusDetails.Body;
+        Date = notificationStatusDetails.RevisionDate;
+        ReadDate = notificationStatusDetails.ReadDate;
+        DeletedDate = notificationStatusDetails.DeletedDate;
     }
 
     public NotificationResponseModel() : base(_objectName)
@@ -37,4 +39,8 @@ public class NotificationResponseModel : ResponseModel
     public string? Body { get; set; }
 
     public DateTime Date { get; set; }
+
+    public DateTime? ReadDate { get; set; }
+
+    public DateTime? DeletedDate { get; set; }
 }

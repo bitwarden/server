@@ -17,16 +17,18 @@ namespace Bit.Api.NotificationCenter.Controllers;
 [Authorize("Application")]
 public class NotificationsController : Controller
 {
-    private readonly IGetNotificationsForUserQuery _getNotificationsForUserQuery;
+    private readonly IGetNotificationStatusDetailsForUserQuery _getNotificationStatusDetailsForUserQuery;
     private readonly IMarkNotificationDeletedCommand _markNotificationDeletedCommand;
     private readonly IMarkNotificationReadCommand _markNotificationReadCommand;
 
+    private const int RowsPerPage = 10;
+
     public NotificationsController(
-        IGetNotificationsForUserQuery getNotificationsForUserQuery,
+        IGetNotificationStatusDetailsForUserQuery getNotificationStatusDetailsForUserQuery,
         IMarkNotificationDeletedCommand markNotificationDeletedCommand,
         IMarkNotificationReadCommand markNotificationReadCommand)
     {
-        _getNotificationsForUserQuery = getNotificationsForUserQuery;
+        _getNotificationStatusDetailsForUserQuery = getNotificationStatusDetailsForUserQuery;
         _markNotificationDeletedCommand = markNotificationDeletedCommand;
         _markNotificationReadCommand = markNotificationReadCommand;
     }
@@ -42,24 +44,30 @@ public class NotificationsController : Controller
             Deleted = filter.DeletedStatusFilter
         };
 
-        var notifications = await _getNotificationsForUserQuery.GetByUserIdStatusFilterAsync(notificationStatusFilter);
+        var notificationStatusDetails =
+            await _getNotificationStatusDetailsForUserQuery.GetByUserIdStatusFilterAsync(notificationStatusFilter);
 
         if (continuationToken != null)
         {
-            notifications = notifications
-                .Where(n => n.Priority <= continuationToken.Priority && n.RevisionDate < continuationToken.Date);
+            // Priority and CreationDate are always in descending order
+            notificationStatusDetails = notificationStatusDetails
+                .Where(n => n.Priority < continuationToken.Priority ||
+                            (n.Priority == continuationToken.Priority && n.CreationDate < continuationToken.Date));
         }
 
-        var responses = notifications
-            .Take(10)
+        var pagedNotificationStatusDetails = notificationStatusDetails
+            .Take(RowsPerPage)
+            .ToList();
+
+        var responses = pagedNotificationStatusDetails
             .Select(n => new NotificationResponseModel(n))
             .ToList();
 
-        var nextContinuationToken = responses.Count > 0 && responses.Count < 10
+        var nextContinuationToken = pagedNotificationStatusDetails.Count == RowsPerPage
             ? new NotificationContinuationToken
             {
-                Priority = responses.Last().Priority,
-                Date = responses.Last().Date
+                Priority = pagedNotificationStatusDetails.Last().Priority,
+                Date = pagedNotificationStatusDetails.Last().CreationDate
             }
             : null;
 
@@ -79,7 +87,7 @@ public class NotificationsController : Controller
         await _markNotificationReadCommand.MarkReadAsync(id);
     }
 
-    private NotificationContinuationToken? ParseContinuationToken(string? continuationToken)
+    private static NotificationContinuationToken? ParseContinuationToken(string? continuationToken)
     {
         if (continuationToken == null)
         {
@@ -88,17 +96,18 @@ public class NotificationsController : Controller
 
         var decodedContinuationToken = CoreHelpers.Base64UrlDecodeString(continuationToken);
         return JsonSerializer.Deserialize<NotificationContinuationToken>(decodedContinuationToken,
-            JsonHelpers.IgnoreCase);
+            JsonHelpers.CamelCase);
     }
 
-    private string? CreateContinuationToken(NotificationContinuationToken? notificationContinuationToken)
+    private static string? CreateContinuationToken(NotificationContinuationToken? notificationContinuationToken)
     {
         if (notificationContinuationToken == null)
         {
             return null;
         }
 
-        var serializedContinuationToken = JsonSerializer.Serialize(notificationContinuationToken);
+        var serializedContinuationToken = JsonSerializer.Serialize(notificationContinuationToken,
+            JsonHelpers.CamelCase);
         return CoreHelpers.Base64UrlEncodeString(serializedContinuationToken);
     }
 }

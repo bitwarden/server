@@ -1,4 +1,5 @@
-﻿using Bit.Core.NotificationCenter.Authorization;
+﻿#nullable enable
+using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Queries;
@@ -22,7 +23,7 @@ public static class NotificationCenterServiceCollectionExtensions
         services.AddScoped<IMarkNotificationReadCommand, MarkNotificationReadCommand>();
         services.AddScoped<IUpdateNotificationCommand, UpdateNotificationCommand>();
         // Queries
-        services.AddScoped<IGetNotificationsForUserQuery, GetNotificationsForUserQuery>();
+        services.AddScoped<IGetNotificationStatusDetailsForUserQuery, GetNotificationStatusDetailsForUserQuery>();
         services.AddScoped<IGetNotificationStatusForUserQuery, GetNotificationStatusForUserQuery>();
     }
 }
