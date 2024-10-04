@@ -1,9 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;

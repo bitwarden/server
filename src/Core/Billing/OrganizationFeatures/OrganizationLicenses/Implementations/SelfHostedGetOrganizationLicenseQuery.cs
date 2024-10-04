@@ -5,12 +5,12 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
+// ReSharper disable once CheckNamespace
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
 
 public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseQuery
 {
