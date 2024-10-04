@@ -10,6 +10,7 @@ public static class PolicyServiceCollectionExtensions
     public static void AddPolicyServices(this IServiceCollection services)
     {
         services.AddScoped<IPolicyService, PolicyService>();
+        services.AddScoped<IPolicyServicevNext, PolicyServicevNext>();
         services.AddScoped<IPolicyDefinition, SingleOrgPolicyDefinition>();
     }
 }

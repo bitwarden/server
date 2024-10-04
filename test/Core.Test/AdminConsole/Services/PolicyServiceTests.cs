@@ -9,7 +9,6 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -52,7 +51,9 @@ public class PolicyServiceTests
     public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest(
         [AdminConsoleFixtures.Policy(PolicyType.DisableSend)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        var orgId = Guid.NewGuid();
+
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             UsePolicies = false,
         });
@@ -80,7 +81,7 @@ public class PolicyServiceTests
     {
         policy.Enabled = false;
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -112,7 +113,7 @@ public class PolicyServiceTests
     {
         policy.Enabled = false;
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -146,7 +147,7 @@ public class PolicyServiceTests
         policy.Enabled = false;
         policy.Type = policyType;
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -179,7 +180,7 @@ public class PolicyServiceTests
     {
         policy.Enabled = true;
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -213,7 +214,7 @@ public class PolicyServiceTests
         policy.Id = default;
         policy.Data = null;
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -243,7 +244,7 @@ public class PolicyServiceTests
     {
         policy.Enabled = true;
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -272,19 +273,16 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor(
-        OrganizationAbility organizationAbility,
         Organization organization,
         [AdminConsoleFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy,
         SutProvider<PolicyService> sutProvider)
     {
         // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
-        organizationAbility.UsePolicies = true;
-        policy.OrganizationId = organizationAbility.Id = organization.Id;
+        organization.UsePolicies = true;
+        policy.OrganizationId = organization.Id;
 
-        SetupOrg(sutProvider, organization.Id, organizationAbility);
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        SetupOrg(sutProvider, organization.Id, organization);
 
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByIdAsync(policy.Id)
@@ -394,7 +392,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_EnableTwoFactor_WithoutMasterPasswordOr2FA_ThrowsBadRequest(
-        OrganizationAbility organization,
+        Organization organization,
         [AdminConsoleFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy,
         SutProvider<PolicyService> sutProvider)
     {
@@ -491,10 +489,11 @@ public class PolicyServiceTests
     {
         // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
-        var org = new OrganizationAbility()
+        var org = new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
+            Name = "TEST",
         };
 
         SetupOrg(sutProvider, policy.OrganizationId, org);
@@ -565,7 +564,7 @@ public class PolicyServiceTests
             AutoEnrollEnabled = autoEnrollEnabled
         });
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -602,7 +601,7 @@ public class PolicyServiceTests
     {
         policy.Enabled = false;
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -639,7 +638,7 @@ public class PolicyServiceTests
         policy.Enabled = true;
         policy.SetDataModel(new ResetPasswordDataModel());
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -673,7 +672,7 @@ public class PolicyServiceTests
     {
         policy.Enabled = false;
 
-        SetupOrg(sutProvider, policy.OrganizationId, new OrganizationAbility
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
@@ -798,11 +797,11 @@ public class PolicyServiceTests
         Assert.True(result);
     }
 
-    private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, OrganizationAbility organizationAbility)
+    private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(organizationId)
-            .Returns(organizationAbility);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns(Task.FromResult(organization));
     }
 
     private static void SetupUserPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
