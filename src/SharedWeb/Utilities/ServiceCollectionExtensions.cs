@@ -88,7 +88,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
+            services.AddSingleton<IEventRepository, Core.Repositories.Cosmos.EventRepository>();
             services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
             services.AddKeyedSingleton<IGrantRepository, Core.Auth.Repositories.Cosmos.GrantRepository>("cosmos");
         }
