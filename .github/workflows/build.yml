@@ -311,7 +311,7 @@ jobs:
           github.ref == 'refs/heads/hotfix-rc'
         run: |
           # Set proper setup image based on branch
-          case "${{ github.ref }}" in
+          case "$GITHUB_REF" in
             "refs/heads/main")
                 SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
                 ;;
@@ -528,9 +528,9 @@ jobs:
               workflow_id: 'build-unified.yml',
               ref: 'main',
               inputs: {
-                server_branch: '${{ github.ref }}'
+                server_branch: process.env.GITHUB_REF
               }
-            })
+            });
 
   trigger-k8s-deploy:
     name: Trigger k8s deploy
