@@ -46,14 +46,7 @@ public class PolicyServicevNextTests
                 Guid.NewGuid()));
 
         Assert.Contains("Organization not found", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
-
-        await sutProvider.GetDependency<IPolicyRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertAsync(default);
-
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogPolicyEventAsync(default, default, default);
+        await AssertPolicyNotSavedAsync(sutProvider);
     }
 
     [Theory, BitAutoData]
@@ -75,27 +68,14 @@ public class PolicyServicevNextTests
                 Guid.NewGuid()));
 
         Assert.Contains("cannot use policies", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
-
-        await sutProvider.GetDependency<IPolicyRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertAsync(default);
-
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogPolicyEventAsync(default, default, default);
+        await AssertPolicyNotSavedAsync(sutProvider);
     }
 
     [Theory, BitAutoData]
     public async Task SaveAsync_PolicyDefinitionNotFound_Throws([Policy(PolicyType.SingleOrg)]Policy policy)
     {
         var sutProvider = SutProviderFactory();
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(policy.OrganizationId)
-            .Returns(new OrganizationAbility
-            {
-                Id = policy.OrganizationId,
-                UsePolicies = true
-            });
+        ArrangeOrganization(sutProvider, policy);
 
         var exception = await Assert.ThrowsAsync<Exception>(
             () => sutProvider.Sut.SaveAsync(policy,
@@ -104,14 +84,7 @@ public class PolicyServicevNextTests
                 Guid.NewGuid()));
 
         Assert.Contains("No PolicyDefinition found for SingleOrg policy", exception.Message, StringComparison.OrdinalIgnoreCase);
-
-        await sutProvider.GetDependency<IPolicyRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertAsync(default);
-
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogPolicyEventAsync(default, default, default);
+        await AssertPolicyNotSavedAsync(sutProvider);
     }
 
     [Theory, BitAutoData]
@@ -121,14 +94,7 @@ public class PolicyServicevNextTests
         fakePolicyDefinition.ValidateAsyncMock(null, policy).Returns("Validation error!");
         var sutProvider = SutProviderFactory([fakePolicyDefinition]);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(policy.OrganizationId)
-            .Returns(new OrganizationAbility
-            {
-                Id = policy.OrganizationId,
-                UsePolicies = true
-            });
-
+        ArrangeOrganization(sutProvider, policy);
         sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policy.OrganizationId).Returns([]);
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
@@ -138,14 +104,7 @@ public class PolicyServicevNextTests
                 Guid.NewGuid()));
 
         Assert.Contains("Validation error!", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
-
-        await sutProvider.GetDependency<IPolicyRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertAsync(default);
-
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogPolicyEventAsync(default, default, default);
+        await AssertPolicyNotSavedAsync(sutProvider);
     }
 
     /// <summary>
@@ -158,5 +117,27 @@ public class PolicyServicevNextTests
         var sutProvider = new SutProvider<PolicyServicevNext>(fixture);
         sutProvider.Create();
         return sutProvider;
+    }
+
+    private static void ArrangeOrganization(SutProvider<PolicyServicevNext> sutProvider, Policy policy)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(policy.OrganizationId)
+            .Returns(new OrganizationAbility
+            {
+                Id = policy.OrganizationId,
+                UsePolicies = true
+            });
+    }
+
+    private static async Task AssertPolicyNotSavedAsync(SutProvider<PolicyServicevNext> sutProvider)
+    {
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogPolicyEventAsync(default, default, default);
     }
 }
