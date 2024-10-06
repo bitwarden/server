@@ -90,7 +90,7 @@ public class PolicyServicevNext : IPolicyServicevNext
 
         // Run other validation
         var validationError = await policyDefinition.ValidateAsync(currentPolicy, policy);
-        if (validationError != null)
+        if (!string.IsNullOrEmpty(validationError))
         {
             throw new BadRequestException(validationError);
         }

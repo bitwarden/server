@@ -1,4 +1,6 @@
-﻿using AutoFixture;
+﻿#nullable enable
+
+using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -105,6 +107,78 @@ public class PolicyServicevNextTests
 
         Assert.Contains("Validation error!", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_RequiredPolicyIsNull_Throws(
+        [Policy(PolicyType.RequireSso)] Policy policy)
+    {
+        var sutProvider = SutProviderFactory([
+            new FakeRequireSsoPolicyDefinition(),
+            new FakeSingleOrgPolicyDefinition()
+        ]);
+
+        ArrangeOrganization(sutProvider, policy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policy.OrganizationId)
+            .Returns([]);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Policy requires PolicyType SingleOrg to be enabled", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        await AssertPolicyNotSavedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_RequiredPolicyNotEnabled_Throws(
+        [Policy(PolicyType.SingleOrg, false)] Policy singleOrgPolicy,
+        [Policy(PolicyType.RequireSso)] Policy policy)
+    {
+        var sutProvider = SutProviderFactory([
+            new FakeRequireSsoPolicyDefinition(),
+            new FakeSingleOrgPolicyDefinition()
+        ]);
+
+        ArrangeOrganization(sutProvider, policy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policy.OrganizationId)
+            .Returns([singleOrgPolicy]);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Policy requires PolicyType SingleOrg to be enabled", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        await AssertPolicyNotSavedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_RequiredPolicyEnabled_Success(
+        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
+        [Policy(PolicyType.RequireSso)] Policy policy)
+    {
+        var sutProvider = SutProviderFactory([
+            new FakeRequireSsoPolicyDefinition(),
+            new FakeSingleOrgPolicyDefinition()
+        ]);
+
+        ArrangeOrganization(sutProvider, policy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policy.OrganizationId)
+            .Returns([singleOrgPolicy]);
+
+        await sutProvider.Sut.SaveAsync(policy,
+            Substitute.For<IUserService>(),
+            Substitute.For<IOrganizationService>(),
+            Guid.NewGuid());
+
+        await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(policy);
     }
 
     /// <summary>
