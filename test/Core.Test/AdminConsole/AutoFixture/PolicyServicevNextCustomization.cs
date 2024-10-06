@@ -1,11 +1,9 @@
 ﻿#nullable enable
 
 using System.Reflection;
-using AutoFixture;
 using AutoFixture.Kernel;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services.Implementations;
-using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AdminConsole.AutoFixture;
 

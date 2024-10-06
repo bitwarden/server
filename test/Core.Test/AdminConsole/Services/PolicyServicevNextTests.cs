@@ -10,9 +10,9 @@ using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using AdminConsoleFixtures = Bit.Core.Test.AdminConsole.AutoFixture;
 using NSubstitute;
 using Xunit;
+using AdminConsoleFixtures = Bit.Core.Test.AdminConsole.AutoFixture;
 
 namespace Bit.Core.Test.AdminConsole.Services;
 
@@ -72,7 +72,7 @@ public class PolicyServicevNextTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_PolicyDefinitionNotFound_Throws([Policy(PolicyType.SingleOrg)]Policy policy)
+    public async Task SaveAsync_PolicyDefinitionNotFound_Throws([Policy(PolicyType.SingleOrg)] Policy policy)
     {
         var sutProvider = SutProviderFactory();
         ArrangeOrganization(sutProvider, policy);
@@ -91,7 +91,7 @@ public class PolicyServicevNextTests
     public async Task SaveAsync_ThrowsOnValidationError([AdminConsoleFixtures.Policy(PolicyType.SingleOrg)] Policy policy)
     {
         var fakePolicyDefinition = new FakeSingleOrgPolicyDefinition();
-        fakePolicyDefinition.ValidateAsyncMock(null, policy).Returns("Validation error!");
+        fakePolicyDefinition.Validate(null, policy).Returns("Validation error!");
         var sutProvider = SutProviderFactory([fakePolicyDefinition]);
 
         ArrangeOrganization(sutProvider, policy);

@@ -82,21 +82,21 @@ public class PolicyServicevNext : IPolicyServicevNext
                 .Where(otherPolicy => otherPolicy is { Enabled: true })
                 .ToList();
 
-            if (dependentPolicies is { Count: > 0})
+            if (dependentPolicies is { Count: > 0 })
             {
-                throw new BadRequestException("This policy is required by " + dependentPolicies.First() + ". Try disabling that policy first." );
+                throw new BadRequestException("This policy is required by " + dependentPolicies.First() + ". Try disabling that policy first.");
             }
         }
 
         // Run other validation
-        var validationError = await policyDefinition.ValidateAsync(currentPolicy, policy);
+        var validationError = await policyDefinition.Validate(currentPolicy, policy);
         if (validationError != null)
         {
             throw new BadRequestException(validationError);
         }
 
         // Run side effects
-        await policyDefinition.OnSaveSideEffectsAsync(currentPolicy, policy);
+        await policyDefinition.OnSaveSideEffects(currentPolicy, policy);
 
         var now = DateTime.UtcNow;
         if (policy.Id == default)
