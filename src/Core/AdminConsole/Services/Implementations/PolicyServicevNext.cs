@@ -1,18 +1,12 @@
 ﻿#nullable enable
 
-using System.Collections.Immutable;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.Services.Implementations;
 
@@ -33,9 +27,16 @@ public class PolicyServicevNext : IPolicyServicevNext
         _eventService = eventService;
         _policyRepository = policyRepository;
 
-        _policyDefinitions = ImmutableDictionary.CreateRange(
-            policyDefinitions.Select(def => KeyValuePair.Create(def.Type, def))
-        );
+        var policyDefinitionsDict = new Dictionary<PolicyType, IPolicyDefinition>();
+        foreach (var policyDefinition in policyDefinitions)
+        {
+            if (!policyDefinitionsDict.TryAdd(policyDefinition.Type, policyDefinition))
+            {
+                throw new Exception($"Duplicate PolicyDefinition for {policyDefinition.Type} policy.");
+            }
+        }
+
+        _policyDefinitions = policyDefinitionsDict;
     }
 
     public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
@@ -52,7 +53,7 @@ public class PolicyServicevNext : IPolicyServicevNext
             throw new BadRequestException("This organization cannot use policies.");
         }
 
-        var policyDefinition = _policyDefinitions[policy.Type];
+        var policyDefinition = GetDefinition(policy.Type);
         var allSavedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(org.Id);
         var currentPolicy = allSavedPolicies.SingleOrDefault(p => p.Id == policy.Id);
 
@@ -107,5 +108,15 @@ public class PolicyServicevNext : IPolicyServicevNext
 
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+    }
+
+    private IPolicyDefinition GetDefinition(PolicyType type)
+    {
+        if (!_policyDefinitions.TryGetValue(type, out var result))
+        {
+            throw new Exception($"No PolicyDefinition found for {type} policy.");
+        }
+
+        return result;
     }
 }

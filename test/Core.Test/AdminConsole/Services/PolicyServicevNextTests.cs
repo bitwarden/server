@@ -18,9 +18,21 @@ namespace Bit.Core.Test.AdminConsole.Services;
 
 public class PolicyServicevNextTests
 {
+    [Fact]
+    public void Constructor_DuplicatePolicyDefinitions_Throws()
+    {
+        var exception = Assert.Throws<Exception>(() =>
+            new PolicyServicevNext(
+                Substitute.For<IApplicationCacheService>(),
+                Substitute.For<IEventService>(),
+                Substitute.For<IPolicyRepository>(),
+                [new FakeSingleOrgPolicyDefinition(), new FakeSingleOrgPolicyDefinition()]
+            ));
+        Assert.Contains("Duplicate PolicyDefinition for SingleOrg policy", exception.Message);
+    }
+
     [Theory, BitAutoData]
-    public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest(
-        Policy policy)
+    public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest(Policy policy)
     {
         var sutProvider = SutProviderFactory();
         sutProvider.GetDependency<IApplicationCacheService>()
@@ -45,8 +57,7 @@ public class PolicyServicevNextTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest(
-        Policy policy)
+    public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest(Policy policy)
     {
         var sutProvider = SutProviderFactory();
         sutProvider.GetDependency<IApplicationCacheService>()
@@ -64,6 +75,35 @@ public class PolicyServicevNextTests
                 Guid.NewGuid()));
 
         Assert.Contains("cannot use policies", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogPolicyEventAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_PolicyDefinitionNotFound_Throws([Policy(PolicyType.SingleOrg)]Policy policy)
+    {
+        var sutProvider = SutProviderFactory();
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(policy.OrganizationId)
+            .Returns(new OrganizationAbility
+            {
+                Id = policy.OrganizationId,
+                UsePolicies = true
+            });
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("No PolicyDefinition found for SingleOrg policy", exception.Message, StringComparison.OrdinalIgnoreCase);
 
         await sutProvider.GetDependency<IPolicyRepository>()
             .DidNotReceiveWithAnyArgs()
