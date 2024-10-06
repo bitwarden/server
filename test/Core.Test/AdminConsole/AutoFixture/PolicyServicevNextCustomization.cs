@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿#nullable enable
+
+using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -8,8 +10,9 @@ using Bit.Test.Common.AutoFixture.Attributes;
 namespace Bit.Core.Test.AdminConsole.AutoFixture;
 
 /// <summary>
-/// Override autofixture and set the injected PolicyDefinitions to an empty array.
-/// This prevents Autofixture from creating duplicate PolicyDefinitions which will throw an error.
+/// Configures Autofixture to inject the provided IPolicyDefinition implementations into the PolicyService constructor.
+/// Note that this should usually be used even to inject an empty list, otherwise AutoFixture will create duplicate
+/// invalid IPolicyDefinitions.
 /// </summary>
 public class PolicyServicevNextBuilder : ISpecimenBuilder
 {
@@ -34,27 +37,4 @@ public class PolicyServicevNextBuilder : ISpecimenBuilder
 
         return _policyDefinitions;
     }
-}
-
-public class PolicyServicevNextCustomization : ICustomization
-{
-    private readonly IEnumerable<IPolicyDefinition> _policyDefinitions;
-
-    public PolicyServicevNextCustomization(IEnumerable<IPolicyDefinition> policyDefinitions = null)
-    {
-        _policyDefinitions = policyDefinitions ?? new List<IPolicyDefinition>();
-    }
-    public void Customize(IFixture fixture)
-    {
-        fixture.Customizations.Add(new PolicyServicevNextBuilder(_policyDefinitions));
-    }
-}
-
-/// <summary>
-/// A customization for PolicyService that sets the injected PolicyDefinitions to an empty array.
-/// This prevents Autofixture from creating duplicate PolicyDefinitions which will throw an error.
-/// </summary>
-public class PolicyServicevNextCustomizeAttribute : BitCustomizeAttribute
-{
-    public override ICustomization GetCustomization() => new PolicyServicevNextCustomization();
 }

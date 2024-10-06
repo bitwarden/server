@@ -12,19 +12,17 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using AdminConsoleFixtures = Bit.Core.Test.AdminConsole.AutoFixture;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Services;
 
-[SutProviderCustomize]
-[PolicyServicevNextCustomize]
 public class PolicyServicevNextTests
 {
     [Theory, BitAutoData]
     public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest(
-        Policy policy, SutProvider<PolicyServicevNext> sutProvider)
+        Policy policy)
     {
+        var sutProvider = SutProviderFactory();
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
             .Returns((OrganizationAbility)null);
@@ -48,8 +46,9 @@ public class PolicyServicevNextTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest(
-        Policy policy, SutProvider<PolicyServicevNext> sutProvider)
+        Policy policy)
     {
+        var sutProvider = SutProviderFactory();
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
             .Returns(new OrganizationAbility
@@ -76,12 +75,11 @@ public class PolicyServicevNextTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_ThrowsOnValidationError(
-        [AdminConsoleFixtures.Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyServicevNext> sutProvider)
+    public async Task SaveAsync_ThrowsOnValidationError([AdminConsoleFixtures.Policy(PolicyType.SingleOrg)] Policy policy)
     {
         var fakePolicyDefinition = new FakeSingleOrgPolicyDefinition();
         fakePolicyDefinition.ValidateAsyncMock(null, policy).Returns("Validation error!");
-        sutProvider = RegisterPolicyDefinitions([fakePolicyDefinition]);
+        var sutProvider = SutProviderFactory([fakePolicyDefinition]);
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
@@ -113,10 +111,10 @@ public class PolicyServicevNextTests
     /// <summary>
     /// Returns a new SutProvider with the PolicyDefinitions registered in the Sut.
     /// </summary>
-    private SutProvider<PolicyServicevNext> RegisterPolicyDefinitions(IEnumerable<IPolicyDefinition> policyDefinitions)
+    private static SutProvider<PolicyServicevNext> SutProviderFactory(IEnumerable<IPolicyDefinition> policyDefinitions = null)
     {
         var fixture = new Fixture();
-        fixture.Customizations.Add(new PolicyServicevNextBuilder(policyDefinitions));
+        fixture.Customizations.Add(new PolicyServicevNextBuilder(policyDefinitions ?? new List<IPolicyDefinition>()));
         var sutProvider = new SutProvider<PolicyServicevNext>(fixture);
         sutProvider.Create();
         return sutProvider;
