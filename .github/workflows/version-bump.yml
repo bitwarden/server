@@ -20,7 +20,7 @@ on:
 jobs:
   bump_version:
     name: Bump Version
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.set-final-version-output.outputs.version }}
     steps:
@@ -227,7 +227,7 @@ jobs:
     name: Cut RC branch
     if: ${{ inputs.cut_rc_branch == true }}
     needs: bump_version
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out branch
         uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
