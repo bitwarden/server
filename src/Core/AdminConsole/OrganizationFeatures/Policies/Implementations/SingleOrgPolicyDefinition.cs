@@ -1,10 +1,13 @@
 ﻿#nullable enable
 
+using System.ComponentModel;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -37,27 +40,13 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition
         _currentContext = currentContext;
     }
 
-    public Func<Policy?, Policy, Task<string?>> Validate => async (currentPolicy, modifiedPolicy) =>
-    {
-        var organizationId = modifiedPolicy.OrganizationId;
-
-        // Do not allow this policy to be disabled if Key Connector is being used
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
-        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
-        {
-            return "Key Connector is enabled.";
-        }
-
-        return null;
-    };
-
-    public Func<Policy?, Policy, Task> OnSaveSideEffects => async (currentPolicy, modifiedPolicy) =>
+    public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
         if (currentPolicy is null or { Enabled: false } && modifiedPolicy is { Enabled: true })
         {
             await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId);
         }
-    };
+    }
 
     private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
     {
@@ -96,4 +85,17 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition
         }
     }
 
+    public async Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    {
+        var organizationId = modifiedPolicy.OrganizationId;
+
+        // Do not allow this policy to be disabled if Key Connector is being used
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
+        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
+        {
+            return "Key Connector is enabled.";
+        }
+
+        return null;
+    }
 }

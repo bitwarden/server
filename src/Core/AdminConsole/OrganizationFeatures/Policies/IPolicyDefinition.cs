@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
@@ -25,7 +26,7 @@ public interface IPolicyDefinition
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <param name="modifiedPolicy">The modified policy to be saved</param>
     /// <returns>A sequence of validation errors if validation was unsuccessful</returns>
-    public Func<Policy?, Policy, Task<string?>> Validate { get; }
+    public Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy);
 
     /// <summary>
     /// Optionally performs side effects after a policy is validated but before it is saved.
@@ -33,5 +34,5 @@ public interface IPolicyDefinition
     /// </summary>
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <param name="modifiedPolicy">The modified policy to be saved</param>
-    public Func<Policy?, Policy, Task> OnSaveSideEffects { get; }
+    public Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy);
 }
