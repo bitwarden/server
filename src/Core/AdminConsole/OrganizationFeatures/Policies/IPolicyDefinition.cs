@@ -25,7 +25,7 @@ public interface IPolicyDefinition
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <param name="modifiedPolicy">The modified policy to be saved</param>
     /// <returns>A sequence of validation errors if validation was unsuccessful</returns>
-    public Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy);
+    public Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy) => Task.FromResult<string?>(null);
 
     /// <summary>
     /// Optionally performs side effects after a policy is validated but before it is saved.
@@ -33,5 +33,5 @@ public interface IPolicyDefinition
     /// </summary>
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <param name="modifiedPolicy">The modified policy to be saved</param>
-    public Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy);
+    public Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy) => Task.FromResult(0);
 }

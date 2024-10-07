@@ -30,14 +30,4 @@ public class FakeRequireSsoPolicyDefinition : IPolicyDefinition
 {
     public PolicyType Type => PolicyType.RequireSso;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
-
-    public Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
-    {
-        return Task.FromResult((string)null);
-    }
-
-    public Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy)
-    {
-        return Task.FromResult(0);
-    }
 }
