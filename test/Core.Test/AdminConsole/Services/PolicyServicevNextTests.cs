@@ -13,7 +13,6 @@ using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using Xunit;
 using EventType = Bit.Core.Enums.EventType;
 
@@ -99,7 +98,7 @@ public class PolicyServicevNextTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_PolicyDefinitionNotFound_Throws([Policy(PolicyType.SingleOrg)]Policy policy)
+    public async Task SaveAsync_PolicyDefinitionNotFound_Throws([Policy(PolicyType.SingleOrg)] Policy policy)
     {
         var sutProvider = SutProviderFactory();
         ArrangeOrganization(sutProvider, policy);
