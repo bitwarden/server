@@ -12,14 +12,39 @@ using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using AdminConsoleFixtures = Bit.Core.Test.AdminConsole.AutoFixture;
 using NSubstitute;
+using NSubstitute.ReceivedExtensions;
 using Xunit;
+using EventType = Bit.Core.Enums.EventType;
 
 namespace Bit.Core.Test.AdminConsole.Services;
 
 public class PolicyServicevNextTests
 {
+    [Theory, BitAutoData]
+    public async Task SaveAsync_Success([Policy(PolicyType.SingleOrg)] Policy policy)
+    {
+        var fakePolicyDefinition = new FakeSingleOrgPolicyDefinition();
+        fakePolicyDefinition.ValidateAsyncMock(null, policy).Returns((string)null);
+        var sutProvider = SutProviderFactory([fakePolicyDefinition]);
+
+        var originalRevisionDate = policy.RevisionDate;
+
+        ArrangeOrganization(sutProvider, policy);
+        sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policy.OrganizationId).Returns([]);
+
+        await sutProvider.Sut.SaveAsync(policy,
+            Substitute.For<IUserService>(),
+            Substitute.For<IOrganizationService>(),
+            Guid.NewGuid());
+
+        fakePolicyDefinition.OnSaveSideEffectsAsyncMock.Received(1).Invoke(null, policy);
+        Assert.NotEqual(originalRevisionDate, policy.RevisionDate);
+        await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(policy);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogPolicyEventAsync(policy, EventType.Policy_Updated);
+    }
+
     [Fact]
     public void Constructor_DuplicatePolicyDefinitions_Throws()
     {
@@ -86,26 +111,6 @@ public class PolicyServicevNextTests
                 Guid.NewGuid()));
 
         Assert.Contains("No PolicyDefinition found for SingleOrg policy", exception.Message, StringComparison.OrdinalIgnoreCase);
-        await AssertPolicyNotSavedAsync(sutProvider);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveAsync_ThrowsOnValidationError([AdminConsoleFixtures.Policy(PolicyType.SingleOrg)] Policy policy)
-    {
-        var fakePolicyDefinition = new FakeSingleOrgPolicyDefinition();
-        fakePolicyDefinition.ValidateAsyncMock(null, policy).Returns("Validation error!");
-        var sutProvider = SutProviderFactory([fakePolicyDefinition]);
-
-        ArrangeOrganization(sutProvider, policy);
-        sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policy.OrganizationId).Returns([]);
-
-        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
-                Guid.NewGuid()));
-
-        Assert.Contains("Validation error!", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 
@@ -231,6 +236,26 @@ public class PolicyServicevNextTests
             Guid.NewGuid());
 
         await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(policy);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_ThrowsOnValidationError([Policy(PolicyType.SingleOrg)] Policy policy)
+    {
+        var fakePolicyDefinition = new FakeSingleOrgPolicyDefinition();
+        fakePolicyDefinition.ValidateAsyncMock(null, policy).Returns("Validation error!");
+        var sutProvider = SutProviderFactory([fakePolicyDefinition]);
+
+        ArrangeOrganization(sutProvider, policy);
+        sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policy.OrganizationId).Returns([]);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Validation error!", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        await AssertPolicyNotSavedAsync(sutProvider);
     }
 
     /// <summary>
