@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.AutoFixture;

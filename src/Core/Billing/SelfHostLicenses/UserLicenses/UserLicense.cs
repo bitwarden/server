@@ -7,10 +7,11 @@ using Bit.Core.Billing.Attributes;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.Billing.SelfHostLicenses.UserLicenses;
 
 public class UserLicense : ILicense
 {

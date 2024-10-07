@@ -3,9 +3,9 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.Models.Data.Organizations;
 

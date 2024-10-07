@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.Billing.SelfHostLicenses;
 
 public interface ILicense
 {

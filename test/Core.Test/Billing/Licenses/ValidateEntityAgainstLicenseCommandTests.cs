@@ -2,8 +2,9 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+using Bit.Core.Billing.SelfHostLicenses.UserLicenses;
 using Bit.Core.Entities;
-using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;

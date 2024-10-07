@@ -7,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.SelfHostLicenses.UserLicenses;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;

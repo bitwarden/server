@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.Test.Models.Business;
 

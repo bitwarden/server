@@ -7,7 +7,6 @@ using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

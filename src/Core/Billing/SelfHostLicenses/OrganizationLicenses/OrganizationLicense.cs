@@ -3,15 +3,13 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Serialization;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Attributes;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 
 public class OrganizationLicense : ILicense
 {

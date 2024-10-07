@@ -5,9 +5,11 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Attributes;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.SelfHostLicenses;
+using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+using Bit.Core.Billing.SelfHostLicenses.UserLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
 using Stripe;
 

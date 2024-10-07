@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.SelfHostLicenses;
+using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 using Bit.Core.Entities;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services;
 

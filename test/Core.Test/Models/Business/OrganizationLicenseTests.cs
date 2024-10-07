@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Models.Business;
+using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
