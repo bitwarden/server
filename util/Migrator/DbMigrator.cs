@@ -129,7 +129,7 @@ public class DbMigrator
         if (_noTransactionMigration)
         {
             builder = builder.WithTransactionPerScript()
-            .WithExecutionTimeout(TimeSpan.FromMinutes(60));
+                .WithExecutionTimeout(new TimeSpan(0, 60, 0));
         }
         else
         {
