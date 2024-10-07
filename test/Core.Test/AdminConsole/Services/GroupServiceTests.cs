@@ -84,6 +84,6 @@ public class GroupServiceTests
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs()
             .DeleteUserAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
-            .LogOrganizationUserEventAsync(default, default);
+            .LogOrganizationUserEventAsync<OrganizationUser>(default, default);
     }
 }

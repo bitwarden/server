@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -49,11 +50,11 @@ public class OrganizationController : Controller
 
         await _organizationService.ImportAsync(
             _currentContext.OrganizationId.Value,
-            null,
             model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
             model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
             model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
-            model.OverwriteExisting.GetValueOrDefault());
+            model.OverwriteExisting.GetValueOrDefault(),
+            EventSystemUser.PublicApi);
         return new OkResult();
     }
 }
