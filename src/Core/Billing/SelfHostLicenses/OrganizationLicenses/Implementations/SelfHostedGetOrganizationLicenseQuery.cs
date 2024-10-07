@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
@@ -12,31 +11,26 @@ using Microsoft.Extensions.Logging;
 // ReSharper disable once CheckNamespace
 namespace Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 
-public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseQuery
+public class SelfHostedGetOrganizationLicenseQuery(
+    IHttpClientFactory httpFactory,
+    IGlobalSettings globalSettings,
+    ILogger<SelfHostedGetOrganizationLicenseQuery> logger)
+    : BaseIdentityClientService(httpFactory,
+        globalSettings.Installation.ApiUri,
+        globalSettings.Installation.IdentityUri,
+        "api.licensing",
+        $"installation.{globalSettings.Installation.Id}",
+        globalSettings.Installation.Key,
+        logger), ISelfHostedGetOrganizationLicenseQuery
 {
-    private readonly IGlobalSettings _globalSettings;
-
-    public SelfHostedGetOrganizationLicenseQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<SelfHostedGetOrganizationLicenseQuery> logger, ICurrentContext currentContext)
-        : base(
-            httpFactory,
-            globalSettings.Installation.ApiUri,
-            globalSettings.Installation.IdentityUri,
-            "api.licensing",
-            $"installation.{globalSettings.Installation.Id}",
-            globalSettings.Installation.Key,
-            logger)
-    {
-        _globalSettings = globalSettings;
-    }
-
     public async Task<OrganizationLicense> GetLicenseAsync(Organization organization, OrganizationConnection billingSyncConnection)
     {
-        if (!_globalSettings.SelfHosted)
+        if (!globalSettings.SelfHosted)
         {
             throw new BadRequestException("This action is only available for self-hosted.");
         }
 
-        if (!_globalSettings.EnableCloudCommunication)
+        if (!globalSettings.EnableCloudCommunication)
         {
             throw new BadRequestException("Cloud communication is disabled in global settings");
         }

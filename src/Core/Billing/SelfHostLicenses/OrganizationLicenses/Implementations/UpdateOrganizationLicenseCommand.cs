@@ -9,19 +9,11 @@ using Bit.Core.Services;
 // ReSharper disable once CheckNamespace
 namespace Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 
-public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseCommand
+public class UpdateOrganizationLicenseCommand(
+    ILicensingService licensingService,
+    IOrganizationService organizationService)
+    : IUpdateOrganizationLicenseCommand
 {
-    private readonly ILicensingService _licensingService;
-    private readonly IOrganizationService _organizationService;
-
-    public UpdateOrganizationLicenseCommand(
-        ILicensingService licensingService,
-        IOrganizationService organizationService)
-    {
-        _licensingService = licensingService;
-        _organizationService = organizationService;
-    }
-
     public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
         OrganizationLicense license, Organization? currentOrganizationUsingLicenseKey)
     {
@@ -30,7 +22,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             throw new BadRequestException("License is already in use by another organization.");
         }
 
-        await _licensingService.WriteLicenseToDiskAsync(selfHostedOrganization.Id, license);
+        await licensingService.WriteLicenseToDiskAsync(selfHostedOrganization.Id, license);
         await UpdateOrganizationAsync(selfHostedOrganization, license);
     }
 
@@ -39,6 +31,6 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         var organization = selfHostedOrganizationDetails.ToOrganization();
         organization.UpdateFromLicense(license);
 
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 }
