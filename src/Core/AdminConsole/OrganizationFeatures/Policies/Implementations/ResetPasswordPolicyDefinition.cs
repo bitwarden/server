@@ -22,13 +22,20 @@ public class ResetPasswordPolicyDefinition : IPolicyDefinition
     public async Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
         if (modifiedPolicy is not { Enabled:true } ||
-            modifiedPolicy.GetDataModel<ResetPasswordDataModel>()?.AutoEnrollEnabled == false)
+            modifiedPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled == false)
         {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(modifiedPolicy.OrganizationId);
-            if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
-            {
-                return "Trusted device encryption is on and requires this policy.";
-            }
+            return await ValidateDisableAsync(modifiedPolicy);
+        }
+
+        return null;
+    }
+
+    private async Task<string?> ValidateDisableAsync(Policy policy)
+    {
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policy.OrganizationId);
+        if (ssoConfig?.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
+        {
+            return "Trusted device encryption is on and requires this policy.";
         }
 
         return null;
