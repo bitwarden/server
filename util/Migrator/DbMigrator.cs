@@ -15,8 +15,8 @@ public class DbMigrator
     private readonly ILogger<DbMigrator> _logger;
     private readonly bool _skipDatabasePreparation;
     private readonly bool _noTransactionMigration;
-     public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
-        bool skipDatabasePreparation = false, bool noTransactionMigration = false)
+    public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
+       bool skipDatabasePreparation = false, bool noTransactionMigration = false)
     {
         _connectionString = connectionString;
         _logger = logger ?? CreateLogger();
@@ -112,19 +112,19 @@ public class DbMigrator
     string folderName = MigratorConstants.DefaultMigrationsFolderName,
     bool dryRun = false,
     CancellationToken cancellationToken = default)
-{
-    if (enableLogging)
     {
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
-    }
+        if (enableLogging)
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
+        }
 
-    cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
-    var builder = DeployChanges.To
-        .SqlDatabase(_connectionString)
-        .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-            s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
-        .WithExecutionTimeout(TimeSpan.FromMinutes(5)); 
+        var builder = DeployChanges.To
+            .SqlDatabase(_connectionString)
+            .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
+                s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
+            .WithExecutionTimeout(TimeSpan.FromMinutes(5));
 
         if (_noTransactionMigration)
         {
