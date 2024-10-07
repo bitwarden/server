@@ -25,7 +25,6 @@ public class DbMigrator
         _noTransactionMigration = noTransactionMigration;
     }
 
-
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         bool repeatable = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
@@ -33,6 +32,7 @@ public class DbMigrator
         CancellationToken cancellationToken = default)
     {
         var attempt = 1;
+
         while (attempt < 10)
         {
             try
@@ -72,6 +72,7 @@ public class DbMigrator
         using (var connection = new SqlConnection(masterConnectionString))
         {
             var databaseName = new SqlConnectionStringBuilder(_connectionString).InitialCatalog;
+
             if (string.IsNullOrWhiteSpace(databaseName))
             {
                 databaseName = "vault";
@@ -136,8 +137,6 @@ public class DbMigrator
             builder = builder.WithTransaction();
         }
 
-
-
         if (repeatable)
         {
             builder.JournalTo(new NullJournal());
@@ -158,6 +157,7 @@ public class DbMigrator
         {
             var scriptsToExec = upgrader.GetScriptsToExecute();
             var stringBuilder = new StringBuilder("Scripts that will be applied:");
+
             foreach (var script in scriptsToExec)
             {
                 stringBuilder.AppendLine(script.Name);
