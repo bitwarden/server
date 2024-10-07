@@ -84,7 +84,7 @@ public class PolicyServicevNext : IPolicyServicevNext
 
             if (dependentPolicies is { Count: > 0})
             {
-                throw new BadRequestException("This policy is required by " + dependentPolicies.First() + ". Try disabling that policy first." );
+                throw new BadRequestException("This policy is required by " + dependentPolicies.First()!.Type + " policy. Try disabling that policy first." );
             }
         }
 

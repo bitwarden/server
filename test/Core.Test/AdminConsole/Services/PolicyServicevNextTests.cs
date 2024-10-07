@@ -181,6 +181,58 @@ public class PolicyServicevNextTests
         await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(policy);
     }
 
+    [Theory, BitAutoData]
+    public async Task SaveAsync_DependentPolicyIsEnabled_Throws(
+        [Policy(PolicyType.SingleOrg, false)] Policy policy,
+        [Policy(PolicyType.SingleOrg)] Policy currentPolicy,
+        [Policy(PolicyType.RequireSso)] Policy requireSsoPolicy) // depends on Single Org
+    {
+        var sutProvider = SutProviderFactory([
+            new FakeRequireSsoPolicyDefinition(),
+            new FakeSingleOrgPolicyDefinition()
+        ]);
+
+        policy.Id = currentPolicy.Id;
+        ArrangeOrganization(sutProvider, policy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policy.OrganizationId)
+            .Returns([currentPolicy, requireSsoPolicy]);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("This policy is required by RequireSso policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        await AssertPolicyNotSavedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_DependentPolicyNotEnabled_Success(
+        [Policy(PolicyType.SingleOrg, false)] Policy policy,
+        [Policy(PolicyType.SingleOrg)] Policy currentPolicy,
+        [Policy(PolicyType.RequireSso, false)] Policy requireSsoPolicy) // depends on Single Org but is not enabled
+    {
+        var sutProvider = SutProviderFactory([
+            new FakeRequireSsoPolicyDefinition(),
+            new FakeSingleOrgPolicyDefinition()
+        ]);
+
+        policy.Id = currentPolicy.Id;
+        ArrangeOrganization(sutProvider, policy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policy.OrganizationId)
+            .Returns([currentPolicy, requireSsoPolicy]);
+
+        await sutProvider.Sut.SaveAsync(policy,
+            Substitute.For<IUserService>(),
+            Substitute.For<IOrganizationService>(),
+            Guid.NewGuid());
+
+        await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(policy);
+    }
+
     /// <summary>
     /// Returns a new SutProvider with the PolicyDefinitions registered in the Sut.
     /// </summary>
