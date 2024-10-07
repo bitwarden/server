@@ -207,6 +207,77 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    public async Task<string> PurchaseOrganizationNoPaymentMethod(Organization org, StaticStore.Plan plan, int additionalSeats, bool premiumAccessAddon,
+        int additionalSmSeats = 0, int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false)
+    {
+
+        var stripeCustomerMetadata = new Dictionary<string, string>
+        {
+            { "region", _globalSettings.BaseServiceUri.CloudRegion }
+        };
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, new TaxInfo(), additionalSeats, 0, premiumAccessAddon
+        , additionalSmSeats, additionalServiceAccount);
+
+        Customer customer = null;
+        Subscription subscription;
+        try
+        {
+            var customerCreateOptions = new CustomerCreateOptions
+            {
+                Description = org.DisplayBusinessName(),
+                Email = org.BillingEmail,
+                Metadata = stripeCustomerMetadata,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = org.SubscriberType(),
+                            Value = GetFirstThirtyCharacters(org.SubscriberName()),
+                        }
+                    ],
+                },
+                Coupon = signupIsFromSecretsManagerTrial
+                    ? SecretsManagerStandaloneDiscountId
+                    : null,
+                TaxIdData = null,
+            };
+
+            customer = await _stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            subCreateOptions.AddExpand("latest_invoice.payment_intent");
+            subCreateOptions.Customer = customer.Id;
+
+            subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating customer, walking back operation.");
+            if (customer != null)
+            {
+                await _stripeAdapter.CustomerDeleteAsync(customer.Id);
+            }
+
+            throw;
+        }
+
+        org.Gateway = GatewayType.Stripe;
+        org.GatewayCustomerId = customer.Id;
+        org.GatewaySubscriptionId = subscription.Id;
+
+        if (subscription.Status == "incomplete" &&
+            subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+        {
+            org.Enabled = false;
+            return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+        }
+
+        org.Enabled = true;
+        org.ExpirationDate = subscription.CurrentPeriodEnd;
+        return null;
+
+    }
+
     private async Task ChangeOrganizationSponsorship(
         Organization org,
         OrganizationSponsorship sponsorship,
@@ -710,6 +781,11 @@ public class StripePaymentService : IPaymentService
         if (sub == null)
         {
             throw new GatewayException("Subscription not found.");
+        }
+
+        if (sub.Status == SubscriptionStatuses.Canceled)
+        {
+            throw new BadRequestException("You do not have an active subscription. Reinstate your subscription to make changes.");
         }
 
         var collectionMethod = sub.CollectionMethod;

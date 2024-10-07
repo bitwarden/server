@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Bit.Core.Models.Business;
+using Stripe;
 
 namespace Bit.Core.Billing.Models;
 
@@ -11,6 +12,15 @@ public record TaxInformation(
     string City,
     string State)
 {
+    public static TaxInformation From(TaxInfo taxInfo) => new(
+        taxInfo.BillingAddressCountry,
+        taxInfo.BillingAddressPostalCode,
+        taxInfo.TaxIdNumber,
+        taxInfo.BillingAddressLine1,
+        taxInfo.BillingAddressLine2,
+        taxInfo.BillingAddressCity,
+        taxInfo.BillingAddressState);
+
     public (AddressOptions, List<CustomerTaxIdDataOptions>) GetStripeOptions()
     {
         var address = new AddressOptions

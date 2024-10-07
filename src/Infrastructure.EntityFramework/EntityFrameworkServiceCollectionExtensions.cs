@@ -93,6 +93,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
         services.AddSingleton<INotificationRepository, NotificationRepository>();
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
+        services
+            .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
 
         if (selfHosted)
         {
