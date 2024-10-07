@@ -1,13 +1,12 @@
 ﻿#nullable enable
-using System.Text.Json;
 using Bit.Api.NotificationCenter.Controllers;
 using Bit.Api.NotificationCenter.Models.Request;
+using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -40,8 +39,8 @@ public class NotificationsControllerTest
             .ToList();
 
         sutProvider.GetDependency<IGetNotificationStatusDetailsForUserQuery>()
-            .GetByUserIdStatusFilterAsync(Arg.Any<NotificationStatusFilter>())
-            .Returns(notificationStatusDetailsList);
+            .GetByUserIdStatusFilterAsync(Arg.Any<NotificationStatusFilter>(), Arg.Any<PageOptions>())
+            .Returns(new PagedResult<NotificationStatusDetails> { Data = notificationStatusDetailsList });
 
         var expectedNotificationStatusDetailsMap = notificationStatusDetailsList
             .Take(10)
@@ -74,13 +73,15 @@ public class NotificationsControllerTest
         await sutProvider.GetDependency<IGetNotificationStatusDetailsForUserQuery>()
             .Received(1)
             .GetByUserIdStatusFilterAsync(Arg.Is<NotificationStatusFilter>(filter =>
-                filter.Read == readStatusFilter && filter.Deleted == deletedStatusFilter));
+                    filter.Read == readStatusFilter && filter.Deleted == deletedStatusFilter),
+                Arg.Is<PageOptions>(pageOptions =>
+                    pageOptions.ContinuationToken == null && pageOptions.PageSize == 10));
     }
 
     [Theory]
     [BitAutoData]
     [NotificationStatusDetailsListCustomize(19)]
-    public async Task List_PagingNoContinuationToken_ReturnedFirst10MatchingNotifications(
+    public async Task List_PagingRequestNoContinuationToken_ReturnedFirst10MatchingNotifications(
         SutProvider<NotificationsController> sutProvider,
         IEnumerable<NotificationStatusDetails> notificationStatusDetailsEnumerable)
     {
@@ -90,8 +91,9 @@ public class NotificationsControllerTest
             .ToList();
 
         sutProvider.GetDependency<IGetNotificationStatusDetailsForUserQuery>()
-            .GetByUserIdStatusFilterAsync(Arg.Any<NotificationStatusFilter>())
-            .Returns(notificationStatusDetailsList);
+            .GetByUserIdStatusFilterAsync(Arg.Any<NotificationStatusFilter>(), Arg.Any<PageOptions>())
+            .Returns(new PagedResult<NotificationStatusDetails>
+            { Data = notificationStatusDetailsList.Take(10).ToList(), ContinuationToken = "2" });
 
         var expectedNotificationStatusDetailsMap = notificationStatusDetailsList
             .Take(10)
@@ -115,22 +117,19 @@ public class NotificationsControllerTest
             Assert.Equal(expectedNotificationStatusDetails.ReadDate, notificationResponseModel.ReadDate);
             Assert.Equal(expectedNotificationStatusDetails.DeletedDate, notificationResponseModel.DeletedDate);
         });
+        Assert.Equal("2", listResponse.ContinuationToken);
 
-        var expectedContinuationToken = new Dictionary<string, object>
-        {
-            { "priority", notificationStatusDetailsList[9].Priority },
-            { "date", notificationStatusDetailsList[9].CreationDate }
-        };
-        var expectedJsonContinuationToken = JsonSerializer.Serialize(expectedContinuationToken);
-        var expectedBase64EncodedJsonContinuationToken =
-            CoreHelpers.Base64UrlEncodeString(expectedJsonContinuationToken);
-        Assert.Equal(expectedBase64EncodedJsonContinuationToken, listResponse.ContinuationToken);
+        await sutProvider.GetDependency<IGetNotificationStatusDetailsForUserQuery>()
+            .Received(1)
+            .GetByUserIdStatusFilterAsync(Arg.Any<NotificationStatusFilter>(),
+                Arg.Is<PageOptions>(pageOptions =>
+                    pageOptions.ContinuationToken == null && pageOptions.PageSize == 10));
     }
 
     [Theory]
     [BitAutoData]
     [NotificationStatusDetailsListCustomize(19)]
-    public async Task List_PagingUsingContinuationToken_ReturnedLast9MatchingNotifications(
+    public async Task List_PagingRequestUsingContinuationToken_ReturnedLast9MatchingNotifications(
         SutProvider<NotificationsController> sutProvider,
         IEnumerable<NotificationStatusDetails> notificationStatusDetailsEnumerable)
     {
@@ -140,25 +139,15 @@ public class NotificationsControllerTest
             .ToList();
 
         sutProvider.GetDependency<IGetNotificationStatusDetailsForUserQuery>()
-            .GetByUserIdStatusFilterAsync(Arg.Any<NotificationStatusFilter>())
-            .Returns(notificationStatusDetailsList);
+            .GetByUserIdStatusFilterAsync(Arg.Any<NotificationStatusFilter>(), Arg.Any<PageOptions>())
+            .Returns(new PagedResult<NotificationStatusDetails>
+            { Data = notificationStatusDetailsList.Skip(10).ToList() });
 
         var expectedNotificationStatusDetailsMap = notificationStatusDetailsList
             .Skip(10)
             .ToDictionary(n => n.Id);
 
-        var continuationToken = new Dictionary<string, object>
-        {
-            { "priority", notificationStatusDetailsList[9].Priority },
-            { "date", notificationStatusDetailsList[9].CreationDate }
-        };
-        var jsonContinuationToken = JsonSerializer.Serialize(continuationToken);
-        var base64EncodedJsonContinuationToken = CoreHelpers.Base64UrlEncodeString(jsonContinuationToken);
-
-        var listResponse = await sutProvider.Sut.List(new NotificationFilterRequestModel
-        {
-            ContinuationToken = base64EncodedJsonContinuationToken
-        });
+        var listResponse = await sutProvider.Sut.List(new NotificationFilterRequestModel { ContinuationToken = "2" });
 
         Assert.Equal("list", listResponse.Object);
         Assert.Equal(9, listResponse.Data.Count());
@@ -177,6 +166,12 @@ public class NotificationsControllerTest
             Assert.Equal(expectedNotificationStatusDetails.DeletedDate, notificationResponseModel.DeletedDate);
         });
         Assert.Null(listResponse.ContinuationToken);
+
+        await sutProvider.GetDependency<IGetNotificationStatusDetailsForUserQuery>()
+            .Received(1)
+            .GetByUserIdStatusFilterAsync(Arg.Any<NotificationStatusFilter>(),
+                Arg.Is<PageOptions>(pageOptions =>
+                    pageOptions.ContinuationToken == "2" && pageOptions.PageSize == 10));
     }
 
     [Theory]

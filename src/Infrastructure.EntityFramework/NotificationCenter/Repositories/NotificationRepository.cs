@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Repositories;
@@ -36,11 +37,16 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
         return Mapper.Map<List<Core.NotificationCenter.Entities.Notification>>(notifications);
     }
 
-    public async Task<IEnumerable<NotificationStatusDetails>> GetByUserIdAndStatusAsync(Guid userId,
-        ClientType clientType, NotificationStatusFilter? statusFilter)
+    public async Task<PagedResult<NotificationStatusDetails>> GetByUserIdAndStatusAsync(Guid userId,
+        ClientType clientType, NotificationStatusFilter? statusFilter, PageOptions pageOptions)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
+
+        if (!int.TryParse(pageOptions.ContinuationToken, out var pageNumber))
+        {
+            pageNumber = 1;
+        }
 
         var notificationStatusDetailsViewQuery = new NotificationStatusDetailsViewQuery(userId, clientType);
 
@@ -55,9 +61,17 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
                     select n;
         }
 
-        return await query
+        var results = await query
             .OrderByDescending(n => n.Priority)
             .ThenByDescending(n => n.CreationDate)
+            .Skip(pageOptions.PageSize * (pageNumber - 1))
+            .Take(pageOptions.PageSize)
             .ToListAsync();
+
+        return new PagedResult<NotificationStatusDetails>
+        {
+            Data = results,
+            ContinuationToken = (pageNumber + 1).ToString()
+        };
     }
 }

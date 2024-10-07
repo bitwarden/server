@@ -1,4 +1,6 @@
-CREATE PROCEDURE [dbo].[Notification_ReadByUserIdAndStatus]
+-- Stored Procedure Notification_ReadByUserIdAndStatus
+
+CREATE OR ALTER PROCEDURE [dbo].[Notification_ReadByUserIdAndStatus]
     @UserId UNIQUEIDENTIFIER,
     @ClientType TINYINT,
     @Read BIT,
@@ -35,3 +37,4 @@ BEGIN
     OFFSET @PageSize * (@PageNumber - 1) ROWS
     FETCH NEXT @PageSize ROWS ONLY
 END
+GO
