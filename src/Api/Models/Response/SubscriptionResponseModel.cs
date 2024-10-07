@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.SelfHostLicenses.UserLicenses;
+﻿using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.OrganizationLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;

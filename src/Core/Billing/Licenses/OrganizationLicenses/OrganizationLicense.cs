@@ -9,7 +9,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+namespace Bit.Core.Billing.Licenses.OrganizationLicenses;
 
 public class OrganizationLicense : ILicense
 {

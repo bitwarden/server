@@ -1,5 +1,5 @@
 ﻿using AutoFixture;
-using Bit.Core.Billing.SelfHostLicenses.UserLicenses;
+using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Billing.AutoFixture;

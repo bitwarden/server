@@ -4,7 +4,7 @@ using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.OrganizationLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;

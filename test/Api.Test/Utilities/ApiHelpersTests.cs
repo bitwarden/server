@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using Bit.Api.Utilities;
-using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.OrganizationLicenses;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;

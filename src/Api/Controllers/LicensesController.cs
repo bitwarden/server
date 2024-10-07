@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
-using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
-using Bit.Core.Billing.SelfHostLicenses.UserLicenses;
+using Bit.Core.Billing.Licenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;

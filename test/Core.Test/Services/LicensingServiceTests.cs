@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.OrganizationLicenses;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.AutoFixture;

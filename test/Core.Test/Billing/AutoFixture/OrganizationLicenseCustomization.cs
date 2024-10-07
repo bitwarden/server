@@ -1,6 +1,6 @@
 ﻿using AutoFixture;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.OrganizationLicenses;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Billing.AutoFixture;

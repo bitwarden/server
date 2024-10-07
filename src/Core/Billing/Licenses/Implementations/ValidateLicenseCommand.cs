@@ -1,7 +1,6 @@
 ﻿#nullable enable
-using Bit.Core.Billing.SelfHostLicenses;
-using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
-using Bit.Core.Billing.SelfHostLicenses.UserLicenses;
+using Bit.Core.Billing.Licenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Common;

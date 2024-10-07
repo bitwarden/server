@@ -6,7 +6,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 
 // ReSharper disable once CheckNamespace
-namespace Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+namespace Bit.Core.Billing.Licenses.OrganizationLicenses;
 
 public class CloudGetOrganizationLicenseQuery(
     IInstallationRepository installationRepository,

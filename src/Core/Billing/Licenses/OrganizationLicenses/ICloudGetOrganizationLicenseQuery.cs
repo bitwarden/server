@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
+namespace Bit.Core.Billing.Licenses.OrganizationLicenses;
 
 public interface ICloudGetOrganizationLicenseQuery
 {

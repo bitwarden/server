@@ -1,8 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.Billing.Licenses;
-using Bit.Core.Billing.SelfHostLicenses;
-using Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
-using Bit.Core.Billing.SelfHostLicenses.UserLicenses;
+using Bit.Core.Billing.Licenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;

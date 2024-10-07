@@ -11,7 +11,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Bit.Core.Billing.SelfHostLicenses.UserLicenses;
+namespace Bit.Core.Billing.Licenses.UserLicenses;
 
 public class UserLicense : ILicense
 {
