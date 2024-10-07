@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -39,7 +40,47 @@ public class OrganizationLicenseTests
         var licensingService = Substitute.For<ILicensingService>();
         var installationId = new Guid(OrganizationLicenseFileFixtures.InstallationId);
 
-        var license = new OrganizationLicense(organization, null, installationId, licensingService);
+        // var license = new OrganizationLicense(organization, null, installationId, licensingService);
+        var license = new OrganizationLicense
+        {
+            Version = OrganizationLicense.CurrentLicenseFileVersion + 1,
+            LicenseKey = organization.LicenseKey,
+            InstallationId = installationId,
+            Id = organization.Id,
+            Name = organization.Name,
+            BillingEmail = organization.BillingEmail,
+            BusinessName = organization.BusinessName,
+            Enabled = organization.Enabled,
+            Plan = organization.Plan,
+            PlanType = organization.PlanType,
+            Seats = organization.Seats,
+            MaxCollections = organization.MaxCollections,
+            UsePolicies = organization.UsePolicies,
+            UseSso = organization.UseSso,
+            UseKeyConnector = organization.UseKeyConnector,
+            UseScim = organization.UseScim,
+            UseGroups = organization.UseGroups,
+            UseEvents = organization.UseEvents,
+            UseDirectory = organization.UseDirectory,
+            UseTotp = organization.UseTotp,
+            Use2fa = organization.Use2fa,
+            UseApi = organization.UseApi,
+            UseResetPassword = organization.UseResetPassword,
+            MaxStorageGb = organization.MaxStorageGb,
+            SelfHost = organization.SelfHost,
+            UsersGetPremium = organization.UsersGetPremium,
+            UseCustomPermissions = organization.UseCustomPermissions,
+            UsePasswordManager = organization.UsePasswordManager,
+            UseSecretsManager = organization.UseSecretsManager,
+            SmSeats = organization.SmSeats,
+            SmServiceAccounts = organization.SmServiceAccounts,
+            LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion,
+            AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems,
+            Issued = DateTime.UtcNow,
+            Expires = DateTime.UtcNow.AddDays(7),
+            Refresh = DateTime.UtcNow.AddDays(7),
+            Trial = true,
+        };
 
         var result = JsonSerializer.Serialize(license, JsonHelpers.Indented).Replace("\"", "'");
         // Put a break after this line, then copy and paste the value of `result` into OrganizationLicenseFileFixtures
