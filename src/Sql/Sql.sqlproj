@@ -19,4 +19,7 @@
       <SuppressTSqlWarnings>71502</SuppressTSqlWarnings>
     </Build>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Billing\dbo\" />
+  </ItemGroup>
 </Project>
