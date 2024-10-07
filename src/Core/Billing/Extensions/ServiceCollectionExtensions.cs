@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Caches.Implementations;
 using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 
@@ -18,5 +19,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISubscriberService, SubscriberService>();
         services.AddTransient<IValidateLicenseCommandHandler, ValidateLicenseCommandHandler>();
         services.AddTransient<IValidateEntityAgainstLicenseCommandHandler, ValidateEntityAgainstLicenseCommandHandler>();
+        services.AddTransient<IGetUserLicenseQueryHandler, GetUserLicenseQueryHandler>();
     }
 }

@@ -5,6 +5,7 @@ using Bit.Admin.Models;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Licenses.OrganizationLicenses;
+using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
@@ -32,6 +33,7 @@ public class ToolsController : Controller
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IWebHostEnvironment _environment;
+    private readonly IGetUserLicenseQueryHandler _getUserLicenseQueryHandler;
 
     public ToolsController(
         GlobalSettings globalSettings,
@@ -44,7 +46,8 @@ public class ToolsController : Controller
         ITaxRateRepository taxRateRepository,
         IPaymentService paymentService,
         IStripeAdapter stripeAdapter,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IGetUserLicenseQueryHandler getUserLicenseQueryHandler)
     {
         _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
@@ -57,6 +60,7 @@ public class ToolsController : Controller
         _paymentService = paymentService;
         _stripeAdapter = stripeAdapter;
         _environment = environment;
+        _getUserLicenseQueryHandler = getUserLicenseQueryHandler;
     }
 
     [RequirePermission(Permission.Tools_ChargeBrainTreeCustomer)]
@@ -287,7 +291,9 @@ public class ToolsController : Controller
         }
         else if (user != null)
         {
-            var license = await _userService.GenerateLicenseAsync(user, null, model.Version);
+            var license = await _getUserLicenseQueryHandler.Handle(
+                new GetUserLicenseQuery { User = user, Version = model.Version }
+            );
             var ms = new MemoryStream();
             ms.Seek(0, SeekOrigin.Begin);
             await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);

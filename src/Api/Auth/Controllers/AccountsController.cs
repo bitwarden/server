@@ -62,6 +62,8 @@ public class AccountsController : Controller
     private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
+    private readonly IValidateLicenseCommandHandler _validateLicenseCommandHandler;
+    private readonly IGetUserLicenseQueryHandler _getUserLicenseQueryHandler;
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
@@ -73,7 +75,6 @@ public class AccountsController : Controller
         _organizationUserValidator;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyValidator;
-    private readonly IValidateLicenseCommandHandler _validateLicenseCommandHandler;
 
 
     public AccountsController(
@@ -99,7 +100,8 @@ public class AccountsController : Controller
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
         IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator,
-        IValidateLicenseCommandHandler validateLicenseCommandHandler)
+        IValidateLicenseCommandHandler validateLicenseCommandHandler,
+        IGetUserLicenseQueryHandler getUserLicenseQueryHandler)
     {
         _globalSettings = globalSettings;
         _organizationService = organizationService;
@@ -122,6 +124,7 @@ public class AccountsController : Controller
         _organizationUserValidator = organizationUserValidator;
         _webauthnKeyValidator = webAuthnKeyValidator;
         _validateLicenseCommandHandler = validateLicenseCommandHandler;
+        _getUserLicenseQueryHandler = getUserLicenseQueryHandler;
     }
 
 
@@ -694,12 +697,16 @@ public class AccountsController : Controller
         if (!_globalSettings.SelfHosted && user.Gateway != null)
         {
             var subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
-            var license = await _userService.GenerateLicenseAsync(user, subscriptionInfo);
+            var license = await _getUserLicenseQueryHandler.Handle(
+                new GetUserLicenseQuery { User = user, SubscriptionInfo = subscriptionInfo }
+            );
             return new SubscriptionResponseModel(user, subscriptionInfo, license);
         }
         else if (!_globalSettings.SelfHosted)
         {
-            var license = await _userService.GenerateLicenseAsync(user);
+            var license = await _getUserLicenseQueryHandler.Handle(
+                new GetUserLicenseQuery { User = user }
+            );
             return new SubscriptionResponseModel(user, license);
         }
         else

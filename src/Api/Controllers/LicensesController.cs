@@ -5,7 +5,6 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,26 +17,26 @@ namespace Bit.Api.Controllers;
 public class LicensesController : Controller
 {
     private readonly IUserRepository _userRepository;
-    private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IValidateBillingSyncKeyCommand _validateBillingSyncKeyCommand;
     private readonly ICurrentContext _currentContext;
+    private readonly IGetUserLicenseQueryHandler _getUserLicenseQueryHandler;
 
     public LicensesController(
         IUserRepository userRepository,
-        IUserService userService,
         IOrganizationRepository organizationRepository,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IValidateBillingSyncKeyCommand validateBillingSyncKeyCommand,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IGetUserLicenseQueryHandler getUserLicenseQueryHandler)
     {
         _userRepository = userRepository;
-        _userService = userService;
         _organizationRepository = organizationRepository;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _validateBillingSyncKeyCommand = validateBillingSyncKeyCommand;
         _currentContext = currentContext;
+        _getUserLicenseQueryHandler = getUserLicenseQueryHandler;
     }
 
     [HttpGet("user/{id}")]
@@ -54,8 +53,7 @@ public class LicensesController : Controller
             throw new BadRequestException("Invalid license key.");
         }
 
-        var license = await _userService.GenerateLicenseAsync(user, null);
-        return license;
+        return await _getUserLicenseQueryHandler.Handle(new GetUserLicenseQuery { User = user });
     }
 
     /// <summary>

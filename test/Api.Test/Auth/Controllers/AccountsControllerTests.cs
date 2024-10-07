@@ -16,6 +16,7 @@ using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -63,6 +64,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyRotationValidator;
     private readonly IValidateLicenseCommandHandler _validateLicenseCommandHandler;
+    private readonly IGetUserLicenseQueryHandler _getUserLicenseQueryHandler;
 
 
     public AccountsControllerTests()
@@ -93,6 +95,7 @@ public class AccountsControllerTests : IDisposable
             .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
                 IReadOnlyList<OrganizationUser>>>();
         _validateLicenseCommandHandler = Substitute.For<IValidateLicenseCommandHandler>();
+        _getUserLicenseQueryHandler = Substitute.For<IGetUserLicenseQueryHandler>();
 
         _sut = new AccountsController(
             _globalSettings,
@@ -115,7 +118,8 @@ public class AccountsControllerTests : IDisposable
             _emergencyAccessValidator,
             _resetPasswordValidator,
             _webauthnKeyRotationValidator,
-            _validateLicenseCommandHandler
+            _validateLicenseCommandHandler,
+            _getUserLicenseQueryHandler
         );
     }
 

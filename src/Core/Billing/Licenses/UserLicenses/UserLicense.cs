@@ -23,54 +23,6 @@ public class UserLicense : ILicense
     /// getting out of date license errors</remarks>
     public const int CurrentLicenseFileVersion = 0;
 
-    public UserLicense()
-    { }
-
-    public UserLicense(
-        User user,
-        SubscriptionInfo subscriptionInfo,
-        ILicensingService licenseService,
-        int? version = null)
-    {
-        LicenseKey = user.LicenseKey;
-        Id = user.Id;
-        Name = user.Name;
-        Email = user.Email;
-        Version = version.GetValueOrDefault(1);
-        Premium = user.Premium;
-        MaxStorageGb = user.MaxStorageGb;
-        Issued = DateTime.UtcNow;
-        Expires = subscriptionInfo?.UpcomingInvoice?.Date?.AddDays(7) ??
-            user.PremiumExpirationDate?.AddDays(7);
-        Refresh = subscriptionInfo?.UpcomingInvoice?.Date;
-        Trial = (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
-            subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
-
-        Hash = Convert.ToBase64String(EncodedHash); // Hash must come after all properties are set, and before Signature
-        Signature = Convert.ToBase64String(licenseService.SignLicense(this));
-        Token = licenseService.GenerateToken(this);
-    }
-
-    public UserLicense(User user, ILicensingService licenseService, int? version = null)
-    {
-        LicenseType = LicenseType.User;
-        LicenseKey = user.LicenseKey;
-        Id = user.Id;
-        Name = user.Name;
-        Email = user.Email;
-        Version = version.GetValueOrDefault(1);
-        Premium = user.Premium;
-        MaxStorageGb = user.MaxStorageGb;
-        Issued = DateTime.UtcNow;
-        Expires = user.PremiumExpirationDate?.AddDays(7);
-        Refresh = user.PremiumExpirationDate?.Date;
-        Trial = false;
-
-        Hash = Convert.ToBase64String(EncodedHash); // Hash must come after all properties are set, and before Signature
-        Signature = Convert.ToBase64String(licenseService.SignLicense(this));
-        Token = licenseService.GenerateToken(this);
-    }
-
     public string LicenseKey { get; set; }
 
     public Guid Id { get; set; }
