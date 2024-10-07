@@ -15,7 +15,7 @@ public interface IPolicyDefinition
     /// <summary>
     /// PolicyTypes that must be enabled before this policy can be enabled, if any.
     /// </summary>
-    public IEnumerable<PolicyType> RequiredPolicies { get; }
+    public IEnumerable<PolicyType> RequiredPolicies => [];
 
     /// <summary>
     /// Validates a policy before saving it.

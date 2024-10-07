@@ -15,7 +15,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 public class SingleOrgPolicyDefinition : IPolicyDefinition
 {
     public PolicyType Type => PolicyType.SingleOrg;
-    public IEnumerable<PolicyType> RequiredPolicies => Array.Empty<PolicyType>();
 
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
@@ -39,7 +38,7 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition
 
     public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
-        if (currentPolicy is null or { Enabled: false } && modifiedPolicy is { Enabled: true })
+        if (currentPolicy is not { Enabled: true } && modifiedPolicy is { Enabled: true })
         {
             await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId);
         }

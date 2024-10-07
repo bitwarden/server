@@ -11,6 +11,19 @@ public static class PolicyServiceCollectionExtensions
     {
         services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<IPolicyServicevNext, PolicyServicevNext>();
+
+        services.AddScoped<IPolicyDefinition, TwoFactorAuthenticationPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, MasterPasswordPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, PasswordGeneratorPolicyDefinition>();
         services.AddScoped<IPolicyDefinition, SingleOrgPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, RequireSsoPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, PersonalOwnershipPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, DisableSendPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, SendOptionsPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, ResetPasswordPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, MaximumVaultTimeoutPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, DisablePersonalVaultExportPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, ActivateAutofillPolicyDefinition>();
+        services.AddScoped<IPolicyDefinition, AutomaticAppLogInPolicyDefinition>();
     }
 }
