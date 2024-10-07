@@ -29,7 +29,8 @@ public class OrganizationUserResponseModel : ResponseModel
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
     }
 
-    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
+    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser,
+        string obj = "organizationUser")
         : base(obj)
     {
         if (organizationUser == null)
@@ -83,6 +84,29 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
     public IEnumerable<Guid> Groups { get; set; }
 }
 
+#nullable enable
+public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
+{
+    public OrganizationUserUserMiniDetailsResponseModel(OrganizationUserUserDetails organizationUser)
+        : base("organizationUserUserMiniDetails")
+    {
+        Id = organizationUser.Id;
+        UserId = organizationUser.UserId;
+        Type = organizationUser.Type;
+        Status = organizationUser.Status;
+        Name = organizationUser.Name;
+        Email = organizationUser.Email;
+    }
+
+    public Guid Id { get; }
+    public Guid? UserId { get; }
+    public OrganizationUserType Type { get; }
+    public OrganizationUserStatusType Status { get; }
+    public string? Name { get; }
+    public string Email { get; }
+}
+#nullable disable
+
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
@@ -104,7 +128,6 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
     }
-
 
     public string Name { get; set; }
     public string Email { get; set; }

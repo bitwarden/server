@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
@@ -68,13 +68,13 @@ jobs:
             node: true
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
 
       - name: Set up Node
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
         with:
           cache: "npm"
           cache-dependency-path: "**/package-lock.json"
@@ -110,7 +110,7 @@ jobs:
           ls -atlh ../../../
 
       - name: Upload project artifact
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: ${{ matrix.project_name }}.zip
           path: ${{ matrix.base_path }}/${{ matrix.project_name }}/${{ matrix.project_name }}.zip
@@ -173,7 +173,7 @@ jobs:
             dotnet: true
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
 
       - name: Check branch to publish
         env:
@@ -263,7 +263,7 @@ jobs:
             -d ${{ matrix.base_path }}/${{ matrix.project_name }}/obj/build-output/publish
 
       - name: Build Docker image
-        uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v6.7.0
+        uses: docker/build-push-action@32945a339266b759abcbdc89316275140b0fc960 # v6.8.0
         with:
           context: ${{ matrix.base_path }}/${{ matrix.project_name }}
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
@@ -282,7 +282,7 @@ jobs:
           output-format: sarif
 
       - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@2c779ab0d087cd7fe7b826087247c2c81f27bfa6 # v3.26.5
+        uses: github/codeql-action/upload-sarif@461ef6c76dfe95d5c364de2f431ddbd31a417628 # v3.26.9
         with:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
 
@@ -292,7 +292,7 @@ jobs:
     needs: build-docker
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
@@ -355,7 +355,7 @@ jobs:
 
       - name: Upload Docker stub US artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: docker-stub-US.zip
           path: docker-stub-US.zip
@@ -363,7 +363,7 @@ jobs:
 
       - name: Upload Docker stub EU artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: docker-stub-EU.zip
           path: docker-stub-EU.zip
@@ -371,7 +371,7 @@ jobs:
 
       - name: Upload Docker stub US checksum artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: docker-stub-US-sha256.txt
           path: docker-stub-US-sha256.txt
@@ -379,7 +379,7 @@ jobs:
 
       - name: Upload Docker stub EU checksum artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: docker-stub-EU-sha256.txt
           path: docker-stub-EU-sha256.txt
@@ -403,7 +403,7 @@ jobs:
           GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
       - name: Upload Public API Swagger artifact
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: swagger.json
           path: swagger.json
@@ -437,14 +437,14 @@ jobs:
           GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
       - name: Upload Internal API Swagger artifact
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: internal.json
           path: internal.json
           if-no-files-found: error
 
       - name: Upload Identity Swagger artifact
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: identity.json
           path: identity.json
@@ -467,7 +467,7 @@ jobs:
           - win-x64
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
@@ -486,7 +486,7 @@ jobs:
 
       - name: Upload project artifact for Windows
         if: ${{ contains(matrix.target, 'win') == true }}
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility.exe
@@ -494,7 +494,7 @@ jobs:
 
       - name: Upload project artifact
         if: ${{ contains(matrix.target, 'win') == false }}
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
