@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -260,7 +261,9 @@ public class UserServiceTests
             sutProvider.GetDependency<IAcceptOrgUserCommand>(),
             sutProvider.GetDependency<IProviderUserRepository>(),
             sutProvider.GetDependency<IStripeSyncService>(),
-            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>()
+            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
+            sutProvider.GetDependency<IFeatureService>(),
+            sutProvider.GetDependency<IPremiumUserBillingService>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
@@ -274,6 +277,51 @@ public class UserServiceTests
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .Received(shouldCheck.HasFlag(ShouldCheck.Password) ? 1 : 0)
             .VerifyHashedPassword(user, "hashed_test_password", secret);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithManagingEnabledOrganization_ReturnsTrue(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseSso = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithManagingDisabledOrganization_ReturnsFalse(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = false;
+        organization.UseSso = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithOrganizationUseSsoFalse_ReturnsFalse(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseSso = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByClaimedUserDomainAsync(userId)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.False(result);
     }
 
     private static void SetupUserAndDevice(User user,

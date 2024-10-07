@@ -119,6 +119,20 @@ BEGIN
     WHERE 
         [UserId] = @Id
 
+    -- Delete Notification Status
+    DELETE
+    FROM
+        [dbo].[NotificationStatus]
+    WHERE
+        [UserId] = @Id
+
+    -- Delete Notification
+    DELETE
+    FROM
+        [dbo].[Notification]
+    WHERE
+        [UserId] = @Id
+    
     -- Finally, delete the user
     DELETE
     FROM

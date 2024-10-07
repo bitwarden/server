@@ -105,14 +105,11 @@ public static class FeatureFlagKeys
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string ItemShare = "item-share";
-    public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
     public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
-    public const string ShowPaymentMethodWarningBanners = "show-payment-method-warning-banners";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EnableConsolidatedBilling = "enable-consolidated-billing";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
-    public const string EnableDeleteProvider = "AC-1218-delete-provider";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
@@ -126,7 +123,6 @@ public static class FeatureFlagKeys
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
-    public const string AC2828_ProviderPortalMembersPage = "AC-2828_provider-portal-members-page";
     public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
@@ -139,6 +135,15 @@ public static class FeatureFlagKeys
     public const string NativeCarouselFlow = "native-carousel-flow";
     public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
+    public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
+    public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
+    public const string PersistPopupView = "persist-popup-view";
+    public const string CipherKeyEncryption = "cipher-key-encryption";
+    public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
+    public const string StorageReseedRefactor = "storage-reseed-refactor";
+    public const string TrialPayment = "PM-8163-trial-payment";
+    public const string Pm3478RefactorOrganizationUserApi = "pm-3478-refactor-organizationuser-api";
+    public const string RemoveServerVersionHeader = "remove-server-version-header";
 
     public static List<string> GetAllKeys()
     {
@@ -154,7 +159,8 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { BulkDeviceApproval, "true" }
+            { BulkDeviceApproval, "true" },
+            { CipherKeyEncryption, "true" },
         };
     }
 }

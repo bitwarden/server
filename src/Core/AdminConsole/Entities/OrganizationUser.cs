@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
@@ -8,7 +9,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
 
-public class OrganizationUser : ITableObject<Guid>, IExternal
+public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
@@ -20,10 +21,6 @@ public class OrganizationUser : ITableObject<Guid>, IExternal
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
 
-    /// <summary>
-    /// AccessAll is deprecated and should always be left as false. Scheduled for removal.
-    /// </summary>
-    public bool AccessAll { get; set; } = false;
     [MaxLength(300)]
     public string? ExternalId { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;

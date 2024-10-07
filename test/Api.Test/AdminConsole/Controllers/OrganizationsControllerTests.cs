@@ -126,7 +126,7 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
             exception.Message);
 
-        await _organizationService.DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+        await _organizationService.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
     }
 
     [Theory]
@@ -155,8 +155,8 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-        await _organizationService.DeleteUserAsync(orgId, user.Id);
-        await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
+        await _organizationService.RemoveUserAsync(orgId, user.Id);
+        await _organizationService.Received(1).RemoveUserAsync(orgId, user.Id);
     }
 
     [Theory, AutoData]

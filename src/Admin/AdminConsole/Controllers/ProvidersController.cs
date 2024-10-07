@@ -162,27 +162,13 @@ public class ProvidersController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await GetEditModel(id);
         if (provider == null)
         {
             return RedirectToAction("Index");
         }
 
-        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
-        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
-        {
-            return View(new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>()));
-        }
-
-        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-
-        return View(new ProviderEditModel(
-            provider, users, providerOrganizations,
-            providerPlans.ToList(), GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider)));
+        return View(provider);
     }
 
     [HttpPost]
@@ -196,6 +182,20 @@ public class ProvidersController : Controller
         if (provider == null)
         {
             return RedirectToAction("Index");
+        }
+
+        if (provider.Type != model.Type)
+        {
+            var oldModel = await GetEditModel(id);
+            ModelState.AddModelError(nameof(model.Type), "Provider type cannot be changed.");
+            return View(oldModel);
+        }
+
+        if (!ModelState.IsValid)
+        {
+            var oldModel = await GetEditModel(id);
+            ModelState[nameof(ProviderEditModel.BillingEmail)]!.RawValue = oldModel.BillingEmail;
+            return View(oldModel);
         }
 
         model.ToProvider(provider);
@@ -234,6 +234,32 @@ public class ProvidersController : Controller
         }
 
         return RedirectToAction("Edit", new { id });
+    }
+
+    private async Task<ProviderEditModel> GetEditModel(Guid id)
+    {
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider == null)
+        {
+            return null;
+        }
+
+        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+
+        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        {
+            return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>());
+        }
+
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+
+        return new ProviderEditModel(
+            provider, users, providerOrganizations,
+            providerPlans.ToList(), GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
     }
 
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
@@ -341,7 +367,7 @@ public class ProvidersController : Controller
             return BadRequest("Provider does not exist");
         }
 
-        if (!string.Equals(providerName.Trim(), provider.Name, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(providerName.Trim(), provider.DisplayName(), StringComparison.OrdinalIgnoreCase))
         {
             return BadRequest("Invalid provider name");
         }

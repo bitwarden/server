@@ -1,10 +1,13 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -60,6 +63,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IFeatureService _featureService;
+    private readonly IPremiumUserBillingService _premiumUserBillingService;
 
     public UserService(
         IUserRepository userRepository,
@@ -91,7 +96,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IFeatureService featureService,
+        IPremiumUserBillingService premiumUserBillingService)
         : base(
               store,
               optionsAccessor,
@@ -129,6 +136,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _featureService = featureService;
+        _premiumUserBillingService = premiumUserBillingService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -713,8 +722,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.Key = key;
+        user.LastPasswordChangeDate = user.RevisionDate;
         user.ForcePasswordReset = true;
+        user.Key = key;
 
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
@@ -890,9 +900,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 throw new BadRequestException("Invalid license.");
             }
 
-            if (!license.CanUse(user))
+            if (!license.CanUse(user, out var exceptionMessage))
             {
-                throw new BadRequestException("This license is not valid for this user.");
+                throw new BadRequestException(exceptionMessage);
             }
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -902,8 +912,18 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         else
         {
-            paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
-                paymentToken, additionalStorageGb, taxInfo);
+            var deprecateStripeSourcesAPI = _featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI);
+
+            if (deprecateStripeSourcesAPI)
+            {
+                var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
+                await _premiumUserBillingService.Finalize(sale);
+            }
+            else
+            {
+                paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
+                    paymentToken, additionalStorageGb, taxInfo);
+            }
         }
 
         user.Premium = true;
@@ -959,9 +979,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        if (!license.CanUse(user))
+        if (!license.CanUse(user, out var exceptionMessage))
         {
-            throw new BadRequestException("This license is not valid for this user.");
+            throw new BadRequestException(exceptionMessage);
         }
 
         var dir = $"{_globalSettings.LicenseDirectory}/user";
@@ -1243,6 +1263,22 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IsLegacyUser(user);
     }
 
+    public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
+    {
+        var managingOrganization = await GetOrganizationManagingUserAsync(userId);
+        return managingOrganization != null;
+    }
+
+    public async Task<Organization> GetOrganizationManagingUserAsync(Guid userId)
+    {
+        // Users can only be managed by an Organization that is enabled and can have organization domains
+        var organization = await _organizationRepository.GetByClaimedUserDomainAsync(userId);
+
+        // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
+        // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
+        return (organization is { Enabled: true, UseSso: true }) ? organization : null;
+    }
+
     /// <inheritdoc cref="IsLegacyUser(string)"/>
     public static bool IsLegacyUser(User user)
     {
@@ -1297,7 +1333,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
-            await organizationService.DeleteUserAsync(p.OrganizationId, user.Id);
+            await organizationService.RemoveUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                 organization.DisplayName(), user.Email);

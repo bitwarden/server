@@ -1,10 +1,12 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
@@ -13,7 +15,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -22,6 +23,8 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
@@ -34,7 +37,7 @@ public class OrganizationUsersControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PutResetPasswordEnrollment_InivitedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
+    public async Task PutResetPasswordEnrollment_InvitedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
         User user, OrganizationUser orgUser, SutProvider<OrganizationUsersController> sutProvider)
     {
         orgUser.Status = Core.Enums.OrganizationUserStatusType.Invited;
@@ -196,71 +199,6 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_HandlesNullPermissionsObject(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-        organizationUsers.First().Permissions = "null";
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_SetsDeprecatedCustomPermissionstoFalse(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-
-        var customUser = organizationUsers.First();
-        customUser.Type = OrganizationUserType.Custom;
-        customUser.Permissions = CoreHelpers.ClassToJsonData(new Permissions
-        {
-            AccessReports = true,
-            EditAssignedCollections = true,
-            DeleteAssignedCollections = true,
-            AccessEventLogs = true
-        });
-
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        var customUserResponse = response.Data.First(r => r.Id == organizationUsers.First().Id);
-        Assert.Equal(OrganizationUserType.Custom, customUserResponse.Type);
-        Assert.True(customUserResponse.Permissions.AccessReports);
-        Assert.True(customUserResponse.Permissions.AccessEventLogs);
-        Assert.False(customUserResponse.Permissions.EditAssignedCollections);
-        Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_DowngradesCustomUsersWithDeprecatedPermissions(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
-
-        var customUser = organizationUsers.First();
-        customUser.Type = OrganizationUserType.Custom;
-        customUser.Permissions = CoreHelpers.ClassToJsonData(new Permissions
-        {
-            EditAssignedCollections = true,
-            DeleteAssignedCollections = true,
-        });
-
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
-
-        var customUserResponse = response.Data.First(r => r.Id == organizationUsers.First().Id);
-        Assert.Equal(OrganizationUserType.User, customUserResponse.Type);
-        Assert.False(customUserResponse.Permissions.EditAssignedCollections);
-        Assert.False(customUserResponse.Permissions.DeleteAssignedCollections);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task GetAccountRecoveryDetails_ReturnsDetails(
         Guid organizationId,
         OrganizationUserBulkRequestModel bulkRequestModel,
@@ -298,6 +236,138 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccount_WhenUserCanManageUsers_Success(
+        Guid orgId,
+        Guid id,
+        SecretVerificationRequestModel model,
+        User currentUser,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(currentUser, model.Secret).Returns(true);
+
+        await sutProvider.Sut.DeleteAccount(orgId, id, model);
+
+        await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+            .Received(1)
+            .DeleteUserAsync(orgId, id, currentUser.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccount_WhenUserCannotManageUsers_ThrowsNotFoundException(
+        Guid orgId,
+        Guid id,
+        SecretVerificationRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DeleteAccount(orgId, id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccount_WhenCurrentUserNotFound_ThrowsUnauthorizedAccessException(
+        Guid orgId,
+        Guid id,
+        SecretVerificationRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs((User)null);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sutProvider.Sut.DeleteAccount(orgId, id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccount_WhenSecretVerificationFails_ThrowsBadRequestException(
+        Guid orgId,
+        Guid id,
+        SecretVerificationRequestModel model,
+        User currentUser,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(currentUser, model.Secret).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAccount(orgId, id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkDeleteAccount_WhenUserCanManageUsers_Success(
+        Guid orgId,
+        SecureOrganizationUserBulkRequestModel model,
+        User currentUser,
+        List<(Guid, string)> deleteResults,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(currentUser, model.Secret).Returns(true);
+        sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+            .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id)
+            .Returns(deleteResults);
+
+        var response = await sutProvider.Sut.BulkDeleteAccount(orgId, model);
+
+        Assert.Equal(deleteResults.Count, response.Data.Count());
+        Assert.True(response.Data.All(r => deleteResults.Any(res => res.Item1 == r.Id && res.Item2 == r.Error)));
+        await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+            .Received(1)
+            .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkDeleteAccount_WhenUserCannotManageUsers_ThrowsNotFoundException(
+        Guid orgId,
+        SecureOrganizationUserBulkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.BulkDeleteAccount(orgId, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkDeleteAccount_WhenCurrentUserNotFound_ThrowsUnauthorizedAccessException(
+        Guid orgId,
+        SecureOrganizationUserBulkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs((User)null);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sutProvider.Sut.BulkDeleteAccount(orgId, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkDeleteAccount_WhenSecretVerificationFails_ThrowsBadRequestException(
+        Guid orgId,
+        SecureOrganizationUserBulkRequestModel model,
+        User currentUser,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(currentUser, model.Secret).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.BulkDeleteAccount(orgId, model));
+    }
+
     private void Get_Setup(OrganizationAbility organizationAbility,
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUsersController> sutProvider)
@@ -308,6 +378,8 @@ public class OrganizationUsersControllerTests
         }
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
             .Returns(organizationAbility);
+
+        sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>().GetOrganizationUserUserDetails(Arg.Any<OrganizationUserUserDetailsQueryRequest>()).Returns(organizationUsers);
 
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
             user: Arg.Any<ClaimsPrincipal>(),
