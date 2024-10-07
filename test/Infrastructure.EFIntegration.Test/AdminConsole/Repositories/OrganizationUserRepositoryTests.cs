@@ -15,7 +15,6 @@ using Xunit;
 using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
-using Policy = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy;
 using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
@@ -176,6 +175,7 @@ public class OrganizationUserRepositoryTests
         bool isProvider,
 
         // Auto data - models
+        Policy policy,
         User user,
         Organization organization,
         OrganizationUser orgUser,
@@ -220,6 +220,8 @@ public class OrganizationUserRepositoryTests
         providerUserRepos.Add(sqlProviderUserRepo);
 
         // Arrange data
+        var savedPolicyType = PolicyType.SingleOrg;
+
         orgUser.Type = userType;
         orgUser.Status = orgUserStatus;
         var permissionsData = new Permissions { ManagePolicies = canManagePolicies };
@@ -227,6 +229,9 @@ public class OrganizationUserRepositoryTests
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         });
+
+        policy.Enabled = policyEnabled;
+        policy.Type = savedPolicyType;
 
         var results = new List<OrganizationUserPolicyDetails>();
 
@@ -266,11 +271,7 @@ public class OrganizationUserRepositoryTests
                 await providerUserRepos[i].CreateAsync(providerUser);
             }
 
-            var policy = new Core.AdminConsole.Entities.Policy
-            {
-                Enabled = policyEnabled, Type = PolicyType.SingleOrg, OrganizationId = savedOrg.Id
-            };
-
+            policy.OrganizationId = savedOrg.Id;
             await policyRepo.CreateAsync(policy);
             if (efPolicyRepository.Contains(policyRepo))
             {

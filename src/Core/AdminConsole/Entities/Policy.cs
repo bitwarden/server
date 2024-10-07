@@ -10,8 +10,8 @@ namespace Bit.Core.AdminConsole.Entities;
 public class Policy : ITableObject<Guid>
 {
     public Guid Id { get; set; }
-    public Guid OrganizationId { get; init;  }
-    public PolicyType Type { get; init; }
+    public Guid OrganizationId { get; set; }
+    public PolicyType Type { get; set; }
     public string? Data { get; set; }
     public bool Enabled { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
