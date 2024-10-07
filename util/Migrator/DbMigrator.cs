@@ -124,12 +124,12 @@ public class DbMigrator
         .SqlDatabase(_connectionString)
         .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
             s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
-        .WithExecutionTimeout(new TimeSpan(0, 5, 0));
+        .WithExecutionTimeout(TimeSpan.FromMinutes(5)); 
 
         if (_noTransactionMigration)
         {
             builder = builder.WithTransactionPerScript()
-            .WithExecutionTimeout(new TimeSpan(0, 60, 0));
+            .WithExecutionTimeout(TimeSpan.FromMinutes(60));
         }
         else
         {
