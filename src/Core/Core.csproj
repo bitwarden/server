@@ -63,7 +63,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Billing\OrganizationFeatures\" />
+    <Folder Include="Billing\SelfHostLicenses\" />
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
   </ItemGroup>

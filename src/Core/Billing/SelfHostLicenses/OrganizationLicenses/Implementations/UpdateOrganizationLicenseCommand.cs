@@ -6,7 +6,8 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 
-namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
+// ReSharper disable once CheckNamespace
+namespace Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 
 public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseCommand
 {

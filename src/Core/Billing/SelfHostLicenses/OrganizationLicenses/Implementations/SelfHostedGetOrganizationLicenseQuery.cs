@@ -10,7 +10,7 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 // ReSharper disable once CheckNamespace
-namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Billing.SelfHostLicenses.OrganizationLicenses;
 
 public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseQuery
 {
