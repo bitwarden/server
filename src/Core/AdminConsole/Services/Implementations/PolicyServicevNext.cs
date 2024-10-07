@@ -98,13 +98,7 @@ public class PolicyServicevNext : IPolicyServicevNext
         // Run side effects
         await policyDefinition.OnSaveSideEffectsAsync(currentPolicy, policy);
 
-        var now = DateTime.UtcNow;
-        if (policy.Id == default)
-        {
-            policy.CreationDate = now;
-        }
-
-        policy.RevisionDate = now;
+        policy.RevisionDate = DateTime.UtcNow;
 
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
