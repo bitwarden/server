@@ -32,7 +32,7 @@ jobs:
         with:
           ref: ${{ inputs.target_ref }}
 
-      - name: Check if branch exists
+      - name: Check if ${{ inputs.branch_to_cut }} branch exists
         env:
           BRANCH_NAME: ${{ inputs.branch_to_cut }}
         run: |
@@ -56,7 +56,7 @@ jobs:
     outputs:
       version: ${{ steps.set-final-version-output.outputs.version }}
     steps:
-      - name: Validate version input
+      - name: Validate version input format
         if: ${{ inputs.version_number_override != '' }}
         uses: bitwarden/gh-actions/version-check@main
         with:
@@ -164,22 +164,10 @@ jobs:
             echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check if version changed
-        id: version-changed
-        run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "changes_to_commit=TRUE" >> $GITHUB_OUTPUT
-          else
-            echo "changes_to_commit=FALSE" >> $GITHUB_OUTPUT
-            echo "No changes to commit!";
-          fi
-
       - name: Commit files
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
 
       - name: Push changes
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           PR_BRANCH: ${{ steps.create-branch.outputs.name }}
         run: git push -u origin $PR_BRANCH
@@ -193,7 +181,6 @@ jobs:
           owner: ${{ github.repository_owner }}
 
       - name: Create version PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         id: create-pr
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -218,14 +205,12 @@ jobs:
           echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
 
       - name: Approve PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr review $PR_NUMBER --approve
 
       - name: Merge PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
@@ -257,7 +242,7 @@ jobs:
             sleep 10
           done
 
-      - name: Get last commit on main
+      - name: Get last version commit(s)
         id: get-commits
         run: |
           git switch main
@@ -272,14 +257,16 @@ jobs:
 
       - name: Perform cherry-pick(s)
         env:
-          MAIN_COMMIT: ${{ steps.get-commits.outputs.commit }}
-          RC_COMMIT: ${{ steps.get-commits.outputs.commit }}
+          MAIN_COMMIT: ${{ steps.get-commits.outputs.main_commit }}
+          RC_COMMIT: ${{ steps.get-commits.outputs.rc_commit }}
           CUT_BRANCH: ${{ inputs.branch_to_cut }}
         run: |
           # If we are cutting 'hotfix-rc':
           if [[ "$CUT_BRANCH" == "hotfix-rc" ]]; then
+
             # If the 'rc' branch exists:
             if [[ $(git ls-remote --heads origin rc) ]]; then
+
               # Chery-pick from 'rc' into 'hotfix-rc'
               git switch hotfix-rc
               git cherry-pick -x $RC_COMMIT
@@ -289,18 +276,25 @@ jobs:
               git switch rc
               git cherry-pick -x $MAIN_COMMIT
               git push -u origin rc
+
+            # If the 'rc' branch does not exist:
             else
+
               # Cherry-pick from 'main' into 'hotfix-rc'
               git switch hotfix-rc
               git cherry-pick -x $MAIN_COMMIT
               git push -u origin hotfix-rc
+
             fi
+
           # If we are cutting 'rc':
           elif [[ "$CUT_BRANCH" == "rc" ]]; then
+
             # Cherry-pick from 'main' into 'rc'
             git switch rc
             git cherry-pick -x $MAIN_COMMIT
             git push -u origin rc
+
           fi
 
 
