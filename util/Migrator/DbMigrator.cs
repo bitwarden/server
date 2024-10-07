@@ -5,7 +5,6 @@ using Bit.Core;
 using DbUp;
 using DbUp.Helpers;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Migrator;
