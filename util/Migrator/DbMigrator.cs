@@ -15,15 +15,18 @@ public class DbMigrator
     private readonly string _connectionString;
     private readonly ILogger<DbMigrator> _logger;
     private readonly bool _skipDatabasePreparation;
-    private readonly IHostEnvironment _hostingEnvironment;
-    public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
-        bool skipDatabasePreparation = false)
+    // Removed: private readonly IHostEnvironment _hostingEnvironment;
+    private readonly bool _noTransactionMigration;
+     public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
+        bool skipDatabasePreparation = false, bool noTransactionMigration = false)
     {
         _connectionString = connectionString;
         _logger = logger ?? CreateLogger();
         _skipDatabasePreparation = skipDatabasePreparation;
-        _hostingEnvironment = hostingEnvironment;
+        // Removed: _hostingEnvironment = hostingEnvironment;
+        _noTransactionMigration = noTransactionMigration;
     }
+
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         bool repeatable = false,
@@ -107,44 +110,34 @@ public class DbMigrator
     }
 
     private bool MigrateDatabase(bool enableLogging = true,
-        bool repeatable = false,
-        string folderName = MigratorConstants.DefaultMigrationsFolderName,
-        bool dryRun = false,
-        CancellationToken cancellationToken = default)
+    bool repeatable = false,
+    string folderName = MigratorConstants.DefaultMigrationsFolderName,
+    bool dryRun = false,
+    CancellationToken cancellationToken = default)
+{
+    if (enableLogging)
     {
-        if (enableLogging)
-        {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
-        }
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
+    }
 
-        cancellationToken.ThrowIfCancellationRequested();
+    cancellationToken.ThrowIfCancellationRequested();
 
-        var builder = DeployChanges.To
-            .SqlDatabase(_connectionString)
-            .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
-            .WithTransaction()
-            .WithExecutionTimeout(new TimeSpan(0, 5, 0));
+    var builder = DeployChanges.To
+        .SqlDatabase(_connectionString)
+        .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
+            s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
+        .WithExecutionTimeout(new TimeSpan(0, 5, 0));
 
-        if (_hostingEnvironment != null && _hostingEnvironment.IsProduction())
-        {
-            builder = builder.WithTransactionPerScript();
-        }
-        else
-        {
-            builder = builder.WithTransaction();
-        }
+    if (_noTransactionMigration)
+    {
+        builder = builder.WithTransactionPerScript()
+            .WithExecutionTimeout(new TimeSpan(0, 60, 0));
+    }
+    else
+    {
+        builder = builder.WithTransaction();
+    }
 
-        if (_hostingEnvironment != null && _hostingEnvironment.IsProduction())
-        {
-            builder = builder.WithExecutionTimeout(new TimeSpan(0, 10, 0))
-                             .WithTransactionPerScript();
-        }
-        else
-        {
-            builder = builder.WithExecutionTimeout(new TimeSpan(0, 5, 0))
-                             .WithTransaction();
-        }
 
 
         if (repeatable)

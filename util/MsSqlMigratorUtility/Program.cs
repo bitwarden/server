@@ -17,13 +17,15 @@ internal class Program
         [Option('f', "folder", Description = "Folder name of database scripts")]
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         [Option('d', "dry-run", Description = "Print the scripts that will be applied without actually executing them")]
-        bool dryRun = false
-        ) => MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun);
+        bool dryRun = false,
+        [Option('n', "no-transaction", Description = "Disable transaction for migration")]
+        bool noTransactionMigration = false
+        ) => MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun, noTransactionMigration);
 
     private static bool MigrateDatabase(string databaseConnectionString,
-        bool repeatable = false, string folderName = "", bool dryRun = false)
+        bool repeatable = false, string folderName = "", bool dryRun = false, bool noTransactionMigration = false)
     {
-        var migrator = new DbMigrator(databaseConnectionString);
+        var migrator = new DbMigrator(databaseConnectionString, noTransactionMigration: noTransactionMigration);
         bool success;
         if (!string.IsNullOrWhiteSpace(folderName))
         {
