@@ -162,6 +162,7 @@ public static class FeatureFlagKeys
             { DuoRedirect, "true" },
             { BulkDeviceApproval, "true" },
             { CipherKeyEncryption, "true" },
+            { LimitCollectionCreationDeletionSplit, "true" },
         };
     }
 }
