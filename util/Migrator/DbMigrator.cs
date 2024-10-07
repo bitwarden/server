@@ -15,7 +15,6 @@ public class DbMigrator
     private readonly string _connectionString;
     private readonly ILogger<DbMigrator> _logger;
     private readonly bool _skipDatabasePreparation;
-    // Removed: private readonly IHostEnvironment _hostingEnvironment;
     private readonly bool _noTransactionMigration;
      public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
         bool skipDatabasePreparation = false, bool noTransactionMigration = false)
@@ -128,15 +127,15 @@ public class DbMigrator
             s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
         .WithExecutionTimeout(new TimeSpan(0, 5, 0));
 
-    if (_noTransactionMigration)
-    {
-        builder = builder.WithTransactionPerScript()
+        if (_noTransactionMigration)
+        {
+            builder = builder.WithTransactionPerScript()
             .WithExecutionTimeout(new TimeSpan(0, 60, 0));
-    }
-    else
-    {
-        builder = builder.WithTransaction();
-    }
+        }
+        else
+        {
+            builder = builder.WithTransaction();
+        }
 
 
 
