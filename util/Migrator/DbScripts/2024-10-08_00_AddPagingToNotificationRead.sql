@@ -25,16 +25,15 @@ BEGIN
             AND ou.[OrganizationId] IS NOT NULL))
       AND ((@Read IS NULL AND @Deleted IS NULL)
         OR (n.[NotificationStatusUserId] IS NOT NULL
-            AND ((@Read IS NULL
+            AND (@Read IS NULL
                 OR IIF((@Read = 1 AND n.[ReadDate] IS NOT NULL) OR
                        (@Read = 0 AND n.[ReadDate] IS NULL),
                        1, 0) = 1)
-                OR (@Deleted IS NULL
-                    OR IIF((@Deleted = 1 AND n.[DeletedDate] IS NOT NULL) OR
-                           (@Deleted = 0 AND n.[DeletedDate] IS NULL),
-                           1, 0) = 1))))
+            AND (@Deleted IS NULL
+                OR IIF((@Deleted = 1 AND n.[DeletedDate] IS NOT NULL) OR
+                       (@Deleted = 0 AND n.[DeletedDate] IS NULL),
+                       1, 0) = 1)))
     ORDER BY [Priority] DESC, n.[CreationDate] DESC
-    OFFSET @PageSize * (@PageNumber - 1) ROWS
-    FETCH NEXT @PageSize ROWS ONLY
+    OFFSET @PageSize * (@PageNumber - 1) ROWS FETCH NEXT @PageSize ROWS ONLY
 END
 GO
