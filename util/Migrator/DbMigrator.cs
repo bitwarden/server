@@ -15,13 +15,13 @@ public class DbMigrator
     private readonly ILogger<DbMigrator> _logger;
     private readonly bool _skipDatabasePreparation;
     private readonly bool _noTransactionMigration;
+
     public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
        bool skipDatabasePreparation = false, bool noTransactionMigration = false)
     {
         _connectionString = connectionString;
         _logger = logger ?? CreateLogger();
         _skipDatabasePreparation = skipDatabasePreparation;
-        // Removed: _hostingEnvironment = hostingEnvironment;
         _noTransactionMigration = noTransactionMigration;
     }
 
@@ -130,7 +130,7 @@ public class DbMigrator
         if (_noTransactionMigration)
         {
             builder = builder.WithTransactionPerScript()
-                .WithExecutionTimeout(new TimeSpan(0, 60, 0));
+                .WithExecutionTimeout(TimeSpan.FromMinutes(60));
         }
         else
         {
