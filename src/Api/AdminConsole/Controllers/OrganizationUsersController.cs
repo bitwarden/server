@@ -48,12 +48,10 @@ public class OrganizationUsersController : Controller
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IAuthorizationService _authorizationService;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDeleteManagedOrganizationUserAccountCommand _deleteManagedOrganizationUserAccountCommand;
-
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -70,7 +68,6 @@ public class OrganizationUsersController : Controller
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IAuthorizationService authorizationService,
         IApplicationCacheService applicationCacheService,
-        IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
@@ -90,7 +87,6 @@ public class OrganizationUsersController : Controller
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _authorizationService = authorizationService;
         _applicationCacheService = applicationCacheService;
-        _featureService = featureService;
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
@@ -142,11 +138,6 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
-        {
-            return await Get_vNext(orgId, includeGroups, includeCollections);
-        }
-
         var organizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
             new OrganizationUserUserDetailsQueryRequest
             {
@@ -155,17 +146,15 @@ public class OrganizationUsersController : Controller
                 IncludeCollections = includeCollections
             }
         );
-
-        var responseTasks = organizationUsers
-            .Select(async o =>
+        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
+        var responses = organizationUsers
+            .Select(o =>
             {
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o,
-                    await _userService.TwoFactorIsEnabledAsync(o));
+                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
+                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
 
                 return orgUser;
             });
-        var responses = await Task.WhenAll(responseTasks);
-
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
 
@@ -296,7 +285,7 @@ public class OrganizationUsersController : Controller
 
         await _organizationService.InitPendingOrganization(user.Id, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
-        await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
+        await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
     }
 
     [HttpPost("{organizationUserId}/accept")]
@@ -335,8 +324,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value,
-            _userService);
+        var result = await _organizationService.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value);
     }
 
     [HttpPost("confirm")]
@@ -350,10 +338,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var results = _featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization)
-            ? await _organizationService.ConfirmUsersAsync_vNext(orgGuidId, model.ToDictionary(), userId.Value)
-            : await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value,
-            _userService);
+        var results = await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
@@ -616,7 +601,7 @@ public class OrganizationUsersController : Controller
     [HttpPut("{id}/restore")]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _organizationService.RestoreUserAsync(orgUser, userId, _userService));
+        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _organizationService.RestoreUserAsync(orgUser, userId));
     }
 
     [HttpPatch("restore")]
@@ -695,28 +680,5 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
-    }
-
-    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get_vNext(Guid orgId,
-        bool includeGroups = false, bool includeCollections = false)
-    {
-        var organizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
-            new OrganizationUserUserDetailsQueryRequest
-            {
-                OrganizationId = orgId,
-                IncludeGroups = includeGroups,
-                IncludeCollections = includeCollections
-            }
-        );
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
-        var responses = organizationUsers
-            .Select(o =>
-            {
-                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
-
-                return orgUser;
-            });
-        return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
 }
