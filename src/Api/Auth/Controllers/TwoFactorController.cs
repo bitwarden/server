@@ -117,7 +117,7 @@ public class TwoFactorController : Controller
         {
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
-   
+
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
         {
