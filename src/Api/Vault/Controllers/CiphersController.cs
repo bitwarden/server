@@ -912,7 +912,7 @@ public class CiphersController : Controller
 
         // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+            && await _userService.IsManagedByAnyOrganizationAsync(user.Id) == true)
         {
             throw new BadRequestException("Accounts managed by an organization cannot be purged.");
         }

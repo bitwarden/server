@@ -16,6 +16,8 @@ using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+#nullable enable
+
 namespace Bit.Api.Vault.Controllers;
 
 [Route("sync")]
@@ -95,23 +97,32 @@ public class SyncController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user, organizationUserDetails);
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user, organizationUserDetails);
 
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
-            managedByOrganizationId, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+            organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
     }
 
-    private async Task<Guid?> GetManagedByOrganizationIdAsync(User user, IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails)
+    /// <summary>
+    /// Gets the IDs of the organizations that manage a user.
+    /// </summary>
+    /// <remarks>
+    /// Organizations are considered to manage a user if the user's email domain is verified by the organization and the user is a member of it.
+    /// The organization must be enabled and able to have verified domains.
+    /// </remarks>
+    private async Task<IEnumerable<Guid>?> GetOrganizationIdsManagingUserAsync(User user, IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) ||
-            !organizationUserDetails.Any(o => o.Enabled && o.UseSso))
+        // Account deprovisioning must be enabled and organizations must be enabled and able to have verified domains.
+        // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            || !organizationUserDetails.Any(o => o is { Enabled: true, UseSso: true }))
         {
             return null;
         }
 
-        var organizationManagingUser = await _userService.GetOrganizationManagingUserAsync(user.Id);
-        return organizationManagingUser?.Id;
+        var organizationsManagingUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
+        return organizationsManagingUser?.Select(o => o.Id);
     }
 }

@@ -12,6 +12,8 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
+#nullable enable
+
 namespace Bit.Api.Vault.Models.Response;
 
 public class SyncResponseModel : ResponseModel
@@ -21,7 +23,7 @@ public class SyncResponseModel : ResponseModel
         User user,
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
-        Guid? managedByOrganizationId,
+        IEnumerable<Guid>? organizationIdsManagingActiveUser,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
@@ -35,7 +37,7 @@ public class SyncResponseModel : ResponseModel
         : base("sync")
     {
         Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, managedByOrganizationId);
+            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
         Collections = collections?.Select(
