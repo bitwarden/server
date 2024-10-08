@@ -18,7 +18,7 @@ internal class Program
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         [Option('d', "dry-run", Description = "Print the scripts that will be applied without actually executing them")]
         bool dryRun = false,
-        [Option('n', "no-transaction", Description = "Disable transaction for migration")]
+        [Option('nt', "no-transaction", Description = "Disable transaction for migration")]
         bool noTransactionMigration = false
         ) => MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun, noTransactionMigration);
 
