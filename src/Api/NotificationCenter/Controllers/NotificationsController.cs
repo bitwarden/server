@@ -19,8 +19,6 @@ public class NotificationsController : Controller
     private readonly IMarkNotificationDeletedCommand _markNotificationDeletedCommand;
     private readonly IMarkNotificationReadCommand _markNotificationReadCommand;
 
-    private const int DefaultPageSize = 10;
-
     public NotificationsController(
         IGetNotificationStatusDetailsForUserQuery getNotificationStatusDetailsForUserQuery,
         IMarkNotificationDeletedCommand markNotificationDeletedCommand,
@@ -38,7 +36,7 @@ public class NotificationsController : Controller
         var pageOptions = new PageOptions
         {
             ContinuationToken = filter.ContinuationToken,
-            PageSize = DefaultPageSize
+            PageSize = filter.PageSize
         };
 
         var notificationStatusFilter = new NotificationStatusFilter
