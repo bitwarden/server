@@ -3,6 +3,7 @@ using Bit.Core;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -38,7 +39,8 @@ public sealed class RequestLoggingMiddleware
           new RequestLogScope(context.GetIpAddress(_globalSettings),
             GetHeaderValue(context, "user-agent"),
             GetHeaderValue(context, "device-type"),
-            GetHeaderValue(context, "device-type"))))
+            GetHeaderValue(context, "device-type"),
+            GetHeaderValue(context, "bitwarden-client-version"))))
         {
             return _next(context);
         }
@@ -59,12 +61,13 @@ public sealed class RequestLoggingMiddleware
     {
         private string? _cachedToString;
 
-        public RequestLogScope(string? ipAddress, string? userAgent, string? deviceType, string? origin)
+        public RequestLogScope(string? ipAddress, string? userAgent, string? deviceType, string? origin, string? clientVersion)
         {
             IpAddress = ipAddress;
             UserAgent = userAgent;
             DeviceType = deviceType;
             Origin = origin;
+            ClientVersion = clientVersion;
         }
 
         public KeyValuePair<string, object?> this[int index]
@@ -87,17 +90,22 @@ public sealed class RequestLoggingMiddleware
                 {
                     return new KeyValuePair<string, object?>(nameof(Origin), Origin);
                 }
+                else if (index == 4)
+                {
+                    return new KeyValuePair<string, object?>(nameof(ClientVersion), ClientVersion);
+                }
 
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
         }
 
-        public int Count => 4;
+        public int Count => 5;
 
         public string? IpAddress { get; }
         public string? UserAgent { get; }
         public string? DeviceType { get; }
         public string? Origin { get; }
+        public string? ClientVersion { get; }
 
         public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
         {
@@ -110,7 +118,7 @@ public sealed class RequestLoggingMiddleware
 
         public override string ToString()
         {
-            _cachedToString ??= $"IpAddress:{IpAddress} UserAgent:{UserAgent} DeviceType:{DeviceType} Origin:{Origin}";
+            _cachedToString ??= $"IpAddress:{IpAddress} UserAgent:{UserAgent} DeviceType:{DeviceType} Origin:{Origin} ClientVersion:{ClientVersion}";
             return _cachedToString;
         }
     }
