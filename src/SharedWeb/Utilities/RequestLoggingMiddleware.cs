@@ -3,7 +3,6 @@ using Bit.Core;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
