@@ -49,6 +49,10 @@ public class Startup
         services.AddScoped<ICurrentContext, CurrentContext>();
         services.AddScoped<IScimContext, ScimContext>();
 
+        // Caching
+        services.AddMemoryCache();
+        services.AddDistributedCache(globalSettings);
+
         // Authentication
         services.AddAuthentication(ApiKeyAuthenticationOptions.DefaultScheme)
             .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
