@@ -69,6 +69,7 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
