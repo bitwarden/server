@@ -16,7 +16,7 @@ namespace Bit.Api.Test.NotificationCenter.Controllers;
 
 [ControllerCustomize(typeof(NotificationsController))]
 [SutProviderCustomize]
-public class NotificationsControllerTest
+public class NotificationsControllerTests
 {
     [Theory]
     [BitAutoData([null, null])]
