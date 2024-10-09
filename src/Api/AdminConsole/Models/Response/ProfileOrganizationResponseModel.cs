@@ -9,8 +9,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
 
-#nullable enable
-
 namespace Bit.Api.AdminConsole.Models.Response;
 
 public class ProfileOrganizationResponseModel : ResponseModel
@@ -19,7 +17,10 @@ public class ProfileOrganizationResponseModel : ResponseModel
 
     public ProfileOrganizationResponseModel(
         OrganizationUserOrganizationDetails organization,
-        IEnumerable<Guid>? organizationIdsManagingUser)
+#nullable enable
+        IEnumerable<Guid>? organizationIdsManagingUser
+#nullable disable
+        )
         : this("profileOrganization")
     {
         Id = organization.OrganizationId;

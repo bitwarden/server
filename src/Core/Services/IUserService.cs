@@ -8,8 +8,6 @@ using Bit.Core.Models.Business;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
-#nullable enable
-
 namespace Bit.Core.Services;
 
 public interface IUserService
@@ -90,6 +88,7 @@ public interface IUserService
     /// </summary>
     Task<bool> IsLegacyUser(string userId);
 
+#nullable enable
     /// <summary>
     /// Indicates if the user is managed by any organization.
     /// </summary>
@@ -107,4 +106,5 @@ public interface IUserService
     /// </summary>
     /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
     Task<IEnumerable<Organization>?> GetOrganizationsManagingUserAsync(Guid userId);
+#nullable disable
 }

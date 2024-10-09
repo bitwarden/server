@@ -24,8 +24,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-#nullable enable
-
 namespace Bit.Api.Billing.Controllers;
 
 [Route("organizations")]
@@ -202,8 +200,11 @@ public class OrganizationsController(
 
         var organizationDetails = await organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
             OrganizationUserStatusType.Confirmed);
+
+#nullable enable
         var organizationManagingActiveUser = await userService.GetOrganizationsManagingUserAsync(userId);
         var organizationIdsManagingActiveUser = organizationManagingActiveUser?.Select(o => o.Id);
+#nullable disable
 
         return new ProfileOrganizationResponseModel(organizationDetails, organizationIdsManagingActiveUser);
     }

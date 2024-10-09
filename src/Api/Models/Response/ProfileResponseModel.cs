@@ -5,8 +5,6 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-#nullable enable
-
 namespace Bit.Api.Models.Response;
 
 public class ProfileResponseModel : ResponseModel
@@ -17,7 +15,10 @@ public class ProfileResponseModel : ResponseModel
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
         bool twoFactorEnabled,
         bool premiumFromOrganization,
-        IEnumerable<Guid>? organizationIdsManagingUser) : base("profile")
+#nullable enable
+        IEnumerable<Guid>? organizationIdsManagingUser
+#nullable disable
+        ) : base("profile")
     {
         if (user == null)
         {

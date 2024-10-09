@@ -12,8 +12,6 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
-#nullable enable
-
 namespace Bit.Api.Vault.Models.Response;
 
 public class SyncResponseModel : ResponseModel
@@ -23,7 +21,9 @@ public class SyncResponseModel : ResponseModel
         User user,
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
+#nullable enable
         IEnumerable<Guid>? organizationIdsManagingUser,
+#nullable disable
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,

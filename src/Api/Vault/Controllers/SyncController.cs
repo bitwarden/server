@@ -16,8 +16,6 @@ using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-#nullable enable
-
 namespace Bit.Api.Vault.Controllers;
 
 [Route("sync")]
@@ -97,7 +95,10 @@ public class SyncController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
+
+#nullable enable
         var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user, organizationUserDetails);
+#nullable disable
 
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
             organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
@@ -105,6 +106,7 @@ public class SyncController : Controller
         return response;
     }
 
+#nullable enable
     /// <summary>
     /// Gets the IDs of the organizations that manage a user.
     /// </summary>
@@ -125,4 +127,5 @@ public class SyncController : Controller
         var organizationsManagingUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
         return organizationsManagingUser?.Select(o => o.Id);
     }
+#nullable disable
 }

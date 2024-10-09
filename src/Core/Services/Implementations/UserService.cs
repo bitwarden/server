@@ -31,8 +31,6 @@ using Microsoft.Extensions.Options;
 using File = System.IO.File;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-#nullable enable
-
 namespace Bit.Core.Services;
 
 public class UserService : UserManager<User>, IUserService, IDisposable
@@ -1265,6 +1263,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IsLegacyUser(user);
     }
 
+#nullable enable
     public async Task<bool?> IsManagedByAnyOrganizationAsync(Guid userId)
     {
         var managingOrganizations = await GetOrganizationsManagingUserAsync(userId);
@@ -1286,6 +1285,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
         return organizationsWithVerifiedUserEmailDomain.Where(organization => organization is { Enabled: true, UseSso: true }).ToList();
     }
+#nullable disable
 
     /// <inheritdoc cref="IsLegacyUser(string)"/>
     public static bool IsLegacyUser(User user)
