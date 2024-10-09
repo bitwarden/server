@@ -39,7 +39,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     [Fact]
     public async Task ValidateAsync_Success()
     {
-        // Arrange        
+        // Arrange
         await EnsureUserCreatedAsync();
 
         // Act
@@ -58,7 +58,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     [Fact]
     public async Task ValidateAsync_AuthEmailHeaderInvalid_InvalidGrantResponse()
     {
-        // Arrange        
+        // Arrange
         await EnsureUserCreatedAsync();
 
         // Act
@@ -93,12 +93,12 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     }
 
     /// <summary>
-    /// I would have liked to spy into the IUserService but by spying into the IUserService it 
-    /// creates a Singleton that is not available to the UserManager<User> thus causing the 
+    /// I would have liked to spy into the IUserService but by spying into the IUserService it
+    /// creates a Singleton that is not available to the UserManager<User> thus causing the
     /// RegisterAsync() to create a the user in a different UserStore than the one the
     /// UserManager<User> has access to (This is an assumption made from observing the behavior while
     /// writing theses tests, I could be wrong).
-    /// 
+    ///
     /// For the time being, verifying that the user is not null confirms that the failure is due to
     /// a bad password.
     /// </summary>
@@ -107,7 +107,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     [Theory, BitAutoData]
     public async Task ValidateAsync_BadPassword_Failure(string badPassword)
     {
-        // Arrange        
+        // Arrange
         await EnsureUserCreatedAsync();
 
         // Verify the User is not null to ensure the failure is due to bad password
@@ -204,8 +204,8 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         // Assert
 
         /*
-        An improvement on the current failure flow would be to document which part of 
-        the flow failed since all of the failures are basically the same. 
+        An improvement on the current failure flow would be to document which part of
+        the flow failed since all of the failures are basically the same.
         This doesn't build confidence in the tests.
         */
 
@@ -231,7 +231,11 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         });
 
         // Add User
-        await EnsureUserCreatedAsync(factory);
+        await factory.RegisterAsync(new RegisterRequestModel
+            {
+                Email = DefaultUsername,
+                MasterPasswordHash = DefaultPassword
+            });
         var userManager = factory.GetService<UserManager<User>>();
         var user = await userManager.FindByEmailAsync(DefaultUsername);
         Assert.NotNull(user);
