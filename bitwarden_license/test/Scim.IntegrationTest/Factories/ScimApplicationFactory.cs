@@ -55,6 +55,8 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
                 var mailService = services.First(sd => sd.ServiceType == typeof(IMailService));
                 services.Remove(mailService);
                 services.AddSingleton<IMailService, NoopMailService>();
+
+                services.AddDistributedMemoryCache();
             });
         });
 
