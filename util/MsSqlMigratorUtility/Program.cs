@@ -9,7 +9,7 @@ internal class Program
     }
 
     [DefaultCommand]
-    public void Execute(
+    public int Execute(
         [Operand(Description = "Database connection string")]
         string databaseConnectionString,
         [Option('r', "repeatable", Description = "Mark scripts as repeatable")]
@@ -18,7 +18,7 @@ internal class Program
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         [Option('d', "dry-run", Description = "Print the scripts that will be applied without actually executing them")]
         bool dryRun = false
-        ) => MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun);
+        ) => MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun) ? 0 : 1;
 
     private static bool MigrateDatabase(string databaseConnectionString,
         bool repeatable = false, string folderName = "", bool dryRun = false)
