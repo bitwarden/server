@@ -20,7 +20,6 @@ public class SsoConfigService : ISsoConfigService
     private readonly IPolicyService _policyService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IUserService _userService;
     private readonly IOrganizationService _organizationService;
     private readonly IEventService _eventService;
 
@@ -30,7 +29,6 @@ public class SsoConfigService : ISsoConfigService
         IPolicyService policyService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IUserService userService,
         IOrganizationService organizationService,
         IEventService eventService)
     {
@@ -39,7 +37,6 @@ public class SsoConfigService : ISsoConfigService
         _policyService = policyService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _userService = userService;
         _organizationService = organizationService;
         _eventService = eventService;
     }
@@ -74,20 +71,20 @@ public class SsoConfigService : ISsoConfigService
 
             singleOrgPolicy.Enabled = true;
 
-            await _policyService.SaveAsync(singleOrgPolicy, _userService, _organizationService, null);
+            await _policyService.SaveAsync(singleOrgPolicy, _organizationService, null);
 
             var resetPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.ResetPassword) ??
                               new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.ResetPassword, };
 
             resetPolicy.Enabled = true;
             resetPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
-            await _policyService.SaveAsync(resetPolicy, _userService, _organizationService, null);
+            await _policyService.SaveAsync(resetPolicy, _organizationService, null);
 
             var ssoRequiredPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso) ??
                               new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.RequireSso, };
 
             ssoRequiredPolicy.Enabled = true;
-            await _policyService.SaveAsync(ssoRequiredPolicy, _userService, _organizationService, null);
+            await _policyService.SaveAsync(ssoRequiredPolicy, _organizationService, null);
         }
 
         await LogEventsAsync(config, oldConfig);
