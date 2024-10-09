@@ -85,9 +85,9 @@ public class DeviceValidator(
         var deviceName = request.Raw["DeviceName"]?.ToString();
         var devicePushToken = request.Raw["DevicePushToken"]?.ToString();
 
-        if (string.IsNullOrWhiteSpace(deviceIdentifier) || 
+        if (string.IsNullOrWhiteSpace(deviceIdentifier) ||
             string.IsNullOrWhiteSpace(requestDeviceType) ||
-            string.IsNullOrWhiteSpace(deviceName) || 
+            string.IsNullOrWhiteSpace(deviceName) ||
             !Enum.TryParse(requestDeviceType, out DeviceType parsedDeviceType))
         {
             return null;

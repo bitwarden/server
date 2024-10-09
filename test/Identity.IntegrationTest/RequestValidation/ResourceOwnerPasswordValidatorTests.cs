@@ -26,7 +26,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     private readonly UserManager<User> _userManager;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IDeviceService _deviceService;
-    
+
     public ResourceOwnerPasswordValidatorTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
@@ -222,14 +222,14 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     {
         // Arrange
         var factory = new IdentityApplicationFactory();
-        
+
         // Stub DeviceValidator
         factory.SubstituteService<IDeviceValidator>(sub =>
         {
             sub.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
                 .Returns(null as Device);
         });
-        
+
         // Add User
         await EnsureUserCreatedAsync(factory);
         var userManager = factory.GetService<UserManager<User>>();
@@ -240,7 +240,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         var context = await factory.Server.PostAsync("/connect/token",
             GetFormUrlEncodedContent(),
             context => context.SetAuthEmail(DefaultUsername));
-        
+
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
