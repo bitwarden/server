@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -1378,12 +1377,11 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var userService = Substitute.For<IUserService>();
 
         organizationUserRepository.GetByIdAsync(orgUser.Id).Returns(orgUser);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
+            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
         Assert.Contains("User not valid.", exception.Message);
     }
 
@@ -1393,12 +1391,11 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var userService = Substitute.For<IUserService>();
 
         organizationUserRepository.GetByIdAsync(orgUser.Id).Returns(orgUser);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ConfirmUserAsync(confirmingUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
+            () => sutProvider.Sut.ConfirmUserAsync(confirmingUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
         Assert.Contains("User not valid.", exception.Message);
     }
 
@@ -1411,7 +1408,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var userService = Substitute.For<IUserService>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
 
         org.PlanType = PlanType.Free;
@@ -1424,7 +1420,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
+            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
         Assert.Contains("User can only be an admin of one free organization.", exception.Message);
     }
 
@@ -1465,7 +1461,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var userService = Substitute.For<IUserService>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
 
         org.PlanType = planType;
@@ -1478,7 +1473,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
 
-        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
         await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
@@ -1496,7 +1491,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var policyService = sutProvider.GetDependency<IPolicyService>();
-        var userService = Substitute.For<IUserService>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -1510,7 +1504,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg).Returns(new[] { singleOrgPolicy });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
+            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
         Assert.Contains("Cannot confirm this member to the organization until they leave or remove all other organizations.", exception.Message);
     }
 
@@ -1524,7 +1518,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var policyService = sutProvider.GetDependency<IPolicyService>();
-        var userService = Substitute.For<IUserService>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -1538,7 +1531,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg).Returns(new[] { singleOrgPolicy });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
+            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
         Assert.Contains("Cannot confirm this member to the organization because they are in another organization which forbids it.", exception.Message);
     }
 
@@ -1554,7 +1547,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
-        var userService = Substitute.For<IUserService>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser.Type = userType;
@@ -1567,7 +1559,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
 
-        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
         await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, true);
@@ -1585,7 +1577,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var policyService = sutProvider.GetDependency<IPolicyService>();
-        var userService = Substitute.For<IUserService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
@@ -1596,9 +1588,11 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
+        twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, false) });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
+            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
         Assert.Contains("User does not have two-step login enabled.", exception.Message);
     }
 
@@ -1612,7 +1606,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var policyService = sutProvider.GetDependency<IPolicyService>();
-        var userService = Substitute.For<IUserService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
@@ -1622,71 +1616,10 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        userService.TwoFactorIsEnabledAsync(user).Returns(true);
-
-        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ConfirmUser_vNext_TwoFactorPolicy_NotEnabled_Throws(Organization org, OrganizationUser confirmingUser,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, UserWithCalculatedPremium user,
-        OrganizationUser orgUserAnotherOrg,
-        [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
-        string key, SutProvider<OrganizationService> sutProvider)
-    {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
-
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        var policyService = sutProvider.GetDependency<IPolicyService>();
-        var userService = Substitute.For<IUserService>();
-        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
-
-        org.PlanType = PlanType.EnterpriseAnnually;
-        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
-        orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
-        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
-        organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
-        organizationRepository.GetByIdAsync(org.Id).Returns(org);
-        userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user });
-        twoFactorPolicy.OrganizationId = org.Id;
-        policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, false) });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
-        Assert.Contains("User does not have two-step login enabled.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ConfirmUser_vNext_TwoFactorPolicy_Enabled_Success(Organization org, OrganizationUser confirmingUser,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, UserWithCalculatedPremium user,
-        [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
-        string key, SutProvider<OrganizationService> sutProvider)
-    {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
-
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        var policyService = sutProvider.GetDependency<IPolicyService>();
-        var userService = Substitute.For<IUserService>();
-        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
-
-        org.PlanType = PlanType.EnterpriseAnnually;
-        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
-        orgUser.UserId = user.Id;
-        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
-        organizationRepository.GetByIdAsync(org.Id).Returns(org);
-        userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user });
-        twoFactorPolicy.OrganizationId = org.Id;
-        policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, true) });
 
-        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id);
     }
 
     [Theory, BitAutoData]
@@ -1704,52 +1637,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var policyService = sutProvider.GetDependency<IPolicyService>();
-        var userService = Substitute.For<IUserService>();
-
-        org.PlanType = PlanType.EnterpriseAnnually;
-        orgUser1.OrganizationId = orgUser2.OrganizationId = orgUser3.OrganizationId = confirmingUser.OrganizationId = org.Id;
-        orgUser1.UserId = user1.Id;
-        orgUser2.UserId = user2.Id;
-        orgUser3.UserId = user3.Id;
-        anotherOrgUser.UserId = user3.Id;
-        var orgUsers = new[] { orgUser1, orgUser2, orgUser3 };
-        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(orgUsers);
-        organizationRepository.GetByIdAsync(org.Id).Returns(org);
-        userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
-        twoFactorPolicy.OrganizationId = org.Id;
-        policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
-        userService.TwoFactorIsEnabledAsync(user1).Returns(true);
-        userService.TwoFactorIsEnabledAsync(user2).Returns(false);
-        userService.TwoFactorIsEnabledAsync(user3).Returns(true);
-        singleOrgPolicy.OrganizationId = org.Id;
-        policyService.GetPoliciesApplicableToUserAsync(user3.Id, PolicyType.SingleOrg)
-            .Returns(new[] { singleOrgPolicy });
-        organizationUserRepository.GetManyByManyUsersAsync(default)
-            .ReturnsForAnyArgs(new[] { orgUser1, orgUser2, orgUser3, anotherOrgUser });
-
-        var keys = orgUsers.ToDictionary(ou => ou.Id, _ => key);
-        var result = await sutProvider.Sut.ConfirmUsersAsync(confirmingUser.OrganizationId, keys, confirmingUser.Id, userService);
-        Assert.Contains("", result[0].Item2);
-        Assert.Contains("User does not have two-step login enabled.", result[1].Item2);
-        Assert.Contains("Cannot confirm this member to the organization until they leave or remove all other organizations.", result[2].Item2);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ConfirmUsers_vNext_Success(Organization org,
-        OrganizationUser confirmingUser,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser2,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser3,
-        OrganizationUser anotherOrgUser, UserWithCalculatedPremium user1, UserWithCalculatedPremium user2, UserWithCalculatedPremium user3,
-        [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
-        [OrganizationUserPolicyDetails(PolicyType.SingleOrg)] OrganizationUserPolicyDetails singleOrgPolicy,
-        string key, SutProvider<OrganizationService> sutProvider)
-    {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        var policyService = sutProvider.GetDependency<IPolicyService>();
-        var userService = Substitute.For<IUserService>();
         var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
 
         org.PlanType = PlanType.EnterpriseAnnually;
@@ -1761,7 +1648,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         var orgUsers = new[] { orgUser1, orgUser2, orgUser3 };
         organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(orgUsers);
         organizationRepository.GetByIdAsync(org.Id).Returns(org);
-        userRepository.GetManyWithCalculatedPremiumAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
+        userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
         twoFactorPolicy.OrganizationId = org.Id;
         policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication).Returns(new[] { twoFactorPolicy });
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user2.Id) && ids.Contains(user3.Id)))
@@ -1778,7 +1665,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .ReturnsForAnyArgs(new[] { orgUser1, orgUser2, orgUser3, anotherOrgUser });
 
         var keys = orgUsers.ToDictionary(ou => ou.Id, _ => key);
-        var result = await sutProvider.Sut.ConfirmUsersAsync_vNext(confirmingUser.OrganizationId, keys, confirmingUser.Id);
+        var result = await sutProvider.Sut.ConfirmUsersAsync(confirmingUser.OrganizationId, keys, confirmingUser.Id);
         Assert.Contains("", result[0].Item2);
         Assert.Contains("User does not have two-step login enabled.", result[1].Item2);
         Assert.Contains("Cannot confirm this member to the organization until they leave or remove all other organizations.", result[2].Item2);
@@ -2019,11 +1906,10 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
     {
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
-        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService);
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
 
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
         await eventService.Received()
@@ -2035,11 +1921,10 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<OrganizationService> sutProvider)
     {
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
-        await sutProvider.Sut.RestoreUserAsync(organizationUser, eventSystemUser, userService);
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, eventSystemUser);
 
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
         await eventService.Received()
@@ -2052,12 +1937,11 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.UserId = owner.Id;
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
         Assert.Contains("you cannot restore yourself", exception.Message.ToLowerInvariant());
 
@@ -2074,12 +1958,11 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         restoringUser.Type = restoringUserType;
         RestoreRevokeUser_Setup(organization, restoringUser, organizationUser, sutProvider, OrganizationUserType.Admin);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, restoringUser.Id, userService));
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, restoringUser.Id));
 
         Assert.Contains("only owners can restore other owners", exception.Message.ToLowerInvariant());
 
@@ -2097,45 +1980,13 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.Status = userStatus;
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
         Assert.Contains("already active", exception.Message.ToLowerInvariant());
-
-        await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
-        await eventService.DidNotReceiveWithAnyArgs()
-            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task RestoreUser_WithSingleOrgPolicyEnabled_Fails(
-        Organization organization,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
-        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser secondOrganizationUser,
-        SutProvider<OrganizationService> sutProvider)
-    {
-        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
-        secondOrganizationUser.UserId = organizationUser.UserId;
-        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var eventService = sutProvider.GetDependency<IEventService>();
-
-        organizationUserRepository.GetManyByUserAsync(organizationUser.UserId.Value).Returns(new[] { organizationUser, secondOrganizationUser });
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.SingleOrg } });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
-
-        Assert.Contains("you cannot restore this user until " +
-                        "they leave or remove all other organizations.", exception.Message.ToLowerInvariant());
 
         await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
         await eventService.DidNotReceiveWithAnyArgs()
@@ -2151,7 +2002,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
@@ -2160,7 +2010,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
         Assert.Contains("you cannot restore this user because they are a member of " +
                         "another organization which forbids it", exception.Message.ToLowerInvariant());
@@ -2182,16 +2032,16 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, false) });
+
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
-
-        userService.TwoFactorIsEnabledAsync(Arg.Any<ITwoFactorProvidersUser>()).Returns(false);
-
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
         Assert.Contains("you cannot restore this user until they enable " +
                         "two-step login on their user account.", exception.Message.ToLowerInvariant());
@@ -2210,16 +2060,17 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
-        userService.TwoFactorIsEnabledAsync(Arg.Any<ITwoFactorProvidersUser>()).Returns(true);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
 
-        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService);
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
 
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
         await eventService.Received()
@@ -2227,19 +2078,16 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_vNext_WithSingleOrgPolicyEnabled_Fails(
+    public async Task RestoreUser_WithSingleOrgPolicyEnabled_Fails(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser secondOrganizationUser,
         SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
-
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         secondOrganizationUser.UserId = organizationUser.UserId;
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
@@ -2252,7 +2100,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
         Assert.Contains("you cannot restore this user until " +
                         "they leave or remove all other organizations.", exception.Message.ToLowerInvariant());
@@ -2270,12 +2118,9 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser secondOrganizationUser,
         SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
-
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         secondOrganizationUser.UserId = organizationUser.UserId;
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
         var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
@@ -2289,7 +2134,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
         Assert.Contains("you cannot restore this user because they are a member of " +
                         "another organization which forbids it", exception.Message.ToLowerInvariant());
@@ -2306,20 +2151,17 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
-
         organizationUser.Email = null;
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService));
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
         Assert.Contains("you cannot restore this user until they enable " +
                         "two-step login on their user account.", exception.Message.ToLowerInvariant());
@@ -2336,11 +2178,8 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization).Returns(true);
-
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-        var userService = Substitute.For<IUserService>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
         var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
@@ -2353,7 +2192,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
 
-        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService);
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
 
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Confirmed);
         await eventService.Received()
