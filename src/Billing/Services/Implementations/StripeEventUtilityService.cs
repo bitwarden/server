@@ -8,6 +8,7 @@ using Bit.Core.Utilities;
 using Braintree;
 using Stripe;
 using Customer = Stripe.Customer;
+using Environment = Braintree.Environment;
 using Subscription = Stripe.Subscription;
 using Transaction = Bit.Core.Entities.Transaction;
 using TransactionType = Bit.Core.Enums.TransactionType;
@@ -261,6 +262,8 @@ public class StripeEventUtilityService : IStripeEventUtilityService
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
     {
+        LogBraintreeConfiguration();
+
         _logger.LogDebug("Attempting to pay invoice with Braintree");
         if (!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
         {
@@ -402,6 +405,50 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                 invoice.Id);
 
             throw;
+        }
+    }
+
+    private void LogBraintreeConfiguration()
+    {
+        var environment = System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+
+        if (environment != "QA")
+        {
+            _logger.LogInformation("Braintree: Not logging for {Environment}", environment);
+            return;
+        }
+
+        var merchantId = _globalSettings.Braintree.MerchantId;
+
+        if (string.IsNullOrEmpty(merchantId))
+        {
+            _logger.LogWarning("Braintree Merchant ID: null or empty");
+        }
+        else
+        {
+            _logger.LogInformation("Braintree Merchant ID: {MerchantId}", merchantId[..5]);
+        }
+
+        var publicKey = _globalSettings.Braintree.PublicKey;
+
+        if (string.IsNullOrEmpty(publicKey))
+        {
+            _logger.LogWarning("Braintree Public Key: null or empty");
+        }
+        else
+        {
+            _logger.LogInformation("Braintree Public Key: {PublicKey}", publicKey[..5]);
+        }
+
+        var privateKey = _globalSettings.Braintree.PrivateKey;
+
+        if (string.IsNullOrEmpty(privateKey))
+        {
+            _logger.LogWarning("Braintree Private Key: null or empty");
+        }
+        else
+        {
+            _logger.LogInformation("Braintree Private Key: {PrivateKey}", privateKey[..5]);
         }
     }
 }
