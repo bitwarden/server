@@ -232,10 +232,10 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
 
         // Add User
         await factory.RegisterAsync(new RegisterRequestModel
-            {
-                Email = DefaultUsername,
-                MasterPasswordHash = DefaultPassword
-            });
+        {
+            Email = DefaultUsername,
+            MasterPasswordHash = DefaultPassword
+        });
         var userManager = factory.GetService<UserManager<User>>();
         var user = await userManager.FindByEmailAsync(DefaultUsername);
         Assert.NotNull(user);
