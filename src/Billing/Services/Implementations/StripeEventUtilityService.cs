@@ -8,7 +8,6 @@ using Bit.Core.Utilities;
 using Braintree;
 using Stripe;
 using Customer = Stripe.Customer;
-using Environment = Braintree.Environment;
 using Subscription = Stripe.Subscription;
 using Transaction = Bit.Core.Entities.Transaction;
 using TransactionType = Bit.Core.Enums.TransactionType;
