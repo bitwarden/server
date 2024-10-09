@@ -10,38 +10,21 @@ public class UserTwoFactorDuoResponseModelTests
 {
     [Theory]
     [BitAutoData]
-    public void User_WithDuoV4_ShouldBuildModel(User user)
+    public void User_WithDuo_UserNull_ThrowsArgumentException(User user)
     {
         // Arrange
-        user.TwoFactorProviders = GetTwoFactorDuoV4ProvidersJson();
+        user.TwoFactorProviders = GetTwoFactorDuoProvidersJson();
 
         // Act
-        var model = new TwoFactorDuoResponseModel(user);
-
-        // Assert if v4 data Ikey and Skey are set to clientId and clientSecret
-        Assert.NotNull(model);
-        Assert.Equal("clientId", model.ClientId);
-        Assert.Equal("secret************", model.ClientSecret);
-        Assert.Equal("clientId", model.IntegrationKey);
-        Assert.Equal("secret************", model.SecretKey);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void User_WithDuov2_ShouldBuildModel(User user)
-    {
-        // Arrange
-        user.TwoFactorProviders = GetTwoFactorDuoV2ProvidersJson();
-
-        // Act
-        var model = new TwoFactorDuoResponseModel(user);
-
-        // Assert if only v2 data clientId and clientSecret are set to Ikey and Skey
-        Assert.NotNull(model);
-        Assert.Equal("IKey", model.ClientId);
-        Assert.Equal("SKey", model.ClientSecret);
-        Assert.Equal("IKey", model.IntegrationKey);
-        Assert.Equal("SKey", model.SecretKey);
+        try
+        {
+            var model = new TwoFactorDuoResponseModel(null as User);
+        }
+        catch (ArgumentNullException e)
+        {
+            // Assert
+            Assert.Equal("Value cannot be null. (Parameter 'user')", e.Message);
+        }
     }
 
     [Theory]
@@ -54,12 +37,10 @@ public class UserTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(user);
 
-        // Assert Even if both versions are present priority is given to v4 data
+        // Assert
         Assert.NotNull(model);
         Assert.Equal("clientId", model.ClientId);
         Assert.Equal("secret************", model.ClientSecret);
-        Assert.Equal("clientId", model.IntegrationKey);
-        Assert.Equal("secret************", model.SecretKey);
     }
 
     [Theory]
@@ -72,7 +53,7 @@ public class UserTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(user);
 
-        /// Assert
+        // Assert
         Assert.False(model.Enabled);
     }
 
@@ -86,24 +67,27 @@ public class UserTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(user);
 
-        /// Assert
+        // Assert
+        Assert.False(model.Enabled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void User_WithTwoFactorProvidersEmpty_ShouldFail(User user)
+    {
+        // Arrange
+        user.TwoFactorProviders = "{}";
+
+        // Act
+        var model = new TwoFactorDuoResponseModel(user);
+
+        // Assert
         Assert.False(model.Enabled);
     }
 
     private string GetTwoFactorDuoProvidersJson()
     {
         return
-            "{\"2\":{\"Enabled\":true,\"MetaData\":{\"SKey\":\"SKey\",\"IKey\":\"IKey\",\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
-    }
-
-    private string GetTwoFactorDuoV4ProvidersJson()
-    {
-        return
             "{\"2\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
-    }
-
-    private string GetTwoFactorDuoV2ProvidersJson()
-    {
-        return "{\"2\":{\"Enabled\":true,\"MetaData\":{\"SKey\":\"SKey\",\"IKey\":\"IKey\",\"Host\":\"example.com\"}}}";
     }
 }

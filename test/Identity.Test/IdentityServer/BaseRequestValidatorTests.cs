@@ -33,8 +33,7 @@ public class BaseRequestValidatorTests
     private readonly IDeviceService _deviceService;
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
-    private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
-    private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService;
+    private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -57,8 +56,7 @@ public class BaseRequestValidatorTests
         _deviceService = Substitute.For<IDeviceService>();
         _userService = Substitute.For<IUserService>();
         _eventService = Substitute.For<IEventService>();
-        _organizationDuoWebTokenProvider = Substitute.For<IOrganizationDuoWebTokenProvider>();
-        _duoWebV4SDKService = Substitute.For<ITemporaryDuoWebV4SDKService>();
+        _organizationDuoUniversalTokenProvider = Substitute.For<IOrganizationDuoUniversalTokenProvider>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _applicationCacheService = Substitute.For<IApplicationCacheService>();
@@ -80,8 +78,7 @@ public class BaseRequestValidatorTests
             _deviceService,
             _userService,
             _eventService,
-            _organizationDuoWebTokenProvider,
-            _duoWebV4SDKService,
+            _organizationDuoUniversalTokenProvider,
             _organizationRepository,
             _organizationUserRepository,
             _applicationCacheService,

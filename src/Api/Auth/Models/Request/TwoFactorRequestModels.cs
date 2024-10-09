@@ -3,7 +3,6 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Fido2NetLib;
 
@@ -42,20 +41,12 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
 
 public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IValidatableObject
 {
-    /*
-        To support both v2 and v4 we need to remove the required annotation from the properties.
-        todo - the required annotation will be added back in PM-8107.
-    */
+    [Required]
     [StringLength(50)]
     public string ClientId { get; set; }
+    [Required]
     [StringLength(50)]
     public string ClientSecret { get; set; }
-    //todo - will remove SKey and IKey with PM-8107
-    [StringLength(50)]
-    public string IntegrationKey { get; set; }
-    //todo - will remove SKey and IKey with PM-8107
-    [StringLength(50)]
-    public string SecretKey { get; set; }
     [Required]
     [StringLength(50)]
     public string Host { get; set; }
@@ -65,22 +56,17 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            providers = [];
         }
         else if (providers.ContainsKey(TwoFactorProviderType.Duo))
         {
             providers.Remove(TwoFactorProviderType.Duo);
         }
 
-        Temporary_SyncDuoParams();
-
         providers.Add(TwoFactorProviderType.Duo, new TwoFactorProvider
         {
             MetaData = new Dictionary<string, object>
             {
-                //todo - will remove SKey and IKey with PM-8107
-                ["SKey"] = SecretKey,
-                ["IKey"] = IntegrationKey,
                 ["ClientSecret"] = ClientSecret,
                 ["ClientId"] = ClientId,
                 ["Host"] = Host
@@ -96,22 +82,17 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         var providers = existingOrg.GetTwoFactorProviders();
         if (providers == null)
         {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            providers = [];
         }
         else if (providers.ContainsKey(TwoFactorProviderType.OrganizationDuo))
         {
             providers.Remove(TwoFactorProviderType.OrganizationDuo);
         }
 
-        Temporary_SyncDuoParams();
-
         providers.Add(TwoFactorProviderType.OrganizationDuo, new TwoFactorProvider
         {
             MetaData = new Dictionary<string, object>
             {
-                //todo - will remove SKey and IKey with PM-8107
-                ["SKey"] = SecretKey,
-                ["IKey"] = IntegrationKey,
                 ["ClientSecret"] = ClientSecret,
                 ["ClientId"] = ClientId,
                 ["Host"] = Host
@@ -120,38 +101,6 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         });
         existingOrg.SetTwoFactorProviders(providers);
         return existingOrg;
-    }
-
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (!DuoApi.ValidHost(Host))
-        {
-            yield return new ValidationResult("Host is invalid.", [nameof(Host)]);
-        }
-        if (string.IsNullOrWhiteSpace(ClientSecret) && string.IsNullOrWhiteSpace(ClientId) &&
-            string.IsNullOrWhiteSpace(SecretKey) && string.IsNullOrWhiteSpace(IntegrationKey))
-        {
-            yield return new ValidationResult("Neither v2 or v4 values are valid.", [nameof(IntegrationKey), nameof(SecretKey), nameof(ClientSecret), nameof(ClientId)]);
-        }
-    }
-
-    /*
-        use this method to ensure that both v2 params and v4 params are in sync
-        todo will be removed in pm-8107
-    */
-    private void Temporary_SyncDuoParams()
-    {
-        // Even if IKey and SKey exist prioritize v4 params ClientId and ClientSecret
-        if (!string.IsNullOrWhiteSpace(ClientSecret) && !string.IsNullOrWhiteSpace(ClientId))
-        {
-            SecretKey = ClientSecret;
-            IntegrationKey = ClientId;
-        }
-        else if (!string.IsNullOrWhiteSpace(SecretKey) && !string.IsNullOrWhiteSpace(IntegrationKey))
-        {
-            ClientSecret = SecretKey;
-            ClientId = IntegrationKey;
-        }
     }
 }
 

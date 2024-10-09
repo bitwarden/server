@@ -13,10 +13,7 @@ public class TwoFactorDuoResponseModel : ResponseModel
     public TwoFactorDuoResponseModel(User user)
         : base(ResponseObj)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
         Build(provider);
@@ -25,10 +22,7 @@ public class TwoFactorDuoResponseModel : ResponseModel
     public TwoFactorDuoResponseModel(Organization org)
         : base(ResponseObj)
     {
-        if (org == null)
-        {
-            throw new ArgumentNullException(nameof(org));
-        }
+        ArgumentNullException.ThrowIfNull(org);
 
         var provider = org.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
         Build(provider);
@@ -36,14 +30,9 @@ public class TwoFactorDuoResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public string Host { get; set; }
-    //TODO - will remove SecretKey with PM-8107
-    public string SecretKey { get; set; }
-    //TODO - will remove IntegrationKey with PM-8107
-    public string IntegrationKey { get; set; }
     public string ClientSecret { get; set; }
     public string ClientId { get; set; }
 
-    // updated build to assist in the EDD migration for the Duo 2FA provider
     private void Build(TwoFactorProvider provider)
     {
         if (provider?.MetaData != null && provider.MetaData.Count > 0)
@@ -54,36 +43,13 @@ public class TwoFactorDuoResponseModel : ResponseModel
             {
                 Host = (string)host;
             }
-
-            //todo - will remove SKey and IKey with PM-8107
-            // check Skey and IKey first if they exist
-            if (provider.MetaData.TryGetValue("SKey", out var sKey))
-            {
-                ClientSecret = MaskKey((string)sKey);
-                SecretKey = MaskKey((string)sKey);
-            }
-            if (provider.MetaData.TryGetValue("IKey", out var iKey))
-            {
-                IntegrationKey = (string)iKey;
-                ClientId = (string)iKey;
-            }
-
-            // Even if IKey and SKey exist prioritize v4 params ClientId and ClientSecret
             if (provider.MetaData.TryGetValue("ClientSecret", out var clientSecret))
             {
-                if (!string.IsNullOrWhiteSpace((string)clientSecret))
-                {
-                    ClientSecret = MaskKey((string)clientSecret);
-                    SecretKey = MaskKey((string)clientSecret);
-                }
+                ClientSecret = MaskSecret((string)clientSecret);
             }
             if (provider.MetaData.TryGetValue("ClientId", out var clientId))
             {
-                if (!string.IsNullOrWhiteSpace((string)clientId))
-                {
-                    ClientId = (string)clientId;
-                    IntegrationKey = (string)clientId;
-                }
+                ClientId = (string)clientId;
             }
         }
         else
@@ -92,37 +58,14 @@ public class TwoFactorDuoResponseModel : ResponseModel
         }
     }
 
-    /*
-    use this method to ensure that both v2 params and v4 params are in sync
-    todo will be removed in pm-8107
-    */
-    private void Temporary_SyncDuoParams()
+    private static string MaskSecret(string secret)
     {
-        // Even if IKey and SKey exist prioritize v4 params ClientId and ClientSecret
-        if (!string.IsNullOrWhiteSpace(ClientSecret) && !string.IsNullOrWhiteSpace(ClientId))
+        if (string.IsNullOrWhiteSpace(secret) || secret.Length <= 6)
         {
-            SecretKey = ClientSecret;
-            IntegrationKey = ClientId;
-        }
-        else if (!string.IsNullOrWhiteSpace(SecretKey) && !string.IsNullOrWhiteSpace(IntegrationKey))
-        {
-            ClientSecret = SecretKey;
-            ClientId = IntegrationKey;
-        }
-        else
-        {
-            throw new InvalidDataException("Invalid Duo parameters.");
-        }
-    }
-
-    private static string MaskKey(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key) || key.Length <= 6)
-        {
-            return key;
+            return secret;
         }
 
         // Mask all but the first 6 characters.
-        return string.Concat(key.AsSpan(0, 6), new string('*', key.Length - 6));
+        return string.Concat(secret.AsSpan(0, 6), new string('*', secret.Length - 6));
     }
 }
