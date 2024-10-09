@@ -244,7 +244,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         int? startIndex = null;
         var expectedResponse = new ScimListResponseModel<ScimUserResponseModel>
         {
-            ItemsPerPage = 1,
+            ItemsPerPage = 50, //default value
             TotalResults = 1,
             StartIndex = 1, //default value
             Resources = new List<ScimUserResponseModel>
