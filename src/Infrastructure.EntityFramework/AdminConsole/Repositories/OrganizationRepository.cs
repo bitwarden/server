@@ -276,7 +276,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         return await query.ToListAsync();
     }
 
-    public async Task<Core.AdminConsole.Entities.Organization> GetByClaimedUserDomainAsync(Guid userId)
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -291,7 +291,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                               && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
                         select o;
 
-            return await query.FirstOrDefaultAsync();
+            return await query.ToArrayAsync();
         }
     }
 

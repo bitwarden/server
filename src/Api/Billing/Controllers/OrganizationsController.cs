@@ -201,7 +201,12 @@ public class OrganizationsController(
         var organizationDetails = await organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
             OrganizationUserStatusType.Confirmed);
 
-        return new ProfileOrganizationResponseModel(organizationDetails);
+#nullable enable
+        var organizationManagingActiveUser = await userService.GetOrganizationsManagingUserAsync(userId);
+        var organizationIdsManagingActiveUser = organizationManagingActiveUser?.Select(o => o.Id);
+#nullable disable
+
+        return new ProfileOrganizationResponseModel(organizationDetails, organizationIdsManagingActiveUser);
     }
 
     [HttpPost("{id:guid}/seat")]

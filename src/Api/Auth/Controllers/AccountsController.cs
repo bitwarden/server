@@ -443,11 +443,14 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user);
+
+#nullable enable
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+#nullable disable
 
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
-            hasPremiumFromOrg, managedByOrganizationId);
+            hasPremiumFromOrg, organizationIdsManagingActiveUser);
         return response;
     }
 
@@ -457,7 +460,12 @@ public class AccountsController : Controller
         var userId = _userService.GetProperUserId(User);
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value,
             OrganizationUserStatusType.Confirmed);
-        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o));
+
+#nullable enable
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(userId.Value);
+#nullable disable
+
+        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responseData);
     }
 
@@ -475,9 +483,12 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user);
 
-        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, managedByOrganizationId);
+#nullable enable
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+#nullable disable
+
+        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsManagingActiveUser);
         return response;
     }
 
@@ -494,9 +505,12 @@ public class AccountsController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user);
 
-        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, managedByOrganizationId);
+#nullable enable
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+#nullable disable
+
+        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
         return response;
     }
 
@@ -647,9 +661,12 @@ public class AccountsController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user);
 
-        var profile = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, managedByOrganizationId);
+#nullable enable
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+#nullable disable
+
+        var profile = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
         return new PaymentResponseModel
         {
             UserProfile = profile,
@@ -937,14 +954,11 @@ public class AccountsController : Controller
         }
     }
 
-    private async Task<Guid?> GetManagedByOrganizationIdAsync(User user)
+#nullable enable
+    private async Task<IEnumerable<Guid>?> GetOrganizationIdsManagingUserAsync(Guid userId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            return null;
-        }
-
-        var organizationManagingUser = await _userService.GetOrganizationManagingUserAsync(user.Id);
-        return organizationManagingUser?.Id;
+        var organizationManagingUser = await _userService.GetOrganizationsManagingUserAsync(userId);
+        return organizationManagingUser?.Select(o => o.Id);
     }
+#nullable disable
 }
