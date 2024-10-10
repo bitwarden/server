@@ -565,6 +565,39 @@ jobs:
                 tag: 'main'
               }
             })
+  
+  trigger-ee-updates:
+    name: Trigger Ephemeral Environment updates
+    if: github.ref != 'refs/heads/main' && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
+    runs-on: ubuntu-24.04
+    needs: build-docker
+    steps:
+      - name: Log in to Azure - CI subscription
+        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve GitHub PAT secrets
+        id: retrieve-secret-pat
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Trigger Ephemeral Environment update
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'bitwarden',
+              repo: 'devops',
+              workflow_id: '_update_ephemeral_tags.yml',
+              ref: 'main',
+              inputs: {
+                ephemeral_env_branch: '${{ github.head_ref }}'
+              }
+            })
 
   check-failures:
     name: Check for failures

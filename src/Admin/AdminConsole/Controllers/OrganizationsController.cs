@@ -473,7 +473,7 @@ public class OrganizationsController : Controller
             await Task.WhenAll(policies.Select(async policy =>
             {
                 policy.Enabled = false;
-                await _policyService.SaveAsync(policy, _userService, _organizationService, null);
+                await _policyService.SaveAsync(policy, _organizationService, null);
             }));
         }
     }
