@@ -14,7 +14,7 @@ public class ResetPasswordPolicyDefinition : IPolicyDefinition
     public PolicyType Type => PolicyType.ResetPassword;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
-    ResetPasswordPolicyDefinition(ISsoConfigRepository ssoConfigRepository)
+    public ResetPasswordPolicyDefinition(ISsoConfigRepository ssoConfigRepository)
     {
         _ssoConfigRepository = ssoConfigRepository;
     }
