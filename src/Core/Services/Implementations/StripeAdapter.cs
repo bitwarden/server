@@ -5,6 +5,7 @@ namespace Bit.Core.Services;
 
 public class StripeAdapter : IStripeAdapter
 {
+    private readonly Stripe.Tax.CalculationService _taxCalculationService;
     private readonly Stripe.CustomerService _customerService;
     private readonly Stripe.SubscriptionService _subscriptionService;
     private readonly Stripe.InvoiceService _invoiceService;
@@ -21,6 +22,7 @@ public class StripeAdapter : IStripeAdapter
 
     public StripeAdapter()
     {
+        _taxCalculationService = new Stripe.Tax.CalculationService();
         _customerService = new Stripe.CustomerService();
         _subscriptionService = new Stripe.SubscriptionService();
         _invoiceService = new Stripe.InvoiceService();
@@ -34,6 +36,11 @@ public class StripeAdapter : IStripeAdapter
         _priceService = new Stripe.PriceService();
         _setupIntentService = new SetupIntentService();
         _testClockService = new Stripe.TestHelpers.TestClockService();
+    }
+
+    public Task<Stripe.Tax.Calculation> CalculateTaxAsync(Stripe.Tax.CalculationCreateOptions options)
+    {
+        return _taxCalculationService.CreateAsync(options);
     }
 
     public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
