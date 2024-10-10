@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
@@ -264,7 +263,7 @@ public class SavePolicyCommandTests
     private static SutProvider<SavePolicyCommand> SutProviderFactory(IEnumerable<IPolicyDefinition> policyDefinitions = null)
     {
         var fixture = new Fixture();
-        fixture.Customizations.Add(new SavePolicyCommandBuilder(policyDefinitions ?? new List<IPolicyDefinition>()));
+        fixture.Customizations.Add(new SavePolicyCommandSpecimenBuilder(policyDefinitions ?? new List<IPolicyDefinition>()));
         var sutProvider = new SutProvider<SavePolicyCommand>(fixture);
         sutProvider.Create();
         return sutProvider;

@@ -21,7 +21,7 @@ public class ResetPasswordPolicyDefinition : IPolicyDefinition
 
     public async Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
-        if (modifiedPolicy is not { Enabled:true } ||
+        if (modifiedPolicy is not { Enabled: true } ||
             modifiedPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled == false)
         {
             return await ValidateDisableAsync(modifiedPolicy);
