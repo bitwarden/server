@@ -146,6 +146,7 @@ public static class FeatureFlagKeys
     public const string RemoveServerVersionHeader = "remove-server-version-header";
     public const string AccessIntelligence = "pm-13227-access-intelligence";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
+    public const string Pm13322AddPolicyDefinitions = "pm-13322-add-policy-definitions";
 
     public static List<string> GetAllKeys()
     {

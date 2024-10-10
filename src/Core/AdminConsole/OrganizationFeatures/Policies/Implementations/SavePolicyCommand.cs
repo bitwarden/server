@@ -38,8 +38,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         _policyDefinitions = policyDefinitionsDict;
     }
 
-    public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
-        Guid? savingUserId)
+    public async Task SaveAsync(Policy policy, Guid? savingUserId)
     {
         var org = await _applicationCacheService.GetOrganizationAbilityAsync(policy.OrganizationId);
         if (org == null)
