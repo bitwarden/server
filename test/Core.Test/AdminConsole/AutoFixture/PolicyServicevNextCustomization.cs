@@ -3,6 +3,7 @@
 using System.Reflection;
 using AutoFixture.Kernel;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.Services.Implementations;
 
 namespace Bit.Core.Test.AdminConsole.AutoFixture;
