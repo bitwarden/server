@@ -189,12 +189,13 @@ public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
             }
             report.AccessDetails = userAccessDetails;
 
-            report.TotalItemCount =
+            var userCiphers =
                 report.AccessDetails
                     .Where(x => x.ItemCount > 0)
                     .SelectMany(y => y.CollectionCipherIds)
-                    .Distinct()
-                    .Count();
+                    .Distinct();
+            report.CipherIds = userCiphers;
+            report.TotalItemCount = userCiphers.Count();
 
             // Distinct items only            
             var distinctItems = report.AccessDetails.Where(x => x.CollectionId.HasValue).Select(x => x.CollectionId).Distinct();
