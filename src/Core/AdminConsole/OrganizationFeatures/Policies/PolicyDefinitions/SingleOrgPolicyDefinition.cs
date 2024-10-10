@@ -36,15 +36,15 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition
         _currentContext = currentContext;
     }
 
-    public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy, IOrganizationService organizationService)
     {
         if (currentPolicy is not { Enabled: true } && modifiedPolicy is { Enabled: true })
         {
-            await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId);
+            await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId, organizationService);
         }
     }
 
-    private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
+    private async Task RemoveNonCompliantUsersAsync(Guid organizationId, IOrganizationService organizationService)
     {
         // Remove non-compliant users
         var savingUserId = _currentContext.UserId;
@@ -71,10 +71,13 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition
                         && ou.OrganizationId != org.Id
                         && ou.Status != OrganizationUserStatusType.Invited))
             {
-                // TODO: OrganizationService causes a circular dependency here, we either pass it into all handlers
-                // TODO: like we do with PolicyService at the moment, or we investigate and break that circle
-                // await _organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                // TODO: enable this once AC-607 is merged to fix this circular dependency
+                // await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
                 //     savingUserId);
+
+                // In the meantime we use the underlying logic in OrganizationService
+                await organizationService.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
+
                 await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                     org.DisplayName(), orgUser.Email);
             }

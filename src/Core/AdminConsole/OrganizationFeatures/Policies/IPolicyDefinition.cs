@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
@@ -38,5 +39,5 @@ public interface IPolicyDefinition
     /// </summary>
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <param name="modifiedPolicy">The modified policy to be saved</param>
-    public Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy, IOrganizationService organizationService) => Task.FromResult(0);
 }

@@ -60,7 +60,7 @@ public class PolicyService : IPolicyService
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.Pm13322AddPolicyDefinitions))
         {
-            await _savePolicyCommand.SaveAsync(policy, savingUserId);
+            await _savePolicyCommand.SaveAsync(policy, organizationService, savingUserId);
             return;
         }
 

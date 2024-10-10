@@ -19,7 +19,6 @@ public class TwoFactorAuthenticationPolicyDefinition : IPolicyDefinition
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
 
@@ -28,26 +27,24 @@ public class TwoFactorAuthenticationPolicyDefinition : IPolicyDefinition
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         ICurrentContext currentContext,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _currentContext = currentContext;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
-    public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy, IOrganizationService organizationService)
     {
         if (currentPolicy is not { Enabled: true } && modifiedPolicy is { Enabled: true })
         {
-            await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId);
+            await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId, organizationService);
         }
     }
 
-    private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
+    private async Task RemoveNonCompliantUsersAsync(Guid organizationId, IOrganizationService organizationService)
     {
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         var savingUserId = _currentContext.UserId;
@@ -72,8 +69,13 @@ public class TwoFactorAuthenticationPolicyDefinition : IPolicyDefinition
                         "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
                 }
 
-                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
-                    savingUserId);
+                // TODO: enable this once AC-607 is merged to fix this circular dependency
+                // await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
+                //     savingUserId);
+
+                // In the meantime we use the underlying logic in OrganizationService
+                await organizationService.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
+
                 await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                     org!.DisplayName(), orgUser.Email);
             }

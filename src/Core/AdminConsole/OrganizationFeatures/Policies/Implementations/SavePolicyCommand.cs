@@ -38,7 +38,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         _policyDefinitions = policyDefinitionsDict;
     }
 
-    public async Task SaveAsync(Policy policy, Guid? savingUserId)
+    public async Task SaveAsync(Policy policy, IOrganizationService organizationService, Guid? savingUserId)
     {
         var org = await _applicationCacheService.GetOrganizationAbilityAsync(policy.OrganizationId);
         if (org == null)
@@ -94,7 +94,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         }
 
         // Run side effects
-        await policyDefinition.OnSaveSideEffectsAsync(currentPolicy, policy);
+        await policyDefinition.OnSaveSideEffectsAsync(currentPolicy, policy, organizationService);
 
         policy.RevisionDate = DateTime.UtcNow;
 
