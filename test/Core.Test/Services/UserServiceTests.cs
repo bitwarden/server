@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -263,7 +264,8 @@ public class UserServiceTests
             sutProvider.GetDependency<IStripeSyncService>(),
             new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
             sutProvider.GetDependency<IFeatureService>(),
-            sutProvider.GetDependency<IPremiumUserBillingService>()
+            sutProvider.GetDependency<IPremiumUserBillingService>(),
+            sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);

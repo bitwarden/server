@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -169,7 +170,7 @@ public class UpdateOrganizationUserCommandTests
         await organizationService.Received(1).ValidateOrganizationCustomPermissionsEnabledAsync(
             newUserData.OrganizationId,
             newUserData.Type);
-        await organizationService.Received(1).HasConfirmedOwnersExceptAsync(
+        await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().Received(1).HasConfirmedOwnersExceptAsync(
             newUserData.OrganizationId,
             Arg.Is<IEnumerable<Guid>>(i => i.Contains(newUserData.Id)));
     }
@@ -187,7 +188,7 @@ public class UpdateOrganizationUserCommandTests
         newUser.UserId = oldUser.UserId;
         newUser.OrganizationId = oldUser.OrganizationId = organization.Id;
         organizationUserRepository.GetByIdAsync(oldUser.Id).Returns(oldUser);
-        organizationService
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(
                 oldUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(oldUser.Id)))

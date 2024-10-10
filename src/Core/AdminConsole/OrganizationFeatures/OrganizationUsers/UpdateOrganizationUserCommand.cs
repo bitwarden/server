@@ -22,6 +22,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -31,7 +32,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         ICollectionRepository collectionRepository,
-        IGroupRepository groupRepository)
+        IGroupRepository groupRepository,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -41,6 +43,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
     }
 
     /// <summary>
@@ -87,7 +90,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         await _organizationService.ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
 
         if (user.Type != OrganizationUserType.Owner &&
-            !await _organizationService.HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
+            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }

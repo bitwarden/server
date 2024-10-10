@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -49,6 +50,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -72,6 +74,7 @@ public class OrganizationsControllerTests : IDisposable
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerBillingService = Substitute.For<IProviderBillingService>();
         _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
+        _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -91,7 +94,8 @@ public class OrganizationsControllerTests : IDisposable
             _pushNotificationService,
             _providerRepository,
             _providerBillingService,
-            _orgDeleteTokenDataFactory);
+            _orgDeleteTokenDataFactory,
+            _removeOrganizationUserCommand);
     }
 
     public void Dispose()
@@ -120,13 +124,12 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.Leave(orgId.ToString()));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
         Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
             exception.Message);
 
-        await _organizationService.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
+        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
     }
 
     [Theory]
@@ -155,8 +158,9 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-        await _organizationService.RemoveUserAsync(orgId, user.Id);
-        await _organizationService.Received(1).RemoveUserAsync(orgId, user.Id);
+        await _sut.Leave(orgId);
+
+        await _removeOrganizationUserCommand.Received(1).RemoveUserAsync(orgId, user.Id);
     }
 
     [Theory, AutoData]

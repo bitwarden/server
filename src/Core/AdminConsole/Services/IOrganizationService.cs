@@ -52,20 +52,12 @@ public interface IOrganizationService
     Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId);
-    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
-    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, EventSystemUser systemUser);
-    Task RemoveUserAsync(Guid organizationId, Guid userId);
-    Task<List<Tuple<OrganizationUser, string>>> RemoveUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
     Task ImportAsync(Guid organizationId, IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
         bool overwriteExisting, EventSystemUser eventSystemUser);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
     Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
-    Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);
     Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
     Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,

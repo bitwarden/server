@@ -40,10 +40,8 @@ public interface IUserService
         KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
-    Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
-        IOrganizationService organizationService);
-    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode,
-        IOrganizationService organizationService);
+    Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
+    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
     Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);

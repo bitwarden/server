@@ -3,6 +3,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -75,7 +76,7 @@ public class RemoveOrganizationFromProviderCommandTests
     {
         providerOrganization.ProviderId = provider.Id;
 
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
                 includeProvider: false)
@@ -98,7 +99,7 @@ public class RemoveOrganizationFromProviderCommandTests
         organization.GatewayCustomerId = null;
         organization.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
                 includeProvider: false)
@@ -141,7 +142,7 @@ public class RemoveOrganizationFromProviderCommandTests
     {
         providerOrganization.ProviderId = provider.Id;
 
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
                 includeProvider: false)
@@ -208,7 +209,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
                 includeProvider: false)
