@@ -4,14 +4,6 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# DevOps for Actions and other workflow changes
-.github/workflows @bitwarden/dept-devops
-
-# DevOps for Docker changes
-**/Dockerfile @bitwarden/dept-devops
-**/*.Dockerfile @bitwarden/dept-devops
-**/.dockerignore @bitwarden/dept-devops
-
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
 util/EfShared/** @bitwarden/dept-dbops
@@ -57,6 +49,9 @@ src/EventsProcessor @bitwarden/team-admin-console-dev
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
 
-# Multiple owners - DO NOT REMOVE (DevOps)
+# Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
+
+# BRE for release workflow changes
+.github/workflows/release.yml @bitwarden/dept-bre
