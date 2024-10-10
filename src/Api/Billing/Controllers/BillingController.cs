@@ -13,7 +13,6 @@ public class BillingController(
 {
     [HttpPost]
     [Route("calculate-tax")]
-    [AllowAnonymous]
     public async Task<IResult> CalculateTaxAsync([FromBody] CalculateTaxRequestModel requestBody)
     {
         var options = new Stripe.Tax.CalculationCreateOptions
