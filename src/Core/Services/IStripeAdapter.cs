@@ -5,6 +5,7 @@ namespace Bit.Core.Services;
 
 public interface IStripeAdapter
 {
+    Task<Stripe.Tax.Calculation> CalculateTaxAsync(Stripe.Tax.CalculationCreateOptions options);
     Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions customerCreateOptions);
     Task<Stripe.Customer> CustomerGetAsync(string id, Stripe.CustomerGetOptions options = null);
     Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null);
