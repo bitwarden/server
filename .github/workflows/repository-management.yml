@@ -1,55 +1,71 @@
 ---
-name: Version Bump
+name: Repository Management
 
 on:
   workflow_dispatch:
     inputs:
+      branch_to_cut:
+        default: "rc"
+        description: "Branch to cut"
+        options:
+          - "rc"
+          - "hotfix-rc"
+        required: true
+        type: choice
+      target_ref:
+        default: "main"
+        description: "Branch/Tag to target for cut"
+        required: true
+        type: string
       version_number_override:
         description: "New version override (leave blank for automatic calculation, example: '2024.1.0')"
         required: false
         type: string
-      cut_rc_branch:
-        description: "Cut RC branch?"
-        default: true
-        type: boolean
-      enable_slack_notification:
-        description: "Enable Slack notifications for upcoming release?"
-        default: false
-        type: boolean
 
 jobs:
+  cut_branch:
+    name: Cut branch
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out target ref
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+        with:
+          ref: ${{ inputs.target_ref }}
+
+      - name: Check if ${{ inputs.branch_to_cut }} branch exists
+        env:
+          BRANCH_NAME: ${{ inputs.branch_to_cut }}
+        run: |
+          if [[ $(git ls-remote --heads origin $BRANCH_NAME) ]]; then
+            echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Cut branch
+        env:
+          BRANCH_NAME: ${{ inputs.branch_to_cut }}
+        run: |
+          git switch --quiet --create $BRANCH_NAME
+          git push --quiet --set-upstream origin $BRANCH_NAME
+
+
   bump_version:
     name: Bump Version
     runs-on: ubuntu-22.04
+    needs: cut_branch
     outputs:
       version: ${{ steps.set-final-version-output.outputs.version }}
     steps:
-      - name: Validate version input
+      - name: Validate version input format
         if: ${{ inputs.version_number_override != '' }}
         uses: bitwarden/gh-actions/version-check@main
         with:
           version: ${{ inputs.version_number_override }}
 
-      - name: Slack Notification Check
-        run: |
-          if [[ "${{ inputs.enable_slack_notification }}" == true ]]; then
-            echo "Slack notifications enabled."
-          else
-            echo "Slack notifications disabled."
-          fi
-
       - name: Check out branch
         uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
-
-      - name: Check if RC branch exists
-        if: ${{ inputs.cut_rc_branch == true }}
-        run: |
-          remote_rc_branch_check=$(git ls-remote --heads origin rc | wc -l)
-          if [[ "${remote_rc_branch_check}" -gt 0 ]]; then
-            echo "Remote RC branch exists."
-            echo "Please delete current RC branch before running again."
-            exit 1
-          fi
+        with:
+          ref: main
 
       - name: Log in to Azure - CI subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
@@ -103,16 +119,16 @@ jobs:
         run: |
           # Error if version has not changed.
           if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
-            echo "Version has not changed."
+            echo "Specified override version is the same as the current version." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
           # Check if version is newer.
           printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V
           if [ $? -eq 0 ]; then
-            echo "Version check successful."
+            echo "Version is newer than the current version."
           else
-            echo "Version check failed."
+            echo "Version is older than the current version." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
@@ -148,22 +164,10 @@ jobs:
             echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check if version changed
-        id: version-changed
-        run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "changes_to_commit=TRUE" >> $GITHUB_OUTPUT
-          else
-            echo "changes_to_commit=FALSE" >> $GITHUB_OUTPUT
-            echo "No changes to commit!";
-          fi
-
       - name: Commit files
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
 
       - name: Push changes
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           PR_BRANCH: ${{ steps.create-branch.outputs.name }}
         run: git push -u origin $PR_BRANCH
@@ -177,7 +181,6 @@ jobs:
           owner: ${{ github.repository_owner }}
 
       - name: Create version PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         id: create-pr
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -202,42 +205,27 @@ jobs:
           echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
 
       - name: Approve PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr review $PR_NUMBER --approve
 
       - name: Merge PR
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
         run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
 
-      - name: Report upcoming release version to Slack
-        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' && inputs.enable_slack_notification == true }}
-        uses: bitwarden/gh-actions/report-upcoming-release-version@main
-        with:
-          version: ${{ steps.set-final-version-output.outputs.version }}
-          project: ${{ github.repository }}
-          AZURE_KV_CI_SERVICE_PRINCIPAL: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-  cut_rc:
-    name: Cut RC branch
-    if: ${{ inputs.cut_rc_branch == true }}
-    needs: bump_version
+  cherry_pick:
+    name: Cherry-Pick Commit(s)
     runs-on: ubuntu-22.04
+    needs: bump_version
     steps:
-      - name: Check out branch
+      - name: Check out main branch
         uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           ref: main
-
-      - name: Install xmllint
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxml2-utils
 
       - name: Verify version has been updated
         env:
@@ -254,13 +242,64 @@ jobs:
             sleep 10
           done
 
-      - name: Cut RC branch
+      - name: Get last version commit(s)
+        id: get-commits
         run: |
-          git switch --quiet --create rc
-          git push --quiet --set-upstream origin rc
+          git switch main
+          MAIN_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
+          echo "main_commit=$MAIN_COMMIT" >> $GITHUB_OUTPUT
 
-  move-future-db-scripts:
+          if [[ $(git ls-remote --heads origin rc) ]]; then
+            git switch rc
+            RC_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
+            echo "rc_commit=$RC_COMMIT" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Perform cherry-pick(s)
+        env:
+          MAIN_COMMIT: ${{ steps.get-commits.outputs.main_commit }}
+          RC_COMMIT: ${{ steps.get-commits.outputs.rc_commit }}
+          CUT_BRANCH: ${{ inputs.branch_to_cut }}
+        run: |
+          # If we are cutting 'hotfix-rc':
+          if [[ "$CUT_BRANCH" == "hotfix-rc" ]]; then
+
+            # If the 'rc' branch exists:
+            if [[ $(git ls-remote --heads origin rc) ]]; then
+
+              # Chery-pick from 'rc' into 'hotfix-rc'
+              git switch hotfix-rc
+              git cherry-pick -x $RC_COMMIT
+              git push -u origin hotfix-rc
+
+              # Cherry-pick from 'main' into 'rc'
+              git switch rc
+              git cherry-pick -x $MAIN_COMMIT
+              git push -u origin rc
+
+            # If the 'rc' branch does not exist:
+            else
+
+              # Cherry-pick from 'main' into 'hotfix-rc'
+              git switch hotfix-rc
+              git cherry-pick -x $MAIN_COMMIT
+              git push -u origin hotfix-rc
+
+            fi
+
+          # If we are cutting 'rc':
+          elif [[ "$CUT_BRANCH" == "rc" ]]; then
+
+            # Cherry-pick from 'main' into 'rc'
+            git switch rc
+            git cherry-pick -x $MAIN_COMMIT
+            git push -u origin rc
+
+          fi
+
+
+  move_future_db_scripts:
     name: Move finalization database scripts
-    needs: cut_rc
+    needs: cherry_pick
     uses: ./.github/workflows/_move_finalization_db_scripts.yml
     secrets: inherit
