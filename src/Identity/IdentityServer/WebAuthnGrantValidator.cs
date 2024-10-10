@@ -27,13 +27,13 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
 
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
+    private readonly IDeviceValidator _deviceValidator;
 
     public WebAuthnGrantValidator(
         UserManager<User> userManager,
-        IDeviceRepository deviceRepository,
-        IDeviceService deviceService,
         IUserService userService,
         IEventService eventService,
+        IDeviceValidator deviceValidator,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
         ITemporaryDuoWebV4SDKService duoWebV4SDKService,
         IOrganizationRepository organizationRepository,
@@ -52,13 +52,14 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
         )
-        : base(userManager, deviceRepository, deviceService, userService, eventService,
+        : base(userManager, userService, eventService, deviceValidator,
             organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
             userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, userDecryptionOptionsBuilder)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
+        _deviceValidator = deviceValidator;
     }
 
     string IExtensionGrantValidator.GrantType => "webauthn";
@@ -87,7 +88,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
-            KnownDevice = await KnownDeviceAsync(user, context.Request)
+            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request)
         };
 
         UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);

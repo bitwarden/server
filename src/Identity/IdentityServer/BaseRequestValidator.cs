@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Reflection;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -33,9 +31,8 @@ namespace Bit.Identity.IdentityServer;
 public abstract class BaseRequestValidator<T> where T : class
 {
     private UserManager<User> _userManager;
-    private readonly IDeviceRepository _deviceRepository;
-    private readonly IDeviceService _deviceService;
     private readonly IEventService _eventService;
+    private readonly IDeviceValidator _deviceValidator;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
     private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService;
     private readonly IOrganizationRepository _organizationRepository;
@@ -56,10 +53,9 @@ public abstract class BaseRequestValidator<T> where T : class
 
     public BaseRequestValidator(
         UserManager<User> userManager,
-        IDeviceRepository deviceRepository,
-        IDeviceService deviceService,
         IUserService userService,
         IEventService eventService,
+        IDeviceValidator deviceValidator,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
         ITemporaryDuoWebV4SDKService duoWebV4SDKService,
         IOrganizationRepository organizationRepository,
@@ -77,10 +73,9 @@ public abstract class BaseRequestValidator<T> where T : class
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
-        _deviceRepository = deviceRepository;
-        _deviceService = deviceService;
         _userService = userService;
         _eventService = eventService;
+        _deviceValidator = deviceValidator;
         _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
         _duoWebV4SDKService = duoWebV4SDKService;
         _organizationRepository = organizationRepository;
@@ -131,9 +126,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var (isTwoFactorRequired, twoFactorOrganization) = await RequiresTwoFactorAsync(user, request);
         if (isTwoFactorRequired)
         {
-            // Just defaulting it
-            var twoFactorProviderType = TwoFactorProviderType.Authenticator;
-            if (!twoFactorRequest || !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
+            if (!twoFactorRequest || !Enum.TryParse(twoFactorProvider, out TwoFactorProviderType twoFactorProviderType))
             {
                 await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
                 return;
@@ -162,7 +155,6 @@ public abstract class BaseRequestValidator<T> where T : class
             twoFactorToken = null;
         }
 
-
         // Force legacy users to the web for migration
         if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
         {
@@ -176,7 +168,7 @@ public abstract class BaseRequestValidator<T> where T : class
         // Returns true if can finish validation process
         if (await IsValidAuthTypeAsync(user, request.GrantType))
         {
-            var device = await SaveDeviceAsync(user, request);
+            var device = await _deviceValidator.SaveDeviceAsync(user, request);
             if (device == null)
             {
                 await BuildErrorResultAsync("No device information provided.", false, context, user);
@@ -393,28 +385,6 @@ public abstract class BaseRequestValidator<T> where T : class
                orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
     }
 
-    private Device GetDeviceFromRequest(ValidatedRequest request)
-    {
-        var deviceIdentifier = request.Raw["DeviceIdentifier"]?.ToString();
-        var deviceType = request.Raw["DeviceType"]?.ToString();
-        var deviceName = request.Raw["DeviceName"]?.ToString();
-        var devicePushToken = request.Raw["DevicePushToken"]?.ToString();
-
-        if (string.IsNullOrWhiteSpace(deviceIdentifier) || string.IsNullOrWhiteSpace(deviceType) ||
-            string.IsNullOrWhiteSpace(deviceName) || !Enum.TryParse(deviceType, out DeviceType type))
-        {
-            return null;
-        }
-
-        return new Device
-        {
-            Identifier = deviceIdentifier,
-            Name = deviceName,
-            Type = type,
-            PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken
-        };
-    }
-
     private async Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType type,
         string token)
     {
@@ -535,51 +505,6 @@ public abstract class BaseRequestValidator<T> where T : class
             default:
                 return null;
         }
-    }
-
-    protected async Task<bool> KnownDeviceAsync(User user, ValidatedTokenRequest request) =>
-        (await GetKnownDeviceAsync(user, request)) != default;
-
-    protected async Task<Device> GetKnownDeviceAsync(User user, ValidatedTokenRequest request)
-    {
-        if (user == null)
-        {
-            return default;
-        }
-
-        return await _deviceRepository.GetByIdentifierAsync(GetDeviceFromRequest(request).Identifier, user.Id);
-    }
-
-    private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
-    {
-        var device = GetDeviceFromRequest(request);
-        if (device != null)
-        {
-            var existingDevice = await GetKnownDeviceAsync(user, request);
-            if (existingDevice == null)
-            {
-                device.UserId = user.Id;
-                await _deviceService.SaveAsync(device);
-
-                var now = DateTime.UtcNow;
-                if (now - user.CreationDate > TimeSpan.FromMinutes(10))
-                {
-                    var deviceType = device.Type.GetType().GetMember(device.Type.ToString())
-                        .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
-                    if (!_globalSettings.DisableEmailNewDevice)
-                    {
-                        await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
-                            CurrentContext.IpAddress);
-                    }
-                }
-
-                return device;
-            }
-
-            return existingDevice;
-        }
-
-        return null;
     }
 
     private async Task ResetFailedAuthDetailsAsync(User user)

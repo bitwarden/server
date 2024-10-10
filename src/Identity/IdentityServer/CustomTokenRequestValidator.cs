@@ -29,8 +29,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
-        IDeviceRepository deviceRepository,
-        IDeviceService deviceService,
+        IDeviceValidator deviceValidator,
         IUserService userService,
         IEventService eventService,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
@@ -48,7 +47,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
-        : base(userManager, deviceRepository, deviceService, userService, eventService,
+        : base(userManager, userService, eventService, deviceValidator,
             organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
             userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository,
@@ -83,11 +82,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
             }
-
-
             return;
         }
-
         await ValidateAsync(context, context.Result.ValidatedRequest,
             new CustomValidatorRequestContext { KnownDevice = true });
     }
@@ -103,7 +99,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         {
             validatorContext.User = await _userManager.FindByEmailAsync(email);
         }
-
         return validatorContext.User != null;
     }
 
@@ -121,7 +116,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.ValidatedRequest.ClientClaims.Add(claim);
             }
         }
-
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
         {
             return Task.CompletedTask;
@@ -138,7 +132,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse["ApiUseKeyConnector"] = true;
                 context.Result.CustomResponse["ResetMasterPassword"] = false;
             }
-
             return Task.CompletedTask;
         }
 
@@ -150,13 +143,11 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         {
             return Task.CompletedTask;
         }
-
         if (userDecryptionOptions is { KeyConnectorOption: { } })
         {
             context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
             context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
-
         return Task.CompletedTask;
     }
 

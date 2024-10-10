@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<StaticClientStore>();
         services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
+        services.AddTransient<IDeviceValidator, DeviceValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services

@@ -145,7 +145,10 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 // Email Verification
                 { "globalSettings:enableEmailVerification", "true" },
                 { "globalSettings:disableUserRegistration", "false" },
-                { "globalSettings:launchDarkly:flagValues:email-verification", "true" }
+                { "globalSettings:launchDarkly:flagValues:email-verification", "true" },
+
+                // New Device Verification
+                { "globalSettings:disableEmailNewDevice", "false" },
             });
         });
 
