@@ -44,7 +44,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="8.0.8" />
-    <PackageReference Include="Quartz" Version="3.9.0" />
+    <PackageReference Include="Quartz" Version="3.13.0" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.2" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
