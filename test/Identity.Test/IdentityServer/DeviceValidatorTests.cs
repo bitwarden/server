@@ -98,6 +98,30 @@ public class DeviceValidatorTests
 
     [Theory]
     [BitAutoData]
+    public async void SaveDeviceAsync_ExistingUser_NewDevice_ReturnsDevice_SendEmailFalse(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
+        User user)
+    {
+        // Arrange
+        request = AddValidDeviceToRequest(request);
+
+        user.CreationDate = DateTime.UtcNow - TimeSpan.FromMinutes(11);
+        _globalSettings.DisableEmailNewDevice = true;
+
+        // Act
+        var device = await _sut.SaveDeviceAsync(user, request);
+
+        // Assert
+        Assert.NotNull(device);
+        Assert.Equal(user.Id, device.UserId);
+        Assert.Equal("DeviceIdentifier", device.Identifier);
+        Assert.Equal(DeviceType.Android, device.Type);
+        await _mailService.DidNotReceive().SendNewDeviceLoggedInEmail(
+            user.Email, "Android", Arg.Any<DateTime>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async void SaveDeviceAsync_DeviceIsKnown_ShouldReturnDevice(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user,
