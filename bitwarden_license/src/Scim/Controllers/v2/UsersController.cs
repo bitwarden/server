@@ -17,7 +17,6 @@ namespace Bit.Scim.Controllers.v2;
 [ExceptionHandlerFilter]
 public class UsersController : Controller
 {
-    private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IGetUsersListQuery _getUsersListQuery;
@@ -27,7 +26,6 @@ public class UsersController : Controller
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
-        IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IGetUsersListQuery getUsersListQuery,
@@ -36,7 +34,6 @@ public class UsersController : Controller
         IPostUserCommand postUserCommand,
         ILogger<UsersController> logger)
     {
-        _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _getUsersListQuery = getUsersListQuery;
@@ -98,7 +95,7 @@ public class UsersController : Controller
 
         if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM, _userService);
+            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
