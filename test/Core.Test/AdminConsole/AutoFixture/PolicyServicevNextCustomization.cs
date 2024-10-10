@@ -12,11 +12,11 @@ namespace Bit.Core.Test.AdminConsole.AutoFixture;
 /// Note that this should usually be used even to inject an empty list, otherwise AutoFixture will create duplicate
 /// invalid IPolicyDefinitions.
 /// </summary>
-public class PolicyServicevNextBuilder : ISpecimenBuilder
+public class SavePolicyCommandBuilder : ISpecimenBuilder
 {
     private readonly IEnumerable<IPolicyDefinition> _policyDefinitions;
 
-    public PolicyServicevNextBuilder(IEnumerable<IPolicyDefinition> policyDefinitions)
+    public SavePolicyCommandBuilder(IEnumerable<IPolicyDefinition> policyDefinitions)
     {
         _policyDefinitions = policyDefinitions;
     }
@@ -27,7 +27,7 @@ public class PolicyServicevNextBuilder : ISpecimenBuilder
         if (pi == null)
             return new NoSpecimen();
 
-        if (pi.Member.DeclaringType != typeof(PolicyServicevNext) ||
+        if (pi.Member.DeclaringType != typeof(SavePolicyCommand) ||
             pi.ParameterType != typeof(IEnumerable<IPolicyDefinition>))
         {
             return new NoSpecimen();

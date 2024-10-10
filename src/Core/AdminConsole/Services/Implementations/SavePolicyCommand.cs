@@ -10,14 +10,14 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.Services.Implementations;
 
-public class PolicyServicevNext : IPolicyServicevNext
+public class SavePolicyCommand : ISavePolicyCommand
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IReadOnlyDictionary<PolicyType, IPolicyDefinition> _policyDefinitions;
 
-    public PolicyServicevNext(
+    public SavePolicyCommand(
         IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IPolicyRepository policyRepository,

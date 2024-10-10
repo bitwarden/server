@@ -18,7 +18,7 @@ using EventType = Bit.Core.Enums.EventType;
 
 namespace Bit.Core.Test.AdminConsole.Services;
 
-public class PolicyServicevNextTests
+public class SavePolicyCommandTests
 {
     [Theory, BitAutoData]
     public async Task SaveAsync_Success([Policy(PolicyType.SingleOrg)] Policy policy)
@@ -48,7 +48,7 @@ public class PolicyServicevNextTests
     public void Constructor_DuplicatePolicyDefinitions_Throws()
     {
         var exception = Assert.Throws<Exception>(() =>
-            new PolicyServicevNext(
+            new SavePolicyCommand(
                 Substitute.For<IApplicationCacheService>(),
                 Substitute.For<IEventService>(),
                 Substitute.For<IPolicyRepository>(),
@@ -260,16 +260,16 @@ public class PolicyServicevNextTests
     /// <summary>
     /// Returns a new SutProvider with the PolicyDefinitions registered in the Sut.
     /// </summary>
-    private static SutProvider<PolicyServicevNext> SutProviderFactory(IEnumerable<IPolicyDefinition> policyDefinitions = null)
+    private static SutProvider<SavePolicyCommand> SutProviderFactory(IEnumerable<IPolicyDefinition> policyDefinitions = null)
     {
         var fixture = new Fixture();
-        fixture.Customizations.Add(new PolicyServicevNextBuilder(policyDefinitions ?? new List<IPolicyDefinition>()));
-        var sutProvider = new SutProvider<PolicyServicevNext>(fixture);
+        fixture.Customizations.Add(new SavePolicyCommandBuilder(policyDefinitions ?? new List<IPolicyDefinition>()));
+        var sutProvider = new SutProvider<SavePolicyCommand>(fixture);
         sutProvider.Create();
         return sutProvider;
     }
 
-    private static void ArrangeOrganization(SutProvider<PolicyServicevNext> sutProvider, Policy policy)
+    private static void ArrangeOrganization(SutProvider<SavePolicyCommand> sutProvider, Policy policy)
     {
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
@@ -280,7 +280,7 @@ public class PolicyServicevNextTests
             });
     }
 
-    private static async Task AssertPolicyNotSavedAsync(SutProvider<PolicyServicevNext> sutProvider)
+    private static async Task AssertPolicyNotSavedAsync(SutProvider<SavePolicyCommand> sutProvider)
     {
         await sutProvider.GetDependency<IPolicyRepository>()
             .DidNotReceiveWithAnyArgs()

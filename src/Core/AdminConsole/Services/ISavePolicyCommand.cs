@@ -3,7 +3,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.Services;
 
-public interface IPolicyServicevNext
+public interface ISavePolicyCommand
 {
     Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
         Guid? savingUserId);
