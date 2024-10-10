@@ -57,17 +57,15 @@ public class UsersController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Get(
         Guid organizationId,
-        [FromQuery] string filter,
-        [FromQuery] int? count,
-        [FromQuery] int? startIndex)
+        [FromQuery] GetUsersQueryParamModel model)
     {
-        var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, filter, count, startIndex);
+        var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
         var scimListResponseModel = new ScimListResponseModel<ScimUserResponseModel>
         {
             Resources = usersListQueryResult.userList.Select(u => new ScimUserResponseModel(u)).ToList(),
-            ItemsPerPage = count.GetValueOrDefault(usersListQueryResult.userList.Count()),
+            ItemsPerPage = model.Count,
             TotalResults = usersListQueryResult.totalResults,
-            StartIndex = startIndex.GetValueOrDefault(1),
+            StartIndex = model.StartIndex,
         };
         return Ok(scimListResponseModel);
     }
