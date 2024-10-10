@@ -7,6 +7,8 @@ namespace Bit.Core.Services;
 
 public class NoopPushNotificationService : IPushNotificationService
 {
+    public string PushServiceType => "Noop";
+
     public Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
     {
         return Task.FromResult(0);

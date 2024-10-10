@@ -7,6 +7,7 @@ namespace Bit.Core.Services;
 
 public interface IPushNotificationService
 {
+    string PushServiceType { get; }
     Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
     Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
     Task PushSyncCipherDeleteAsync(Cipher cipher);
