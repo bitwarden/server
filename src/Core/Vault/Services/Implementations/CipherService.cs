@@ -210,6 +210,10 @@ public class CipherService : ICipherService
             AttachmentData = JsonSerializer.Serialize(data)
         });
         cipher.AddAttachment(attachmentId, data);
+
+        // Update the revision date when an attachment is added
+        cipher.RevisionDate = DateTime.UtcNow;
+
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
 
         return (attachmentId, uploadUrl);
@@ -258,6 +262,9 @@ public class CipherService : ICipherService
             await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
             throw;
         }
+
+        // Update the revision date when an attachment is added
+        cipher.RevisionDate = DateTime.UtcNow;
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -1020,6 +1027,9 @@ public class CipherService : ICipherService
         cipher.DeleteAttachment(attachmentData.AttachmentId);
         await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentData);
         await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentDeleted);
+
+        // Update the revision date when an attachment is deleted
+        cipher.RevisionDate = DateTime.UtcNow;
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
