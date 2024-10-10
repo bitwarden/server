@@ -12,7 +12,6 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -240,7 +239,8 @@ public class OrganizationsController : Controller
         if (organization.UseSecretsManager &&
             !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
         {
-            throw new BadRequestException("Plan does not support Secrets Manager");
+            TempData["Error"] = "Plan does not support Secrets Manager";
+            return RedirectToAction("Edit", new { id });
         }
 
         await _organizationRepository.ReplaceAsync(organization);
