@@ -41,12 +41,6 @@ public class DeviceValidator(
     private readonly IMailService _mailService = mailService;
     private readonly ICurrentContext _currentContext = currentContext;
 
-    /// <summary>
-    /// Save a device to the database. If the device is already known, it will be returned.
-    /// </summary>
-    /// <param name="user">The user is assumed NOT null, still going to check though</param>
-    /// <param name="request">Duende Validated Request that contains the data to create the device object</param>
-    /// <returns>Returns null if user or device is malformed; The existing device if already in DB; a new device login</returns>
     public async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
     {
         var device = GetDeviceFromRequest(request);
@@ -58,8 +52,7 @@ public class DeviceValidator(
                 device.UserId = user.Id;
                 await _deviceService.SaveAsync(device);
 
-                // This check just seems like a way to avoid sending an email on the first login
-                // maybe vestigial?
+                // This makes sure the user isn't sent a "new device" email on their first login
                 var now = DateTime.UtcNow;
                 if (now - user.CreationDate > TimeSpan.FromMinutes(10))
                 {
@@ -78,12 +71,6 @@ public class DeviceValidator(
         return null;
     }
 
-    /// <summary>
-    /// Check if a device is known to the user.
-    /// </summary>
-    /// <param name="user">current user trying to authenticate</param>
-    /// <param name="request">contains raw information that is parsed about the device</param>
-    /// <returns>true if the device is known, false if it is not</returns>
     public async Task<bool> KnownDeviceAsync(User user, ValidatedTokenRequest request) =>
         (await GetKnownDeviceAsync(user, GetDeviceFromRequest(request))) != default;
 
