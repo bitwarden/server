@@ -12,7 +12,7 @@ public class MemberCipherDetailsResponseModel
     /// A distinct list of the cipher ids associated with 
     /// the organization member
     /// </summary>
-    public IEnumerable<Guid> CipherIds { get; set; }
+    public IEnumerable<string> CipherIds { get; set; }
 
     public MemberCipherDetailsResponseModel(MemberAccessCipherDetails memberAccessCipherDetails)
     {
