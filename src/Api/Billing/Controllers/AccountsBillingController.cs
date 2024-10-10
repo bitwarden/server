@@ -1,4 +1,5 @@
-﻿using Bit.Api.Billing.Models.Responses;
+﻿#nullable enable
+using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -43,7 +44,7 @@ public class AccountsBillingController(
     }
 
     [HttpGet("invoices")]
-    public async Task<IResult> GetInvoicesAsync([FromQuery] string startAfter = null)
+    public async Task<IResult> GetInvoicesAsync([FromQuery] string? status = null, [FromQuery] string? startAfter = null)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -54,6 +55,7 @@ public class AccountsBillingController(
         var invoices = await paymentHistoryService.GetInvoiceHistoryAsync(
             user,
             5,
+            status,
             startAfter);
 
         return TypedResults.Ok(invoices);

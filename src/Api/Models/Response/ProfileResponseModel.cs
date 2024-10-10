@@ -14,7 +14,8 @@ public class ProfileResponseModel : ResponseModel
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
         bool twoFactorEnabled,
-        bool premiumFromOrganization) : base("profile")
+        bool premiumFromOrganization,
+        Guid? managedByOrganizationId) : base("profile")
     {
         if (user == null)
         {
@@ -40,6 +41,7 @@ public class ProfileResponseModel : ResponseModel
         Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
         ProviderOrganizations =
             providerUserOrganizationDetails?.Select(po => new ProfileProviderOrganizationResponseModel(po));
+        ManagedByOrganizationId = managedByOrganizationId;
     }
 
     public ProfileResponseModel() : base("profile")
@@ -61,6 +63,7 @@ public class ProfileResponseModel : ResponseModel
     public bool UsesKeyConnector { get; set; }
     public string AvatarColor { get; set; }
     public DateTime CreationDate { get; set; }
+    public Guid? ManagedByOrganizationId { get; set; }
     public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
     public IEnumerable<ProfileProviderResponseModel> Providers { get; set; }
     public IEnumerable<ProfileProviderOrganizationResponseModel> ProviderOrganizations { get; set; }

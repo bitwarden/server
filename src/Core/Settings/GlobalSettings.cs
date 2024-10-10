@@ -139,6 +139,7 @@ public class GlobalSettings : IGlobalSettings
         private string _internalSso;
         private string _internalVault;
         private string _internalScim;
+        private string _internalBilling;
 
         public BaseServiceUriSettings(GlobalSettings globalSettings)
         {
@@ -216,6 +217,12 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _globalSettings.BuildInternalUri(_scim, "scim");
             set => _internalScim = value;
+        }
+
+        public string InternalBilling
+        {
+            get => _globalSettings.BuildInternalUri(_internalBilling, "billing");
+            set => _internalBilling = value;
         }
     }
 

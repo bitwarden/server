@@ -1,6 +1,7 @@
 ﻿#nullable enable
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
-using Bit.Core.NotificationCenter.Enums;
+using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.Repositories;
 
@@ -23,7 +24,8 @@ public interface INotificationRepository : IRepository<Notification, Guid>
     /// </param>
     /// <returns>
     /// Ordered by priority (highest to lowest) and creation date (descending).
+    /// Includes all fields from <see cref="Notification"/> and <see cref="NotificationStatus"/>
     /// </returns>
-    Task<IEnumerable<Notification>> GetByUserIdAndStatusAsync(Guid userId, ClientType clientType,
+    Task<IEnumerable<NotificationStatusDetails>> GetByUserIdAndStatusAsync(Guid userId, ClientType clientType,
         NotificationStatusFilter? statusFilter);
 }
