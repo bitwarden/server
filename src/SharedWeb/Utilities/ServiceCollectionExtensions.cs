@@ -38,6 +38,7 @@ using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Core.Tools.ReportFeatures;
 using DnsClient;
 using IdentityModel;
 using LaunchDarkly.Sdk.Server;
@@ -114,6 +115,7 @@ public static class ServiceCollectionExtensions
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
+        services.AddReportingServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)

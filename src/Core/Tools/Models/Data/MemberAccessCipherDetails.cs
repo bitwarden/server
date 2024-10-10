@@ -10,6 +10,11 @@ public class MemberAccessDetails
     public bool? ReadOnly { get; set; }
     public bool? HidePasswords { get; set; }
     public bool? Manage { get; set; }
+
+    /// <summary>
+    /// The CipherIds associated with the group/collection access
+    /// </summary>
+    public IEnumerable<string> CollectionCipherIds { get; set; }
 }
 
 public class MemberAccessCipherDetails

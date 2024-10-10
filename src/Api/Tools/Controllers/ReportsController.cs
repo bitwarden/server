@@ -1,12 +1,9 @@
 ﻿using Api.Tools.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Vault.Queries;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.Tools.Models.Data;
 using Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
@@ -20,13 +17,7 @@ namespace Bit.Api.Tools.Controllers;
 [Authorize("Application")]
 public class ReportsController : Controller
 {
-    private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
-    private readonly IGroupRepository _groupRepository;
-    private readonly ICollectionRepository _collectionRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
-    private readonly IApplicationCacheService _applicationCacheService;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IMemberAccessCipherDetailsQuery _memberAccessCipherDetailsQuery;
 
     public ReportsController(
@@ -34,19 +25,10 @@ public class ReportsController : Controller
         IGroupRepository groupRepository,
         ICollectionRepository collectionRepository,
         ICurrentContext currentContext,
-        IOrganizationCiphersQuery organizationCiphersQuery,
-        IApplicationCacheService applicationCacheService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IMemberAccessCipherDetailsQuery memberAccessCipherDetailsQuery
     )
     {
-        _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
-        _groupRepository = groupRepository;
-        _collectionRepository = collectionRepository;
         _currentContext = currentContext;
-        _organizationCiphersQuery = organizationCiphersQuery;
-        _applicationCacheService = applicationCacheService;
-        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _memberAccessCipherDetailsQuery = memberAccessCipherDetailsQuery;
     }
 
