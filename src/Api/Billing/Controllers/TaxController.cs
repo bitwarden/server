@@ -6,14 +6,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Billing.Controllers;
 
-[Route("billing")]
+[Route("tax")]
 [Authorize("Application")]
-public class BillingController(
+public class TaxController(
     IStripeAdapter stripeAdapter) : Controller
 {
     [HttpPost]
-    [Route("calculate-tax")]
-    public async Task<IResult> CalculateTaxAsync([FromBody] CalculateTaxRequestModel requestBody)
+    [Route("calculate")]
+    public async Task<IResult> CalculateAsync([FromBody] CalculateTaxRequestModel requestBody)
     {
         var options = new Stripe.Tax.CalculationCreateOptions
         {
