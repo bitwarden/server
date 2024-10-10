@@ -52,7 +52,7 @@ public class OrganizationBillingControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadata(true));
+            .Returns(new OrganizationMetadata(true, true));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
@@ -60,6 +60,7 @@ public class OrganizationBillingControllerTests
 
         var organizationMetadataResponse = ((Ok<OrganizationMetadataResponse>)result).Value;
 
+        Assert.True(organizationMetadataResponse.IsEligibleForSelfHost);
         Assert.True(organizationMetadataResponse.IsOnSecretsManagerStandalone);
     }
 

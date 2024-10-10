@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
@@ -26,6 +27,7 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IProviderRepository providerRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IOrganizationBillingService
@@ -69,14 +71,11 @@ public class OrganizationBillingService(
 
         var subscription = await subscriberService.GetSubscription(organization);
 
-        if (customer == null || subscription == null)
-        {
-            return OrganizationMetadata.Default();
-        }
+        var isEligibleForSelfHost = await IsEligibleForSelfHost(organization, subscription);
 
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        return new OrganizationMetadata(isOnSecretsManagerStandalone);
+        return new OrganizationMetadata(isEligibleForSelfHost, isOnSecretsManagerStandalone);
     }
 
     public async Task UpdatePaymentMethod(
@@ -340,11 +339,38 @@ public class OrganizationBillingService(
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
+    private async Task<bool> IsEligibleForSelfHost(
+        Organization organization,
+        Subscription? organizationSubscription)
+    {
+        if (organization.Status != OrganizationStatusType.Managed)
+        {
+            return organization.Plan.Contains("Families") ||
+                   organization.Plan.Contains("Enterprise") && IsActive(organizationSubscription);
+        }
+
+        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+        var providerSubscription = await subscriberService.GetSubscriptionOrThrow(provider);
+
+        return organization.Plan.Contains("Enterprise") && IsActive(providerSubscription);
+
+        bool IsActive(Subscription? subscription) => subscription?.Status is
+            StripeConstants.SubscriptionStatus.Active or
+            StripeConstants.SubscriptionStatus.Trialing or
+            StripeConstants.SubscriptionStatus.PastDue;
+    }
+
     private static bool IsOnSecretsManagerStandalone(
         Organization organization,
-        Customer customer,
-        Subscription subscription)
+        Customer? customer,
+        Subscription? subscription)
     {
+        if (customer == null || subscription == null)
+        {
+            return false;
+        }
+
         var plan = StaticStore.GetPlan(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
