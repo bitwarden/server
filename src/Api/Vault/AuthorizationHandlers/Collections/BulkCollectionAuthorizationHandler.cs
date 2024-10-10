@@ -273,7 +273,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             var limitCollectionDeletionEnabled = await GetOrganizationAbilityAsync(org) is { LimitCollectionDeletion: true };
             var userIsOrgOwnerOrAdmin = org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
             // If the limit collection management setting is disabled, allow any user to delete collections
-            if (userIsMemberOfOrg && (!limitCollectionDeletionEnabled || userIsOrgOwnerOrAdmin))
+            if (userIsMemberOfOrg && (!limitCollectionDeletionEnabled || userIsOrgOwnerOrAdmin) && await CanManageCollectionsAsync(resources, org))
             {
                 return true;
             }
