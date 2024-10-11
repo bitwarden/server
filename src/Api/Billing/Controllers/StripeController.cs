@@ -74,16 +74,23 @@ public class StripeController(
                 },
             }
         };
-        var taxCalculation = await stripeAdapter.CalculateTaxAsync(options);
-        var response = new CalculateTaxResponseModel
+        try
         {
-            SalesTaxRate = taxCalculation.TaxBreakdown.Any()
-                ? decimal.Parse(taxCalculation.TaxBreakdown.Single().TaxRateDetails.PercentageDecimal) / 100
-                : 0,
-            SalesTaxAmount = Convert.ToDecimal(taxCalculation.TaxAmountExclusive) / 100,
-            TaxableAmount = Convert.ToDecimal(requestBody.Amount),
-            TotalAmount = Convert.ToDecimal(taxCalculation.AmountTotal) / 100,
-        };
-        return TypedResults.Ok(response);
+            var taxCalculation = await stripeAdapter.CalculateTaxAsync(options);
+            var response = new CalculateTaxResponseModel
+            {
+                SalesTaxRate = taxCalculation.TaxBreakdown.Any()
+                    ? decimal.Parse(taxCalculation.TaxBreakdown.Single().TaxRateDetails.PercentageDecimal) / 100
+                    : 0,
+                SalesTaxAmount = Convert.ToDecimal(taxCalculation.TaxAmountExclusive) / 100,
+                TaxableAmount = Convert.ToDecimal(requestBody.Amount),
+                TotalAmount = Convert.ToDecimal(taxCalculation.AmountTotal) / 100,
+            };
+            return TypedResults.Ok(response);
+        }
+        catch (StripeException e)
+        {
+            return TypedResults.BadRequest(e.Message);
+        }
     }
 }
