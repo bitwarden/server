@@ -88,7 +88,6 @@ public interface IUserService
     /// </summary>
     Task<bool> IsLegacyUser(string userId);
 
-#nullable enable
     /// <summary>
     /// Indicates if the user is managed by any organization.
     /// </summary>
@@ -97,14 +96,16 @@ public interface IUserService
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
     /// <returns>
-    /// This returns a nullable object because if the Account Deprovisioning feature flag is disabled, we should return null.
+    /// False if the Account Deprovisioning feature flag is disabled.
     /// </returns>
-    Task<bool?> IsManagedByAnyOrganizationAsync(Guid userId);
+    Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
 
     /// <summary>
     /// Gets the organizations that manage the user.
     /// </summary>
+    /// <returns>
+    /// An empty collection if the Account Deprovisioning feature flag is disabled.
+    /// </returns>
     /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
-    Task<IEnumerable<Organization>?> GetOrganizationsManagingUserAsync(Guid userId);
-#nullable disable
+    Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId);
 }

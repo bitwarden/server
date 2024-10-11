@@ -21,9 +21,7 @@ public class SyncResponseModel : ResponseModel
         User user,
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
-#nullable enable
-        IEnumerable<Guid>? organizationIdsManagingUser,
-#nullable disable
+        IEnumerable<Guid> organizationIdsManagingUser,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,

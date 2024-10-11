@@ -15,10 +15,7 @@ public class ProfileResponseModel : ResponseModel
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
         bool twoFactorEnabled,
         bool premiumFromOrganization,
-#nullable enable
-        IEnumerable<Guid>? organizationIdsManagingUser
-#nullable disable
-        ) : base("profile")
+        IEnumerable<Guid> organizationIdsManagingUser) : base("profile")
     {
         if (user == null)
         {

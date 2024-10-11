@@ -121,10 +121,8 @@ public class OrganizationsController : Controller
         var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
 
-#nullable enable
         var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(userId);
-        var organizationIdsManagingActiveUser = organizationManagingActiveUser?.Select(o => o.Id);
-#nullable disable
+        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
 
         var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responses);

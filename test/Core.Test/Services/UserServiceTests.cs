@@ -279,7 +279,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task IsManagedByAnyOrganizationAsync_WithAccountDeprovisioningDisabled_ReturnsNull(
+    public async Task IsManagedByAnyOrganizationAsync_WithAccountDeprovisioningDisabled_ReturnsFalse(
         SutProvider<UserService> sutProvider, Guid userId)
     {
         sutProvider.GetDependency<IFeatureService>()
@@ -287,9 +287,8 @@ public class UserServiceTests
             .Returns(false);
 
         var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
-        Assert.Null(result);
+        Assert.False(result);
     }
-
 
     [Theory, BitAutoData]
     public async Task IsManagedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithManagingEnabledOrganization_ReturnsTrue(
