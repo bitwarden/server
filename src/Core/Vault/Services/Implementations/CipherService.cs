@@ -213,6 +213,7 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
 
@@ -265,6 +266,7 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is added
         cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -1030,6 +1032,7 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is deleted
         cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
