@@ -17,10 +17,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
 
     public ProfileOrganizationResponseModel(
         OrganizationUserOrganizationDetails organization,
-#nullable enable
-        IEnumerable<Guid>? organizationIdsManagingUser
-#nullable disable
-        )
+        IEnumerable<Guid> organizationIdsManagingUser)
         : this("profileOrganization")
     {
         Id = organization.OrganizationId;
@@ -70,7 +67,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         AccessSecretsManager = organization.AccessSecretsManager;
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        UserIsManagedByOrganization = organizationIdsManagingUser?.Contains(organization.OrganizationId);
+        UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
 
         if (organization.SsoConfig != null)
         {
@@ -135,7 +132,9 @@ public class ProfileOrganizationResponseModel : ResponseModel
     /// <remarks>
     /// An organization manages a user if the user's email domain is verified by the organization and the user is a member of it.
     /// The organization must be enabled and able to have verified domains.
-    /// This property is null if the Account Deprovisioning feature flag is disabled.
     /// </remarks>
-    public bool? UserIsManagedByOrganization { get; set; }
+    /// <returns>
+    /// False if the Account Deprovisioning feature flag is disabled.
+    /// </returns>
+    public bool UserIsManagedByOrganization { get; set; }
 }
