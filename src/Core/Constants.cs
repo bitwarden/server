@@ -114,7 +114,6 @@ public static class FeatureFlagKeys
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
     public const string AnhFcmv1Migration = "anh-fcmv1-migration";
     public const string ExtensionRefresh = "extension-refresh";
-    public const string RestrictProviderAccess = "restrict-provider-access";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string BulkDeviceApproval = "bulk-device-approval";
