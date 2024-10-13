@@ -14,28 +14,28 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IReadOnlyDictionary<PolicyType, IPolicyDefinition> _policyDefinitions;
+    private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
 
     public SavePolicyCommand(
         IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IPolicyRepository policyRepository,
-        IEnumerable<IPolicyDefinition> policyDefinitions)
+        IEnumerable<IPolicyValidator> policyValidators)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _policyRepository = policyRepository;
 
-        var policyDefinitionsDict = new Dictionary<PolicyType, IPolicyDefinition>();
-        foreach (var policyDefinition in policyDefinitions)
+        var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
+        foreach (var policyValidator in policyValidators)
         {
-            if (!policyDefinitionsDict.TryAdd(policyDefinition.Type, policyDefinition))
+            if (!policyValidatorsDict.TryAdd(policyValidator.Type, policyValidator))
             {
-                throw new Exception($"Duplicate PolicyDefinition for {policyDefinition.Type} policy.");
+                throw new Exception($"Duplicate PolicyValidator for {policyValidator.Type} policy.");
             }
         }
 
-        _policyDefinitions = policyDefinitionsDict;
+        _policyValidators = policyValidatorsDict;
     }
 
     public async Task SaveAsync(Policy policy, IOrganizationService organizationService, Guid? savingUserId)
@@ -51,14 +51,14 @@ public class SavePolicyCommand : ISavePolicyCommand
             throw new BadRequestException("This organization cannot use policies.");
         }
 
-        var policyDefinition = GetDefinition(policy.Type);
+        var policyValidator = GetValidator(policy.Type);
         var allSavedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(org.Id);
         var currentPolicy = allSavedPolicies.SingleOrDefault(p => p.Id == policy.Id);
 
         // If enabling this policy - check that all policy requirements are satisfied
         if (currentPolicy is not { Enabled: true } && policy.Enabled)
         {
-            var missingRequiredPolicyTypes = policyDefinition.RequiredPolicies
+            var missingRequiredPolicyTypes = policyValidator.RequiredPolicies
                 .Where(requiredPolicyType =>
                     allSavedPolicies.SingleOrDefault(p => p.Type == requiredPolicyType) is not { Enabled: true })
                 .ToList();
@@ -73,9 +73,9 @@ public class SavePolicyCommand : ISavePolicyCommand
         // If disabling this policy - ensure it's not required by any other policy
         if (currentPolicy is { Enabled: true } && !policy.Enabled)
         {
-            var dependentPolicies = _policyDefinitions.Values
-                .Where(policyDef => policyDef.RequiredPolicies.Contains(policy.Type))
-                .Select(policyDef => policyDef.Type)
+            var dependentPolicies = _policyValidators.Values
+                .Where(validator => validator.RequiredPolicies.Contains(policy.Type))
+                .Select(validator => validator.Type)
                 .Select(otherPolicyType => allSavedPolicies.SingleOrDefault(p => p.Type == otherPolicyType))
                 .Where(otherPolicy => otherPolicy is { Enabled: true })
                 .ToList();
@@ -87,14 +87,14 @@ public class SavePolicyCommand : ISavePolicyCommand
         }
 
         // Run other validation
-        var validationError = await policyDefinition.ValidateAsync(currentPolicy, policy);
+        var validationError = await policyValidator.ValidateAsync(currentPolicy, policy);
         if (!string.IsNullOrEmpty(validationError))
         {
             throw new BadRequestException(validationError);
         }
 
         // Run side effects
-        await policyDefinition.OnSaveSideEffectsAsync(currentPolicy, policy, organizationService);
+        await policyValidator.OnSaveSideEffectsAsync(currentPolicy, policy, organizationService);
 
         policy.RevisionDate = DateTime.UtcNow;
 
@@ -102,11 +102,11 @@ public class SavePolicyCommand : ISavePolicyCommand
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
     }
 
-    private IPolicyDefinition GetDefinition(PolicyType type)
+    private IPolicyValidator GetValidator(PolicyType type)
     {
-        if (!_policyDefinitions.TryGetValue(type, out var result))
+        if (!_policyValidators.TryGetValue(type, out var result))
         {
-            throw new Exception($"No PolicyDefinition found for {type} policy.");
+            throw new Exception($"No PolicyValidator found for {type} policy.");
         }
 
         return result;

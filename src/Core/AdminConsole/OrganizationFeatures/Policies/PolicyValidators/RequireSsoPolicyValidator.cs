@@ -5,13 +5,13 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class RequireSsoPolicyDefinition : IPolicyDefinition
+public class RequireSsoPolicyValidator : IPolicyValidator
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
 
-    public RequireSsoPolicyDefinition(ISsoConfigRepository ssoConfigRepository)
+    public RequireSsoPolicyValidator(ISsoConfigRepository ssoConfigRepository)
     {
         _ssoConfigRepository = ssoConfigRepository;
     }

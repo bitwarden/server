@@ -9,7 +9,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 /// <summary>
 /// Defines behavior and functionality for a given PolicyType.
 /// </summary>
-public interface IPolicyDefinition
+public interface IPolicyValidator
 {
     /// <summary>
     /// The PolicyType that this definition relates to.

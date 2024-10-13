@@ -8,17 +8,17 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 namespace Bit.Core.Test.AdminConsole.AutoFixture;
 
 /// <summary>
-/// Configures Autofixture to inject the provided IPolicyDefinition implementations into the PolicyService constructor.
+/// Configures Autofixture to inject the provided IPolicyValidator implementations into the PolicyService constructor.
 /// Note that this should usually be used even to inject an empty list, otherwise AutoFixture will create duplicate
-/// invalid IPolicyDefinitions.
+/// invalid IPolicyValidators.
 /// </summary>
 public class SavePolicyCommandSpecimenBuilder : ISpecimenBuilder
 {
-    private readonly IEnumerable<IPolicyDefinition> _policyDefinitions;
+    private readonly IEnumerable<IPolicyValidator> _policyValidators;
 
-    public SavePolicyCommandSpecimenBuilder(IEnumerable<IPolicyDefinition> policyDefinitions)
+    public SavePolicyCommandSpecimenBuilder(IEnumerable<IPolicyValidator> policyValidators)
     {
-        _policyDefinitions = policyDefinitions;
+        _policyValidators = policyValidators;
     }
 
     public object Create(object request, ISpecimenContext context)
@@ -28,11 +28,11 @@ public class SavePolicyCommandSpecimenBuilder : ISpecimenBuilder
             return new NoSpecimen();
 
         if (pi.Member.DeclaringType != typeof(SavePolicyCommand) ||
-            pi.ParameterType != typeof(IEnumerable<IPolicyDefinition>))
+            pi.ParameterType != typeof(IEnumerable<IPolicyValidator>))
         {
             return new NoSpecimen();
         }
 
-        return _policyDefinitions;
+        return _policyValidators;
     }
 }

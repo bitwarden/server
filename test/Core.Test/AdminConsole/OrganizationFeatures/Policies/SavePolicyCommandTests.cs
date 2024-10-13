@@ -16,16 +16,16 @@ using NSubstitute;
 using Xunit;
 using EventType = Bit.Core.Enums.EventType;
 
-namespace Bit.Core.Test.AdminConsole.Services;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 
 public class SavePolicyCommandTests
 {
     [Theory, BitAutoData]
     public async Task SaveAsync_Success([Policy(PolicyType.SingleOrg)] Policy policy)
     {
-        var fakePolicyDefinition = new FakeSingleOrgPolicyDefinition();
-        fakePolicyDefinition.ValidateAsyncMock(null, policy).Returns((string)null);
-        var sutProvider = SutProviderFactory([fakePolicyDefinition]);
+        var fakePolicyValidator = new FakeSingleOrgPolicyValidator();
+        fakePolicyValidator.ValidateAsyncMock(null, policy).Returns((string)null);
+        var sutProvider = SutProviderFactory([fakePolicyValidator]);
 
         var originalRevisionDate = policy.RevisionDate;
 
@@ -34,7 +34,7 @@ public class SavePolicyCommandTests
 
         await sutProvider.Sut.SaveAsync(policy, Substitute.For<IOrganizationService>(), Guid.NewGuid());
 
-        fakePolicyDefinition.OnSaveSideEffectsAsyncMock.Received(1).Invoke(null, policy, Arg.Any<IOrganizationService>());
+        fakePolicyValidator.OnSaveSideEffectsAsyncMock.Received(1).Invoke(null, policy, Arg.Any<IOrganizationService>());
         Assert.NotEqual(originalRevisionDate, policy.RevisionDate);
         await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(policy);
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -42,16 +42,16 @@ public class SavePolicyCommandTests
     }
 
     [Fact]
-    public void Constructor_DuplicatePolicyDefinitions_Throws()
+    public void Constructor_DuplicatePolicyValidators_Throws()
     {
         var exception = Assert.Throws<Exception>(() =>
             new SavePolicyCommand(
                 Substitute.For<IApplicationCacheService>(),
                 Substitute.For<IEventService>(),
                 Substitute.For<IPolicyRepository>(),
-                [new FakeSingleOrgPolicyDefinition(), new FakeSingleOrgPolicyDefinition()]
+                [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()]
             ));
-        Assert.Contains("Duplicate PolicyDefinition for SingleOrg policy", exception.Message);
+        Assert.Contains("Duplicate PolicyValidator for SingleOrg policy", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -89,7 +89,7 @@ public class SavePolicyCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_PolicyDefinitionNotFound_Throws([Policy(PolicyType.SingleOrg)] Policy policy)
+    public async Task SaveAsync_PolicyValidatorNotFound_Throws([Policy(PolicyType.SingleOrg)] Policy policy)
     {
         var sutProvider = SutProviderFactory();
         ArrangeOrganization(sutProvider, policy);
@@ -97,7 +97,7 @@ public class SavePolicyCommandTests
         var exception = await Assert.ThrowsAsync<Exception>(
             () => sutProvider.Sut.SaveAsync(policy, Substitute.For<IOrganizationService>(), Guid.NewGuid()));
 
-        Assert.Contains("No PolicyDefinition found for SingleOrg policy", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("No PolicyValidator found for SingleOrg policy", exception.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 
@@ -106,8 +106,8 @@ public class SavePolicyCommandTests
         [Policy(PolicyType.RequireSso)] Policy policy)
     {
         var sutProvider = SutProviderFactory([
-            new FakeRequireSsoPolicyDefinition(),
-            new FakeSingleOrgPolicyDefinition()
+            new FakeRequireSsoPolicyValidator(),
+            new FakeSingleOrgPolicyValidator()
         ]);
 
         ArrangeOrganization(sutProvider, policy);
@@ -128,8 +128,8 @@ public class SavePolicyCommandTests
         [Policy(PolicyType.RequireSso)] Policy policy)
     {
         var sutProvider = SutProviderFactory([
-            new FakeRequireSsoPolicyDefinition(),
-            new FakeSingleOrgPolicyDefinition()
+            new FakeRequireSsoPolicyValidator(),
+            new FakeSingleOrgPolicyValidator()
         ]);
 
         ArrangeOrganization(sutProvider, policy);
@@ -150,8 +150,8 @@ public class SavePolicyCommandTests
         [Policy(PolicyType.RequireSso)] Policy policy)
     {
         var sutProvider = SutProviderFactory([
-            new FakeRequireSsoPolicyDefinition(),
-            new FakeSingleOrgPolicyDefinition()
+            new FakeRequireSsoPolicyValidator(),
+            new FakeSingleOrgPolicyValidator()
         ]);
 
         ArrangeOrganization(sutProvider, policy);
@@ -171,8 +171,8 @@ public class SavePolicyCommandTests
         [Policy(PolicyType.RequireSso)] Policy requireSsoPolicy) // depends on Single Org
     {
         var sutProvider = SutProviderFactory([
-            new FakeRequireSsoPolicyDefinition(),
-            new FakeSingleOrgPolicyDefinition()
+            new FakeRequireSsoPolicyValidator(),
+            new FakeSingleOrgPolicyValidator()
         ]);
 
         policy.Id = currentPolicy.Id;
@@ -195,8 +195,8 @@ public class SavePolicyCommandTests
         [Policy(PolicyType.RequireSso, false)] Policy requireSsoPolicy) // depends on Single Org but is not enabled
     {
         var sutProvider = SutProviderFactory([
-            new FakeRequireSsoPolicyDefinition(),
-            new FakeSingleOrgPolicyDefinition()
+            new FakeRequireSsoPolicyValidator(),
+            new FakeSingleOrgPolicyValidator()
         ]);
 
         policy.Id = currentPolicy.Id;
@@ -213,9 +213,9 @@ public class SavePolicyCommandTests
     [Theory, BitAutoData]
     public async Task SaveAsync_ThrowsOnValidationError([Policy(PolicyType.SingleOrg)] Policy policy)
     {
-        var fakePolicyDefinition = new FakeSingleOrgPolicyDefinition();
-        fakePolicyDefinition.ValidateAsyncMock(null, policy).Returns("Validation error!");
-        var sutProvider = SutProviderFactory([fakePolicyDefinition]);
+        var fakePolicyValidator = new FakeSingleOrgPolicyValidator();
+        fakePolicyValidator.ValidateAsyncMock(null, policy).Returns("Validation error!");
+        var sutProvider = SutProviderFactory([fakePolicyValidator]);
 
         ArrangeOrganization(sutProvider, policy);
         sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policy.OrganizationId).Returns([]);
@@ -228,12 +228,12 @@ public class SavePolicyCommandTests
     }
 
     /// <summary>
-    /// Returns a new SutProvider with the PolicyDefinitions registered in the Sut.
+    /// Returns a new SutProvider with the PolicyValidators registered in the Sut.
     /// </summary>
-    private static SutProvider<SavePolicyCommand> SutProviderFactory(IEnumerable<IPolicyDefinition> policyDefinitions = null)
+    private static SutProvider<SavePolicyCommand> SutProviderFactory(IEnumerable<IPolicyValidator> policyValidators = null)
     {
         var fixture = new Fixture();
-        fixture.Customizations.Add(new SavePolicyCommandSpecimenBuilder(policyDefinitions ?? new List<IPolicyDefinition>()));
+        fixture.Customizations.Add(new SavePolicyCommandSpecimenBuilder(policyValidators ?? new List<IPolicyValidator>()));
         var sutProvider = new SutProvider<SavePolicyCommand>(fixture);
         sutProvider.Create();
         return sutProvider;

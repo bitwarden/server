@@ -6,15 +6,15 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class ResetPasswordPolicyDefinition : IPolicyDefinition
+public class ResetPasswordPolicyValidator : IPolicyValidator
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
     public PolicyType Type => PolicyType.ResetPassword;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
-    public ResetPasswordPolicyDefinition(ISsoConfigRepository ssoConfigRepository)
+    public ResetPasswordPolicyValidator(ISsoConfigRepository ssoConfigRepository)
     {
         _ssoConfigRepository = ssoConfigRepository;
     }

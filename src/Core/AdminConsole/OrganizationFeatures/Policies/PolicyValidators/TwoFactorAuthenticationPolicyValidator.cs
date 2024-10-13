@@ -9,9 +9,9 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class TwoFactorAuthenticationPolicyDefinition : IPolicyDefinition
+public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
@@ -21,7 +21,7 @@ public class TwoFactorAuthenticationPolicyDefinition : IPolicyDefinition
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
 
-    public TwoFactorAuthenticationPolicyDefinition(
+    public TwoFactorAuthenticationPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IOrganizationRepository organizationRepository,

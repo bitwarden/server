@@ -6,9 +6,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Services;
 using NSubstitute;
 
-namespace Bit.Core.Test.AdminConsole.Services;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 
-public class FakeSingleOrgPolicyDefinition : IPolicyDefinition
+public class FakeSingleOrgPolicyValidator : IPolicyValidator
 {
     public PolicyType Type => PolicyType.SingleOrg;
     public IEnumerable<PolicyType> RequiredPolicies => Array.Empty<PolicyType>();
@@ -27,7 +27,7 @@ public class FakeSingleOrgPolicyDefinition : IPolicyDefinition
         return Task.FromResult(0);
     }
 }
-public class FakeRequireSsoPolicyDefinition : IPolicyDefinition
+public class FakeRequireSsoPolicyValidator : IPolicyValidator
 {
     public PolicyType Type => PolicyType.RequireSso;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];

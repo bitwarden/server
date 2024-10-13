@@ -10,9 +10,9 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class SingleOrgPolicyDefinition : IPolicyDefinition
+public class SingleOrgPolicyValidator : IPolicyValidator
 {
     public PolicyType Type => PolicyType.SingleOrg;
 
@@ -22,7 +22,7 @@ public class SingleOrgPolicyDefinition : IPolicyDefinition
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
 
-    public SingleOrgPolicyDefinition(
+    public SingleOrgPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
