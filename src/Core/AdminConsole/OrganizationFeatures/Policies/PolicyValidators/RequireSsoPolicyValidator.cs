@@ -19,17 +19,17 @@ public class RequireSsoPolicyValidator : IPolicyValidator
     public PolicyType Type => PolicyType.RequireSso;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
-    public async Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    public async Task<string> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
         if (modifiedPolicy is not { Enabled: true })
         {
             return await ValidateDisableAsync(modifiedPolicy);
         }
 
-        return null;
+        return "";
     }
 
-    private async Task<string?> ValidateDisableAsync(Policy policy)
+    private async Task<string> ValidateDisableAsync(Policy policy)
     {
         // Do not allow this policy to be disabled if Key Connector or TDE are being used
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policy.OrganizationId);
@@ -37,7 +37,7 @@ public class RequireSsoPolicyValidator : IPolicyValidator
         {
             MemberDecryptionType.KeyConnector => "Key Connector is enabled.",
             MemberDecryptionType.TrustedDeviceEncryption => "Trusted device encryption is on and requires this policy.",
-            _ => null
+            _ => ""
         };
     }
 }

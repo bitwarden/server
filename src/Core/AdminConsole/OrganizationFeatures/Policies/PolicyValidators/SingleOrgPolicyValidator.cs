@@ -84,25 +84,24 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         }
     }
 
-    public async Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    public async Task<string> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
         if (modifiedPolicy is not { Enabled: true })
         {
             return await ValidateDisableAsync(modifiedPolicy);
         }
 
-        return null;
+        return "";
     }
 
-    private async Task<string?> ValidateDisableAsync(Policy policy)
+    private async Task<string> ValidateDisableAsync(Policy policy)
     {
         // Do not allow this policy to be disabled if Key Connector is being used
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policy.OrganizationId);
-        if (ssoConfig?.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector)
+        return ssoConfig?.GetData().MemberDecryptionType switch
         {
-            return "Key Connector is enabled.";
-        }
-
-        return null;
+            MemberDecryptionType.KeyConnector => "Key Connector is enabled.",
+            _ => ""
+        };
     }
 }

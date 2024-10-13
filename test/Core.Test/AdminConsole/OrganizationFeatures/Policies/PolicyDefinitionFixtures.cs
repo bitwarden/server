@@ -13,10 +13,10 @@ public class FakeSingleOrgPolicyValidator : IPolicyValidator
     public PolicyType Type => PolicyType.SingleOrg;
     public IEnumerable<PolicyType> RequiredPolicies => Array.Empty<PolicyType>();
 
-    public readonly Func<Policy?, Policy, Task<string?>> ValidateAsyncMock = Substitute.For<Func<Policy?, Policy, Task<string?>>>();
+    public readonly Func<Policy?, Policy, Task<string>> ValidateAsyncMock = Substitute.For<Func<Policy?, Policy, Task<string>>>();
     public readonly Action<Policy?, Policy, IOrganizationService> OnSaveSideEffectsAsyncMock = Substitute.For<Action<Policy?, Policy, IOrganizationService>>();
 
-    public Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    public Task<string> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
         return ValidateAsyncMock(currentPolicy, modifiedPolicy);
     }

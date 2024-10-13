@@ -30,7 +30,7 @@ public interface IPolicyValidator
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <param name="modifiedPolicy">The modified policy to be saved</param>
     /// <returns>A sequence of validation errors if validation was unsuccessful</returns>
-    public Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy) => Task.FromResult<string?>(null);
+    public Task<string> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy) => Task.FromResult("");
 
     /// <summary>
     /// Performs side effects after a policy is validated but before it is saved.

@@ -19,7 +19,7 @@ public class ResetPasswordPolicyValidator : IPolicyValidator
         _ssoConfigRepository = ssoConfigRepository;
     }
 
-    public async Task<string?> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    public async Task<string> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
     {
         if (modifiedPolicy is not { Enabled: true } ||
             modifiedPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled == false)
@@ -27,17 +27,16 @@ public class ResetPasswordPolicyValidator : IPolicyValidator
             return await ValidateDisableAsync(modifiedPolicy);
         }
 
-        return null;
+        return "";
     }
 
-    private async Task<string?> ValidateDisableAsync(Policy policy)
+    private async Task<string> ValidateDisableAsync(Policy policy)
     {
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policy.OrganizationId);
-        if (ssoConfig?.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
+        return ssoConfig?.GetData().MemberDecryptionType switch
         {
-            return "Trusted device encryption is on and requires this policy.";
-        }
-
-        return null;
+            MemberDecryptionType.TrustedDeviceEncryption => "Trusted device encryption is on and requires this policy.",
+            _ => ""
+        };
     }
 }
