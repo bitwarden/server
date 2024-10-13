@@ -24,7 +24,7 @@ public class SavePolicyCommandTests
     public async Task SaveAsync_Success([Policy(PolicyType.SingleOrg)] Policy policy)
     {
         var fakePolicyValidator = new FakeSingleOrgPolicyValidator();
-        fakePolicyValidator.ValidateAsyncMock(null, policy).Returns((string)null);
+        fakePolicyValidator.ValidateAsyncMock(null, policy).Returns("");
         var sutProvider = SutProviderFactory([fakePolicyValidator]);
 
         var originalRevisionDate = policy.RevisionDate;
@@ -60,7 +60,7 @@ public class SavePolicyCommandTests
         var sutProvider = SutProviderFactory();
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(policy.OrganizationId)
-            .Returns((OrganizationAbility)null);
+            .Returns(Task.FromResult<OrganizationAbility?>(null));
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy, Substitute.For<IOrganizationService>(), Guid.NewGuid()));
@@ -133,7 +133,7 @@ public class SavePolicyCommandTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_RequiredPolicyEnabled_Success(
-        [Policy(PolicyType.SingleOrg, true)] Policy singleOrgPolicy,
+        [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
         [Policy(PolicyType.RequireSso)] Policy policy)
     {
         var sutProvider = SutProviderFactory([
@@ -217,7 +217,7 @@ public class SavePolicyCommandTests
     /// <summary>
     /// Returns a new SutProvider with the PolicyValidators registered in the Sut.
     /// </summary>
-    private static SutProvider<SavePolicyCommand> SutProviderFactory(IEnumerable<IPolicyValidator> policyValidators = null)
+    private static SutProvider<SavePolicyCommand> SutProviderFactory(IEnumerable<IPolicyValidator>? policyValidators = null)
     {
         var fixture = new Fixture();
         fixture.Customizations.Add(new SavePolicyCommandSpecimenBuilder(policyValidators ?? new List<IPolicyValidator>()));
@@ -241,10 +241,10 @@ public class SavePolicyCommandTests
     {
         await sutProvider.GetDependency<IPolicyRepository>()
             .DidNotReceiveWithAnyArgs()
-            .UpsertAsync(default);
+            .UpsertAsync(default!);
 
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceiveWithAnyArgs()
-            .LogPolicyEventAsync(default, default, default);
+            .LogPolicyEventAsync(default, default);
     }
 }
