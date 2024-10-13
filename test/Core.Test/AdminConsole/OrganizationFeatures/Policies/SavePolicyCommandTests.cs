@@ -89,19 +89,6 @@ public class SavePolicyCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_PolicyValidatorNotFound_Throws([Policy(PolicyType.SingleOrg)] Policy policy)
-    {
-        var sutProvider = SutProviderFactory();
-        ArrangeOrganization(sutProvider, policy);
-
-        var exception = await Assert.ThrowsAsync<Exception>(
-            () => sutProvider.Sut.SaveAsync(policy, Substitute.For<IOrganizationService>(), Guid.NewGuid()));
-
-        Assert.Contains("No PolicyValidator found for SingleOrg policy", exception.Message, StringComparison.OrdinalIgnoreCase);
-        await AssertPolicyNotSavedAsync(sutProvider);
-    }
-
-    [Theory, BitAutoData]
     public async Task SaveAsync_RequiredPolicyIsNull_Throws(
         [Policy(PolicyType.RequireSso)] Policy policy)
     {

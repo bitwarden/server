@@ -51,14 +51,26 @@ public class SavePolicyCommand : ISavePolicyCommand
             throw new BadRequestException("This organization cannot use policies.");
         }
 
-        var policyValidator = GetValidator(policy.Type);
-        var allSavedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(org.Id);
+        if (_policyValidators.TryGetValue(policy.Type, out var validator))
+        {
+            await RunValidatorAsync(validator, policy, organizationService);
+        }
+
+        policy.RevisionDate = DateTime.UtcNow;
+
+        await _policyRepository.UpsertAsync(policy);
+        await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+    }
+
+    private async Task RunValidatorAsync(IPolicyValidator validator, Policy policy, IOrganizationService organizationService)
+    {
+        var allSavedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policy.OrganizationId);
         var currentPolicy = allSavedPolicies.SingleOrDefault(p => p.Id == policy.Id);
 
         // If enabling this policy - check that all policy requirements are satisfied
         if (currentPolicy is not { Enabled: true } && policy.Enabled)
         {
-            var missingRequiredPolicyTypes = policyValidator.RequiredPolicies
+            var missingRequiredPolicyTypes = validator.RequiredPolicies
                 .Where(requiredPolicyType =>
                     allSavedPolicies.SingleOrDefault(p => p.Type == requiredPolicyType) is not { Enabled: true })
                 .ToList();
@@ -74,8 +86,8 @@ public class SavePolicyCommand : ISavePolicyCommand
         if (currentPolicy is { Enabled: true } && !policy.Enabled)
         {
             var dependentPolicies = _policyValidators.Values
-                .Where(validator => validator.RequiredPolicies.Contains(policy.Type))
-                .Select(validator => validator.Type)
+                .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policy.Type))
+                .Select(otherValidator => otherValidator.Type)
                 .Select(otherPolicyType => allSavedPolicies.SingleOrDefault(p => p.Type == otherPolicyType))
                 .Where(otherPolicy => otherPolicy is { Enabled: true })
                 .ToList();
@@ -87,28 +99,13 @@ public class SavePolicyCommand : ISavePolicyCommand
         }
 
         // Run other validation
-        var validationError = await policyValidator.ValidateAsync(currentPolicy, policy);
+        var validationError = await validator.ValidateAsync(currentPolicy, policy);
         if (!string.IsNullOrEmpty(validationError))
         {
             throw new BadRequestException(validationError);
         }
 
         // Run side effects
-        await policyValidator.OnSaveSideEffectsAsync(currentPolicy, policy, organizationService);
-
-        policy.RevisionDate = DateTime.UtcNow;
-
-        await _policyRepository.UpsertAsync(policy);
-        await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
-    }
-
-    private IPolicyValidator GetValidator(PolicyType type)
-    {
-        if (!_policyValidators.TryGetValue(type, out var result))
-        {
-            throw new Exception($"No PolicyValidator found for {type} policy.");
-        }
-
-        return result;
+        await validator.OnSaveSideEffectsAsync(currentPolicy, policy, organizationService);
     }
 }
