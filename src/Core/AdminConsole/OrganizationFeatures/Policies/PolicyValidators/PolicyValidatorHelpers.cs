@@ -14,15 +14,15 @@ public static class PolicyValidatorHelpers
     /// <returns>A validation error if validation was unsuccessful, otherwise an empty string</returns>
     public static async Task<string> ValidateDecryptionTypesNotEnabledAsync(PolicyUpdate policyUpdate,
         MemberDecryptionType[] decryptionOptions, ISsoConfigRepository ssoConfigRepository)
+    {
+        var ssoConfig = await ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
+        return ssoConfig?.GetData().MemberDecryptionType switch
         {
-            var ssoConfig = await ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-            return ssoConfig?.GetData().MemberDecryptionType switch
-            {
-                MemberDecryptionType.KeyConnector when decryptionOptions.Contains(MemberDecryptionType.KeyConnector)
-                    => "Key Connector is enabled and requires this policy.",
-                MemberDecryptionType.TrustedDeviceEncryption when decryptionOptions.Contains(MemberDecryptionType
-                    .TrustedDeviceEncryption) => "Trusted device encryption is on and requires this policy.",
-                _ => ""
-            };
-        }
+            MemberDecryptionType.KeyConnector when decryptionOptions.Contains(MemberDecryptionType.KeyConnector)
+                => "Key Connector is enabled and requires this policy.",
+            MemberDecryptionType.TrustedDeviceEncryption when decryptionOptions.Contains(MemberDecryptionType
+                .TrustedDeviceEncryption) => "Trusted device encryption is on and requires this policy.",
+            _ => ""
+        };
+    }
 }
