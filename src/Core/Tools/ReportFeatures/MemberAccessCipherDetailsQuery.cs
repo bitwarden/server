@@ -7,15 +7,15 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Core.Tools.Models.Data;
-using Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Core.Tools.ReportFeatures.Requests;
 
-namespace Core.Tools.ReportFeatures;
+namespace Bit.Core.Tools.ReportFeatures;
 
 public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
 {

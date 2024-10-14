@@ -1,8 +1,8 @@
 ﻿
-using Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
+using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Core.Tools.ReportFeatures;
+namespace Bit.Core.Tools.ReportFeatures;
 
 public static class ReportingServiceCollectionExtensions
 {

@@ -1,12 +1,9 @@
 ﻿using Api.Tools.Models.Response;
 using Bit.Api.Tools.Models.Response;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Core.Tools.Models.Data;
-using Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Core.Tools.ReportFeatures.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,9 +18,6 @@ public class ReportsController : Controller
     private readonly IMemberAccessCipherDetailsQuery _memberAccessCipherDetailsQuery;
 
     public ReportsController(
-        IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
-        IGroupRepository groupRepository,
-        ICollectionRepository collectionRepository,
         ICurrentContext currentContext,
         IMemberAccessCipherDetailsQuery memberAccessCipherDetailsQuery
     )

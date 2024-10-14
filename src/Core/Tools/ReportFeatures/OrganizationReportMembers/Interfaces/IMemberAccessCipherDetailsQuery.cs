@@ -1,7 +1,7 @@
 ﻿using Core.Tools.Models.Data;
 using Core.Tools.ReportFeatures.Requests;
 
-namespace Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
+namespace Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 
 public interface IMemberAccessCipherDetailsQuery
 {
