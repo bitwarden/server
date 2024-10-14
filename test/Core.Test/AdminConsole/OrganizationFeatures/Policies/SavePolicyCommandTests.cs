@@ -144,7 +144,7 @@ public class SavePolicyCommandTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policyUpdate, Substitute.For<IOrganizationService>(), Guid.NewGuid()));
 
-        Assert.Contains("Policy requires SingleOrg policy to be enabled", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Policy requires the Single organization policy to be enabled", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 
@@ -166,7 +166,7 @@ public class SavePolicyCommandTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policyUpdate, Substitute.For<IOrganizationService>(), Guid.NewGuid()));
 
-        Assert.Contains("Policy requires SingleOrg policy to be enabled", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Policy requires the Single organization policy to be enabled", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 
@@ -208,7 +208,7 @@ public class SavePolicyCommandTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policyUpdate, Substitute.For<IOrganizationService>(), Guid.NewGuid()));
 
-        Assert.Contains("This policy is required by RequireSso policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("This policy is required by the Require single sign-on authentication policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 

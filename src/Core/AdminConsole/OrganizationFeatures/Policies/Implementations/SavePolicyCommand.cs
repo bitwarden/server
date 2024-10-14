@@ -74,36 +74,38 @@ public class SavePolicyCommand : ISavePolicyCommand
 
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate, IOrganizationService organizationService)
     {
-        var allSavedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
-        var currentPolicy = allSavedPolicies.SingleOrDefault(p => p.Type == policyUpdate.Type);
+        var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
+        // Note: policies may be missing from this dict if they have never been enabled
+        var savedPoliciesDict = savedPolicies.ToDictionary(p => p.Type);
+        var currentPolicy = savedPoliciesDict.GetValueOrDefault(policyUpdate.Type);
 
         // If enabling this policy - check that all policy requirements are satisfied
         if (currentPolicy is not { Enabled: true } && policyUpdate.Enabled)
         {
             var missingRequiredPolicyTypes = validator.RequiredPolicies
                 .Where(requiredPolicyType =>
-                    allSavedPolicies.SingleOrDefault(p => p.Type == requiredPolicyType) is not { Enabled: true })
+                    savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
                 .ToList();
 
             if (missingRequiredPolicyTypes.Count != 0)
             {
-                throw new BadRequestException($"Policy requires {missingRequiredPolicyTypes.First()} policy to be enabled first.");
+                throw new BadRequestException($"Policy requires the {missingRequiredPolicyTypes.First().GetName()} policy to be enabled first.");
             }
         }
 
         // If disabling this policy - ensure it's not required by any other policy
         if (currentPolicy is { Enabled: true } && !policyUpdate.Enabled)
         {
-            var dependentPolicies = _policyValidators.Values
+            var dependentPolicyTypes = _policyValidators.Values
                 .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyUpdate.Type))
                 .Select(otherValidator => otherValidator.Type)
-                .Select(otherPolicyType => allSavedPolicies.SingleOrDefault(p => p.Type == otherPolicyType))
-                .Where(otherPolicy => otherPolicy is { Enabled: true })
+                .Where(otherPolicyType => savedPoliciesDict.ContainsKey(otherPolicyType) &&
+                    savedPoliciesDict[otherPolicyType].Enabled)
                 .ToList();
 
-            if (dependentPolicies is { Count: > 0 })
+            if (dependentPolicyTypes is { Count: > 0 })
             {
-                throw new BadRequestException($"This policy is required by {dependentPolicies.First()!.Type} policy. Try disabling that policy first.");
+                throw new BadRequestException($"This policy is required by the {dependentPolicyTypes.First().GetName()} policy. Try disabling that policy first.");
             }
         }
 
