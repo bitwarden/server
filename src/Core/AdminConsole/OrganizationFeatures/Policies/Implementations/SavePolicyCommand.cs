@@ -87,8 +87,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 
             if (missingRequiredPolicyTypes.Count != 0)
             {
-                // TODO: would be better to reference the name instead of the enum
-                throw new BadRequestException("Policy requires PolicyType " + missingRequiredPolicyTypes.First() + " to be enabled first.");
+                throw new BadRequestException($"Policy requires { missingRequiredPolicyTypes.First() } policy to be enabled first.");
             }
         }
 
@@ -104,7 +103,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 
             if (dependentPolicies is { Count: > 0 })
             {
-                throw new BadRequestException("This policy is required by " + dependentPolicies.First()!.Type + " policy. Try disabling that policy first.");
+                throw new BadRequestException($"This policy is required by { dependentPolicies.First()!.Type } policy. Try disabling that policy first.");
             }
         }
 
