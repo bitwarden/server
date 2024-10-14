@@ -38,6 +38,44 @@ public class SavePolicyCommandTests
         await AssertPolicySavedAsync(sutProvider, policyUpdate);
     }
 
+    [Theory, BitAutoData]
+    public async Task SaveAsync_ExistingPolicy_Success(
+        [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg, false)] Policy currentPolicy)
+    {
+        var fakePolicyValidator = new FakeSingleOrgPolicyValidator();
+        fakePolicyValidator.ValidateAsyncMock(policyUpdate, null).Returns("");
+        var sutProvider = SutProviderFactory([fakePolicyValidator]);
+
+        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+            .Returns(currentPolicy);
+
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policyUpdate.OrganizationId).Returns([]);
+
+        // Store mutable properties separately to assert later
+        var id = currentPolicy.Id;
+        var organizationId = currentPolicy.OrganizationId;
+        var type = currentPolicy.Type;
+        var creationDate = currentPolicy.CreationDate;
+        var revisionDate = currentPolicy.RevisionDate;
+
+        await sutProvider.Sut.SaveAsync(policyUpdate, Substitute.For<IOrganizationService>(), Guid.NewGuid());
+
+        fakePolicyValidator.OnSaveSideEffectsAsyncMock.Received(1).Invoke(policyUpdate, null, Arg.Any<IOrganizationService>());
+
+        await AssertPolicySavedAsync(sutProvider, policyUpdate);
+        // Additional assertions to ensure certain properties have or have not been updated
+        await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(Arg.Is<Policy>(p =>
+            p.Id == id &&
+            p.OrganizationId == organizationId &&
+            p.Type == type &&
+            p.CreationDate == creationDate &&
+            p.RevisionDate != revisionDate));
+    }
+
     [Fact]
     public void Constructor_DuplicatePolicyValidators_Throws()
     {
@@ -242,8 +280,7 @@ public class SavePolicyCommandTests
             .LogPolicyEventAsync(default, default);
     }
 
-    private static async Task AssertPolicySavedAsync(SutProvider<SavePolicyCommand> sutProvider, PolicyUpdate policyUpdate,
-        Guid? savingUserId = null)
+    private static async Task AssertPolicySavedAsync(SutProvider<SavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
     {
         var expectedPolicy = () => Arg.Is<Policy>(p =>
             p.Type == policyUpdate.Type &&
