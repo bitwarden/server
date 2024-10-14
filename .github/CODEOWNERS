@@ -4,6 +4,21 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
+## Docker files have shared ownership ##
+**/Dockerfile
+**/*.Dockerfile
+**/.dockerignore
+**/entrypoint.sh
+
+## BRE team owns these workflows ##
+.github/workflows/publish.yml @bitwarden/dept-bre
+
+## These are shared workflows ##
+.github/workflows/cleanup-after-pr.yml
+.github/workflows/cleanup-rc-branch.yml
+.github/workflows/release.yml
+.github/workflows/version-bump.yml
+
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
 util/EfShared/** @bitwarden/dept-dbops
@@ -50,6 +65,3 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
-
-# BRE for release workflow changes
-.github/workflows/release.yml @bitwarden/dept-bre
