@@ -52,7 +52,7 @@
     <PackageReference Include="Sentry.Serilog" Version="3.41.4" />
     <PackageReference Include="Duende.IdentityServer" Version="7.0.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Serilog.Sinks.SyslogMessages" Version="3.0.2" />
+    <PackageReference Include="Serilog.Sinks.SyslogMessages" Version="4.0.0" />
     <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
     <PackageReference Include="Braintree" Version="5.27.0" />
     <PackageReference Include="Stripe.net" Version="45.14.0" />
