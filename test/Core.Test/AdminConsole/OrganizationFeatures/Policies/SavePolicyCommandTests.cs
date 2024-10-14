@@ -33,6 +33,7 @@ public class SavePolicyCommandTests
 
         await sutProvider.Sut.SaveAsync(policyUpdate, Substitute.For<IOrganizationService>(), Guid.NewGuid());
 
+        await fakePolicyValidator.ValidateAsyncMock.Received(1).Invoke(policyUpdate, null);
         fakePolicyValidator.OnSaveSideEffectsAsyncMock.Received(1).Invoke(policyUpdate, null, Arg.Any<IOrganizationService>());
 
         await AssertPolicySavedAsync(sutProvider, policyUpdate);
@@ -53,7 +54,9 @@ public class SavePolicyCommandTests
             .Returns(currentPolicy);
 
         ArrangeOrganization(sutProvider, policyUpdate);
-        sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policyUpdate.OrganizationId).Returns([]);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns([currentPolicy]);
 
         // Store mutable properties separately to assert later
         var id = currentPolicy.Id;
@@ -64,7 +67,8 @@ public class SavePolicyCommandTests
 
         await sutProvider.Sut.SaveAsync(policyUpdate, Substitute.For<IOrganizationService>(), Guid.NewGuid());
 
-        fakePolicyValidator.OnSaveSideEffectsAsyncMock.Received(1).Invoke(policyUpdate, null, Arg.Any<IOrganizationService>());
+        await fakePolicyValidator.ValidateAsyncMock.Received(1).Invoke(policyUpdate, currentPolicy);
+        fakePolicyValidator.OnSaveSideEffectsAsyncMock.Received(1).Invoke(policyUpdate, currentPolicy, Arg.Any<IOrganizationService>());
 
         await AssertPolicySavedAsync(sutProvider, policyUpdate);
         // Additional assertions to ensure certain properties have or have not been updated
