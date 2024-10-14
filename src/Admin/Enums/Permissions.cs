@@ -48,5 +48,6 @@ public enum Permission
     Tools_ManageTaxRates,
     Tools_ManageStripeSubscriptions,
     Tools_CreateEditTransaction,
-    Tools_ProcessStripeEvents
+    Tools_ProcessStripeEvents,
+    Tools_MigrateProviders
 }

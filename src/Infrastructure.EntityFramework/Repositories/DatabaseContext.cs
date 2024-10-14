@@ -74,6 +74,7 @@ public class DatabaseContext : DbContext
     public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
+    public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -10,8 +10,7 @@ namespace Bit.Core.AdminConsole.Services;
 
 public interface IPolicyService
 {
-    Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
-        Guid? savingUserId);
+    Task SaveAsync(Policy policy, IOrganizationService organizationService, Guid? savingUserId);
 
     /// <summary>
     /// Get the combined master password policy options for the specified user.

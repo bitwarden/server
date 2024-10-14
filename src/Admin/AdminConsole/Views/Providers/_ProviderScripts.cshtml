@@ -20,9 +20,10 @@
 
     function deleteProvider(id) {
         const providerName = $('#DeleteModal input#provider-name').val();
+        const encodedProviderName = encodeURIComponent(providerName);
         $.ajax({
             type: "POST",
-            url: `@Url.Action("Delete", "Providers")?id=${id}&providerName=${providerName}`,
+            url: `@Url.Action("Delete", "Providers")?id=${id}&providerName=${encodedProviderName}`,
             dataType: 'json',
             contentType: false,
             processData: false,

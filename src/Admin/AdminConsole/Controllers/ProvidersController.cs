@@ -367,7 +367,7 @@ public class ProvidersController : Controller
             return BadRequest("Provider does not exist");
         }
 
-        if (!string.Equals(providerName.Trim(), provider.Name, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(providerName.Trim(), provider.DisplayName(), StringComparison.OrdinalIgnoreCase))
         {
             return BadRequest("Invalid provider name");
         }
