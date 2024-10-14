@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -38,9 +39,9 @@ public class SavePolicyCommand : ISavePolicyCommand
         _policyValidators = policyValidatorsDict;
     }
 
-    public async Task SaveAsync(Policy policy, IOrganizationService organizationService, Guid? savingUserId)
+    public async Task SaveAsync(PolicyUpdate policyUpdate, IOrganizationService organizationService, Guid? savingUserId)
     {
-        var org = await _applicationCacheService.GetOrganizationAbilityAsync(policy.OrganizationId);
+        var org = await _applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
         if (org == null)
         {
             throw new BadRequestException("Organization not found");
@@ -51,24 +52,33 @@ public class SavePolicyCommand : ISavePolicyCommand
             throw new BadRequestException("This organization cannot use policies.");
         }
 
-        if (_policyValidators.TryGetValue(policy.Type, out var validator))
+        if (_policyValidators.TryGetValue(policyUpdate.Type, out var validator))
         {
-            await RunValidatorAsync(validator, policy, organizationService);
+            await RunValidatorAsync(validator, policyUpdate, organizationService);
         }
 
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+                     ?? new Policy
+                     {
+                         OrganizationId = policyUpdate.OrganizationId,
+                         Type = policyUpdate.Type
+                     };
+
+        policy.Enabled = policyUpdate.Enabled;
+        policy.Data = policyUpdate.Data;
         policy.RevisionDate = DateTime.UtcNow;
 
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
     }
 
-    private async Task RunValidatorAsync(IPolicyValidator validator, Policy policy, IOrganizationService organizationService)
+    private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate, IOrganizationService organizationService)
     {
-        var allSavedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policy.OrganizationId);
-        var currentPolicy = allSavedPolicies.SingleOrDefault(p => p.Id == policy.Id);
+        var allSavedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
+        var currentPolicy = allSavedPolicies.SingleOrDefault(p => p.Type == policyUpdate.Type);
 
         // If enabling this policy - check that all policy requirements are satisfied
-        if (currentPolicy is not { Enabled: true } && policy.Enabled)
+        if (currentPolicy is not { Enabled: true } && policyUpdate.Enabled)
         {
             var missingRequiredPolicyTypes = validator.RequiredPolicies
                 .Where(requiredPolicyType =>
@@ -83,10 +93,10 @@ public class SavePolicyCommand : ISavePolicyCommand
         }
 
         // If disabling this policy - ensure it's not required by any other policy
-        if (currentPolicy is { Enabled: true } && !policy.Enabled)
+        if (currentPolicy is { Enabled: true } && !policyUpdate.Enabled)
         {
             var dependentPolicies = _policyValidators.Values
-                .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policy.Type))
+                .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyUpdate.Type))
                 .Select(otherValidator => otherValidator.Type)
                 .Select(otherPolicyType => allSavedPolicies.SingleOrDefault(p => p.Type == otherPolicyType))
                 .Where(otherPolicy => otherPolicy is { Enabled: true })
@@ -99,13 +109,13 @@ public class SavePolicyCommand : ISavePolicyCommand
         }
 
         // Run other validation
-        var validationError = await validator.ValidateAsync(currentPolicy, policy);
+        var validationError = await validator.ValidateAsync(policyUpdate, currentPolicy);
         if (!string.IsNullOrEmpty(validationError))
         {
             throw new BadRequestException(validationError);
         }
 
         // Run side effects
-        await validator.OnSaveSideEffectsAsync(currentPolicy, policy, organizationService);
+        await validator.OnSaveSideEffectsAsync(policyUpdate, currentPolicy, organizationService);
     }
 }

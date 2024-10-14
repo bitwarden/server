@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -35,11 +36,11 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
-    public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy, IOrganizationService organizationService)
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService)
     {
-        if (currentPolicy is not { Enabled: true } && modifiedPolicy is { Enabled: true })
+        if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
-            await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId, organizationService);
+            await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId, organizationService);
         }
     }
 

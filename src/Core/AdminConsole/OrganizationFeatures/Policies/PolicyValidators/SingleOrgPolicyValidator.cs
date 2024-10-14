@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -36,11 +37,11 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         _currentContext = currentContext;
     }
 
-    public async Task OnSaveSideEffectsAsync(Policy? currentPolicy, Policy modifiedPolicy, IOrganizationService organizationService)
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService)
     {
-        if (currentPolicy is not { Enabled: true } && modifiedPolicy is { Enabled: true })
+        if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
-            await RemoveNonCompliantUsersAsync(modifiedPolicy.OrganizationId, organizationService);
+            await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId, organizationService);
         }
     }
 
@@ -84,20 +85,20 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         }
     }
 
-    public async Task<string> ValidateAsync(Policy? currentPolicy, Policy modifiedPolicy)
+    public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-        if (modifiedPolicy is not { Enabled: true })
+        if (policyUpdate is not { Enabled: true })
         {
-            return await ValidateDisableAsync(modifiedPolicy);
+            return await ValidateDisableAsync(policyUpdate);
         }
 
         return "";
     }
 
-    private async Task<string> ValidateDisableAsync(Policy policy)
+    private async Task<string> ValidateDisableAsync(PolicyUpdate policyUpdate)
     {
         // Do not allow this policy to be disabled if Key Connector is being used
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policy.OrganizationId);
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
         return ssoConfig?.GetData().MemberDecryptionType switch
         {
             MemberDecryptionType.KeyConnector => "Key Connector is enabled.",

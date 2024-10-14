@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -60,7 +61,16 @@ public class PolicyService : IPolicyService
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.Pm13322AddPolicyDefinitions))
         {
-            await _savePolicyCommand.SaveAsync(policy, organizationService, savingUserId);
+            // Transitional mapping - this will be moved to callers once the feature flag is removed
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = policy.OrganizationId,
+                Type = policy.Type,
+                Enabled = policy.Enabled,
+                Data = policy.Data
+            };
+
+            await _savePolicyCommand.SaveAsync(policyUpdate, organizationService, savingUserId);
             return;
         }
 
