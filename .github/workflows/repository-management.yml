@@ -198,10 +198,10 @@ jobs:
 
       - name: Perform cherry-pick(s)
         env:
+          CUT_BRANCH: ${{ inputs.branch_to_cut }}
           MAIN_COMMIT: ${{ steps.get-commits.outputs.main_commit }}
           RC_COMMIT: ${{ steps.get-commits.outputs.rc_commit }}
           RC_VERSION: ${{ steps.get-commits.outputs.rc_version }}
-          CUT_BRANCH: ${{ inputs.branch_to_cut }}
         run: |
           # If we are cutting 'hotfix-rc':
           if [[ "$CUT_BRANCH" == "hotfix-rc" ]]; then
