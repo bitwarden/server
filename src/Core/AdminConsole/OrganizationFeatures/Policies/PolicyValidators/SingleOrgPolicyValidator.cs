@@ -49,7 +49,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     {
         // Remove non-compliant users
         var savingUserId = _currentContext.UserId;
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId, null);
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
