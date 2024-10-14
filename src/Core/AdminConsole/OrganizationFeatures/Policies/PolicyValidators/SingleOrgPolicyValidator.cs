@@ -89,8 +89,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     {
         if (policyUpdate is not { Enabled: true })
         {
-            return await PolicyValidatorHelpers.ValidateDecryptionTypesNotEnabledAsync(
-                policyUpdate, [MemberDecryptionType.KeyConnector], _ssoConfigRepository);
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
+            return ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
         }
 
         return "";

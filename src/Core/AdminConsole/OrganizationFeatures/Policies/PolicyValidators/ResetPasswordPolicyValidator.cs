@@ -25,8 +25,8 @@ public class ResetPasswordPolicyValidator : IPolicyValidator
         if (policyUpdate is not { Enabled: true } ||
             policyUpdate.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled == false)
         {
-            return await PolicyValidatorHelpers.ValidateDecryptionTypesNotEnabledAsync(
-                policyUpdate, [MemberDecryptionType.TrustedDeviceEncryption], _ssoConfigRepository);
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
+            return ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.TrustedDeviceEncryption]);
         }
 
         return "";
