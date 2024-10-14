@@ -30,7 +30,7 @@ public interface IPolicyValidator
     /// </summary>
     /// <param name="policyUpdate">The policy update request</param>
     /// <param name="currentPolicy">The current policy, if any</param>
-    /// <returns>A sequence of validation errors if validation was unsuccessful</returns>
+    /// <returns>A validation error if validation was unsuccessful, otherwise an empty string</returns>
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 
     /// <summary>

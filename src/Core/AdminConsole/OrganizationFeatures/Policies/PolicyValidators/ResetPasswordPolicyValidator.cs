@@ -3,6 +3,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -25,19 +26,10 @@ public class ResetPasswordPolicyValidator : IPolicyValidator
         if (policyUpdate is not { Enabled: true } ||
             policyUpdate.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled == false)
         {
-            return await ValidateDisableAsync(policyUpdate);
+            return await PolicyValidatorHelpers.ValidateDecryptionTypesNotEnabledAsync(
+                policyUpdate, [MemberDecryptionType.TrustedDeviceEncryption], _ssoConfigRepository);
         }
 
         return "";
-    }
-
-    private async Task<string> ValidateDisableAsync(PolicyUpdate policyUpdate)
-    {
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-        return ssoConfig?.GetData().MemberDecryptionType switch
-        {
-            MemberDecryptionType.TrustedDeviceEncryption => "Trusted device encryption is on and requires this policy.",
-            _ => ""
-        };
     }
 }

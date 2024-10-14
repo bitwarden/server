@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -89,20 +90,10 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     {
         if (policyUpdate is not { Enabled: true })
         {
-            return await ValidateDisableAsync(policyUpdate);
+            return await PolicyValidatorHelpers.ValidateDecryptionTypesNotEnabledAsync(
+                policyUpdate, [MemberDecryptionType.KeyConnector], _ssoConfigRepository);
         }
 
         return "";
-    }
-
-    private async Task<string> ValidateDisableAsync(PolicyUpdate policyUpdate)
-    {
-        // Do not allow this policy to be disabled if Key Connector is being used
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-        return ssoConfig?.GetData().MemberDecryptionType switch
-        {
-            MemberDecryptionType.KeyConnector => "Key Connector is enabled.",
-            _ => ""
-        };
     }
 }
