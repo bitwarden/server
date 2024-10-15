@@ -26,7 +26,7 @@ env:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
       deployment-id: ${{ steps.deployment.outputs.deployment_id }}
@@ -62,7 +62,7 @@ jobs:
 
   publish-docker:
     name: Publish Docker images
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: setup
     env:
       _RELEASE_VERSION: ${{ needs.setup.outputs.release-version }}
@@ -155,7 +155,7 @@ jobs:
 
   update-deployment:
     name: Update Deployment Status
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - setup
       - publish-docker

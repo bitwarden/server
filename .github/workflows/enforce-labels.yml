@@ -9,7 +9,7 @@ jobs:
   enforce-label:
     if: ${{ contains(github.event.*.labels.*.name, 'hold') || contains(github.event.*.labels.*.name, 'needs-qa') || contains(github.event.*.labels.*.name, 'DB-migrations-changed') }}
     name: Enforce label
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Check for label

@@ -9,7 +9,7 @@ on:
 jobs:
   delete-rc:
     name: Delete RC Branch
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Login to Azure - CI Subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0

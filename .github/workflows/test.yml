@@ -15,7 +15,7 @@ env:
 jobs:
   check-test-secrets:
     name: Check for test secrets
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       available: ${{ steps.check-test-secrets.outputs.available }}
     permissions:
@@ -34,7 +34,7 @@ jobs:
   testing:
     name: Run tests
     if: ${{ startsWith(github.head_ref, 'version_bump_') == false }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: check-test-secrets
     permissions:
       checks: write

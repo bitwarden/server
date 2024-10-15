@@ -8,7 +8,7 @@ on:
 jobs:
   stale:
     name: Check for stale issues and PRs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check
         uses: actions/stale@28ca1036281a5e5922ead5184a1bbf96e5fc984e # v9.0.0
