@@ -2,12 +2,10 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +27,6 @@ public class MembersController : Controller
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public MembersController(
@@ -43,7 +40,6 @@ public class MembersController : Controller
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
         IOrganizationRepository organizationRepository,
-        IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _organizationUserRepository = organizationUserRepository;
@@ -56,7 +52,6 @@ public class MembersController : Controller
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _organizationRepository = organizationRepository;
-        _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
@@ -120,16 +115,11 @@ public class MembersController : Controller
         var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(_currentContext.OrganizationId.Value);
         // TODO: Get all CollectionUser associations for the organization and marry them up here for the response.
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
+        var orgUsersTwoFactorIsEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUserUserDetails);
+        var memberResponses = organizationUserUserDetails.Select(u =>
         {
-            return await List_vNext(organizationUserUserDetails);
-        }
-
-        var memberResponsesTasks = organizationUserUserDetails.Select(async u =>
-        {
-            return new MemberResponseModel(u, await _userService.TwoFactorIsEnabledAsync(u), null);
+            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, null);
         });
-        var memberResponses = await Task.WhenAll(memberResponsesTasks);
         var response = new ListResponseModel<MemberResponseModel>(memberResponses);
         return new JsonResult(response);
     }
@@ -267,16 +257,5 @@ public class MembersController : Controller
         }
         await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
         return new OkResult();
-    }
-
-    private async Task<JsonResult> List_vNext(ICollection<OrganizationUserUserDetails> organizationUserUserDetails)
-    {
-        var orgUsersTwoFactorIsEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUserUserDetails);
-        var memberResponses = organizationUserUserDetails.Select(u =>
-        {
-            return new MemberResponseModel(u, orgUsersTwoFactorIsEnabled.FirstOrDefault(tuple => tuple.user == u).twoFactorIsEnabled, null);
-        });
-        var response = new ListResponseModel<MemberResponseModel>(memberResponses);
-        return new JsonResult(response);
     }
 }

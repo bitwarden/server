@@ -1,0 +1,249 @@
+name: Repository management
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_to_cut:
+        default: "rc"
+        description: "Branch to cut"
+        options:
+          - "rc"
+          - "hotfix-rc"
+        required: true
+        type: choice
+      target_ref:
+        default: "main"
+        description: "Branch/Tag to target for cut"
+        required: true
+        type: string
+      version_number_override:
+        description: "New version override (leave blank for automatic calculation, example: '2024.1.0')"
+        required: false
+        type: string
+
+jobs:
+  cut_branch:
+    name: Cut branch
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out target ref
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+        with:
+          ref: ${{ inputs.target_ref }}
+
+      - name: Check if ${{ inputs.branch_to_cut }} branch exists
+        env:
+          BRANCH_NAME: ${{ inputs.branch_to_cut }}
+        run: |
+          if [[ $(git ls-remote --heads origin $BRANCH_NAME) ]]; then
+            echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Cut branch
+        env:
+          BRANCH_NAME: ${{ inputs.branch_to_cut }}
+        run: |
+          git switch --quiet --create $BRANCH_NAME
+          git push --quiet --set-upstream origin $BRANCH_NAME
+
+
+  bump_version:
+    name: Bump Version
+    runs-on: ubuntu-22.04
+    needs: cut_branch
+    outputs:
+      version: ${{ steps.set-final-version-output.outputs.version }}
+    steps:
+      - name: Validate version input format
+        if: ${{ inputs.version_number_override != '' }}
+        uses: bitwarden/gh-actions/version-check@main
+        with:
+          version: ${{ inputs.version_number_override }}
+
+      - name: Check out branch
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+        with:
+          ref: main
+
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Get current version
+        id: current-version
+        run: |
+          CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify input version
+        if: ${{ inputs.version_number_override != '' }}
+        env:
+          CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
+          NEW_VERSION: ${{ inputs.version_number_override }}
+        run: |
+          # Error if version has not changed.
+          if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
+            echo "Specified override version is the same as the current version." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          # Check if version is newer.
+          printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V
+          if [ $? -eq 0 ]; then
+            echo "Version is newer than the current version."
+          else
+            echo "Version is older than the current version." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Calculate next release version
+        if: ${{ inputs.version_number_override == '' }}
+        id: calculate-next-version
+        uses: bitwarden/gh-actions/version-next@main
+        with:
+          version: ${{ steps.current-version.outputs.version }}
+
+      - name: Bump version props - Version Override
+        if: ${{ inputs.version_number_override != '' }}
+        id: bump-version-override
+        uses: bitwarden/gh-actions/version-bump@main
+        with:
+          file_path: "Directory.Build.props"
+          version: ${{ inputs.version_number_override }}
+
+      - name: Bump version props - Automatic Calculation
+        if: ${{ inputs.version_number_override == '' }}
+        id: bump-version-automatic
+        uses: bitwarden/gh-actions/version-bump@main
+        with:
+          file_path: "Directory.Build.props"
+          version: ${{ steps.calculate-next-version.outputs.version }}
+
+      - name: Set final version output
+        id: set-final-version-output
+        run: |
+          if [[ "${{ steps.bump-version-override.outcome }}" = "success" ]]; then
+            echo "version=${{ inputs.version_number_override }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.bump-version-automatic.outcome }}" = "success" ]]; then
+            echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "Github Actions"
+
+      - name: Commit files
+        run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
+
+      - name: Push changes
+        run: |
+          git pull -pt
+          git push
+
+
+  cherry_pick:
+    name: Cherry-Pick Commit(s)
+    runs-on: ubuntu-22.04
+    needs: bump_version
+    steps:
+      - name: Check out main branch
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+        with:
+          ref: main
+      
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Verify version has been updated
+        env:
+          NEW_VERSION: ${{ needs.bump_version.outputs.version }}
+        run: |
+          # Wait for version to change.
+          while : ; do
+            echo "Waiting for version to be updated..."
+            git pull --force
+            CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+            # If the versions don't match we continue the loop, otherwise we break out of the loop.
+            [[ "$NEW_VERSION" != "$CURRENT_VERSION" ]] || break
+            sleep 10
+          done
+
+      - name: Get last version commit(s)
+        id: get-commits
+        run: |
+          git switch main
+          MAIN_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
+          echo "main_commit=$MAIN_COMMIT" >> $GITHUB_OUTPUT
+
+          if [[ $(git ls-remote --heads origin rc) ]]; then
+            git switch rc
+            RC_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
+            echo "rc_commit=$RC_COMMIT" >> $GITHUB_OUTPUT
+
+            RC_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+            echo "rc_version=$RC_VERSION" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "Github Actions"
+
+      - name: Perform cherry-pick(s)
+        env:
+          CUT_BRANCH: ${{ inputs.branch_to_cut }}
+          MAIN_COMMIT: ${{ steps.get-commits.outputs.main_commit }}
+          RC_COMMIT: ${{ steps.get-commits.outputs.rc_commit }}
+          RC_VERSION: ${{ steps.get-commits.outputs.rc_version }}
+        run: |
+          # If we are cutting 'hotfix-rc':
+          if [[ "$CUT_BRANCH" == "hotfix-rc" ]]; then
+
+            # If the 'rc' branch exists:
+            if [[ $(git ls-remote --heads origin rc) ]]; then
+
+              # Chery-pick from 'rc' into 'hotfix-rc'
+              git switch hotfix-rc
+              HOTFIX_RC_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+              if [[ "$HOTFIX_RC_VERSION" != "$RC_VERSION" ]]; then
+                git cherry-pick --strategy-option=theirs -x $RC_COMMIT
+                git push -u origin hotfix-rc
+              fi
+
+              # Cherry-pick from 'main' into 'rc'
+              git switch rc
+              git cherry-pick --strategy-option=theirs -x $MAIN_COMMIT
+              git push -u origin rc
+
+            # If the 'rc' branch does not exist:
+            else
+
+              # Cherry-pick from 'main' into 'hotfix-rc'
+              git switch hotfix-rc
+              git cherry-pick --strategy-option=theirs -x $MAIN_COMMIT
+              git push -u origin hotfix-rc
+
+            fi
+
+          # If we are cutting 'rc':
+          elif [[ "$CUT_BRANCH" == "rc" ]]; then
+
+            # Cherry-pick from 'main' into 'rc'
+            git switch rc
+            git cherry-pick --strategy-option=theirs -x $MAIN_COMMIT
+            git push -u origin rc
+
+          fi
+
+
+  move_future_db_scripts:
+    name: Move finalization database scripts
+    needs: cherry_pick
+    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    secrets: inherit

@@ -51,10 +51,9 @@ IBaseRequestValidatorTestWrapper
     public bool isValid { get; set; }
     public BaseRequestValidatorTestWrapper(
         UserManager<User> userManager,
-        IDeviceRepository deviceRepository,
-        IDeviceService deviceService,
         IUserService userService,
         IEventService eventService,
+        IDeviceValidator deviceValidator,
         IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
         ITemporaryDuoWebV4SDKService duoWebV4SDKService,
         IOrganizationRepository organizationRepository,
@@ -72,10 +71,9 @@ IBaseRequestValidatorTestWrapper
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder) :
         base(
             userManager,
-            deviceRepository,
-            deviceService,
             userService,
             eventService,
+            deviceValidator,
             organizationDuoWebTokenProvider,
             duoWebV4SDKService,
             organizationRepository,

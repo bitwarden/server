@@ -15,6 +15,7 @@
     var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
     var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
+    var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin ||
                         canGenerateLicense || canManageTaxRates || canManageStripeSubscriptions;
@@ -108,10 +109,16 @@
                                                 Manage Stripe Subscriptions
                                             </a>
                                         }
-                                        @if (canProcessStripeEvents)
+                                         @if (canProcessStripeEvents)
                                         {
                                             <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
                                                 Process Stripe Events
+                                            </a>
+                                        }
+                                        @if (canMigrateProviders)
+                                        {
+                                            <a class="dropdown-item" asp-controller="MigrateProviders" asp-action="index">
+                                                Migrate Providers
                                             </a>
                                         }
                                     </div>

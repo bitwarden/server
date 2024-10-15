@@ -163,6 +163,7 @@ public static class RolePermissionMapping
                 Permission.Tools_ManageStripeSubscriptions,
                 Permission.Tools_CreateEditTransaction,
                 Permission.Tools_ProcessStripeEvents,
+                Permission.Tools_MigrateProviders
             }
         },
         { "sales", new List<Permission>

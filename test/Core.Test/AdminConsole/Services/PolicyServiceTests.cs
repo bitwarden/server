@@ -7,6 +7,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -32,7 +33,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -60,7 +60,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -93,7 +92,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -125,7 +123,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -163,7 +160,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -192,7 +188,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -226,7 +221,7 @@ public class PolicyServiceTests
 
         var utcNow = DateTime.UtcNow;
 
-        await sutProvider.Sut.SaveAsync(policy, Substitute.For<IUserService>(), Substitute.For<IOrganizationService>(), Guid.NewGuid());
+        await sutProvider.Sut.SaveAsync(policy, Substitute.For<IOrganizationService>(), Guid.NewGuid());
 
         await sutProvider.GetDependency<IEventService>().Received()
             .LogPolicyEventAsync(policy, EventType.Policy_Updated);
@@ -256,7 +251,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -348,19 +342,23 @@ public class PolicyServiceTests
                 orgUserDetailAdmin
             });
 
-        var userService = Substitute.For<IUserService>();
-        var organizationService = Substitute.For<IOrganizationService>();
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<OrganizationUserUserDetails>>())
+            .Returns(new List<(OrganizationUserUserDetails user, bool hasTwoFactor)>()
+            {
+                (orgUserDetailUserInvited, false),
+                (orgUserDetailUserAcceptedWith2FA, true),
+                (orgUserDetailUserAcceptedWithout2FA, false),
+                (orgUserDetailAdmin, false),
+            });
 
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserInvited).Returns(false);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserAcceptedWith2FA).Returns(true);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserAcceptedWithout2FA).Returns(false);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailAdmin).Returns(false);
+        var organizationService = Substitute.For<IOrganizationService>();
 
         var utcNow = DateTime.UtcNow;
 
         var savingUserId = Guid.NewGuid();
 
-        await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
+        await sutProvider.Sut.SaveAsync(policy, organizationService, savingUserId);
 
         await organizationService.Received()
             .RemoveUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWithout2FA.Id, savingUserId);
@@ -456,17 +454,24 @@ public class PolicyServiceTests
                 orgUserDetailAdmin
             });
 
-        var userService = Substitute.For<IUserService>();
-        var organizationService = Substitute.For<IOrganizationService>();
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Contains(orgUserDetailUserWith2FANoMP.UserId.Value)
+                && ids.Contains(orgUserDetailUserWithout2FA.UserId.Value)
+                && ids.Contains(orgUserDetailAdmin.UserId.Value)))
+            .Returns(new List<(Guid userId, bool hasTwoFactor)>()
+            {
+                (orgUserDetailUserWith2FANoMP.UserId.Value, true),
+                (orgUserDetailUserWithout2FA.UserId.Value, false),
+                (orgUserDetailAdmin.UserId.Value, false),
+            });
 
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserWith2FANoMP).Returns(true);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserWithout2FA).Returns(false);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailAdmin).Returns(false);
+        var organizationService = Substitute.For<IOrganizationService>();
 
         var savingUserId = Guid.NewGuid();
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId));
+            () => sutProvider.Sut.SaveAsync(policy, organizationService, savingUserId));
 
         Assert.Contains("Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
 
@@ -526,17 +531,20 @@ public class PolicyServiceTests
                 orgUserDetail,
             });
 
-        var userService = Substitute.For<IUserService>();
-        var organizationService = Substitute.For<IOrganizationService>();
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUserDetail.UserId.Value)))
+            .Returns(new List<(Guid userId, bool hasTwoFactor)>()
+            {
+                (orgUserDetail.UserId.Value, false),
+            });
 
-        userService.TwoFactorIsEnabledAsync(orgUserDetail)
-            .Returns(false);
+        var organizationService = Substitute.For<IOrganizationService>();
 
         var utcNow = DateTime.UtcNow;
 
         var savingUserId = Guid.NewGuid();
 
-        await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
+        await sutProvider.Sut.SaveAsync(policy, organizationService, savingUserId);
 
         await sutProvider.GetDependency<IEventService>().Received()
             .LogPolicyEventAsync(policy, EventType.Policy_Updated);
@@ -579,7 +587,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -616,7 +623,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -650,7 +656,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
@@ -684,7 +689,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
                 Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 

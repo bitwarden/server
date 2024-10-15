@@ -4,7 +4,6 @@ using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -25,8 +24,6 @@ public class UsersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IFeatureService _featureService;
-    private readonly IUserService _userService;
 
     public UsersController(
         IUserRepository userRepository,
@@ -34,9 +31,7 @@ public class UsersController : Controller
         IPaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IFeatureService featureService,
-        IUserService userService)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -44,8 +39,6 @@ public class UsersController : Controller
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _featureService = featureService;
-        _userService = userService;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -64,22 +57,8 @@ public class UsersController : Controller
         var skip = (page - 1) * count;
         var users = await _userRepository.SearchAsync(email, skip, count);
 
-        var userModels = new List<UserViewModel>();
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
-        {
-            var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
-
-            userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
-        }
-        else
-        {
-            foreach (var user in users)
-            {
-                var isTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
-                userModels.Add(UserViewModel.MapViewModel(user, isTwoFactorEnabled));
-            }
-        }
+        var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
+        var userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
 
         return View(new UsersModel
         {
