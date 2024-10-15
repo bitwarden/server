@@ -323,13 +323,38 @@ public class TwoFactorAuthenticationValidatorTests
             providerType, user).Returns(true);
 
         _userManager.TWO_FACTOR_ENABLED = true;
-        _userManager.TWO_FACTOR_TOKEN = token;
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
 
         // Act
         var result = await _sut.VerifyTwoFactor(user, null, providerType, token);
 
         // Assert
         Assert.True(result);
+    }
+
+    [Theory]
+    [BitAutoData(TwoFactorProviderType.Duo)]
+    [BitAutoData(TwoFactorProviderType.WebAuthn)]
+    [BitAutoData(TwoFactorProviderType.Email)]
+    [BitAutoData(TwoFactorProviderType.YubiKey)]
+    [BitAutoData(TwoFactorProviderType.Remember)]
+    public async void VerifyTwoFactorAsync_Individual_InvalidToken_ReturnsTrue(
+        TwoFactorProviderType providerType,
+        User user,
+        string token)
+    {
+        // Arrange
+        _userService.TwoFactorProviderIsEnabledAsync(
+            providerType, user).Returns(true);
+
+        _userManager.TWO_FACTOR_ENABLED = true;
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
+
+        // Act
+        var result = await _sut.VerifyTwoFactor(user, null, providerType, token);
+
+        // Assert
+        Assert.False(result);
     }
 
     [Theory]
@@ -345,7 +370,7 @@ public class TwoFactorAuthenticationValidatorTests
             token, organization, user).Returns(true);
 
         _userManager.TWO_FACTOR_ENABLED = true;
-        _userManager.TWO_FACTOR_TOKEN = token;
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
 
         organization.Use2fa = true;
         organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
@@ -362,7 +387,7 @@ public class TwoFactorAuthenticationValidatorTests
     [Theory]
     [BitAutoData(TwoFactorProviderType.Duo)]
     [BitAutoData(TwoFactorProviderType.OrganizationDuo)]
-    public async void VerifyTwoFactorAsync_TemporaryDuoService_ReturnsFalse(
+    public async void VerifyTwoFactorAsync_TemporaryDuoService_ValidToken_ReturnsTrue(
         TwoFactorProviderType providerType,
         User user,
         Organization organization,
@@ -381,6 +406,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         _userManager.TWO_FACTOR_ENABLED = true;
         _userManager.TWO_FACTOR_TOKEN = token;
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
 
         // Act
         var result = await _sut.VerifyTwoFactor(
@@ -388,7 +414,38 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Assert
         Assert.True(result);
+    }
 
+    [Theory]
+    [BitAutoData(TwoFactorProviderType.Duo)]
+    [BitAutoData(TwoFactorProviderType.OrganizationDuo)]
+    public async void VerifyTwoFactorAsync_TemporaryDuoService_InvalidToken_ReturnsFalse(
+    TwoFactorProviderType providerType,
+    User user,
+    Organization organization,
+    string token)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.DuoRedirect).Returns(true);
+        _userService.TwoFactorProviderIsEnabledAsync(providerType, user).Returns(true);
+        _temporaryDuoWebV4SDKService.ValidateAsync(
+            token, Arg.Any<TwoFactorProvider>(), user).Returns(true);
+
+        user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
+        organization.Use2fa = true;
+        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
+        organization.Enabled = true;
+
+        _userManager.TWO_FACTOR_ENABLED = true;
+        _userManager.TWO_FACTOR_TOKEN = token;
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
+
+        // Act
+        var result = await _sut.VerifyTwoFactor(
+            user, organization, providerType, token);
+
+        // Assert
+        Assert.True(result);
     }
 
     private static UserManagerTestWrapper<User> SubstituteUserManager()
