@@ -1,13 +1,9 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Attributes;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Billing.Licenses.OrganizationLicenses;
 
@@ -162,73 +158,4 @@ public class OrganizationLicense : ILicense
             this.EncodeLicense(p => p.ShouldIncludePropertyOnLicense(Version, LicenseIgnoreCondition.OnHash)));
 
     public bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
-
-    /// <summary>
-    /// Converts the license to a JWT string using the RsaSha256Signature algorithm
-    /// </summary>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public string ToToken(X509Certificate2 certificate)
-    {
-        if (!certificate.HasPrivateKey)
-        {
-            throw new InvalidOperationException("You don't have the private key!");
-        }
-
-        using var rsa = certificate.GetRSAPrivateKey();
-
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity([
-                new Claim(nameof(LicenseKey), LicenseKey),
-                new Claim(nameof(InstallationId), InstallationId.ToString()),
-                new Claim(nameof(Id), Id.ToString()),
-                new Claim(nameof(Name), Name),
-                new Claim(nameof(BillingEmail), BillingEmail),
-                new Claim(nameof(BusinessName), BusinessName ?? string.Empty),
-                new Claim(nameof(Enabled), Enabled.ToString()),
-                new Claim(nameof(Plan), Plan),
-                new Claim(nameof(PlanType), PlanType.ToString()),
-                new Claim(nameof(Seats), Seats.ToString()),
-                new Claim(nameof(MaxCollections), MaxCollections.ToString()),
-                new Claim(nameof(UsePolicies), UsePolicies.ToString()),
-                new Claim(nameof(UseSso), UseSso.ToString()),
-                new Claim(nameof(UseKeyConnector), UseKeyConnector.ToString()),
-                new Claim(nameof(UseScim), UseScim.ToString()),
-                new Claim(nameof(UseGroups), UseGroups.ToString()),
-                new Claim(nameof(UseEvents), UseEvents.ToString()),
-                new Claim(nameof(UseDirectory), UseDirectory.ToString()),
-                new Claim(nameof(UseTotp), UseTotp.ToString()),
-                new Claim(nameof(Use2fa), Use2fa.ToString()),
-                new Claim(nameof(UseApi), UseApi.ToString()),
-                new Claim(nameof(UseResetPassword), UseResetPassword.ToString()),
-                new Claim(nameof(MaxStorageGb), MaxStorageGb.ToString()),
-                new Claim(nameof(SelfHost), SelfHost.ToString()),
-                new Claim(nameof(UsersGetPremium), UsersGetPremium.ToString()),
-                new Claim(nameof(UseCustomPermissions), UseCustomPermissions.ToString()),
-                new Claim(nameof(Version), Version.ToString()),
-                new Claim(nameof(Issued), Issued.ToString()),
-                new Claim(nameof(Refresh), Refresh.ToString()),
-                new Claim(nameof(Expires), Expires.ToString()),
-                new Claim(nameof(ExpirationWithoutGracePeriod), ExpirationWithoutGracePeriod.ToString()),
-                new Claim(nameof(UsePasswordManager), UsePasswordManager.ToString()),
-                new Claim(nameof(UseSecretsManager), UseSecretsManager.ToString()),
-                new Claim(nameof(SmSeats), SmSeats.ToString()),
-                new Claim(nameof(SmServiceAccounts), SmServiceAccounts.ToString()),
-                new Claim(nameof(LimitCollectionCreationDeletion), LimitCollectionCreationDeletion.ToString()),
-                new Claim(nameof(AllowAdminAccessToAllCollectionItems), AllowAdminAccessToAllCollectionItems.ToString()),
-                new Claim(nameof(Trial), Trial.ToString()),
-                new Claim(nameof(LicenseType), LicenseType.ToString())
-            ]),
-            Issuer = "Bitwarden",
-            Audience = Id.ToString(),
-            NotBefore = Issued,
-            Expires = Issued.AddDays(7),
-            SigningCredentials = new SigningCredentials(new RsaSecurityKey(rsa), SecurityAlgorithms.RsaSha256)
-        };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var token = tokenHandler.CreateJwtSecurityToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
-    }
 }

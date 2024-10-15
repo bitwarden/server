@@ -28,8 +28,8 @@ public class GetUserLicenseQueryHandler(
 
         var user = query.User;
 
-        var subscriptionInfo = query.SubscriptionInfo is null && query.User.Gateway is null
-            ? await paymentService.GetSubscriptionAsync(query.User)
+        var subscriptionInfo = query.SubscriptionInfo is null && user.Gateway is null
+            ? await paymentService.GetSubscriptionAsync(user)
             : query.SubscriptionInfo;
 
         var userLicense = new UserLicense
@@ -51,7 +51,7 @@ public class GetUserLicenseQueryHandler(
 
         userLicense.Hash = Convert.ToBase64String(userLicense.EncodedHash);
         userLicense.Signature = Convert.ToBase64String(licenseService.SignLicense(userLicense));
-        userLicense.Token = licenseService.GenerateToken(userLicense);
+        userLicense.Token = await licenseService.GenerateToken(userLicense);
 
         return userLicense;
     }

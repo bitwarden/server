@@ -75,7 +75,7 @@ public class CloudGetOrganizationLicenseQuery(
         // Hash must come after all properties are set, and before Signature since Signature contains the hash
         organizationLicense.Hash = Convert.ToBase64String(organizationLicense.EncodedHash);
         organizationLicense.Signature = Convert.ToBase64String(licensingService.SignLicense(organizationLicense));
-        organizationLicense.Token = licensingService.GenerateToken(organizationLicense);
+        organizationLicense.Token = await licensingService.GenerateToken(organizationLicense);
 
         return organizationLicense;
     }

@@ -1,9 +1,12 @@
-﻿using System.Security.Cryptography;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.ClaimsFactory;
 using Bit.Core.Billing.Licenses.OrganizationLicenses;
 using Bit.Core.Billing.Licenses.UserLicenses;
 using Bit.Core.Entities;
@@ -14,6 +17,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Services;
 
@@ -26,6 +30,8 @@ public class LicensingService : ILicensingService
     private readonly IMailService _mailService;
     private readonly ILogger<LicensingService> _logger;
     private readonly IValidateEntityAgainstLicenseCommandHandler _validateEntityAgainstLicenseCommandHandler;
+    private readonly ILicenseClaimsFactory<OrganizationLicense> _organizationLicenseClaimsFactory;
+    private readonly ILicenseClaimsFactory<UserLicense> _userLicenseClaimsFactory;
 
     private readonly Dictionary<Guid, DateTime> _userCheckCache = new();
 
@@ -36,7 +42,9 @@ public class LicensingService : ILicensingService
         IWebHostEnvironment environment,
         ILogger<LicensingService> logger,
         IGlobalSettings globalSettings,
-        IValidateEntityAgainstLicenseCommandHandler validateEntityAgainstLicenseCommandHandler)
+        IValidateEntityAgainstLicenseCommandHandler validateEntityAgainstLicenseCommandHandler,
+        ILicenseClaimsFactory<OrganizationLicense> organizationLicenseClaimsFactory,
+        ILicenseClaimsFactory<UserLicense> userLicenseClaimsFactory)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
@@ -44,6 +52,8 @@ public class LicensingService : ILicensingService
         _logger = logger;
         _globalSettings = globalSettings;
         _validateEntityAgainstLicenseCommandHandler = validateEntityAgainstLicenseCommandHandler;
+        _organizationLicenseClaimsFactory = organizationLicenseClaimsFactory;
+        _userLicenseClaimsFactory = userLicenseClaimsFactory;
 
         var certThumbprint = environment.IsDevelopment() ?
             "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
@@ -217,14 +227,33 @@ public class LicensingService : ILicensingService
         return rsa.SignData(license.EncodedData, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
     }
 
-    public string GenerateToken(ILicense license)
+    public async Task<string> GenerateToken(ILicense license)
     {
         if (_globalSettings.SelfHosted || !_certificate.HasPrivateKey)
         {
             throw new InvalidOperationException("Cannot generate tokens.");
         }
 
-        return license.ToToken(_certificate);
+        var claims = license.LicenseType switch
+        {
+            LicenseType.Organization => await _organizationLicenseClaimsFactory.GenerateClaimsAsync(license as OrganizationLicense),
+            LicenseType.User => await _userLicenseClaimsFactory.GenerateClaimsAsync(license as UserLicense),
+            _ => throw new InvalidOperationException("Invalid license type.")
+        };
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Issuer = "Bitwarden",
+            Audience = license.Id.ToString(),
+            NotBefore = license.Issued,
+            Expires = license.Expires,
+            SigningCredentials = new SigningCredentials(new RsaSecurityKey(_certificate.GetRSAPrivateKey()), SecurityAlgorithms.RsaSha256)
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateJwtSecurityToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
     }
 
     public Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization) =>

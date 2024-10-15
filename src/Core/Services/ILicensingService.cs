@@ -12,7 +12,7 @@ public interface ILicensingService
     Task<bool> ValidateUserPremiumAsync(User user);
     bool VerifyLicenseSignature(ILicense license);
     byte[] SignLicense(ILicense license);
-    string GenerateToken(ILicense license);
+    Task<string> GenerateToken(ILicense license);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId);
     Task WriteLicenseToDiskAsync(Guid entityId, ILicense license);

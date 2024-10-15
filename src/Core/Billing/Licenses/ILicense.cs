@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 
 namespace Bit.Core.Billing.Licenses;
 
@@ -7,6 +6,7 @@ public interface ILicense
 {
     LicenseType LicenseType { get; }
     string LicenseKey { get; set; }
+    Guid Id { get; set; }
     int Version { get; set; }
     DateTime Issued { get; set; }
     DateTime? Refresh { get; set; }
@@ -19,5 +19,4 @@ public interface ILicense
     byte[] EncodedData { get; }
     byte[] EncodedHash { get; }
     bool ValidLicenseVersion { get; }
-    string ToToken(X509Certificate2 certificate);
 }

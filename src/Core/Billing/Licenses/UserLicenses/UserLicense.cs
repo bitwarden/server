@@ -1,15 +1,8 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Attributes;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
-using Bit.Core.Services;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Billing.Licenses.UserLicenses;
 
@@ -74,41 +67,4 @@ public class UserLicense : ILicense
             this.EncodeLicense(p => p.ShouldIncludePropertyOnLicense(Version, LicenseIgnoreCondition.OnHash)));
 
     public bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
-
-    public string ToToken(X509Certificate2 certificate)
-    {
-        if (!certificate.HasPrivateKey)
-        {
-            throw new InvalidOperationException("You don't have the private key!");
-        }
-
-        using var rsa = certificate.GetRSAPrivateKey();
-
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity([
-                new Claim(nameof(LicenseKey), LicenseKey),
-                new Claim(nameof(Id), Id.ToString()),
-                new Claim(nameof(Name), Name),
-                new Claim(nameof(Email), Email),
-                new Claim(nameof(Premium), Premium.ToString()),
-                new Claim(nameof(MaxStorageGb), MaxStorageGb.ToString()),
-                new Claim(nameof(Version), Version.ToString()),
-                new Claim(nameof(Issued), Issued.ToString()),
-                new Claim(nameof(Refresh), Refresh.ToString()),
-                new Claim(nameof(Expires), Expires.ToString()),
-                new Claim(nameof(Trial), Trial.ToString()),
-                new Claim(nameof(LicenseType), LicenseType.ToString())
-            ]),
-            Issuer = "Bitwarden",
-            Audience = Id.ToString(),
-            NotBefore = Issued,
-            Expires = Issued.AddDays(7),
-            SigningCredentials = new SigningCredentials(new RsaSecurityKey(rsa), SecurityAlgorithms.RsaSha256)
-        };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var token = tokenHandler.CreateJwtSecurityToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
-    }
 }
