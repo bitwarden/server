@@ -28,12 +28,13 @@ public class CloudGetOrganizationLicenseQuery(
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
         var now = DateTime.UtcNow;
         var expirationDate = GetExpirationDate(subscriptionInfo, organization, now);
+        var expirationWithoutGracePeriodDate = GetExpirationWithoutGracePeriodDate(subscriptionInfo, organization, now);
         var refreshDate = GetRefreshDate(subscriptionInfo, organization, expirationDate, now);
         var isTrial = IsTrial(subscriptionInfo, organization, now);
 
         var organizationLicense = new OrganizationLicense
         {
-            Version = version.GetValueOrDefault(OrganizationLicense.CurrentLicenseFileVersion + 1),
+            Version = version.GetValueOrDefault(OrganizationLicense.CurrentLicenseFileVersion),
             LicenseKey = organization.LicenseKey,
             InstallationId = installationId,
             Id = organization.Id,
@@ -68,6 +69,7 @@ public class CloudGetOrganizationLicenseQuery(
             AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems,
             Issued = now,
             Expires = expirationDate,
+            ExpirationWithoutGracePeriod = expirationWithoutGracePeriodDate,
             Refresh = refreshDate,
             Trial = isTrial
         };
@@ -109,6 +111,17 @@ public class CloudGetOrganizationLicenseQuery(
         }
 
         return org.ExpirationDate?.AddMonths(11) ?? now.AddYears(1);
+    }
+
+    private static DateTime? GetExpirationWithoutGracePeriodDate(SubscriptionInfo subscriptionInfo, Organization org, DateTime now)
+    {
+        var isNotTrialing = !subscriptionInfo.Subscription.TrialEndDate.HasValue || subscriptionInfo.Subscription.TrialEndDate.Value <= DateTime.UtcNow;
+        var orgHasNotExpired = !org.ExpirationDate.HasValue || org.ExpirationDate.Value >= DateTime.UtcNow;
+        var isAnnualPlan = subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180);
+
+        return isNotTrialing && orgHasNotExpired && isAnnualPlan
+            ? subscriptionInfo.Subscription.PeriodEndDate
+            : null;
     }
 
     private static DateTime GetRefreshDate(SubscriptionInfo subscriptionInfo, Organization org, DateTime licenseExpirationDate, DateTime now)

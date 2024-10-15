@@ -234,10 +234,10 @@ public class LicensingService : ILicensingService
             throw new InvalidOperationException("Cannot generate tokens.");
         }
 
-        var claims = license.LicenseType switch
+        var claims = license switch
         {
-            LicenseType.Organization => await _organizationLicenseClaimsFactory.GenerateClaimsAsync(license as OrganizationLicense),
-            LicenseType.User => await _userLicenseClaimsFactory.GenerateClaimsAsync(license as UserLicense),
+            OrganizationLicense organizationLicense => await _organizationLicenseClaimsFactory.GenerateClaimsAsync(organizationLicense),
+            UserLicense userLicense => await _userLicenseClaimsFactory.GenerateClaimsAsync(userLicense),
             _ => throw new InvalidOperationException("Invalid license type.")
         };
 

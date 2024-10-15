@@ -157,5 +157,7 @@ public class OrganizationLicense : ILicense
         SHA256.HashData(
             this.EncodeLicense(p => p.ShouldIncludePropertyOnLicense(Version, LicenseIgnoreCondition.OnHash)));
 
+    [LicenseIgnore]
+    [JsonIgnore]
     public bool ValidLicenseVersion => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
 }
