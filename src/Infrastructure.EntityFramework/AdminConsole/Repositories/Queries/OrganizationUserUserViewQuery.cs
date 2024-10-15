@@ -28,9 +28,9 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             SsoExternalId = x.su.ExternalId,
             Permissions = x.ou.Permissions,
             ResetPasswordKey = x.ou.ResetPasswordKey,
-            UsesKeyConnector = x.u != null && x.u.UsesKeyConnector,
+            UsesKeyConnector = x.u.UsesKeyConnector,
             AccessSecretsManager = x.ou.AccessSecretsManager,
-            HasMasterPassword = x.u != null && !string.IsNullOrWhiteSpace(x.u.MasterPassword)
+            HasMasterPassword = !string.IsNullOrWhiteSpace(x.u.MasterPassword)
         });
     }
 }
