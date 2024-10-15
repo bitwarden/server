@@ -66,7 +66,7 @@ public class CipherServiceTests
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Collection> { collections[0] });
 
-        await sutProvider.Sut.ImportCiphersAsync(collections, ciphers, collectionRelationships, importingUserId);
+        await sutProvider.Sut.ImportCollectionCiphersAsync(collections, ciphers, collectionRelationships, importingUserId);
 
         await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
             ciphers,

@@ -57,7 +57,7 @@ public class ImportCiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
         var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId, false)).ToList();
-        await _cipherService.ImportCiphersAsync(folders, ciphers, model.FolderRelationships);
+        await _cipherService.ImportFolderCiphersAsync(folders, ciphers, model.FolderRelationships, userId);
     }
 
     [HttpPost("import-organization")]
@@ -85,7 +85,7 @@ public class ImportCiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
-        await _cipherService.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
+        await _cipherService.ImportCollectionCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
     }
 
     private async Task<bool> CheckOrgImportPermission(List<Collection> collections, Guid orgId)
