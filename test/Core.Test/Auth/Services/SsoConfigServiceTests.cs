@@ -342,7 +342,6 @@ public class SsoConfigServiceTests
         await sutProvider.GetDependency<IPolicyService>().Received(1)
             .SaveAsync(
                 Arg.Is<Policy>(t => t.Type == PolicyType.SingleOrg),
-                Arg.Any<IUserService>(),
                 Arg.Any<IOrganizationService>(),
                 null
             );
@@ -350,7 +349,6 @@ public class SsoConfigServiceTests
         await sutProvider.GetDependency<IPolicyService>().Received(1)
             .SaveAsync(
                 Arg.Is<Policy>(t => t.Type == PolicyType.ResetPassword && t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled),
-                Arg.Any<IUserService>(),
                 Arg.Any<IOrganizationService>(),
                 null
             );
