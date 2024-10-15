@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -10,26 +11,26 @@ public class OrganizationDomainService : IOrganizationDomainService
 {
     private readonly IOrganizationDomainRepository _domainRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
+    private readonly IVerifyOrganizationDomainCommand _verifyOrganizationDomainCommand;
     private readonly ILogger<OrganizationDomainService> _logger;
     private readonly IGlobalSettings _globalSettings;
 
     public OrganizationDomainService(
         IOrganizationDomainRepository domainRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IDnsResolverService dnsResolverService,
         IEventService eventService,
         IMailService mailService,
+        IVerifyOrganizationDomainCommand verifyOrganizationDomainCommand,
         ILogger<OrganizationDomainService> logger,
         IGlobalSettings globalSettings)
     {
         _domainRepository = domainRepository;
         _organizationUserRepository = organizationUserRepository;
-        _dnsResolverService = dnsResolverService;
         _eventService = eventService;
         _mailService = mailService;
+        _verifyOrganizationDomainCommand = verifyOrganizationDomainCommand;
         _logger = logger;
         _globalSettings = globalSettings;
     }
@@ -45,45 +46,19 @@ public class OrganizationDomainService : IOrganizationDomainService
 
         foreach (var domain in verifiableDomains)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId,
+                "Attempting verification for organization {OrgId} with domain {Domain}",
+                domain.OrganizationId,
+                domain.DomainName);
+
             try
             {
-                _logger.LogInformation(Constants.BypassFiltersEventId,
-                    "Attempting verification for organization {OrgId} with domain {Domain}",
-                    domain.OrganizationId,
-                    domain.DomainName);
-
                 domain.SetJobRunCount();
 
-                var status = await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt);
-                if (status)
-                {
-                    _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
-
-                    // Update entry on OrganizationDomain table
-                    domain.SetLastCheckedDate();
-                    domain.SetVerifiedDate();
-                    await _domainRepository.ReplaceAsync(domain);
-
-                    await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified,
-                        EventSystemUser.DomainVerification);
-                }
-                else
-                {
-                    // Update entry on OrganizationDomain table
-                    domain.SetLastCheckedDate();
-                    domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
-                    await _domainRepository.ReplaceAsync(domain);
-
-                    await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified,
-                        EventSystemUser.DomainVerification);
-                    _logger.LogInformation(Constants.BypassFiltersEventId, "Verification for organization {OrgId} with domain {Domain} failed",
-                        domain.OrganizationId, domain.DomainName);
-                }
+                _ = await _verifyOrganizationDomainCommand.SystemVerifyOrganizationDomainAsync(domain);
             }
             catch (Exception ex)
             {
-                // Update entry on OrganizationDomain table
-                domain.SetLastCheckedDate();
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                 await _domainRepository.ReplaceAsync(domain);
 
