@@ -1,5 +1,4 @@
----
-name: Repository Management
+name: Repository management
 
 on:
   workflow_dispatch:
