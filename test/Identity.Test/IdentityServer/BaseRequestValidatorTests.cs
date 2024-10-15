@@ -29,10 +29,9 @@ namespace Bit.Identity.Test.IdentityServer;
 public class BaseRequestValidatorTests
 {
     private UserManager<User> _userManager;
-    private readonly IDeviceRepository _deviceRepository;
-    private readonly IDeviceService _deviceService;
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
+    private readonly IDeviceValidator _deviceValidator;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
     private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService;
     private readonly IOrganizationRepository _organizationRepository;
@@ -53,10 +52,9 @@ public class BaseRequestValidatorTests
 
     public BaseRequestValidatorTests()
     {
-        _deviceRepository = Substitute.For<IDeviceRepository>();
-        _deviceService = Substitute.For<IDeviceService>();
         _userService = Substitute.For<IUserService>();
         _eventService = Substitute.For<IEventService>();
+        _deviceValidator = Substitute.For<IDeviceValidator>();
         _organizationDuoWebTokenProvider = Substitute.For<IOrganizationDuoWebTokenProvider>();
         _duoWebV4SDKService = Substitute.For<ITemporaryDuoWebV4SDKService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
@@ -76,10 +74,9 @@ public class BaseRequestValidatorTests
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
-            _deviceRepository,
-            _deviceService,
             _userService,
             _eventService,
+            _deviceValidator,
             _organizationDuoWebTokenProvider,
             _duoWebV4SDKService,
             _organizationRepository,
@@ -228,7 +225,8 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_ClientCredentialsGrantType_ShouldSucceed(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult,
+        Device device)
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -240,18 +238,13 @@ public class BaseRequestValidatorTests
         _globalSettings.DisableEmailNewDevice = false;
 
         context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device 
-        context.ValidatedTokenRequest.Raw["DeviceIdentifier"] = "DeviceIdentifier";
-        context.ValidatedTokenRequest.Raw["DeviceType"] = "Android"; // This needs to be an actual Type
-        context.ValidatedTokenRequest.Raw["DeviceName"] = "DeviceName";
-        context.ValidatedTokenRequest.Raw["DevicePushToken"] = "DevicePushToken";
 
+        _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+                         .Returns(device);
         // Act
         await _sut.ValidateAsync(context);
 
         // Assert
-        await _mailService.Received(1).SendNewDeviceLoggedInEmail(
-            context.CustomValidatorRequestContext.User.Email, "Android", Arg.Any<DateTime>(), Arg.Any<string>()
-        );
         Assert.False(context.GrantResult.IsError);
     }
 
@@ -262,7 +255,8 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_ClientCredentialsGrantType_ExistingDevice_ShouldSucceed(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult,
+        Device device)
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -274,13 +268,9 @@ public class BaseRequestValidatorTests
         _globalSettings.DisableEmailNewDevice = false;
 
         context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device 
-        context.ValidatedTokenRequest.Raw["DeviceIdentifier"] = "DeviceIdentifier";
-        context.ValidatedTokenRequest.Raw["DeviceType"] = "Android"; // This needs to be an actual Type
-        context.ValidatedTokenRequest.Raw["DeviceName"] = "DeviceName";
-        context.ValidatedTokenRequest.Raw["DevicePushToken"] = "DevicePushToken";
 
-        _deviceRepository.GetByIdentifierAsync("DeviceIdentifier", Arg.Any<Guid>())
-                         .Returns(new Device() { Identifier = "DeviceIdentifier" });
+        _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+                         .Returns(device);
         // Act
         await _sut.ValidateAsync(context);
 
