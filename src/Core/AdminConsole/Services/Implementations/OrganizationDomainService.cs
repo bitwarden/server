@@ -47,7 +47,12 @@ public class OrganizationDomainService : IOrganizationDomainService
         {
             try
             {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Attempting verification for organization {OrgId} with domain {Domain}", domain.OrganizationId, domain.DomainName);
+                _logger.LogInformation(Constants.BypassFiltersEventId,
+                    "Attempting verification for organization {OrgId} with domain {Domain}",
+                    domain.OrganizationId,
+                    domain.DomainName);
+
+                domain.SetJobRunCount();
 
                 var status = await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt);
                 if (status)
@@ -57,7 +62,6 @@ public class OrganizationDomainService : IOrganizationDomainService
                     // Update entry on OrganizationDomain table
                     domain.SetLastCheckedDate();
                     domain.SetVerifiedDate();
-                    domain.SetJobRunCount();
                     await _domainRepository.ReplaceAsync(domain);
 
                     await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified,
@@ -67,7 +71,6 @@ public class OrganizationDomainService : IOrganizationDomainService
                 {
                     // Update entry on OrganizationDomain table
                     domain.SetLastCheckedDate();
-                    domain.SetJobRunCount();
                     domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                     await _domainRepository.ReplaceAsync(domain);
 
@@ -81,7 +84,6 @@ public class OrganizationDomainService : IOrganizationDomainService
             {
                 // Update entry on OrganizationDomain table
                 domain.SetLastCheckedDate();
-                domain.SetJobRunCount();
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                 await _domainRepository.ReplaceAsync(domain);
 
