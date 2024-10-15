@@ -1,5 +1,5 @@
 CREATE OR ALTER PROCEDURE [dbo].[UserAsymmetricKeys_Regenerate]
-    @UserId UNIQUEIDENTIFIER OUTPUT,
+    @UserId UNIQUEIDENTIFIER,
     @PublicKey VARCHAR(MAX),
     @PrivateKey VARCHAR(MAX)
 AS
