@@ -56,8 +56,6 @@ public class OrganizationDomainService : IOrganizationDomainService
 
             try
             {
-                domain.SetJobRunCount();
-
                 _ = await _verifyOrganizationDomainCommand.SystemVerifyOrganizationDomainAsync(domain);
             }
             catch (Exception ex)

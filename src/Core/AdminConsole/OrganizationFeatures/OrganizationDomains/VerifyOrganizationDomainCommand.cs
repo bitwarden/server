@@ -41,36 +41,43 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
                 ? EventType.OrganizationDomain_Verified
                 : EventType.OrganizationDomain_NotVerified);
 
+        await _organizationDomainRepository.ReplaceAsync(domainVerificationResult);
+
         return domainVerificationResult;
     }
 
     public async Task<OrganizationDomain> SystemVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain)
     {
+        organizationDomain.SetJobRunCount();
+
         var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain);
 
         if (domainVerificationResult.VerifiedDate is not null)
         {
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
 
-            await _eventService.LogOrganizationDomainEventAsync(domainVerificationResult, EventType.OrganizationDomain_Verified,
+            await _eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
+                EventType.OrganizationDomain_Verified,
                 EventSystemUser.DomainVerification);
         }
         else
         {
             domainVerificationResult.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
-            await _organizationDomainRepository.ReplaceAsync(domainVerificationResult);
 
-            await _eventService.LogOrganizationDomainEventAsync(domainVerificationResult, EventType.OrganizationDomain_NotVerified,
+            await _eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
+                EventType.OrganizationDomain_NotVerified,
                 EventSystemUser.DomainVerification);
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Verification for organization {OrgId} with domain {Domain} failed",
                 domainVerificationResult.OrganizationId, domainVerificationResult.DomainName);
         }
 
+        await _organizationDomainRepository.ReplaceAsync(domainVerificationResult);
+
         return domainVerificationResult;
     }
 
-    public async Task<OrganizationDomain> VerifyOrganizationDomainAsync(OrganizationDomain domain)
+    private async Task<OrganizationDomain> VerifyOrganizationDomainAsync(OrganizationDomain domain)
     {
         domain.SetLastCheckedDate();
 
@@ -101,8 +108,6 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             _logger.LogError("Error verifying Organization domain: {domain}. {errorMessage}",
                 domain.DomainName, e.Message);
         }
-
-        await _organizationDomainRepository.ReplaceAsync(domain);
 
         return domain;
     }
