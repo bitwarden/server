@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -12,22 +15,28 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
 {
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IOrganizationService _organizationService;
     private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IPolicyService _policyService;
     private readonly ILogger<VerifyOrganizationDomainCommand> _logger;
 
     public VerifyOrganizationDomainCommand(
         IOrganizationDomainRepository organizationDomainRepository,
+        IOrganizationService organizationService,
         IDnsResolverService dnsResolverService,
         IEventService eventService,
         IGlobalSettings globalSettings,
+        IPolicyService policyService,
         ILogger<VerifyOrganizationDomainCommand> logger)
     {
         _organizationDomainRepository = organizationDomainRepository;
+        _organizationService = organizationService;
         _dnsResolverService = dnsResolverService;
         _eventService = eventService;
         _globalSettings = globalSettings;
+        _policyService = policyService;
         _logger = logger;
     }
 
@@ -101,6 +110,13 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             if (await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt))
             {
                 domain.SetVerifiedDate();
+
+                await _policyService.SaveAsync(new Policy
+                {
+                    OrganizationId = domain.OrganizationId,
+                    Type = PolicyType.SingleOrg,
+                    Enabled = true,
+                }, _organizationService, null);
             }
         }
         catch (Exception e)
