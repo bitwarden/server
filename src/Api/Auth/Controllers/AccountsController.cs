@@ -584,7 +584,7 @@ public class AccountsController : Controller
             if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
                 && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
             {
-                throw new BadRequestException("Accounts managed by an organization cannot be deleted.");
+                throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
             }
 
             var result = await _userService.DeleteAsync(user);
