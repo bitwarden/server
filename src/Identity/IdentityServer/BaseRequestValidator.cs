@@ -108,7 +108,7 @@ public abstract class BaseRequestValidator<T> where T : class
         if (isTwoFactorRequired)
         {
             // 2FA required and not provided response
-            if (!validTwoFactorRequest || 
+            if (!validTwoFactorRequest ||
                 !Enum.TryParse(twoFactorProvider, out TwoFactorProviderType twoFactorProviderType))
             {
                 var resultDict = await _twoFactorAuthenticationValidator

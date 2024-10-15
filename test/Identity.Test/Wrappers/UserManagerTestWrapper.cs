@@ -91,6 +91,6 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
     /// <returns></returns>
     public override async Task<bool> VerifyTwoFactorTokenAsync(TUser user, string tokenProvider, string token)
     {
-        return TWO_FACTOR_TOKEN_VERIFIED;
+        return token == TWO_FACTOR_TOKEN;
     }
 }

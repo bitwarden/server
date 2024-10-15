@@ -112,8 +112,8 @@ public class TwoFactorAuthenticationValidator(
         foreach (var provider in enabledProviders)
         {
             providerKeys.Add((byte)provider.Key);
-            var infoDict = await BuildTwoFactorParams(organization, user, provider.Key, provider.Value);
-            providers.Add(((byte)provider.Key).ToString(), infoDict);
+            var twoFactorParams = await BuildTwoFactorParams(organization, user, provider.Key, provider.Value);
+            providers.Add(((byte)provider.Key).ToString(), twoFactorParams);
         }
 
         var twoFactorResultDict = new Dictionary<string, object>
@@ -140,7 +140,10 @@ public class TwoFactorAuthenticationValidator(
         return twoFactorResultDict;
     }
 
-    public async Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType type,
+    public async Task<bool> VerifyTwoFactor(
+        User user,
+        Organization organization,
+        TwoFactorProviderType type,
         string token)
     {
         switch (type)
