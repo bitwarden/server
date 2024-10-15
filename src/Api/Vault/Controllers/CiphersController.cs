@@ -914,7 +914,7 @@ public class CiphersController : Controller
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
         {
-            throw new BadRequestException("Accounts managed by an organization cannot be purged.");
+            throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
         }
 
         if (string.IsNullOrWhiteSpace(organizationId))
