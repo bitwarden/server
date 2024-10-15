@@ -31,14 +31,14 @@ public class BaseRequestValidatorTests
     private readonly IEventService _eventService;
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
-     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly ILogger<BaseRequestValidatorTests> _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IPolicyService _policyService;
-     private readonly IFeatureService _featureService;
+    private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
 
@@ -190,7 +190,7 @@ public class BaseRequestValidatorTests
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, default))); 
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, default)));
 
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
@@ -221,7 +221,7 @@ public class BaseRequestValidatorTests
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null))); 
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
 
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
@@ -265,7 +265,7 @@ public class BaseRequestValidatorTests
                          .Returns(device);
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null))); 
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         // Act
         await _sut.ValidateAsync(context);
 
@@ -303,7 +303,7 @@ public class BaseRequestValidatorTests
                       .Returns(Task.FromResult(true));
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null))); 
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         // Act
         await _sut.ValidateAsync(context);
 
@@ -330,7 +330,7 @@ public class BaseRequestValidatorTests
         _featureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers).Returns(true);
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null))); 
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
 
         // Act
         await _sut.ValidateAsync(context);

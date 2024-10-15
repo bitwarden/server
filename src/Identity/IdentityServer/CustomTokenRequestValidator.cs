@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -11,7 +9,6 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using HandlebarsDotNet;
@@ -45,19 +42,19 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder
         )
         : base(
-            userManager, 
-            userService, 
-            eventService, 
-            deviceValidator, 
+            userManager,
+            userService,
+            eventService,
+            deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService, 
-            logger, 
-            currentContext, 
+            mailService,
+            logger,
+            currentContext,
             globalSettings,
-            userRepository, 
+            userRepository,
             policyService,
-            featureService, 
+            featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder)
     {

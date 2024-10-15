@@ -46,20 +46,20 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
         )
-        :  base(
-            userManager, 
-            userService, 
-            eventService, 
-            deviceValidator, 
+        : base(
+            userManager,
+            userService,
+            eventService,
+            deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService, 
-            logger, 
-            currentContext, 
+            mailService,
+            logger,
+            currentContext,
             globalSettings,
-            userRepository, 
+            userRepository,
             policyService,
-            featureService, 
+            featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder)
     {
