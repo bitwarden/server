@@ -150,9 +150,9 @@ public class AccountsController : Controller
 
         // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id) == true)
+            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
         {
-            throw new BadRequestException("Accounts managed by an organization cannot change email.");
+            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
         }
 
         await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
@@ -174,9 +174,9 @@ public class AccountsController : Controller
 
         // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id) == true)
+            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
         {
-            throw new BadRequestException("Accounts managed by an organization cannot change email.");
+            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
         }
 
         var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
